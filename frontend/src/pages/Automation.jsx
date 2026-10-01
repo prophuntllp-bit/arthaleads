@@ -2149,7 +2149,7 @@ export default function Automation() {
               const Icon = preset.icon;
               const isFb = item.platform === "Facebook";
               const isVistrowVoice = item.platform === "Vistrow Voice";
-              const leading = isFb ? <FacebookIcon />
+              const leading = isFb ? <div className="flex h-full w-full items-center justify-center bg-[#1877F2]"><FacebookIcon /></div>
                 : isVistrowVoice ? <VistrowVoiceIcon size={40} />
                 : item.platform === "Website Form" && item.siteUrl
                   ? <SiteFavicon url={item.siteUrl} size={28} fallback={<Icon className="h-5 w-5" />} />

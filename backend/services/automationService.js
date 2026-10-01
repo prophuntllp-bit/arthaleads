@@ -79,7 +79,29 @@ function applyDefaults(payload = {}) {
 
 const automationService = {
   async list(orgId) {
-    return Automation.find({ orgId }).select("-accessToken -userToken").sort({ createdAt: -1 });
+    const rows = await Automation.find({ orgId }).select("-accessToken -userToken").sort({ createdAt: -1 });
+    await this.fillSiteNames(rows);
+    return rows;
+  },
+
+  // Website connections that only know a generic name ("WordPress Site") read
+  // their real one from the site's homepage, once a week at most. Bounded so a
+  // slow site can never hold the page up.
+  async fillSiteNames(rows) {
+    const { fetchSiteName, isGenericSiteName } = require("../utils/siteName");
+    const weekAgo = Date.now() - 7 * 86400000;
+    const todo = rows.filter((a) => a.platform === "Website Form" && a.siteUrl && isGenericSiteName(a.siteName)
+      && (!a.siteNameCheckedAt || a.siteNameCheckedAt.getTime() < weekAgo));
+    if (!todo.length) return;
+    const work = Promise.all(todo.map(async (a) => {
+      const name = await fetchSiteName(a.siteUrl);
+      const patch = { siteNameCheckedAt: new Date() };
+      if (name) patch.siteName = name;
+      await Automation.updateOne({ _id: a._id }, { $set: patch });
+      if (name) a.siteName = name;
+      a.siteNameCheckedAt = patch.siteNameCheckedAt;
+    }));
+    await Promise.race([work, new Promise((r) => setTimeout(r, 5000))]).catch(() => {});
   },
 
   async create(payload, actor) {

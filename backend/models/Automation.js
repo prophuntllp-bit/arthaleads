@@ -150,6 +150,11 @@ const automationSchema = new mongoose.Schema(
       maxlength: 200,
       default: "",
     },
+    // When we last tried to read the site's own name from its homepage.
+    siteNameCheckedAt: {
+      type: Date,
+      default: null,
+    },
     connectedForms: {
       type: [String],
       default: [],

@@ -805,7 +805,6 @@ router.post("/website", express.json(), websiteLeadLimiter, async (req, res) => 
       if (page_url && !automation.siteUrl) {
         const u = new URL(page_url);
         automation.siteUrl = u.origin;
-        if (!automation.siteName) automation.siteName = u.hostname.replace(/^www\./, "");
         if (/^WordPress Site( \d+)?$/i.test(automation.name || "")) automation.name = u.hostname.replace(/^www\./, "");
       }
       if (form_name && !(automation.connectedForms || []).includes(form_name) && (automation.connectedForms || []).length < 30) {

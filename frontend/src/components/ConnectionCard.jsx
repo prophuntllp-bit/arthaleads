@@ -73,9 +73,15 @@ export default function ConnectionCard({
   const isGoogle = item.platform === "Google";
   const isTokenSource = ["Custom", "Vistrow Voice", "WhatsApp"].includes(item.platform);
 
-  // Subtitle: the website's domain when we know it, else the platform.
-  const subtitle = isWebsite && item.siteUrl ? hostOf(item.siteUrl) : item.platform;
-  const showSubtitle = subtitle && subtitle !== item.name;
+  // A website is called by its own name when we have read it, then by its
+  // domain when the saved name is just a placeholder, and only then by the
+  // label typed at set-up. The domain sits underneath.
+  const GENERIC_NAME = /^(wordpress site|website|my site)( \d+)?$/i;
+  const realSiteName = item.siteName && !GENERIC_NAME.test(item.siteName.trim()) ? item.siteName.trim() : "";
+  const host = isWebsite && item.siteUrl ? hostOf(item.siteUrl) : "";
+  const title = isWebsite ? (realSiteName || (host && GENERIC_NAME.test(String(item.name).trim()) ? host : item.name)) : item.name;
+  const subtitle = isWebsite && host ? host : item.platform;
+  const showSubtitle = subtitle && subtitle.toLowerCase() !== String(title).toLowerCase();
 
   const expiresAt = item.userTokenExpiresAt ? new Date(item.userTokenExpiresAt) : null;
   const daysLeft = expiresAt ? Math.ceil((expiresAt - Date.now()) / 86400000) : null;
@@ -98,7 +104,7 @@ export default function ConnectionCard({
           {leading}
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-[15px] font-semibold leading-tight text-app">{item.name}</h3>
+          <h3 className="truncate text-[15px] font-semibold leading-tight text-app">{title}</h3>
           {showSubtitle && <p className="mt-0.5 truncate text-xs text-app-soft">{subtitle}</p>}
         </div>
         <span className={`inline-flex shrink-0 items-center gap-1.5 text-xs font-medium ${status.text}`}>
