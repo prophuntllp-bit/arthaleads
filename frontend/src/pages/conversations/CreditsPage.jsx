@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useOutletContext } from "react-router-dom";
-import { Zap, Loader2, ArrowDownCircle, ArrowUpCircle, Info, Download, FileText } from "lucide-react";
+import { Zap, Loader2, ArrowDownCircle, ArrowUpCircle, Info, Download, FileText, BarChart3 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import api from "../../services/api";
 import toast from "react-hot-toast";
 import CreditTopUpModal from "../../components/CreditTopUpModal";
@@ -35,6 +36,217 @@ function describe(r) {
   if (r.type === "refund")     return `Refund${who ? ` · ${who}` : ""}`;
   if (r.type === "adjustment") return r.note || "Adjustment";
   return `${CATEGORY_TEXT[r.category] || "Message"}${who ? ` to ${who}` : ""}`;
+}
+
+// Colours validated for both themes (see the dataviz palette check): marketing
+// is the warm one because it is the one that costs the most per message.
+const UTIL_COLORS = { marketing: "#ea580c", service: "#2563eb", other: "#0d9488" };
+const UTIL_LABELS = { marketing: "Marketing", service: "Replies", other: "Utility & other" };
+const RANGES = [["7", "Last 7 days"], ["30", "Last 30 days"], ["month", "This month"]];
+const num = (n) => (n || 0).toLocaleString("en-IN");
+// Per-message rates are fractions of a rupee (Meta's reply rate is ₹0.115), so they need a third decimal that the usual two-decimal money format would round away.
+const ratePerMessage = (paise) =>
+  `₹${((paise || 0) / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 3 })}`;
+const shortDay = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
+
+function UtilTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  const total = payload.reduce((a, p) => a + (p.value || 0), 0);
+  return (
+    <div className="rounded-xl px-3 py-2 text-xs shadow-lg" style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
+      <p className="font-bold text-app mb-1">{shortDay(label)}</p>
+      {payload.slice().reverse().map((p) => (
+        <div key={p.dataKey} className="flex items-center justify-between gap-5">
+          <span className="flex items-center gap-1.5 text-app-soft">
+            <span className="w-2 h-2 rounded-sm" style={{ background: p.color }} />{UTIL_LABELS[p.dataKey]}
+          </span>
+          <span className="text-app font-semibold tabular-nums">{num(p.value)}</span>
+        </div>
+      ))}
+      <div className="flex items-center justify-between gap-5 mt-1 pt-1" style={{ borderTop: "1px solid var(--app-border)" }}>
+        <span className="text-app-soft">Total</span><span className="text-app font-bold tabular-nums">{num(total)}</span>
+      </div>
+    </div>
+  );
+}
+
+// Where the messages and the money went. The Statement below lists charges one
+// by one; this is the "what am I actually spending on" view.
+function UtilizationSection() {
+  const [range, setRange] = useState("30");
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    api.get("/credits/utilization", { params: { range } })
+      .then((r) => setData(r.data))
+      .catch(() => toast.error("Could not load usage"))
+      .finally(() => setLoading(false));
+  }, [range]);
+
+  const direct = !!data?.billedDirectlyByMeta;
+  const t = data?.totals;
+  const sources = data?.sources;
+  const sourceTotal = (sources?.bot || 0) + (sources?.team || 0) + (sources?.campaigns || []).reduce((a, c) => a + c.messages, 0);
+  const pct = (n) => (sourceTotal ? Math.round((n / sourceTotal) * 100) : 0);
+
+  return (
+    <div className="card p-5 mb-5">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-base font-bold text-app flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-app-soft" /> Credits utilization
+          </h2>
+          <p className="text-xs text-app-soft mt-0.5">
+            {direct ? "What your WhatsApp messages are costing you, by type and by who sent them" : "Where your credits are going, by message type and by who sent them"}
+          </p>
+        </div>
+        <div className="flex gap-1 p-1 rounded-full" style={{ background: "var(--app-surface-low)" }}>
+          {RANGES.map(([k, label]) => (
+            <button key={k} onClick={() => setRange(k)}
+              className="px-3 py-1 rounded-full text-xs font-semibold transition"
+              style={range === k ? { background: "var(--app-surface-solid)", color: "var(--app-text)", boxShadow: "0 1px 3px rgba(0,0,0,0.12)" } : { color: "var(--app-text-soft)" }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading && !data ? (
+        <div className="flex items-center justify-center py-14"><Loader2 className="w-5 h-5 animate-spin text-app-soft" /></div>
+      ) : data && (
+        <div className={loading ? "opacity-60 transition" : "transition"}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+            {[
+              ["Messages sent", num(t.messages), "all outgoing WhatsApp messages"],
+              ["Free replies", num(t.free), "covered by the monthly allowance"],
+              ["Paid messages", num(t.paid), "marketing, utility and replies past the allowance"],
+              direct
+                ? ["Estimated Meta charge", rupees(t.estMetaPaise), "before GST, on Meta's published rates"]
+                : ["Credits spent", rupees(t.spentPaise), "taken from your wallet, before GST"],
+            ].map(([label, value, hint]) => (
+              <div key={label} className="rounded-2xl p-4 stitch-surface-muted">
+                <p className="text-xs text-app-soft">{label}</p>
+                <p className="text-2xl font-bold text-app mt-1 tabular-nums">{value}</p>
+                <p className="text-[11px] text-app-soft mt-1">{hint}</p>
+              </div>
+            ))}
+          </div>
+
+          {t.messages === 0 ? (
+            <p className="text-sm text-app-soft text-center py-10">No messages were sent in this period.</p>
+          ) : (
+            <>
+              <div className="mt-6">
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                  <p className="text-xs font-semibold text-app-soft">Messages sent per day</p>
+                  <div className="flex items-center gap-3 text-xs text-app-soft">
+                    {Object.keys(UTIL_COLORS).map((k) => (
+                      <span key={k} className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-sm" style={{ background: UTIL_COLORS[k] }} />{UTIL_LABELS[k]}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ width: "100%", height: 200 }}>
+                  <ResponsiveContainer>
+                    <BarChart data={data.days} margin={{ top: 4, right: 4, left: -18, bottom: 0 }} barCategoryGap="22%">
+                      <CartesianGrid vertical={false} stroke="var(--app-border)" />
+                      <XAxis dataKey="date" tickFormatter={shortDay} interval="preserveStartEnd" minTickGap={28}
+                        tick={{ fontSize: 11, fill: "var(--app-text-soft)" }} axisLine={false} tickLine={false} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "var(--app-text-soft)" }} axisLine={false} tickLine={false} />
+                      <Tooltip content={<UtilTooltip />} cursor={{ fill: "rgba(128,128,128,0.10)" }} />
+                      {["service", "marketing", "other"].map((k) => (
+                        <Bar key={k} dataKey={k} stackId="m" fill={UTIL_COLORS[k]} stroke="var(--app-surface-solid)" strokeWidth={2} isAnimationActive={false} />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto mt-5">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left" style={{ borderBottom: "1px solid var(--app-border)" }}>
+                      <th className="py-2 pr-3 text-xs font-semibold text-app-soft">Type</th>
+                      <th className="py-2 px-3 text-xs font-semibold text-app-soft text-right">Sent</th>
+                      <th className="py-2 px-3 text-xs font-semibold text-app-soft text-right">Free</th>
+                      <th className="py-2 px-3 text-xs font-semibold text-app-soft text-right">Paid</th>
+                      <th className="py-2 px-3 text-xs font-semibold text-app-soft text-right">{direct ? "Meta rate" : "Your rate"}</th>
+                      <th className="py-2 pl-3 text-xs font-semibold text-app-soft text-right">{direct ? "Estimated charge" : "Credits spent"}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.categories.map((c) => (
+                      <tr key={c.category} style={{ borderBottom: "1px solid var(--app-border)" }}>
+                        <td className="py-2.5 pr-3 text-xs text-app font-semibold">
+                          <span className="inline-block w-2.5 h-2.5 rounded-sm mr-2 align-middle"
+                            style={{ background: UTIL_COLORS[c.category === "marketing" || c.category === "service" ? c.category : "other"] }} />
+                          {c.label}
+                        </td>
+                        <td className="py-2.5 px-3 text-xs text-app text-right tabular-nums">{num(c.messages)}</td>
+                        <td className="py-2.5 px-3 text-xs text-app-soft text-right tabular-nums">{num(c.free)}</td>
+                        <td className="py-2.5 px-3 text-xs text-app text-right tabular-nums">{num(c.paid)}</td>
+                        <td className="py-2.5 px-3 text-xs text-app-soft text-right tabular-nums">
+                          {c.category === "other" ? "—" : direct ? ratePerMessage(({ marketing: 86.31, service: 11.5, utility: 11.5, authentication: 11.5 })[c.category]) : ratePerMessage(c.ratePaise)}
+                        </td>
+                        <td className="py-2.5 pl-3 text-xs text-app font-bold text-right tabular-nums">
+                          {c.category === "other" ? "—" : rupees(direct ? c.estMetaPaise : c.spentPaise)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-xs font-semibold text-app-soft mb-2">Who sent them</p>
+                  {[
+                    ["Assistant and button flow", sources.bot],
+                    ["Your team", sources.team],
+                    ["Campaigns", (sources.campaigns || []).reduce((a, c) => a + c.messages, 0)],
+                  ].map(([label, n]) => (
+                    <div key={label} className="mb-2.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-app">{label}</span>
+                        <span className="text-app-soft tabular-nums">{num(n)} · {pct(n)}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full mt-1 overflow-hidden" style={{ background: "var(--app-surface-low)" }}>
+                        <div className="h-full rounded-full" style={{ width: `${pct(n)}%`, background: "var(--app-primary, #ea580c)" }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-app-soft mb-2">Campaigns in this period</p>
+                  {(sources.campaigns || []).length === 0 ? (
+                    <p className="text-xs text-app-soft">No campaign messages were sent.</p>
+                  ) : (sources.campaigns || []).slice(0, 6).map((c) => (
+                    <div key={c.name} className="flex items-center justify-between text-xs py-1.5" style={{ borderBottom: "1px solid var(--app-border)" }}>
+                      <span className="text-app truncate pr-3">{c.name}</span>
+                      <span className="text-app-soft tabular-nums shrink-0">{num(c.messages)} sent</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <p className="text-[11px] text-app-soft mt-4 flex items-start gap-1.5">
+                <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>
+                  {direct
+                    ? "Your messages are billed by Meta to your own account, not from this wallet. Estimates use Meta's published India rates before GST and assume each free reply is covered by the monthly allowance. Meta's invoice is the final figure."
+                    : "Credits spent is what was taken from your wallet, before GST. Free replies use the monthly allowance and cost nothing."}
+                  {" "}Messages that failed to send are not counted.
+                </span>
+              </p>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function CreditsPage() {
@@ -243,6 +455,8 @@ export default function CreditsPage() {
           )}
         </div>
       )}
+
+      <UtilizationSection />
 
       <div className="card p-0 overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-5 py-4 flex-wrap" style={{ borderBottom: "1px solid var(--app-border)" }}>
