@@ -1,6 +1,7 @@
-﻿// services/leadService.js
+// services/leadService.js
 const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
+const { projectLeadFromLead } = require("../utils/projectLeadFromLead");
 const Project = require("../models/Project");
 const User = require("../models/User");
 const Organization = require("../models/Organization");
@@ -812,11 +813,19 @@ const leadService = {
     // (requirements/budget/purpose) and were inflating the unfiltered list
     // with blank rows. An explicit project filter or a domain search both
     // count as deliberate intent to include them.
-    const skipProjectLeads = !!priority || !!consent || (!wantsProjectLeads && !projectId && !siteFilter && !sitePage);
+    // A lead that was moved into a project still counts as one of the org's
+    // leads, so it stays in this list (with its details) and answers every
+    // filter. Only bulk-imported contacts, which have none of the pipeline
+    // fields, are kept out of the plain browse view.
+    const transferredOnly = !wantsProjectLeads && !projectId && !siteFilter && !sitePage;
     let projLeads = [], projTotal = 0;
 
-    if (!skipProjectLeads) {
+    {
       const projFilter = { orgId: user.orgId };
+      if (transferredOnly) projFilter.fromLeadId = { $ne: null };
+      if (priority) projFilter.priority = priority;
+      if (consent === "unknown") projFilter["whatsappConsent.status"] = { $nin: ["granted", "denied"] };
+      else if (consent)          projFilter["whatsappConsent.status"] = consent;
       if (status)  projFilter.status  = status;
       if (source)  projFilter.source  = source;
       // Same rule as regular leads above.
@@ -840,27 +849,18 @@ const leadService = {
       if (sitePage) projAndConditions.push(sitePageCondition(sitePage));
       if (projAndConditions.length) projFilter.$and = projAndConditions;
 
-      // ProjectLead has no per-lead `assignedTo` — assignment lives on the
-      // parent Project (Project.assignedTo[]), so scope by project instead.
-      let scopedProjectIds = null;
-      if (user.role === "agent" || query.myOnly === "true") {
-        const scoped = await Project.find({ orgId: user.orgId, assignedTo: user._id }).select("_id").lean();
-        scopedProjectIds = scoped.map((p) => String(p._id));
-      } else if (agentId && (user.role === "admin" || user.role === "manager")) {
-        const scoped = await Project.find({ orgId: user.orgId, assignedTo: agentId }).select("_id").lean();
-        scopedProjectIds = scoped.map((p) => String(p._id));
+      // A project lead belongs to an agent when the agent is on the parent
+      // Project (Project.assignedTo[]) or, for one moved in from Leads, when it
+      // was assigned to them personally.
+      const scopeAgentId = (user.role === "agent" || query.myOnly === "true")
+        ? user._id
+        : (agentId && (user.role === "admin" || user.role === "manager") ? agentId : null);
+      if (scopeAgentId) {
+        const scoped = await Project.find({ orgId: user.orgId, assignedTo: scopeAgentId }).select("_id").lean();
+        projAndConditions.push({ $or: [{ project: { $in: scoped.map((p) => p._id) } }, { assignedTo: scopeAgentId }] });
+        projFilter.$and = projAndConditions;
       }
-
-      if (projectId) {
-        // Explicit project filter — intersect with any agent-based scoping so
-        // "agent X + project Y" correctly returns nothing when X isn't on Y,
-        // instead of ignoring one of the two filters.
-        projFilter.project = (scopedProjectIds && !scopedProjectIds.includes(String(projectId)))
-          ? null // guaranteed no match — ProjectLead.project is a required field, never null
-          : projectId;
-      } else if (scopedProjectIds) {
-        projFilter.project = { $in: scopedProjectIds };
-      }
+      if (projectId) projFilter.project = projectId;
 
       [projLeads, projTotal] = await Promise.all([
         ProjectLead.find(projFilter)
@@ -888,11 +888,19 @@ const leadService = {
       // ProjectLead has no per-lead assignee — it's assigned via the parent
       // project's agent(s), so surface those names in the same column the
       // unified list already uses for plain-lead assignment.
-      assignedToName: (pl.project?.assignedTo || []).map((u) => u.name).filter(Boolean).join(", "),
+      assignedTo:     pl.assignedTo || null,
+      assignedToName: pl.assignedToName || (pl.project?.assignedTo || []).map((u) => u.name).filter(Boolean).join(", "),
       name:         pl.name,
       phone:        pl.phone,
       email:        pl.email,
       source:       pl.source,
+      fromLeadId:   pl.fromLeadId || null,
+      leadSourceLabel: pl.leadSourceLabel, sourcePage: pl.sourcePage, sourceDomain: pl.sourceDomain,
+      priority:     pl.priority,
+      propertyType: pl.propertyType, bhk: pl.bhk, purpose: pl.purpose, budget: pl.budget,
+      timeline:     pl.timeline, preferredLocation: pl.preferredLocation, city: pl.city, streetAddress: pl.streetAddress,
+      requirements: pl.requirements, formResponses: pl.formResponses, tags: pl.tags,
+      followUpNote: pl.followUpNote, campaignRef: pl.campaignRef,
       // ProjectLead.status defaults to "" (unset), not "New" — the Pipeline
       // board buckets strictly by the exact STATUS_OPTIONS names, so an
       // unset status matched none of them and the lead silently vanished
@@ -1224,32 +1232,9 @@ const leadService = {
     if (!lead) throw new AppError("Lead not found", 404);
     const project = await Project.findOne({ _id: toProjectId, isArchived: { $ne: true }, orgId: user.orgId });
     if (!project) throw new AppError("Project not found", 404);
-    const pl = await ProjectLead.create({
-      project:    toProjectId,
-      name:       lead.name,
-      phone:      lead.phone,
-      email:      lead.email || "",
-      source:     lead.source || "Manual",
-      importedBy: user._id,
-      orgId:      user.orgId,
-      // Preserve where the lead actually came from — without this, the
-      // domain filter on the Leads page can never find it again once
-      // it's transferred into a project.
-      leadSourceLabel: lead.leadSourceLabel || "",
-      sourcePage:      lead.sourcePage      || "",
-      sourceDomain:    lead.sourceDomain    || "",
-      // Preserve all telecaller remark fields
-      remark1:    lead.remark1   || "",
-      remark2:    lead.remark2   || "",
-      remark3:    lead.remark3   || "",
-      remark4:    lead.remark4   || "",
-      remarkNote: lead.remark    || "", // Lead.remark (plain note) → ProjectLead.remarkNote
-      followUp:   lead.followUpDate  || null,
-      followUp2:  lead.followUp2     || null,
-      booking:    lead.booking       || "",
-      followUpSetBy:      lead.followUpSetBy     || null,
-      followUpSetByName:  lead.followUpSetByName || "",
-    });
+    // Everything on the lead comes across (see utils/projectLeadFromLead.js),
+    // not just its contact details and remarks.
+    const pl = await ProjectLead.create(projectLeadFromLead(lead, toProjectId, user, { projectName: project.name }));
     lead.isArchived = true;
     await lead.save({ validateBeforeSave: false });
     return pl;
@@ -1275,28 +1260,7 @@ const leadService = {
     }
 
     if (leadsToTransfer.length) {
-      const docs = leadsToTransfer.map((lead) => ({
-        project:    toProjectId,
-        name:       lead.name,
-        phone:      lead.phone,
-        email:      lead.email || "",
-        source:     lead.source || "Manual",
-        importedBy: user._id,
-        orgId:      user.orgId,
-        leadSourceLabel: lead.leadSourceLabel || "",
-        sourcePage:      lead.sourcePage      || "",
-        sourceDomain:    lead.sourceDomain    || "",
-        remark1:    lead.remark1   || "",
-        remark2:    lead.remark2   || "",
-        remark3:    lead.remark3   || "",
-        remark4:    lead.remark4   || "",
-        remarkNote: lead.remark    || "",
-        followUp:   lead.followUpDate  || null,
-        followUp2:  lead.followUp2     || null,
-        booking:    lead.booking       || "",
-        followUpSetBy:      lead.followUpSetBy     || null,
-        followUpSetByName:  lead.followUpSetByName || "",
-      }));
+      const docs = leadsToTransfer.map((lead) => projectLeadFromLead(lead, toProjectId, user, { projectName: project.name }));
 
       await ProjectLead.insertMany(docs);
       await Lead.updateMany(

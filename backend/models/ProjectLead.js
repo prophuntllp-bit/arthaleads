@@ -1,4 +1,4 @@
-﻿// models/ProjectLead.js
+// models/ProjectLead.js
 const mongoose = require("mongoose");
 const OPTS = require("../constants/leadOptions");
 
@@ -18,7 +18,7 @@ const activitySchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ["created", "status_changed", "note_added", "called"],
+      enum: ["created", "status_changed", "assigned", "note_added", "note_updated", "note_deleted", "follow_up_set", "site_visit", "called", "emailed", "duplicate_flagged", "consent_changed", "transferred"],
       required: true,
     },
     description:     { type: String, required: true },
@@ -47,6 +47,44 @@ const projectLeadSchema = new mongoose.Schema(
     leadSourceLabel: { type: String, trim: true, default: "" },
     sourcePage:      { type: String, trim: true, default: "" },
     sourceDomain:    { type: String, trim: true, default: "" },
+
+    // Set when this record was created by moving a Lead into the project. The
+    // original Lead stays archived; everything on it is copied here (see
+    // utils/projectLeadFromLead.js) and createdAt keeps the lead's own date.
+    fromLeadId:    { type: mongoose.Schema.Types.ObjectId, ref: "Lead", default: null, index: true },
+    transferredAt: { type: Date, default: null },
+
+    // Mirrors Lead's pipeline fields so a transferred lead keeps its details.
+    // Deliberately no defaults: a bulk-imported contact has none of these, and a
+    // default of "Buy" / "Apartment" would invent values nobody entered.
+    priority:          { type: String, enum: OPTS.PRIORITY },
+    propertyType:      { type: String, enum: OPTS.PROPERTY_TYPE },
+    bhk:               { type: String, enum: OPTS.BHK },
+    purpose:           { type: String, enum: OPTS.PURPOSE },
+    budget:            { min: { type: Number }, max: { type: Number }, currency: { type: String } },
+    timeline:          { type: String, trim: true },
+    preferredLocation: { type: String, trim: true },
+    city:              { type: String, trim: true },
+    streetAddress:     { type: String, trim: true },
+    requirements:      { type: String, trim: true },
+    formResponses:     [{ _id: false, fieldKey: { type: String, trim: true }, label: { type: String, trim: true }, value: { type: String } }],
+    tags:              [{ type: String, trim: true }],
+    assignedTo:        { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    assignedToName:    { type: String, default: "" },
+    followUpNote:      { type: String, default: "" },
+    siteVisitDate:     { type: Date, default: null },
+    siteVisitDone:     { type: Boolean, default: false },
+    firstContactedAt:  { type: Date, default: null },
+    formPlugin:        { type: String, trim: true, default: "" },
+    campaignRef: {
+      type: { adId: String, headline: String, body: String, sourceUrl: String, ctwaClid: String },
+      default: undefined,
+    },
+    whatsappConsent: {
+      status:     { type: String, enum: ["granted", "denied", "unknown"] },
+      source:     { type: String },
+      capturedAt: { type: Date },
+    },
 
     // Remark system for telecallers
     remark: {
