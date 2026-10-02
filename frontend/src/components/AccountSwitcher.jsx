@@ -54,14 +54,15 @@ export default function AccountSwitcher({ onDone }) {
   return (
     <div className="border-t px-2 py-2" style={{ borderColor: "var(--app-border)" }}>
       <p className="px-2 pb-1.5 text-[11px] font-semibold text-app-soft">Switch account</p>
-      {people.length > 6 && (
+      {people.length > 4 && (
         <label className="mx-1 mb-1.5 flex items-center gap-2 rounded-xl px-2.5 py-1.5" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
           <Search className="h-3.5 w-3.5 text-app-soft" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a teammate"
             className="w-full bg-transparent text-xs text-app outline-none placeholder:text-app-soft" />
         </label>
       )}
-      <div className="max-h-56 space-y-0.5 overflow-y-auto">
+      {/* Two people visible, the rest scroll, so the menu stays short. */}
+      <div className="max-h-[92px] space-y-0.5 overflow-y-auto overscroll-contain pr-1">
         {shown.map((p) => {
           const me = String(p._id) === String(user._id);
           return (
