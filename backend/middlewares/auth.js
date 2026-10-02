@@ -91,6 +91,21 @@ const protect = async (req, res, next) => {
     req.user  = user;
     req.orgId = user.orgId;
 
+    // An admin using "Switch account" is acting as this person. A few things
+    // only the person themselves may ever do: clock in or out (it would fake
+    // their attendance), change their own password or profile, or ask for
+    // the account to be deleted.
+    if (decoded.actBy) {
+      req.switchedBy = decoded.actBy;
+      const p = req.originalUrl.split("?")[0];
+      const ownOnly = (req.method !== "GET" && /^\/api\/attendance\/clock(in|out)$/.test(p))
+        || (req.method === "PUT" && p === "/api/auth/me")
+        || (req.method !== "GET" && p.startsWith("/api/auth/account/deletion"));
+      if (ownOnly) {
+        return next(new AppError("You're viewing as someone else. Switch back to your own account to do this.", 403));
+      }
+    }
+
     // ── Org-level access guard (skip for super_admin - platform-wide access) ──
     if (user.role !== "super_admin" && user.orgId) {
       let org = _getCachedOrg(user.orgId);

@@ -8,7 +8,7 @@ import {
   FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
   PenLine, ChevronDown, ChevronUp, Tag, FileText, Plus, List,
   PanelLeftClose, PanelLeft, Zap, Search, X as XIcon, CornerDownLeft,
-  Receipt, BookMarked, FileCheck, Building2, ClipboardList, Phone, Mail,
+  Receipt, BookMarked, FileCheck, Building2, ClipboardList, Phone, Mail, ChevronsUpDown,
 } from "lucide-react";
 import WhatsAppIcon from "./WhatsAppIcon";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -19,6 +19,7 @@ import { canAccess } from "../utils/plan";
 import toast from "react-hot-toast";
 import AttendanceCapture from "./AttendanceCapture";
 import { SmartImage } from "./UI";
+import AccountSwitcher from "./AccountSwitcher";
 
 const navItems = [
   { to: "/super-admin", label: "Super Admin",  icon: ShieldCheck, roles: ["super_admin"], end: true },
@@ -35,6 +36,7 @@ const navItems = [
   { to: "/leads",       label: "Leads",        icon: Users },
   { to: "/pipeline",    label: "Pipeline",     icon: Kanban },
   { to: "/projects",    label: "Projects",     icon: FolderKanban },
+  { divider: true },
   {
     label: "Bookings & Invoices", icon: Receipt,
     roles: ["admin", "manager", "super_admin"],
@@ -57,6 +59,7 @@ const navItems = [
       { to: "/tasks?new=1", label: "Add Task",   icon: Plus, roles: ["admin", "manager", "super_admin"], noActive: true },
     ],
   },
+  { divider: true },
   { to: "/attendance",  label: "Attendance",   icon: Clock,     minPlan: "growth" },
   { to: "/dump-leads",  label: "Dump Leads",   icon: Archive,   roles: ["admin", "manager", "super_admin"] },
   { to: "/team",        label: "Team",         icon: UserCheck, roles: ["admin", "manager", "super_admin"] },
@@ -66,6 +69,7 @@ const navItems = [
   // (billingRoutes gates /order and /verify on authorize("admin")), so showing
   // this to an agent offers something they cannot act on. Seat usage is still
   // visible to everyone on the Team page.
+  { divider: true },
   { to: "/plans",       label: "Plan & Billing", icon: Zap, roles: ["admin"] },
   { to: "/settings",    label: "Settings",     icon: Settings },
   { to: "/help-support", label: "Help & Support", icon: LifeBuoy },
@@ -227,6 +231,15 @@ export default function Sidebar() {
   useEffect(() => { fetchClockStatus(); }, [fetchClockStatus]);
   useEffect(() => { setLogoError(false); }, [org?.logo]);
   useEffect(() => { setFlyout(null); }, [location.pathname, location.search]);
+  // Landing on a page inside a group (from a link, search or reload) opens
+  // that group, so the current page is always visible in the menu.
+  useEffect(() => {
+    const group = navItems.find((n) => n.children?.some((c) => {
+      const path = c.to.split("?")[0];
+      return location.pathname === path || location.pathname.startsWith(path + "/");
+    }));
+    if (group) setOpenGroups((g) => (g[group.label] ? g : { ...g, [group.label]: true }));
+  }, [location.pathname]);
 
   const openFlyoutForItem = (item, filteredChildren, e) => {
     if (flyoutCloseTimer.current) clearTimeout(flyoutCloseTimer.current);
@@ -401,7 +414,9 @@ export default function Sidebar() {
       setOpenGroups((g) => ({ ...g, "Bookings & Invoices": true }));
   }, [location.pathname]);
 
-  const filtered = navItems.filter((n) => !n.roles || n.roles.includes(user?.role));
+  const filtered = navItems
+    .filter((n) => n.divider || !n.roles || n.roles.includes(user?.role))
+    .filter((n, i, arr) => !n.divider || (i > 0 && i < arr.length - 1 && !arr[i - 1].divider));
 
   const handleLogout = async () => {
     await logout(); // clears httpOnly cookie on server, then local session
@@ -436,6 +451,14 @@ export default function Sidebar() {
     setDesktopProfilePos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
     setDesktopProfileOpen(v => !v);
   };
+  // From the account card at the foot of the sidebar: opens beside it,
+  // growing upward, like the card's own menu.
+  const openSidebarAccountMenu = (e) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDesktopProfilePos({ bottom: Math.max(8, window.innerHeight - rect.bottom), left: rect.right + 10 });
+    setDesktopProfileOpen(v => !v);
+  };
 
   // ── Derived clock state ───────────────────────────────────────────────────
   const isClockedIn  = !!(clockStatus?.clockIn && !clockStatus?.clockOut);
@@ -458,7 +481,7 @@ export default function Sidebar() {
   // SHARED NAV CONTENT (rendered inside both mobile drawer and desktop sidebar)
   // `isExpanded` controls whether labels are visible
   // ──────────────────────────────────────────────────────────────────────────
-  const NavContent = ({ isExpanded, showPin = false, showProfile = true }) => {
+  const NavContent = ({ isExpanded, showPin = false, showProfile = true, showAccountCard = false }) => {
     // Label fade style - fade in/out when sidebar expands/collapses
     const labelStyle = {
       opacity:    isExpanded ? 1 : 0,
@@ -545,7 +568,10 @@ export default function Sidebar() {
 
         {/* ── Nav items ── */}
         <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch", minHeight: 0 }}>
-          {filtered.map((item) => {
+          {filtered.map((item, idx) => {
+            if (item.divider) {
+              return <div key={`divider-${idx}`} className="mx-3 my-2 h-px" style={{ background: "var(--app-border)" }} />;
+            }
             if (item.children) {
               const filteredChildren = item.children.filter(c => !c.roles || c.roles.includes(user?.role));
               const isGroupActive = filteredChildren.some(
@@ -558,20 +584,28 @@ export default function Sidebar() {
               return (
                 <div key={item.label}>
                   <button
-                    onClick={open ? () => setOpenGroups((g) => ({ ...g, [item.label]: !g[item.label] })) : undefined}
-                    onMouseEnter={!open ? (e) => openFlyoutForItem(item, filteredChildren, e) : undefined}
-                    onMouseLeave={!open ? scheduleFlyoutClose : undefined}
+                    // Full sidebar (pinned, hovered or the phone drawer):
+                    // the group opens in place, under itself. Icon-only rail:
+                    // there is no room for that, so it opens beside it.
+                    onClick={isExpanded ? () => setOpenGroups((g) => ({ ...g, [item.label]: !g[item.label] })) : undefined}
+                    onMouseEnter={!isExpanded ? (e) => openFlyoutForItem(item, filteredChildren, e) : undefined}
+                    onMouseLeave={!isExpanded ? scheduleFlyoutClose : undefined}
+                    aria-expanded={isExpanded ? gExpanded : undefined}
                     title={!isExpanded ? item.label : undefined}
                     className={`w-full flex items-center px-3 py-2.5 rounded-2xl text-sm font-medium transition-all ${
-                      isGroupActive
+                      isGroupActive && !(isExpanded && gExpanded)
                         ? "font-semibold"
                         : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
                     }`}
                     style={{
                       paddingLeft: 14,
-                      ...(isGroupActive ? {
+                      // While open, the highlight belongs to the page inside
+                      // it, not the group heading.
+                      ...(isGroupActive && !(isExpanded && gExpanded) ? {
                         color: "var(--app-primary)",
                         background: "rgba(var(--app-primary-rgb),0.10)",
+                      } : isExpanded && gExpanded ? {
+                        color: "var(--app-text)",
                       } : isFlyoutOpen ? {
                         background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
                       } : {}),
@@ -580,41 +614,47 @@ export default function Sidebar() {
                     <item.icon className="flex-shrink-0" style={{ width: 18, height: 18 }} />
                     <span className="ml-3 flex-1 text-left" style={labelStyle}>{item.label}</span>
                     <ChevronDown
-                      className={`flex-shrink-0 transition-transform ${(open ? gExpanded : isFlyoutOpen) ? "rotate-180" : ""}`}
-                      style={{ width: 14, height: 14, opacity: isExpanded ? 1 : 0, transition: "opacity 150ms" }}
+                      className={`flex-shrink-0 transition-transform duration-200 ${(isExpanded ? gExpanded : isFlyoutOpen) ? "rotate-180" : ""}`}
+                      style={{ width: 16, height: 16, opacity: isExpanded ? 1 : 0, transition: "opacity 150ms, transform 200ms" }}
                     />
                   </button>
-                  {/* Mobile accordion only */}
-                  {open && gExpanded && isExpanded && (
-                    <div
-                      className="ml-5 mt-0.5 space-y-0.5 border-l pl-2.5"
-                      style={{ borderColor: "var(--app-border)" }}
-                    >
-                      {filteredChildren.map(({ to, label, icon: CIcon, end: endMatch, noActive }) => (
-                        <NavLink
-                          key={to}
-                          to={to}
-                          end={endMatch !== undefined ? endMatch : true}
-                          onClick={() => setOpen(false)}
-                          {...(noActive ? { isActive: () => false } : {})}
-                          className={({ isActive }) =>
-                            `flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                              isActive
-                                ? "font-semibold"
-                                : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
-                            }`
-                          }
-                          style={({ isActive }) => isActive ? {
-                            color: "var(--app-primary)",
-                            background: "rgba(var(--app-primary-rgb),0.10)",
-                          } : {}}
-                        >
-                          <CIcon style={{ width: 14, height: 14, flexShrink: 0 }} />
-                          {label}
-                        </NavLink>
-                      ))}
+                  {/* Inline submenu: plain labels lined up under the group's
+                      own label, no icons, same row height as the main menu. */}
+                  <div
+                    className="grid transition-[grid-template-rows] duration-200 ease-out"
+                    style={{ gridTemplateRows: isExpanded && gExpanded ? "1fr" : "0fr" }}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="space-y-0.5 pt-0.5">
+                        {filteredChildren.map(({ to, label, end: endMatch, noActive }) => (
+                          <NavLink
+                            key={to}
+                            to={to}
+                            end={endMatch !== undefined ? endMatch : true}
+                            tabIndex={isExpanded && gExpanded ? 0 : -1}
+                            onClick={() => setOpen(false)}
+                            {...(noActive ? { isActive: () => false } : {})}
+                            className={({ isActive }) =>
+                              `flex items-center rounded-2xl py-2 pr-3 text-sm transition-all ${
+                                isActive
+                                  ? "font-semibold"
+                                  : "font-medium text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
+                              }`
+                            }
+                            style={({ isActive }) => ({
+                              paddingLeft: 44,
+                              ...(isActive ? {
+                                color: "var(--app-primary)",
+                                background: "rgba(var(--app-primary-rgb),0.10)",
+                              } : {}),
+                            })}
+                          >
+                            <span className="truncate">{label}</span>
+                          </NavLink>
+                        ))}
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             }
@@ -682,6 +722,36 @@ export default function Sidebar() {
             <div className="w-10 h-1 rounded-full overflow-hidden flex-shrink-0" style={{ background: "rgba(0,0,0,0.12)" }}>
               <div className="h-full rounded-full" style={{ width: `${trialInfo.pct}%`, background: trialInfo.color }} />
             </div>
+          </div>
+        )}
+
+        {/* ── Desktop: account card at the foot of the sidebar ── */}
+        {showAccountCard && (
+          <div className="flex-shrink-0 px-2 pb-3 pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
+            <button
+              type="button"
+              onClick={openSidebarAccountMenu}
+              title={!isExpanded ? user?.name : undefined}
+              className="flex w-full items-center rounded-2xl p-1.5 text-left transition hover:bg-black/5 dark:hover:bg-white/5"
+              style={isExpanded ? { border: "1px solid var(--app-border)", background: "var(--app-surface-low)" } : undefined}
+            >
+              <span className="relative flex-shrink-0" style={{ width: 36, height: 36 }}>
+                <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full text-sm font-bold"
+                  style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>
+                  {user?.avatar ? <img src={user.avatar} alt="" className="h-full w-full object-cover" /> : user?.name?.[0]?.toUpperCase()}
+                </span>
+                {isClockedIn && (
+                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 bg-green-500"
+                    style={{ borderColor: "var(--app-surface-solid)" }} title="Clocked in" />
+                )}
+              </span>
+              <span className="ml-2.5 min-w-0 flex-1 overflow-hidden" style={labelStyle}>
+                <span className="block truncate text-sm font-semibold leading-tight text-app">{user?.name}</span>
+                <span className="block truncate text-xs leading-tight text-app-soft">{user?.email || user?.role?.replace("_", " ")}</span>
+              </span>
+              <ChevronsUpDown className="flex-shrink-0 text-app-soft"
+                style={{ width: 15, height: 15, opacity: isExpanded ? 1 : 0, transition: "opacity 150ms" }} />
+            </button>
           </div>
         )}
 
@@ -779,6 +849,8 @@ export default function Sidebar() {
                   {isDark ? "Dark Mode" : "Light Mode"}
                 </button>
               </div>
+
+              <AccountSwitcher onDone={() => setProfileOpen(false)} />
 
               {/* Sign out */}
               <div className="px-3 pb-3 border-t pt-1.5" style={{ borderColor: "var(--app-border)" }}>
@@ -1152,8 +1224,9 @@ export default function Sidebar() {
       <div
         style={{
           position:     "fixed",
-          top:          desktopProfilePos.top,
-          right:        desktopProfilePos.right,
+          ...(desktopProfilePos.bottom != null
+            ? { bottom: desktopProfilePos.bottom, left: desktopProfilePos.left, maxHeight: "calc(100vh - 16px)", overflowY: "auto" }
+            : { top: desktopProfilePos.top, right: desktopProfilePos.right }),
           zIndex:       9999,
           width:        260,
           background:   isDark ? "rgb(30,29,32)" : "#fff",
@@ -1243,6 +1316,8 @@ export default function Sidebar() {
             Referrals
           </button>
         </div>
+
+        <AccountSwitcher onDone={() => setDesktopProfileOpen(false)} />
 
         {/* ── Sign out ── */}
         <div className="px-3 pb-3 border-t pt-1.5" style={{ borderColor: "var(--app-border)" }}>
@@ -1418,7 +1493,7 @@ export default function Sidebar() {
             zIndex:     30,
           }}
         >
-          <NavContent isExpanded={expanded} showPin={true} showProfile={false} />
+          <NavContent isExpanded={expanded} showPin={true} showProfile={false} showAccountCard={true} />
         </div>
       </aside>
 

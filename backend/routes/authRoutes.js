@@ -52,6 +52,8 @@ router.get("/performance/leads", authorize("admin", "manager"), authController.g
 // (create/edit/toggle/delete stay admin-only — same split the UI already
 // enforces via disabled buttons for non-admins).
 router.get("/users",          authorize("admin", "manager"),  authController.getAllUsers);
+// Admin "Switch account": see the CRM exactly as one of their team does.
+router.post("/switch-user/:id", authorize("admin"), authController.switchUser);
 router.post("/users",         authorize("admin"), validate(createUserSchema), authController.createUser);
 router.patch("/users/:id",    authorize("admin"), validate(updateUserSchema), authController.updateUser);
 router.patch("/users/:id/toggle", authorize("admin"), authController.toggleUserActive);

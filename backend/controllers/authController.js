@@ -257,13 +257,51 @@ const authController = {
         return next(new AppError("Your session has expired — please log in again", 401));
       }
 
+      // A super admin back from "Login As", or an org admin back from
+      // "Switch account". A token that is itself a switched session is never
+      // restored as if it were the admin's own.
       const user = await User.findById(payload.id).select("role isActive");
-      if (!user || user.role !== "super_admin" || !user.isActive) {
+      if (!user || !["super_admin", "admin"].includes(user.role) || !user.isActive || payload.actBy) {
         return next(new AppError("Invalid session", 401));
       }
 
       res.cookie("crm_token", token, cookieOptions());
       res.json({ success: true });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // POST /api/auth/switch-user/:id - an admin signs in as someone on their
+  // own team for up to 2 hours, to see exactly what that person sees. The
+  // session carries who switched (actBy), which blocks switching again from
+  // inside it and the few actions only the person themselves may take (see
+  // middlewares/auth.js). Every switch is in the audit log. The admin's own
+  // token goes back to the browser so "Switch back" restores it without a
+  // fresh login, the same way the super admin "Login As" works.
+  async switchUser(req, res, next) {
+    try {
+      if (req.switchedBy) return next(new AppError("Switch back to your own account first.", 400));
+      if (String(req.params.id) === String(req.user._id)) return next(new AppError("That's already you.", 400));
+
+      const target = await User.findOne({ _id: req.params.id, orgId: req.user.orgId })
+        .select("name email role isActive orgId").lean();
+      if (!target) return next(new AppError("That person isn't on your team.", 404));
+      if (!target.isActive) return next(new AppError(`${target.name}'s account is deactivated.`, 400));
+      if (target.role === "super_admin") return next(new AppError("You can't switch to that account.", 403));
+
+      const originalToken = req.cookies?.crm_token
+        || (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.split(" ")[1] : null);
+
+      const token = jwt.sign({ id: target._id, actBy: req.user._id }, process.env.JWT_SECRET, { expiresIn: "2h" });
+      res.cookie("crm_token", token, { ...cookieOptions(), maxAge: 2 * 60 * 60 * 1000 });
+
+      _auditLog(req, "user_switched", {
+        targetUser: target._id, targetUserName: target.name,
+        details: { targetRole: target.role, targetEmail: target.email },
+      });
+
+      res.json({ success: true, user: { _id: target._id, name: target.name, email: target.email, role: target.role }, originalToken });
     } catch (err) {
       next(err);
     }
