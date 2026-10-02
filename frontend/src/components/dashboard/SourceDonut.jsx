@@ -10,6 +10,7 @@ import { useState } from "react";
 // their own validated dark-mode steps.
 const SLOT = { Facebook: 1, Website: 2, WhatsApp: 3, "Vistrow Voice": 4, Google: 5 };
 const OTHER = 6;
+export function sourceSlot(name) { return SLOT[name] || OTHER; }
 
 function buildRows(bySource) {
   const rows = [];

@@ -29,6 +29,20 @@ function hostOf(url) {
   try { return new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`).hostname.replace(/^www\./, ""); } catch { return url || ""; }
 }
 
+// What to call a connection. A website goes by its own name when we have read
+// it, then by its domain when the saved name is just a placeholder ("WordPress
+// Site 5"), and only then by the label typed at set-up. Shared with the
+// dashboard's Automation Health so both screens name a source the same way.
+const GENERIC_NAME = /^(wordpress site|website|my site)( \d+)?$/i;
+export function connectionTitle(item) {
+  if (item.platform !== "Website Form") return item.name || item.platform;
+  const real = item.siteName && !GENERIC_NAME.test(item.siteName.trim()) ? item.siteName.trim() : "";
+  const host = item.siteUrl ? hostOf(item.siteUrl) : "";
+  return real || (host && GENERIC_NAME.test(String(item.name || "").trim()) ? host : item.name || host || "Website");
+}
+
+export { hostOf };
+
 function Row({ label, children }) {
   return (
     <div className="grid grid-cols-[84px_minmax(0,1fr)] items-center gap-3 py-2">
@@ -73,13 +87,8 @@ export default function ConnectionCard({
   const isGoogle = item.platform === "Google";
   const isTokenSource = ["Custom", "Vistrow Voice", "WhatsApp"].includes(item.platform);
 
-  // A website is called by its own name when we have read it, then by its
-  // domain when the saved name is just a placeholder, and only then by the
-  // label typed at set-up. The domain sits underneath.
-  const GENERIC_NAME = /^(wordpress site|website|my site)( \d+)?$/i;
-  const realSiteName = item.siteName && !GENERIC_NAME.test(item.siteName.trim()) ? item.siteName.trim() : "";
   const host = isWebsite && item.siteUrl ? hostOf(item.siteUrl) : "";
-  const title = isWebsite ? (realSiteName || (host && GENERIC_NAME.test(String(item.name).trim()) ? host : item.name)) : item.name;
+  const title = connectionTitle(item);
   const subtitle = isWebsite && host ? host : item.platform;
   const showSubtitle = subtitle && subtitle.toLowerCase() !== String(title).toLowerCase();
 

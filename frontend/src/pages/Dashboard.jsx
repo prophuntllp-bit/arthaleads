@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import StatusBreakdown from "../components/dashboard/StatusBreakdown";
 import SourceDonut from "../components/dashboard/SourceDonut";
+import SourcePerformance from "../components/dashboard/SourcePerformance";
+import AutomationHealth from "../components/dashboard/AutomationHealth";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
 import {
@@ -665,13 +667,19 @@ export default function Dashboard() {
         <div className="space-y-3">
           <ZoneHeader label="Admin Intelligence" color="indigo" />
           <StaleLeadsWidget navigate={navigate} />
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <RevenueForecastWidget data={data} />
+          {/* The forecast projects from closed deals. With none yet it could
+              only show dashes and zeros, so it waits until there is one. */}
+          {data?.allTimeClosedWon > 0 ? (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              <RevenueForecastWidget data={data} />
+              <LeadsTrendWidget data={data} scope={describeRange(dateRange)} />
+            </div>
+          ) : (
             <LeadsTrendWidget data={data} scope={describeRange(dateRange)} />
-          </div>
+          )}
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <LiveAgentStatusWidget navigate={navigate} />
-            <AutomationHealthWidget automations={allAutomations} />
+            <AutomationHealth automations={allAutomations} Logo={PlatformLogo} onOpen={() => navigate("/integrations")} />
           </div>
           {/* Project breakdown + Monthly goal — side by side */}
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-start">
@@ -700,6 +708,8 @@ export default function Dashboard() {
               onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetSource: source } })} />
           </div>
         </div>
+        <SourcePerformance rows={data?.sourcePerformance || []} scope={describeRange(dateRange)}
+          onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetSource: source } })} />
       </div>
 
       {/* ── Zone 6: Team ─────────────────────────────────────────────── */}
@@ -769,6 +779,9 @@ function ZonedKPIRow({ data, navigate, scope = "", range = {} }) {
   const delta = data && data.previousPeriodLeads != null ? calcDelta(total, data.previousPeriodLeads) : null;
   const closedWon = data?.byStatus?.["Closed Won"] ?? 0;
   const conversion = total ? Math.round((closedWon / total) * 1000) / 10 : 0;
+  const speed = data?.speedToLead;
+  const in1h = speed?.total ? Math.round((speed.within1h / speed.total) * 100) : null;
+  const visits = (data?.sourcePerformance || []).reduce((n, r) => n + (r.visits || 0), 0);
   const stats = [
     {
       label: "Total Leads", value: total, color: "#f97316",
@@ -777,13 +790,22 @@ function ZonedKPIRow({ data, navigate, scope = "", range = {} }) {
       onClick: () => navigate("/leads", { state: { ...range } }),
     },
     {
-      label: "Pipeline", value: fmtINR(data?.periodPipelineValue ?? data?.pipelineValue), color: "var(--app-text)",
-      sub: `${data?.periodPipelineLeads ?? data?.pipelineLeads ?? 0} active leads ${scope}`.trim(),
-    },
-    {
-      label: "New", value: data?.byStatus?.New ?? data?.allTimeNew ?? 0, color: "#6366f1",
+      label: "New", value: data?.byStatus?.New ?? 0, color: "#6366f1",
       sub: "Not contacted yet",
       onClick: () => navigate("/leads", { state: { ...range, presetStatus: "New" } }),
+    },
+    {
+      // Share of the period's leads a person reached within an hour (a call,
+      // marked Contacted, or an agent's WhatsApp message; bot replies don't count).
+      label: "Reached in 1 hr", value: in1h === null ? "-" : `${in1h}%`,
+      color: in1h === null ? "var(--app-text-soft)" : in1h >= 60 ? "#22c55e" : in1h >= 30 ? "#f59e0b" : "#ef4444",
+      sub: speed?.total ? `${speed.within5m} in 5 min · ${speed.notContacted} not yet` : "No leads in this period",
+      title: "A person reached the lead within an hour: a call, marked Contacted, or an agent's WhatsApp message. The WhatsApp bot's replies don't count.",
+    },
+    {
+      label: "Site Visits", value: visits, color: "#8b5cf6",
+      sub: visits ? "Reached site visit or later" : "None yet this period",
+      onClick: () => navigate("/leads", { state: { ...range, presetStatus: "Site Visit" } }),
     },
     {
       label: "Closed Won", value: closedWon, color: "#22c55e",
@@ -795,10 +817,6 @@ function ZonedKPIRow({ data, navigate, scope = "", range = {} }) {
       sub: "Due today, all leads",
       onClick: () => navigate("/leads", { state: { presetFollowUpToday: true } }),
     },
-    {
-      label: "Avg Response", value: fmtResponseTime(data?.periodAvgResponseMs ?? data?.avgResponseMs), color: "#22c55e",
-      sub: data?.periodContacted ? `first contact, ${data.periodContacted} leads` : "First contact",
-    },
   ];
   return (
     <div data-tour="stat-cards" className="space-y-3">
@@ -808,7 +826,7 @@ function ZonedKPIRow({ data, navigate, scope = "", range = {} }) {
             <>
               <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold truncate leading-none">{s.label}</p>
               <p className="text-xl sm:text-2xl font-black leading-none truncate mt-1" style={{ color: s.color }}>{s.value}</p>
-              <p className="text-[9px] truncate mt-0.5" style={{ color: s.subColor || "var(--app-text-soft)" }} title={s.sub}>{s.sub}</p>
+              <p className="text-[9px] truncate mt-0.5" style={{ color: s.subColor || "var(--app-text-soft)" }} title={s.title || s.sub}>{s.sub}</p>
             </>
           );
           return s.onClick ? (
@@ -817,7 +835,7 @@ function ZonedKPIRow({ data, navigate, scope = "", range = {} }) {
               {inner}
             </button>
           ) : (
-            <div key={s.label} className="card p-3 flex flex-col gap-0">
+            <div key={s.label} className="card p-3 flex flex-col gap-0" title={s.title}>
               {inner}
             </div>
           );
@@ -1029,6 +1047,34 @@ function FollowUpDuePanel({ user, navigate, prefetchedLeads }) {
 
   if (dismissed || !leads.length) return null;
 
+  const canBulk = user?.role === "admin" || user?.role === "manager";
+  const stale = leads.filter((l) => l.urgency === "overdue" && l.daysOverdue > 30);
+
+  // Tomorrow 11:00 IST, whatever the browser's timezone.
+  const tomorrowIST = () => {
+    const ist = new Date(Date.now() + 5.5 * 3600000 + 86400000);
+    return new Date(`${ist.toISOString().slice(0, 10)}T11:00:00+05:30`).toISOString();
+  };
+  const setFollowUp = async (lead, followUpDate) => {
+    try {
+      await api.patch(`/leads/${lead._id}`, { followUpDate });
+      setLeads((prev) => prev.filter((l) => l._id !== lead._id));
+      toast.success(followUpDate ? `${lead.name}: follow-up moved to tomorrow 11 AM` : `${lead.name}: follow-up cleared`);
+    } catch {
+      toast.error("Couldn't update that follow-up");
+    }
+  };
+  const clearStale = async () => {
+    if (!window.confirm("Clear every follow-up that is more than 30 days overdue? The leads stay as they are; only the old follow-up date is removed, and it is noted on each lead.")) return;
+    try {
+      const { data: r } = await api.post("/leads/followups/clear-stale", { olderThanDays: 30 });
+      setLeads((prev) => prev.filter((l) => !(l.urgency === "overdue" && l.daysOverdue > 30)));
+      toast.success(`Cleared ${r.cleared} old follow-up${r.cleared === 1 ? "" : "s"}`);
+    } catch {
+      toast.error("Couldn't clear old follow-ups");
+    }
+  };
+
   const overdue = leads.filter((l) => l.urgency === "overdue");
   const today   = leads.filter((l) => l.urgency === "today");
 
@@ -1128,6 +1174,18 @@ function FollowUpDuePanel({ user, navigate, prefetchedLeads }) {
               </p>
             </div>
 
+            {/* Reschedule / clear */}
+            <div className="flex shrink-0 items-center gap-1">
+              <button type="button" onClick={() => setFollowUp(lead, tomorrowIST())} title="Move to tomorrow 11 AM"
+                className="rounded-lg border border-[color:var(--app-border)] px-2 py-1 text-[11px] font-medium text-app-soft transition hover:text-app">
+                Tomorrow
+              </button>
+              <button type="button" onClick={() => setFollowUp(lead, null)} title="Clear this follow-up"
+                className="flex h-[26px] w-[26px] items-center justify-center rounded-lg border border-[color:var(--app-border)] text-app-soft transition hover:text-red-500">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
             {/* Call + WA - icon-only on mobile, label on sm+ */}
             {lead.phone && (
               <div className="flex items-center gap-1.5 shrink-0">
@@ -1151,6 +1209,16 @@ function FollowUpDuePanel({ user, navigate, prefetchedLeads }) {
           </div>
         ))}
       </div>}
+
+      {!minimized && canBulk && stale.length > 0 && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2" style={{ borderTop: "1px solid var(--app-border)" }}>
+          <p className="text-[11px] text-app-soft">{stale.length} of these are more than 30 days overdue.</p>
+          <button type="button" onClick={clearStale}
+            className="shrink-0 rounded-lg border border-red-500/30 px-2.5 py-1 text-[11px] font-semibold text-red-500 transition hover:bg-red-500/10">
+            Clear old follow-ups
+          </button>
+        </div>
+      )}
 
       {/* Footer — scroll count hint when there are more than 5 leads */}
       {!minimized && leads.length > 5 && (
@@ -1706,57 +1774,6 @@ function LeadsTrendWidget({ data, scope = "" }) {
 }
 
 // ── 6. Automation Health Widget ───────────────────────────────────────────────
-function AutomationHealthWidget({ automations }) {
-  if (!automations || automations.length === 0) return null;
-
-  const active   = automations.filter((a) => a.status === "connected" && a.isActive !== false);
-  const inactive = automations.filter((a) => a.status !== "connected" || a.isActive === false);
-
-  return (
-    <section className="card p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <p className="stitch-kicker mb-1">Integrations</p>
-          <h3 className="text-base font-bold text-app">Automation Health</h3>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {active.length > 0 && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-              style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>
-              {active.length} live
-            </span>
-          )}
-          {inactive.length > 0 && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-              style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444" }}>
-              {inactive.length} off
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {automations.slice(0, 6).map((a) => {
-          const isLive = a.status === "connected" && a.isActive !== false;
-          return (
-            <div key={a._id} className="flex items-center gap-2.5 p-2.5 rounded-xl"
-              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0">
-                <PlatformLogo platform={a.platform} size={18} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-app truncate">{a.name || a.platform}</p>
-                <p className="text-[10px] text-app-soft">{a.platform}</p>
-              </div>
-              <span className="shrink-0 w-2 h-2 rounded-full" style={{ background: isLive ? "#22c55e" : "#ef4444" }} />
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 function TopLeadSourceCard({ label, value, logo, note, tone, iconTone, onClick }) {
   return (
     <button

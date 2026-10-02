@@ -149,6 +149,31 @@ router.post("/backfill-source-domain", authorize("admin"), async (req, res, next
 // org simply loses the warning rather than losing the form.
 router.get("/check-duplicate", planGate("growth"), leadController.checkDuplicate);
 
+// POST /api/leads/followups/clear-stale  { olderThanDays }
+// Clears follow-up dates that were missed long ago, so the overdue list shows
+// work that is still real. Logs it on each lead; the leads themselves are
+// untouched otherwise.
+router.post("/followups/clear-stale", authorize("admin", "manager"), async (req, res, next) => {
+  try {
+    const days = Math.max(7, Math.min(parseInt(req.body?.olderThanDays, 10) || 30, 365));
+    const cutoff = new Date(Date.now() - days * 86400000);
+    const filter = {
+      orgId: req.user.orgId, isDeleted: { $ne: true }, isArchived: { $ne: true },
+      status: { $nin: ["Closed Won", "Closed Lost"] },
+      followUpDate: { $ne: null, $lt: cutoff },
+    };
+    const result = await Lead.updateMany(filter, {
+      $set: { followUpDate: null },
+      $push: { activities: {
+        type: "follow_up_set",
+        description: `Follow-up cleared: it was more than ${days} days overdue`,
+        performedBy: req.user._id, performedByName: req.user.name || "", createdAt: new Date(),
+      } },
+    });
+    res.json({ success: true, cleared: result.modifiedCount || 0 });
+  } catch (err) { next(err); }
+});
+
 router.route("/")
   .get(leadController.getAll)
   .post(validate(createLeadSchema), leadController.create);

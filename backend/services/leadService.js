@@ -1115,6 +1115,37 @@ const leadService = {
             { $count: "count" },
           ],
 
+          // Site visits scheduled inside the selected range (by visit date,
+          // not by when the lead arrived), and how many of those happened.
+          periodSiteVisits: [
+            { $match: { siteVisitDate: createdAtFilter || { $ne: null } } },
+            { $group: { _id: null, count: { $sum: 1 }, done: { $sum: { $cond: ["$siteVisitDone", 1, 0] } } } },
+          ],
+
+          // Per-source quality for the selected range, not just volume.
+          sourcePerformance: [
+            ...dateStage,
+            { $group: {
+              _id: "$source",
+              leads: { $sum: 1 },
+              contacted: { $sum: { $cond: [{ $in: [{ $ifNull: ["$status", "New"] }, ["New", ""]] }, 0, 1] } },
+              visits: { $sum: { $cond: [{ $or: [
+                { $eq: ["$siteVisitDone", true] },
+                { $in: ["$status", ["Site Visit", "Negotiation", "Closed Won"]] },
+                { $ne: [{ $ifNull: ["$siteVisitDate", null] }, null] },
+              ] }, 1, 0] } },
+              won: { $sum: { $cond: [{ $eq: ["$status", "Closed Won"] }, 1, 0] } },
+            } },
+            { $sort: { leads: -1 } },
+          ],
+
+          // Raw times for speed-to-lead (worked out below, with WhatsApp).
+          periodLeadTimes: [
+            ...dateStage,
+            { $project: { k: { $ifNull: ["$fromLeadId", "$_id"] }, createdAt: 1, firstContactedAt: 1 } },
+            { $limit: 5000 },
+          ],
+
           // Today's new leads and site visits
           todayCreated: [
             { $match: { createdAt: { $gte: todayStart, $lte: todayEnd } } },
@@ -1172,6 +1203,46 @@ const leadService = {
         },
       },
     ], { allowDiskUse: true, maxTimeMS: 25000 });
+
+    // ── Speed to lead ────────────────────────────────────────────────────────
+    // Time from a lead arriving to the team's first human touch: a call, the
+    // lead being marked Contacted, or an agent's own WhatsApp message. The
+    // WhatsApp bot's instant replies deliberately don't count.
+    let speedToLead = null;
+    try {
+      const rows = result.periodLeadTimes || [];
+      if (rows.length) {
+        const WaConversation = require("../models/WaConversation");
+        const WaMessage = require("../models/WaMessage");
+        const convs = await WaConversation.find({ orgId: user.orgId, leadId: { $in: rows.map((r) => r.k) } }).select("leadId").lean();
+        const firstAgent = convs.length ? await WaMessage.aggregate([
+          { $match: { conversationId: { $in: convs.map((c) => c._id) }, sender: "agent", direction: "outbound" } },
+          { $group: { _id: "$conversationId", at: { $min: "$timestamp" } } },
+        ]) : [];
+        const convLead = new Map(convs.map((c) => [String(c._id), String(c.leadId)]));
+        const waFirst = new Map();
+        for (const f of firstAgent) {
+          const lid = convLead.get(String(f._id));
+          if (lid && (!waFirst.has(lid) || f.at < waFirst.get(lid))) waFirst.set(lid, f.at);
+        }
+        const gaps = [];
+        let notContacted = 0;
+        for (const r of rows) {
+          const times = [r.firstContactedAt, waFirst.get(String(r.k))].filter(Boolean).map((d) => new Date(d).getTime());
+          if (!times.length) { notContacted++; continue; }
+          gaps.push(Math.max(0, Math.min(...times) - new Date(r.createdAt).getTime()));
+        }
+        gaps.sort((a, b) => a - b);
+        speedToLead = {
+          total: rows.length,
+          contacted: gaps.length,
+          notContacted,
+          within5m: gaps.filter((g) => g <= 5 * 60000).length,
+          within1h: gaps.filter((g) => g <= 3600000).length,
+          medianMs: gaps.length ? gaps[Math.floor(gaps.length / 2)] : null,
+        };
+      }
+    } catch { speedToLead = null; }
 
     const orgDoc = await Organization.findById(user.orgId, "monthlyClosingGoal");
     const orgGoal = orgDoc?.monthlyClosingGoal ?? 0;
@@ -1232,6 +1303,10 @@ const leadService = {
         ? Math.max(0, result.avgFirstResponse[0].avgMs)
         : null,
       monthlyClosingGoal: orgGoal,
+      periodSiteVisits:     result.periodSiteVisits[0]?.count || 0,
+      periodSiteVisitsDone: result.periodSiteVisits[0]?.done || 0,
+      sourcePerformance:    (result.sourcePerformance || []).map((r) => ({ source: r._id || "Unknown", leads: r.leads, contacted: r.contacted, visits: r.visits, won: r.won })),
+      speedToLead,
     };
 
     _analyticsCache.set(cacheKey, { data: analyticsData, expiresAt: Date.now() + ANALYTICS_TTL });
@@ -1263,8 +1338,9 @@ const leadService = {
   // leads) since those are handled separately in the Follow-ups page.
   // Agents see only their assigned/created leads; admins/managers see all org.
   async getFollowUpsDue(user) {
-    const todayStart = new Date(); todayStart.setHours(0,  0,  0,   0);
-    const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
+    // IST day, not the server's UTC one.
+    const todayStart = startOfISTDay(istDateKey());
+    const todayEnd   = endOfISTDay(istDateKey());
 
     const filter = {
       orgId:      user.orgId,
