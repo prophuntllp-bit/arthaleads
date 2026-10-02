@@ -676,6 +676,9 @@ export default function Leads() {
       // Helper: force a value to a plain string so xlsx/Excel never coerces
       // phone numbers into scientific notation or strips leading zeros
       const str = (v) => (v == null || v === "" ? "" : String(v));
+      // Calendar date in IST: toISOString() is UTC, so anything between
+      // midnight and 5:30am IST was exported as the previous day.
+      const istDay = (d) => (d ? new Date(new Date(d).getTime() + 5.5 * 3600000).toISOString().slice(0, 10) : "");
 
       const rows = source.map((lead) => ({
         Name:          str(lead.name),
@@ -683,6 +686,11 @@ export default function Leads() {
         Email:         str(lead.email),
         Source:        str(lead.source),
         LeadSource:    str(lead.leadSourceLabel),  // sub-source / campaign label
+        // The website and the exact page the form was on, same as the
+        // Source column in the table (these were missing from downloads).
+        Website:       str(lead.sourceDomain),
+        Page:          pagePath(lead.sourcePage),
+        PageURL:       lead.sourcePage ? String(lead.sourcePage).split("?")[0] : "",
         Status:        str(lead.status),
         Priority:      str(lead.priority),
         PropertyType:  str(lead.propertyType),
@@ -690,8 +698,8 @@ export default function Leads() {
         Purpose:       str(lead.purpose),
         BudgetMin:     lead.budget?.min ?? "",
         BudgetMax:     lead.budget?.max ?? "",
-        FollowUpDate:  lead.followUpDate  ? new Date(lead.followUpDate).toISOString().slice(0, 10)  : "",
-        FollowUpDate2: lead.followUp2     ? new Date(lead.followUp2).toISOString().slice(0, 10)     : "",
+        FollowUpDate:  istDay(lead.followUpDate),
+        FollowUpDate2: istDay(lead.followUp2),
         FollowUpNote:  str(lead.followUpNote),
         Remark:        str(lead.remark),
         Remark1:       str(lead.remark1),
@@ -699,7 +707,7 @@ export default function Leads() {
         "Lead Outcome": str(lead.booking),
         AssignedTo:    str(lead.assignedToName),
         Project:       str(lead.projectName),
-        CreatedAt:     lead.createdAt ? new Date(lead.createdAt).toISOString().slice(0, 10) : "",
+        CreatedAt:     istDay(lead.createdAt),
       }));
 
       toast.dismiss(tid);
@@ -738,6 +746,11 @@ export default function Leads() {
             }
           }
         }
+
+        // Readable column widths: sized to the longest value, within reason.
+        ws["!cols"] = colKeys.map((k) => ({
+          wch: Math.min(60, Math.max(k.length, ...rows.slice(0, 500).map((r) => String(r[k] ?? "").length)) + 2),
+        }));
 
         const wb = xlsxUtils.book_new();
         xlsxUtils.book_append_sheet(wb, ws, "Leads");
