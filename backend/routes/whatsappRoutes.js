@@ -616,10 +616,30 @@ const ctwaFlow = createCtwaFlowService({
   Organization, WaAgent, isWithinBusinessHours, notifyHotSignal,
 });
 
+// A brand-new number that sends two messages within a moment used to run
+// "find or create the conversation" twice at once: both found nothing, both
+// created a lead, and the second insert hit the unique (org, phone) index and
+// threw, losing that message entirely. Setting a thread up is now one at a
+// time per number; everything after it runs as before.
+const convSetupLocks = new Map(); // `${orgId}:${phone}` -> Promise
+async function withConvSetupLock(key, fn) {
+  const prev = convSetupLocks.get(key) || Promise.resolve();
+  let release;
+  const mine = new Promise((r) => { release = r; });
+  const chain = prev.then(() => mine);
+  convSetupLocks.set(key, chain);
+  await prev;
+  try { return await fn(); } finally {
+    release();
+    if (convSetupLocks.get(key) === chain) convSetupLocks.delete(key);
+  }
+}
+
 async function handleInbound(org, parsed) {
   const { phone, name, msgId, msgText, msgType, referral, interactiveId } = parsed;
   if (!phone || !msgText) return;
 
+  const { conv, isNewConversation } = await withConvSetupLock(`${org._id}:${phone}`, async () => {
   let conv = await WaConversation.findOne({ orgId: org._id, contactPhone: phone });
   const isNewConversation = !conv;
   if (!conv) {
@@ -666,6 +686,8 @@ async function handleInbound(org, parsed) {
     // it otherwise.
     if (!conv.botEnabled) autoAssignConversation(org, conv).catch(() => {});
   }
+  return { conv, isNewConversation };
+  });
 
   if (msgId && await WaMessage.findOne({ waMsgId: msgId })) return; // dedup
 
@@ -707,7 +729,13 @@ async function handleInbound(org, parsed) {
   }
 
   if (conv.botEnabled) {
-    await respondAsBot(org, conv, { interactiveId, msgText, isNewConversation, sinceTimestamp: inboundTimestamp });
+    // No sinceTimestamp here. That guard reads "has the bot said anything
+    // since this message arrived?", which is true for the second of two quick
+    // taps (the reply to the FIRST tap goes out after the second arrived), so
+    // the second tap was silently dropped: a "Photos & Videos" tap right after
+    // "Location Details" never sent the photos. The queue below already keeps
+    // turns in order; inboundKey stops the same message being answered twice.
+    await respondAsBot(org, conv, { interactiveId, msgText, isNewConversation, inboundKey: msgId || `t${inboundTimestamp.getTime()}`, inboundAt: inboundTimestamp });
   }
 }
 
@@ -726,22 +754,50 @@ async function handleInbound(org, parsed) {
 // Running each conversation's turns strictly in arrival order (against a fresh
 // copy of the conversation, so flowState reflects the previous turn) fixes
 // both. Single API instance, so an in-process queue is enough.
-const botQueues = new Map(); // conversationId -> { tail: Promise, pending: [{ interactiveId }] }
+const botQueues = new Map(); // conversationId -> { tail: Promise, pending: [{ interactiveId, args }] }
+// Inbound messages already answered, per conversation (the live webhook and
+// resumeBotIfOwed can both owe a reply to the same message). Keyed by the
+// message itself, never by time: "anything sent since it arrived" mistakes the
+// reply to an earlier message for a reply to this one.
+const answeredInbound = new Map(); // conversationId -> Set(inboundKey), last 50
+function markAnswered(id, key) {
+  if (!key) return;
+  let set = answeredInbound.get(id);
+  if (!set) { set = new Set(); answeredInbound.set(id, set); }
+  set.add(key);
+  if (set.size > 50) set.delete(set.values().next().value);
+}
 function respondAsBot(org, conv, args) {
   const id = String(conv._id);
   let q = botQueues.get(id);
   if (!q) { q = { tail: Promise.resolve(), pending: [] }; botQueues.set(id, q); }
-  const entry = { interactiveId: args.interactiveId || null };
+  const entry = { interactiveId: args.interactiveId || null, args };
   q.pending.push(entry);
   const run = async () => {
     q.pending.splice(q.pending.indexOf(entry), 1);
     try {
+      if (args.inboundKey && answeredInbound.get(id)?.has(args.inboundKey)) return;
+      // Two typed messages in a row ("Hi" then "send me the price"): answer
+      // once, on the newest, with both in the transcript, instead of two
+      // replies. Only typed text is folded; every button tap is its own turn.
+      // A skipped first message hands its "new conversation" status on, so the
+      // greeting / qualification flow still starts.
+      if (!args.interactiveId) {
+        const laterText = q.pending.find((p) => !p.interactiveId);
+        if (laterText) {
+          if (args.isNewConversation) laterText.args.isNewConversation = true;
+          markAnswered(id, args.inboundKey);
+          return;
+        }
+      }
       const fresh = await WaConversation.findById(conv._id);
       const target = fresh || conv;
-      // Taps still waiting behind this one, so a turn can avoid repeating a
-      // prompt the next turn is about to send anyway.
+      // Taps still waiting behind this one, so a turn can avoid sending a
+      // prompt the next turn would immediately follow with another.
       target._pendingTaps = () => q.pending.map((p) => p.interactiveId).filter(Boolean);
-      return await respondAsBotNow(org, target, args);
+      const result = await respondAsBotNow(org, target, args);
+      markAnswered(id, args.inboundKey);
+      return result;
     } finally {
       if (!q.pending.length) setImmediate(() => { if (botQueues.get(id) === q && !q.pending.length) botQueues.delete(id); });
     }
@@ -751,7 +807,7 @@ function respondAsBot(org, conv, args) {
   return next;
 }
 
-async function respondAsBotNow(org, conv, { interactiveId, msgText, isNewConversation, sinceTimestamp }) {
+async function respondAsBotNow(org, conv, { interactiveId, msgText, isNewConversation, sinceTimestamp, inboundAt }) {
   // Two independent paths can both end up owing a reply to the same inbound
   // message — the live webhook, and resumeBotIfOwed firing right as someone
   // flips "Bot ON" back on for a thread whose last message arrived while it
@@ -795,7 +851,7 @@ async function respondAsBotNow(org, conv, { interactiveId, msgText, isNewConvers
   // flow rather than dead-ending) is handled entirely by ctwaFlowService —
   // never falls through to the greeting/GPT path below for this message.
   if (conv.flowState?.step) {
-    const handled = await ctwaFlow.advanceFlow(org, agent, conv, { interactiveId, msgText });
+    const handled = await ctwaFlow.advanceFlow(org, agent, conv, { interactiveId, msgText, inboundAt });
     if (handled) return;
     // advanceFlow already cleared flowState on a no-match — fall through to
     // the normal reply below so this message still gets answered.
@@ -825,7 +881,10 @@ async function resumeBotIfOwed(org, convId) {
   const everReplied = await WaMessage.exists({ conversationId: convId, direction: "outbound" });
   const conv = await WaConversation.findById(convId);
   if (!conv?.botEnabled) return; // toggled off again before this ran
-  await respondAsBot(org, conv, { interactiveId: null, msgText: lastMsg.body, isNewConversation: !everReplied, sinceTimestamp: lastMsg.timestamp });
+  await respondAsBot(org, conv, {
+    interactiveId: null, msgText: lastMsg.body, isNewConversation: !everReplied,
+    sinceTimestamp: lastMsg.timestamp, inboundKey: lastMsg.waMsgId || `t${new Date(lastMsg.timestamp).getTime()}`,
+  });
 }
 
 // Sent once, as the very first outbound message on a brand-new conversation —

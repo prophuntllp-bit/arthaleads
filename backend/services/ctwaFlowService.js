@@ -478,7 +478,8 @@ module.exports = function createCtwaFlowService({
    * Returns true if the flow handled this message, false if the caller should
    * fall through to the usual triggerBotReply.
    */
-  async function advanceFlow(org, agent, conversation, { interactiveId, msgText }) {
+  async function advanceFlow(org, agent, conversation, { interactiveId: tappedId, msgText, inboundAt = null }) {
+    let interactiveId = tappedId;
     const step = conversation.flowState?.step;
     if (!step || !agent?.ctwaFlow?.enabled) return false;
     const botName = agent.name || "Artha Assistant";
@@ -525,6 +526,25 @@ module.exports = function createCtwaFlowService({
     // true terminal (advisor connected, or a site-visit slot picked — both
     // hand off to a human and clear flowState, so nothing reaches this
     // function again after that).
+    // Someone who types the answer ("investment", "3-6 months", "photos")
+    // instead of tapping it is answering the question, not leaving the flow.
+    // Matched only against what is on screen right now (the current
+    // question, or the closing buttons), and only on a clear match.
+    if (!interactiveId && msgText) {
+      const norm = (t) => String(t || "").toLowerCase().normalize("NFKD").replace(/[^a-z0-9₹+ ]/g, " ").replace(/\s+/g, " ").trim();
+      const said = norm(msgText);
+      const current = questions.find((q) => q.id === step);
+      const onScreen = current ? current.options.map((o) => ({ id: o.id, label: o.label }))
+        : step === "closing" ? getClosingButtons(agent).map((b) => ({ id: b.id, label: b.title })) : [];
+      if (said && said.length <= 40) {
+        const hits = onScreen.filter((o) => {
+          const l = norm(o.label);
+          return l && (said === l || (l.length >= 4 && said.includes(l)) || (said.length >= 4 && l.split(" ").length > 1 && l.startsWith(said)));
+        });
+        if (hits.length === 1) interactiveId = hits[0].id;
+      }
+    }
+
     let matchedQuestionIndex = -1, matchedOption = null;
     for (let i = 0; i < questions.length; i++) {
       const opt = questions[i].options.find((o) => o.id === interactiveId);
@@ -591,6 +611,16 @@ module.exports = function createCtwaFlowService({
       const position = currentIdx === -1 ? questions.length : currentIdx;
       if (matchedQuestionIndex < position) return true;
 
+      // Another tap from this same question (or a later one) is already
+      // queued: "Location Details" then "Photos & Videos" a second later. Let
+      // that turn move the conversation on, so the closing question comes
+      // once, after both answers, instead of between them.
+      const waiting = conversation._pendingTaps?.() || [];
+      if (waiting.some((id) => CLOSING_OPTIONS.some((o) => o.id === id)
+        || questions.some((q, i) => i >= matchedQuestionIndex && q.options.some((o) => o.id === id)))) {
+        return true;
+      }
+
       // An explicit "then go to" wins over the default array-order
       // progression — this is what lets two different buttons on the same
       // question (e.g. "Photos & Videos" vs. "Book a Private Preview") lead
@@ -626,6 +656,17 @@ module.exports = function createCtwaFlowService({
         }
       }
       return completeSiteVisit(org, conversation, botName, { id: "site_visit", label: "General enquiry" });
+    }
+
+    // Typed before the customer could have seen our latest question (their
+    // own follow-up to the ad's prefilled message, sent while the first
+    // question was on its way): it crossed with the question rather than
+    // replying to it. The question is on their screen now, so stay in the
+    // flow instead of throwing it away over a message that predates it.
+    if (inboundAt) {
+      const lastBot = await WaMessage.findOne({ conversationId: conversation._id, direction: "outbound", sender: "bot" })
+        .sort({ timestamp: -1 }).select("timestamp").lean();
+      if (lastBot && new Date(lastBot.timestamp) > new Date(inboundAt)) return true;
     }
 
     // No known button matched — a free-typed message. Exit the flow rather
