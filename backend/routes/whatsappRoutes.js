@@ -124,9 +124,8 @@ async function sendProviderMedia(org, to, { type, url, caption, filename }) {
   if (provider !== "meta") {
     throw new Error(`Media messages are only supported on the direct connection, not ${provider}.`);
   }
-  const media = type === "document"
-    ? { link: url, caption, filename }
-    : { link: url, caption };
+  // Caption left off entirely when there isn't one, rather than sent empty.
+  const media = { link: url, ...(caption ? { caption } : {}), ...(type === "document" && filename ? { filename } : {}) };
   const r = await axios.post(
     `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
     { messaging_product: "whatsapp", recipient_type: "individual", to, type, [type]: media },
@@ -1722,10 +1721,12 @@ async function sendQualifiedMedia(org, agent, conversation, botName, replyText, 
     (sends.length > before ? sent : missing).push(kind);
   };
   want("photos", wantsPhotos && allowed(agent?.shareProjectPhotos), () => {
-    // Capped at 3 — WhatsApp has no album/carousel for raw images, so each is
-    // its own billed message, and three photos is plenty to make the case
-    // without turning a single reply into a spam burst.
-    for (const url of (project.images || []).filter((u) => /^https?:/.test(u)).slice(0, 3)) sends.push({ type: "image", url, caption: project.name });
+    // Every uploaded photo, up to 10. WhatsApp has no album for raw images,
+    // so each is its own message; 10 keeps one reply from becoming a flood.
+    // Only the first carries the project name, so it isn't repeated under
+    // every picture.
+    (project.images || []).filter((u) => /^https?:/.test(u)).slice(0, 10)
+      .forEach((url, i) => sends.push({ type: "image", url, caption: i === 0 ? project.name : "" }));
   });
   want("videos", wantsVideos && allowed(agent?.shareVideos), () => {
     // Every uploaded video (a project holds at most 3).

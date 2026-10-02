@@ -8,7 +8,7 @@ import CustomSelect from "./CustomSelect";
 /**
  * Send a project's photos, video, floor plan or brochure into a conversation by
  * hand. Same rules as a typed reply: only inside WhatsApp's 24-hour window, and
- * each file is one message (photos are capped at 3, every uploaded video is sent).
+ * each file is one message (up to 10 photos and every uploaded video are sent).
  * Upload the files on the Projects page first.
  */
 const DEFAULT_MESSAGE = "Here you go 🙂 Would you like to see it in person? I can check site visit slots for you.";
@@ -25,13 +25,21 @@ export default function ProjectMediaSendModal({ open, onClose, conversation, onS
     if (!open) return;
     let cancelled = false;
     setProjects(null); setError(""); setPicked({}); setMessage(DEFAULT_MESSAGE);
-    api.get("/projects")
-      .then(({ data }) => {
+    // Opens on the project this conversation's assistant is set up for, so
+    // the files match what the bot itself would send. Only when there is no
+    // such project does it fall back to the first one that has files.
+    const agentReq = conversation?.agentId
+      ? api.get(`/whatsapp/agents/${conversation.agentId}`).then((r) => r.data.agent?.projectIds || []).catch(() => [])
+      : Promise.resolve([]);
+    Promise.all([api.get("/projects"), agentReq])
+      .then(([{ data }, agentProjectIds]) => {
         if (cancelled) return;
         const list = data.data || [];
         setProjects(list);
+        const ids = agentProjectIds.map(String);
+        const agentProject = list.find((p) => ids.includes(String(p._id)));
         const withFiles = list.find((p) => p.videos?.length || p.floorPlanUrl || p.brochureUrl || p.images?.length);
-        setProjectId((withFiles || list[0])?._id || "");
+        setProjectId((agentProject || withFiles || list[0])?._id || "");
       })
       .catch(() => { if (!cancelled) setError("Couldn't load your projects."); });
     return () => { cancelled = true; };
@@ -46,7 +54,7 @@ export default function ProjectMediaSendModal({ open, onClose, conversation, onS
       { key: "videos",    icon: Film,           label: "Video",      have: videos > 0,           note: videos ? (videos > 1 ? `all ${videos} videos sent` : "1 video") : "not uploaded" },
       { key: "floorplan", icon: LayoutTemplate, label: "Floor plan (PDF)", have: !!project.floorPlanUrl, note: project.floorPlanUrl ? "PDF" : "not uploaded" },
       { key: "brochure",  icon: FileText,       label: "Brochure (PDF)",   have: !!project.brochureUrl,  note: project.brochureUrl ? "PDF" : "not uploaded" },
-      { key: "photos",    icon: ImageIcon,      label: "Photos",     have: photos > 0,           note: photos ? `${Math.min(photos, 3)} of ${photos} sent` : "not uploaded" },
+      { key: "photos",    icon: ImageIcon,      label: "Photos",     have: photos > 0,           note: photos ? (photos > 10 ? `10 of ${photos} sent` : `all ${photos} sent`) : "not uploaded" },
     ];
   }, [project]);
 

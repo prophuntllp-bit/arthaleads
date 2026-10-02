@@ -597,7 +597,10 @@ module.exports = function createCtwaFlowService({
       } else if (action === "location") {
         const project = await resolveFlowProject(org, agent);
         if (project?.location) {
-          await sendFlowStep(org, conversation, botName, { bodyText: `${project.name} is located at: ${project.location}` });
+          // Just the location: project names usually already say where they
+          // are ("Shapoorji Pallonji Khopoli Plots"), so "<name> is located
+          // at: Near Khopoli" read twice.
+          await sendFlowStep(org, conversation, botName, { bodyText: `📍 Location: ${project.location}` });
         }
       }
 
