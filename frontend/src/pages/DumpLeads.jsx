@@ -7,7 +7,8 @@ import CustomSelect from "../components/CustomSelect";
 import { fmtDate } from "../utils/constants";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
+import { read as xlsxRead, utils as xlsxUtils } from "xlsx";
+import { downloadCsv, downloadXlsx, parseCsv } from "../utils/sheetExport";
 
 const BOOKING_COLOR = {
   "Not Interested":    "bg-red-500/10 text-red-500 border-red-500/20",
@@ -185,29 +186,15 @@ export default function DumpLeads() {
         Remark: lead.remark || "",
         Remark1: lead.remark1 || "",
         Remark2: lead.remark2 || "",
-        AddedOn: lead.createdAt ? new Date(lead.createdAt).toISOString().slice(0, 10) : "",
+        // IST calendar day (toISOString is UTC).
+        AddedOn: lead.createdAt ? new Date(new Date(lead.createdAt).getTime() + 5.5 * 3600000).toISOString().slice(0, 10) : "",
       }));
 
       const suffix = !overrideSource && selectedIds.size > 0 ? `-selected-${selectedIds.size}` : "";
       const dateStr = new Date().toISOString().slice(0, 10);
 
-      if (type === "json") {
-        const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `arthaleads-dump-leads${suffix}-${dateStr}.json`;
-        link.click();
-        URL.revokeObjectURL(url);
-        toast.success(`Exported ${rows.length} leads as JSON`);
-        return;
-      }
-
-      const worksheet = xlsxUtils.json_to_sheet(rows);
-      const workbook = xlsxUtils.book_new();
-      xlsxUtils.book_append_sheet(workbook, worksheet, "Dump Leads");
-      const ext = type === "excel" ? "xlsx" : "csv";
-      xlsxWriteFile(workbook, `arthaleads-dump-leads${suffix}-${dateStr}.${ext}`, { bookType: ext });
+      if (type === "excel") downloadXlsx(rows, `arthaleads-dump-leads${suffix}-${dateStr}.xlsx`, { sheetName: "Dump Leads" });
+      else downloadCsv(rows, `arthaleads-dump-leads${suffix}-${dateStr}.csv`);
       toast.success(`Exported ${rows.length} leads as ${type === "excel" ? "Excel" : "CSV"}`);
     } catch (e) {
       toast.error(e.response?.data?.message || "Export failed");
@@ -215,30 +202,7 @@ export default function DumpLeads() {
   };
 
   // ── Native CSV/TSV parser ─────────────────────────────────────────────────────
-  const parseCsvText = (text) => {
-    const lines = text.split(/\r?\n/).filter((l) => l.trim());
-    if (lines.length < 2) return [];
-    const delim = lines[0].includes("\t") ? "\t" : ",";
-    const parseRow = (line) => {
-      const vals = [];
-      let cur = "", inQuote = false;
-      for (let i = 0; i < line.length; i++) {
-        const ch = line[i];
-        if (ch === '"') { inQuote = !inQuote; continue; }
-        if (ch === delim && !inQuote) { vals.push(cur); cur = ""; continue; }
-        cur += ch;
-      }
-      vals.push(cur);
-      return vals;
-    };
-    const headers = parseRow(lines[0]).map((h) => h.trim());
-    return lines.slice(1).map((line) => {
-      const vals = parseRow(line);
-      const obj = {};
-      headers.forEach((h, i) => { obj[h] = (vals[i] || "").trim(); });
-      return obj;
-    });
-  };
+  const parseCsvText = parseCsv;
 
   // ── Import ──────────────────────────────────────────────────────────────────
   const handleImport = async (event) => {
@@ -572,9 +536,9 @@ export default function DumpLeads() {
           style={{
             top: exportMenuPos.top,
             right: exportMenuPos.right,
-            background: "var(--app-bg)",
-            border: "1px solid var(--app-border)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.22)",
+            background: "var(--app-surface-solid)",
+            border: "1px solid var(--app-border-strong)",
+            boxShadow: "var(--app-shadow-lg)",
           }}
         >
           {selectedIds.size > 0 && (
@@ -583,9 +547,8 @@ export default function DumpLeads() {
             </p>
           )}
           {[
-            { key: "csv",   label: "Export CSV" },
             { key: "excel", label: "Export Excel" },
-            { key: "json",  label: "Export JSON" },
+            { key: "csv",   label: "Export CSV" },
           ].map((item) => (
             <button
               key={item.key}

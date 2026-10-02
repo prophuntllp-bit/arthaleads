@@ -46,7 +46,8 @@ const fmtBudget = (val) => {
   return `₹${val}`;
 };
 import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, QrCode, Search, Send, ShieldCheck, Trash2, Upload, User, Users, X } from "lucide-react";
-import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
+import { read as xlsxRead, utils as xlsxUtils } from "xlsx";
+import { downloadCsv, downloadXlsx, parseCsv } from "../utils/sheetExport";
 import DateTimePicker from "../components/DateTimePicker";
 import DateRangePicker from "../components/DateRangePicker";
 
@@ -720,43 +721,10 @@ export default function Leads() {
         ? `${selectedIdsOverride.size}-selected`
         : `${rows.length}-leads`;
 
-      if (type === "json") {
-        const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
-        const url  = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = `leads-${label}-${date}.json`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
-      } else {
-        // Build the sheet manually so we can force the Phone column to type "s" (string).
-        // json_to_sheet would detect numeric-looking strings and coerce them to numbers,
-        // which causes Excel to show scientific notation for long phone numbers.
-        const ws = xlsxUtils.json_to_sheet(rows);
-
-        // Walk every cell in the Phone column (column B, index 1) and stamp type="s"
-        const colKeys = Object.keys(rows[0] || {});
-        const phoneColIdx = colKeys.indexOf("Phone");
-        if (phoneColIdx >= 0) {
-          const phoneColLetter = xlsxUtils.encode_col(phoneColIdx);
-          for (let r = 1; r <= rows.length; r++) {
-            const cellAddr = `${phoneColLetter}${r + 1}`; // +1 for header row
-            if (ws[cellAddr]) {
-              ws[cellAddr].t = "s"; // force string
-              ws[cellAddr].z = "@"; // Excel "Text" number format
-            }
-          }
-        }
-
-        // Readable column widths: sized to the longest value, within reason.
-        ws["!cols"] = colKeys.map((k) => ({
-          wch: Math.min(60, Math.max(k.length, ...rows.slice(0, 500).map((r) => String(r[k] ?? "").length)) + 2),
-        }));
-
-        const wb = xlsxUtils.book_new();
-        xlsxUtils.book_append_sheet(wb, ws, "Leads");
-        const ext = type === "excel" ? "xlsx" : "csv";
-        xlsxWriteFile(wb, `leads-${label}-${date}.${ext}`, { bookType: ext });
-      }
+      // Phone is written as text in both formats, so Excel never turns it
+      // into 9.19689E+11 or drops a leading zero (see utils/sheetExport.js).
+      if (type === "excel") downloadXlsx(rows, `leads-${label}-${date}.xlsx`, { sheetName: "Leads" });
+      else downloadCsv(rows, `leads-${label}-${date}.csv`);
 
       toast.success(`Exported ${rows.length} lead${rows.length !== 1 ? "s" : ""}`);
     } catch (e) {
@@ -876,30 +844,9 @@ export default function Leads() {
   };
 
   // ── Native CSV/TSV parser (no xlsx dependency) ───────────────────────────────
-  const parseCsvText = (text) => {
-    const lines = text.split(/\r?\n/).filter((l) => l.trim());
-    if (lines.length < 2) return [];
-    const delim = lines[0].includes("\t") ? "\t" : ",";
-    const parseRow = (line) => {
-      const vals = [];
-      let cur = "", inQuote = false;
-      for (let i = 0; i < line.length; i++) {
-        const ch = line[i];
-        if (ch === '"') { inQuote = !inQuote; continue; }
-        if (ch === delim && !inQuote) { vals.push(cur); cur = ""; continue; }
-        cur += ch;
-      }
-      vals.push(cur);
-      return vals;
-    };
-    const headers = parseRow(lines[0]).map((h) => h.trim());
-    return lines.slice(1).map((line) => {
-      const vals = parseRow(line);
-      const obj = {};
-      headers.forEach((h, i) => { obj[h] = (vals[i] || "").trim(); });
-      return obj;
-    });
-  };
+  // Quoted fields with commas, "" and line breaks (multi-line remarks) are
+  // kept intact, and our own Excel-safe ="phone" cells are unwrapped.
+  const parseCsvText = parseCsv;
 
   // ── Facebook Lead Form CSV parser ─────────────────────────────────────────────
   // Columns to strip (Facebook metadata)
@@ -1933,35 +1880,40 @@ export default function Leads() {
         <>
           <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setShowExportMenu(false)} />
           <div
-            className="fixed w-56 overflow-hidden rounded-2xl py-1"
+            className="fixed w-64 overflow-hidden rounded-2xl p-1.5"
             style={{
               top: exportMenuPos.top,
               right: exportMenuPos.right,
               zIndex: 9999,
-              background: "var(--app-surface)",
-              border: "1px solid var(--app-border)",
-              boxShadow: "var(--app-shadow)",
+              // Solid: the see-through card surface let the filters show
+              // through the menu.
+              background: "var(--app-surface-solid)",
+              border: "1px solid var(--app-border-strong)",
+              boxShadow: "var(--app-shadow-lg)",
             }}
           >
             {selectedIds.size > 0 && (
-              <p className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-orange-400">
+              <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-orange-500">
                 Exporting {selectedIds.size} selected
               </p>
             )}
             {[
-              { key: "csv",   label: "Export CSV" },
-              { key: "excel", label: "Export Excel" },
-              { key: "json",  label: "Export JSON" },
+              { key: "excel", label: "Excel (.xlsx)", hint: "Best for opening in Excel" },
+              { key: "csv",   label: "CSV (.csv)",    hint: "For Google Sheets or other CRMs" },
             ].map((item) => (
               <button
                 key={item.key}
-                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app hover:bg-orange-500/10 transition"
+                className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-orange-500/10"
                 onClick={() => {
                   setShowExportMenu(false);
                   exportRows(item.key, selectedIds.size > 0 ? selectedIds : null);
                 }}
               >
-                <Download className="h-4 w-4" /> {item.label}
+                <Download className="mt-0.5 h-4 w-4 shrink-0 text-app-soft" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-app">{item.label}</span>
+                  <span className="block text-[11px] text-app-soft">{item.hint}</span>
+                </span>
               </button>
             ))}
           </div>
