@@ -30,13 +30,37 @@ router.get("/hot", planGate("growth"), async (req, res, next) => {
       isDeleted: { $ne: true },
       isArchived: { $ne: true },
       status: { $nin: ["Closed Won", "Closed Lost"] },
+      // Vendors and job-seekers the WhatsApp bot flagged are never "hot".
+      tags: { $ne: "Not a buyer" },
     };
     if (req.user.role === "agent") filter.assignedTo = req.user._id;
 
     const leads = await Lead.find(filter)
-      .select("name phone status priority source budget booking siteVisitDone followUpDate firstContactedAt activities notes assignedToName assignedTo propertyType bhk preferredLocation purpose")
+      .select("name phone status priority source budget booking siteVisitDone followUpDate firstContactedAt activities notes assignedToName assignedTo propertyType bhk preferredLocation purpose createdAt updatedAt")
       .populate("assignedTo", "name")
       .lean();
+
+    // When each lead last wrote to us on WhatsApp (last 14 days), so a lead
+    // who is chatting right now outranks one that went quiet months ago.
+    try {
+      const WaMessage = require("../models/WaMessage");
+      const WaConversation = require("../models/WaConversation");
+      const since = new Date(Date.now() - 14 * 86400000);
+      const lastIn = await WaMessage.aggregate([
+        { $match: { orgId: req.user.orgId, direction: "inbound", timestamp: { $gte: since } } },
+        { $group: { _id: "$conversationId", at: { $max: "$timestamp" } } },
+      ]);
+      if (lastIn.length) {
+        const convs = await WaConversation.find({ _id: { $in: lastIn.map((r) => r._id) }, leadId: { $ne: null } }).select("leadId").lean();
+        const convLead = new Map(convs.map((c) => [String(c._id), String(c.leadId)]));
+        const replyAt = new Map();
+        for (const r of lastIn) {
+          const lid = convLead.get(String(r._id));
+          if (lid && (!replyAt.has(lid) || r.at > replyAt.get(lid))) replyAt.set(lid, r.at);
+        }
+        for (const l of leads) { const at = replyAt.get(String(l._id)); if (at) l._lastReplyAt = at; }
+      }
+    } catch { /* scoring still works without reply data */ }
 
     const scored = leads
       .map((l) => {

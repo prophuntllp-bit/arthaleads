@@ -14,6 +14,8 @@
     /* Soft text darkened from #71717a → #5f5f66 for AA contrast on glass surfaces,
        especially at the 10–11px sizes used in kickers and table headers. */
     --app-text-soft: #5f5f66;
+    /* Leads-by-source colours (fixed per source, validated for colour-blind separation) */
+    --src-1: #2563eb; --src-2: #ea580c; --src-3: #16a34a; --src-4: #7c3aed; --src-5: #0891b2; --src-6: #db2777;
     /* Brand-colour tokens — overridden at runtime by applyBrandColor() in App.jsx */
     --app-primary:           #ff6b00;
     --app-primary-deep:      #a04100;
@@ -38,6 +40,7 @@
     --app-text: #ededed;
     --app-text-soft: #969696;
     --app-border: rgba(255, 255, 255, 0.10);
+    --src-1: #3b82f6; --src-2: #ea580c; --src-3: #16a34a; --src-4: #8b5cf6; --src-5: #0891b2; --src-6: #ec4899;
     --app-border-strong:    rgba(var(--app-primary-rgb), 0.28);
     --app-primary:          #ff6b00;
     --app-primary-deep:     #a04100;

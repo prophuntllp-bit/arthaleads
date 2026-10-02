@@ -1,8 +1,9 @@
 // Fetches live CRM data to give the AI assistant real context about the user's workspace.
 const Lead       = require("../models/Lead");
+const ProjectLead = require("../models/ProjectLead");
 const Attendance = require("../models/Attendance");
 const { findLeadById } = require("./leadLookup");
-const { formatISTDate, formatISTTime } = require("./datetime");
+const { formatISTDate, formatISTTime, istDateKey, startOfISTDay, endOfISTDay } = require("./datetime");
 let User, Project, Booking, Invoice, Task;
 try { User    = require("../models/User");    } catch { User    = null; }
 try { Project = require("../models/Project"); } catch { Project = null; }
@@ -11,10 +12,11 @@ try { Invoice = require("../models/Invoice"); } catch { Invoice = null; }
 try { Task    = require("../models/Task");    } catch { Task    = null; }
 
 function pad(n) { return String(n).padStart(2, "0"); }
+// The server runs in UTC; every "today" here is the IST calendar day.
 function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return istDateKey();
 }
+void pad;
 
 async function fetchPageContext(page, userId, orgId, leadId) {
   const parts = [];
@@ -62,27 +64,37 @@ async function fetchPageContext(page, userId, orgId, leadId) {
 
   try {
     if (cleanPage === "/dashboard" || cleanPage === "/leads" || cleanPage === "/") {
-      const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
-      const [total, newToday, hotLeads, overdueCount] = await Promise.all([
-        Lead.countDocuments({ orgId, isDeleted: { $ne: true } }),
-        Lead.countDocuments({ orgId, isDeleted: { $ne: true }, createdAt: { $gte: startOfDay } }),
-        Lead.find({ orgId, isDeleted: { $ne: true }, score: { $gte: 60 } })
-          .sort({ score: -1 }).limit(3).select("name status score phone").lean(),
-        Lead.countDocuments({
-          orgId, isDeleted: { $ne: true },
-          followUpDate: { $lt: startOfDay, $ne: null },
-        }),
+      // Same definition as the dashboard cards: active pipeline leads plus
+      // leads that were moved into a project. Counted on the IST day.
+      const startOfDay = startOfISTDay(today);
+      const endOfDay   = endOfISTDay(today);
+      const leadQ  = { orgId, isArchived: { $ne: true }, isDeleted: { $ne: true } };
+      const movedQ = { orgId, isDeleted: { $ne: true }, fromLeadId: { $ne: null } };
+      const todayQ = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
+      const countBoth = async (extra = {}) => {
+        const [a, b] = await Promise.all([
+          Lead.countDocuments({ ...leadQ, ...extra }),
+          ProjectLead.countDocuments({ ...movedQ, ...extra }),
+        ]);
+        return a + b;
+      };
+      const [total, cameInToday, stillNewToday, overdueCount] = await Promise.all([
+        countBoth(),
+        countBoth(todayQ),
+        countBoth({ ...todayQ, status: "New" }),
+        Lead.countDocuments({ ...leadQ, followUpDate: { $lt: startOfDay, $ne: null }, status: { $nin: ["Closed Won", "Closed Lost"] } }),
       ]);
-      parts.push(`LIVE WORKSPACE DATA:
+      parts.push(`LIVE WORKSPACE DATA (same numbers as the dashboard):
 - Total leads: ${total}
-- New leads today: ${newToday}
+- Leads that came in today (created today, IST): ${cameInToday}
+- Of today's leads, still in "New" status (not contacted yet): ${stillNewToday}
 - Overdue follow-ups: ${overdueCount}
-- Hot leads (score ≥60): ${hotLeads.length ? hotLeads.map(l => `${l.name} (${l.status}, score ${l.score})`).join(" | ") : "none right now"}`);
+When asked how many leads came in today, answer with "Leads that came in today", and mention how many are still New if it differs.`);
     }
 
     if (cleanPage === "/followups") {
-      const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay   = new Date(); endOfDay.setHours(23, 59, 59, 999);
+      const startOfDay = startOfISTDay(today);
+      const endOfDay   = endOfISTDay(today);
       const [overdueCount, todayCount, overdueLeads] = await Promise.all([
         Lead.countDocuments({ orgId, isDeleted: { $ne: true }, followUpDate: { $lt: startOfDay, $ne: null } }),
         Lead.countDocuments({ orgId, isDeleted: { $ne: true }, followUpDate: { $gte: startOfDay, $lte: endOfDay } }),
@@ -170,8 +182,8 @@ ${members.map(m => `- ${m.name} (${m.role})`).join("\n")}`);
     }
 
     if (cleanPage === "/tasks" && Task) {
-      const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay   = new Date(); endOfDay.setHours(23, 59, 59, 999);
+      const startOfDay = startOfISTDay(today);
+      const endOfDay   = endOfISTDay(today);
       const [total, pending, completed, overdue, dueToday, overdueTasks] = await Promise.all([
         Task.countDocuments({ orgId }),
         Task.countDocuments({ orgId, status: "pending" }),

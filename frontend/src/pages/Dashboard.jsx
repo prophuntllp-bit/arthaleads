@@ -1,7 +1,9 @@
 ﻿// Dashboard - v2
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import StatusBreakdown from "../components/dashboard/StatusBreakdown";
+import SourceDonut from "../components/dashboard/SourceDonut";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
@@ -37,8 +39,6 @@ import DateRangePicker from "../components/DateRangePicker";
 import OnboardingChecklist from "../components/OnboardingChecklist";
 import AttendanceCapture from "../components/AttendanceCapture";
 
-const STATUS_CHART_COLORS = ["#6366f1", "#f59e0b", "#8b5cf6", "#f97316", "#22c55e", "#ef4444"];
-const SOURCE_CHART_COLORS = ["#3b82f6", "#ef4444", "#22c55e", "#06b6d4", "#f59e0b", "#8b5cf6", "#ec4899", "#f97316", "#14b8a6", "#6b7280"];
 
 function PlatformLogo({ platform, size = 16 }) {
   const s = { width: size, height: size, flexShrink: 0, display: "block" };
@@ -453,6 +453,13 @@ const RANGE_PHRASES = {
   thisweek: "this week", lastweek: "last week", thismonth: "this month", lastmonth: "last month",
   thisyear: "this year", lastyear: "last year",
 };
+// The Leads page reads these from navigation state, so a card clicked on the
+// dashboard opens Leads showing exactly the leads the card counted.
+function leadsRangeState(range) {
+  if (range && typeof range === "object") return { presetFrom: range.from || "", presetTo: range.to || "" };
+  return range ? { presetDateRange: range } : {};
+}
+
 function describeRange(range) {
   if (range && typeof range === "object") {
     const f = (k) => new Date(`${k}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
@@ -544,11 +551,6 @@ export default function Dashboard() {
   }, []);
 
   if (loading || retrying) return <PageLoader />;
-
-  const statusChartData = Object.entries(data?.byStatus || {}).map(([name, value]) => ({ name, value }));
-  const sourceChartData = Object.entries(data?.bySource || {})
-    .filter(([, value]) => value > 0)
-    .map(([name, value]) => ({ name, value }));
 
   // Which platforms to show: connected automations first; fallback to platforms with lead data
   const activePlatforms = (connectedPlatforms && connectedPlatforms.length > 0)
@@ -644,7 +646,7 @@ export default function Dashboard() {
       )}
 
       {/* ── Zone 2: Today at a Glance ─────────────────────────────────── */}
-      <ZonedKPIRow data={data} navigate={navigate} scope={describeRange(dateRange)} />
+      <ZonedKPIRow data={data} navigate={navigate} scope={describeRange(dateRange)} range={leadsRangeState(dateRange)} />
 
       {/* ── Zone 3: Action Required ───────────────────────────────────── */}
       <div className="space-y-3">
@@ -688,115 +690,16 @@ export default function Dashboard() {
       {/* ── Zone 5: Performance ──────────────────────────────────────── */}
       <div className="space-y-3">
         <ZoneHeader label="Performance" />
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
-          <section className="card p-3 xl:col-span-7">
-            <div className="mb-2 flex items-center justify-between">
-              <div>
-                <p className="stitch-kicker mb-0.5">Pipeline</p>
-                <h3 className="text-sm font-bold text-app">Leads by Status</h3>
-              </div>
-              <div className="stitch-pill text-xs">Live</div>
-            </div>
-            <ResponsiveContainer width="100%" height={Math.max(70, statusChartData.length * 36)}>
-              <BarChart
-                data={statusChartData}
-                layout="vertical"
-                barCategoryGap="18%"
-                margin={{ top: 0, right: 12, left: 0, bottom: 0 }}
-                style={{ outline: "none" }}
-              >
-                <XAxis
-                  type="number"
-                  tick={{ fontSize: 10, fill: "var(--app-text-soft)" }}
-                  axisLine={false}
-                  tickLine={false}
-                  allowDecimals={false}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  tick={{ fontSize: 11, fill: "var(--app-text-soft)" }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={78}
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: 12,
-                    border: "1px solid var(--app-border)",
-                    background: "var(--app-bg)",
-                    color: "var(--app-text)",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                    fontSize: 12,
-                  }}
-                  itemStyle={{ color: "var(--app-text)" }}
-                  labelStyle={{ color: "var(--app-text)", fontWeight: 600 }}
-                  cursor={{ fill: "rgba(255,255,255,0.04)" }}
-                />
-                <Bar dataKey="value" radius={[0, 8, 8, 0]}>
-                  {statusChartData.map((_, index) => (
-                    <Cell key={index} fill={STATUS_CHART_COLORS[index % STATUS_CHART_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </section>
-
-          <section className="card p-3 xl:col-span-5">
-            <div className="mb-2">
-              <p className="stitch-kicker mb-0.5">Acquisition Mix</p>
-              <h3 className="text-sm font-bold text-app">Leads by Source</h3>
-            </div>
-            {sourceChartData.length === 0 ? (
-              <p className="py-8 text-center text-sm text-app-soft">No data yet</p>
-            ) : (
-              <div className="flex flex-col gap-3">
-                <div className="relative" style={{ WebkitTapHighlightColor: "transparent" }}>
-                  <ResponsiveContainer width="100%" height={160}>
-                    <PieChart style={{ outline: "none" }}>
-                      <Pie
-                        data={sourceChartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={58}
-                        outerRadius={85}
-                        dataKey="value"
-                        labelLine={false}
-                        paddingAngle={2}
-                        strokeWidth={0}
-                        isAnimationActive={false}
-                        tabIndex={-1}
-                      >
-                        {sourceChartData.map((_, index) => (
-                          <Cell key={index} fill={SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length]} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-bold text-app">
-                      {sourceChartData.reduce((s, d) => s + d.value, 0)}
-                    </span>
-                    <span className="text-xs text-app-soft">Total</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                  {sourceChartData.map(({ name, value }, index) => (
-                    <div key={name} className="flex items-center gap-2 min-w-0">
-                      <span
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ background: SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length] }}
-                      />
-                      <span className="truncate text-xs text-app-soft">{name}</span>
-                      <span className="ml-auto text-xs font-semibold text-app">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </section>
+        <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-12">
+          <div className="xl:col-span-7">
+            <StatusBreakdown byStatus={data?.byStatus} scope={describeRange(dateRange)}
+              onSelect={(status) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetStatus: status } })} />
+          </div>
+          <div className="xl:col-span-5">
+            <SourceDonut bySource={data?.bySource} scope={describeRange(dateRange)}
+              onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetSource: source } })} />
+          </div>
         </div>
-        <DropoffFunnel byStatus={data?.byStatus} scope={describeRange(dateRange)} />
       </div>
 
       {/* ── Zone 6: Team ─────────────────────────────────────────────── */}
@@ -858,7 +761,7 @@ function ZoneHeader({ label, color = "default" }) {
   );
 }
 
-function ZonedKPIRow({ data, navigate, scope = "" }) {
+function ZonedKPIRow({ data, navigate, scope = "", range = {} }) {
   // These follow the date range at the top of the page. The follow-ups card is
   // the one exception: it is always today's, because a follow-up that is due
   // today is due today whatever range is being looked at.
@@ -871,7 +774,7 @@ function ZonedKPIRow({ data, navigate, scope = "" }) {
       label: "Total Leads", value: total, color: "#f97316",
       sub: delta !== null ? `${delta >= 0 ? "↑" : "↓"} ${Math.abs(delta)}% vs previous period` : (scope ? `created ${scope}` : "All time"),
       subColor: delta !== null ? (delta >= 0 ? "#22c55e" : "#ef4444") : undefined,
-      onClick: () => navigate("/leads"),
+      onClick: () => navigate("/leads", { state: { ...range } }),
     },
     {
       label: "Pipeline", value: fmtINR(data?.periodPipelineValue ?? data?.pipelineValue), color: "var(--app-text)",
@@ -880,12 +783,12 @@ function ZonedKPIRow({ data, navigate, scope = "" }) {
     {
       label: "New", value: data?.byStatus?.New ?? data?.allTimeNew ?? 0, color: "#6366f1",
       sub: "Not contacted yet",
-      onClick: () => navigate("/leads", { state: { presetStatus: "New" } }),
+      onClick: () => navigate("/leads", { state: { ...range, presetStatus: "New" } }),
     },
     {
       label: "Closed Won", value: closedWon, color: "#22c55e",
       sub: closedWon ? `${conversion}% of leads ${scope}`.trim() : "None marked Closed Won",
-      onClick: () => navigate("/leads", { state: { presetStatus: "Closed Won" } }),
+      onClick: () => navigate("/leads", { state: { ...range, presetStatus: "Closed Won" } }),
     },
     {
       label: "Follow-ups", value: data?.todayFollowUps ?? 0, color: "#f59e0b",
@@ -1102,48 +1005,6 @@ function ActivityFeed({ items, navigate }) {
 }
 
 // ── Pipeline Drop-off Funnel ──────────────────────────────────────────────────
-function DropoffFunnel({ byStatus, scope = "" }) {
-  const STAGES = [
-    { key: "New",         color: "#6366f1" },
-    { key: "Contacted",   color: "#f59e0b" },
-    { key: "Site Visit",  color: "#8b5cf6" },
-    { key: "Negotiation", color: "#f97316" },
-    { key: "Closed Won",  color: "#22c55e" },
-    { key: "Closed Lost", color: "#ef4444" },
-  ];
-  const total = STAGES.reduce((s, st) => s + (byStatus?.[st.key] || 0), 0);
-  if (!total) return null;
-  return (
-    <section className="card p-4 sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <p className="stitch-kicker mb-1">Where leads get stuck</p>
-          <h3 className="text-base font-bold text-app">Pipeline Drop-off</h3>
-        </div>
-        <div className="stitch-pill text-xs">{total} leads · {scope || "this period"}</div>
-      </div>
-      <div className="space-y-2">
-        {STAGES.map(({ key, color }) => {
-          const count = byStatus?.[key] || 0;
-          const pct = Math.round(count / total * 100);
-          return (
-            <div key={key} className="flex items-center gap-3">
-              <div className="w-24 text-xs text-app-soft text-right shrink-0">{key}</div>
-              <div className="flex-1 h-5 rounded-lg overflow-hidden" style={{ background: "var(--app-surface-low)" }}>
-                <div className="h-full rounded-lg flex items-center px-2 transition-all duration-700"
-                  style={{ width: pct > 0 ? `${Math.max(pct, 4)}%` : "0%", background: color }}>
-                  {pct >= 8 && <span className="text-[10px] font-bold text-white">{count}</span>}
-                </div>
-              </div>
-              <div className="w-10 text-xs font-semibold text-app text-right shrink-0">{pct}%</div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 // ── Follow-up Due Alert Panel ─────────────────────────────────────────────────
 function FollowUpDuePanel({ user, navigate, prefetchedLeads }) {
   const [leads, setLeads] = useState(prefetchedLeads || []);

@@ -53,13 +53,44 @@ function scoreLead(lead) {
   if (noteCount >= 3) s += 5;
   else if (noteCount > 0) s += 2;
 
-  // Follow-up urgency
+  // Follow-up urgency. A follow-up missed by months is a forgotten task, not
+  // a hot lead, so the boost fades once it is more than a week overdue.
   if (lead.followUpDate) {
     const daysUntil = (new Date(lead.followUpDate) - Date.now()) / 86400000;
-    if (daysUntil <= 0) s += 15;       // overdue → highest urgency
+    if (daysUntil <= -30) s += 2;
+    else if (daysUntil <= -7) s += 6;
+    else if (daysUntil <= 0) s += 15;  // overdue this week → highest urgency
     else if (daysUntil <= 1) s += 12;  // tomorrow
     else if (daysUntil <= 3) s += 8;   // this few days
     else if (daysUntil <= 7) s += 4;   // this week
+  }
+
+  // The customer wrote back recently (WhatsApp). The strongest live signal
+  // there is: they are in the conversation right now.
+  if (lead._lastReplyAt) {
+    const hrs = (Date.now() - new Date(lead._lastReplyAt)) / 3600000;
+    if (hrs <= 24) s += 20;
+    else if (hrs <= 72) s += 12;
+    else if (hrs <= 168) s += 6;
+  }
+
+  // A lead that just arrived is worth more than one sitting for months.
+  if (lead.createdAt) {
+    const days = (Date.now() - new Date(lead.createdAt)) / 86400000;
+    if (days <= 1) s += 10;
+    else if (days <= 3) s += 6;
+    else if (days <= 7) s += 3;
+  }
+
+  // Nothing has happened on it for weeks: cool it down, whatever it scored
+  // on paper months ago.
+  const lastTouch = lead._lastReplyAt && new Date(lead._lastReplyAt) > new Date(lead.updatedAt || 0)
+    ? lead._lastReplyAt : lead.updatedAt;
+  if (lastTouch) {
+    const idle = (Date.now() - new Date(lastTouch)) / 86400000;
+    if (idle > 60) s -= 20;
+    else if (idle > 30) s -= 12;
+    else if (idle > 14) s -= 6;
   }
 
   // Recency of first contact (fresh leads respond better)
@@ -73,7 +104,7 @@ function scoreLead(lead) {
   if (lead.source === "WhatsApp") s += 5;
   else if (["Facebook", "Google"].includes(lead.source)) s += 3;
 
-  return Math.min(Math.round(s), 100);
+  return Math.max(0, Math.min(Math.round(s), 100));
 }
 
 function scoreLabel(score) {

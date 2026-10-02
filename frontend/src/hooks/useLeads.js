@@ -9,14 +9,10 @@ export function useLeads(mode = "normal", initialFilters = {}) {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [filters, setFilters] = useState({
-    search: initialFilters.search || "",
-    status: initialFilters.status || "",
-    source: initialFilters.source || "",
-    priority: initialFilters.priority || "",
-    dateRange: initialFilters.dateRange || "",
-    followUpToday: initialFilters.followUpToday || "",
-  });
+  const [filters, setFilters] = useState(() => ({
+    search: "", status: "", source: "", priority: "", dateRange: "", followUpToday: "",
+    ...Object.fromEntries(Object.entries(initialFilters).map(([k, v]) => [k, v || ""])),
+  }));
 
   const endpoint = mode === "unified" ? "/leads/unified" : "/leads";
 

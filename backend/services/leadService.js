@@ -935,12 +935,17 @@ const leadService = {
     if (cached && cached.expiresAt > Date.now()) return cached.data;
 
     // ── Base match (NO date filter - applied per-facet below) ─────────────────
-    // Analytics only covers pipeline leads (Lead model).
-    // Project leads (ProjectLead) are manually-imported bulk contacts and
-    // should not inflate dashboard counts / source charts.
+    // Pipeline leads (Lead), plus leads that were moved into a project. A move
+    // archives the original Lead and carries it on as a ProjectLead with
+    // fromLeadId set, so without the second half every moved lead silently
+    // vanished from the dashboard while still showing on the Leads page.
+    // Contacts bulk-imported straight into a project (no fromLeadId) stay out:
+    // they are a project's database, not leads that came in.
     const baseMatch = { orgId: user.orgId, isArchived: { $ne: true }, isDeleted: { $ne: true } };
+    const movedMatch = { orgId: user.orgId, isDeleted: { $ne: true }, fromLeadId: { $ne: null } };
     if (user.role === "agent") {
       baseMatch.assignedTo = user._id;
+      movedMatch.assignedTo = user._id;
     }
 
     // Date range stage - spread into facets that respect the selected period.
@@ -983,6 +988,12 @@ const leadService = {
     // Single $facet aggregation — allowDiskUse prevents OOM on large orgs
     const [result] = await Lead.aggregate([
       { $match: baseMatch },
+      { $unionWith: { coll: ProjectLead.collection.name, pipeline: [
+        { $match: movedMatch },
+        // A handful of moved records lost their status in the old transfer;
+        // they were never worked on the project, so they count as New.
+        { $set: { status: { $cond: [{ $in: [{ $ifNull: ["$status", ""] }, [""]] }, "New", "$status"] } } },
+      ] } },
       {
         $facet: {
           // All-time totals — never date-filtered, always shows full pipeline

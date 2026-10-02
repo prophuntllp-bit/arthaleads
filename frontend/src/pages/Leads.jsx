@@ -296,6 +296,9 @@ export default function Leads() {
     source: location.state?.presetSource || "",
     followUpToday: location.state?.presetFollowUpToday ? "true" : "",
     consent: location.state?.presetConsent || "",
+    dateRange: location.state?.presetDateRange || "",
+    from: location.state?.presetFrom || "",
+    to: location.state?.presetTo || "",
     myOnly: (() => { try { return localStorage.getItem("leads_myOnly") === "true" ? "true" : ""; } catch { return ""; } })(),
   });
 
@@ -381,7 +384,8 @@ export default function Leads() {
     if (location.state?.openAddLead) {
       setShowForm(true);
     }
-    if (location.state?.presetStatus || location.state?.presetSource || location.state?.presetFollowUpToday || location.state?.presetSearch || location.state?.openAddLead) {
+    if (location.state?.presetStatus || location.state?.presetSource || location.state?.presetFollowUpToday || location.state?.presetSearch || location.state?.openAddLead
+      || location.state?.presetDateRange || location.state?.presetFrom) {
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, []);
