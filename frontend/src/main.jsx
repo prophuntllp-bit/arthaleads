@@ -1,5 +1,6 @@
 ﻿import React from "react";
 import ReactDOM from "react-dom/client";
+import UpdateBanner from "./components/UpdateBanner";
 
 // ── Service Worker: periodic sync + message handling ─────────────────────────
 // SW is registered in index.html so PWABuilder/crawlers can detect it.
@@ -88,6 +89,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                 exactly what happened saving WhatsApp settings. Toasts should
                 always sit above a modal that triggered them. */}
             <Toaster position="top-right" containerStyle={{ zIndex: 10000 }} />
+            <UpdateBanner />
           </BrowserRouter>
         </ThemeProvider>
       </GoogleOAuthProvider>
