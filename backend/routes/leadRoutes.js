@@ -134,6 +134,10 @@ router.route("/:id")
   .put(validate(updateLeadSchema), leadController.update)
   .delete(leadController.delete);
 
+// GET /api/leads/:id/whatsapp-messages — read-only chat history, so an agent
+// about to call a lead can see what the bot/team already discussed with them.
+router.get("/:id/whatsapp-messages", leadController.getWhatsAppMessages);
+
 // PATCH /api/leads/:id — partial field update for follow-up editing
 router.patch("/:id", async (req, res, next) => {
   try {

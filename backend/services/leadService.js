@@ -4,6 +4,8 @@ const ProjectLead = require("../models/ProjectLead");
 const Project = require("../models/Project");
 const User = require("../models/User");
 const Organization = require("../models/Organization");
+const WaConversation = require("../models/WaConversation");
+const WaMessage = require("../models/WaMessage");
 const { AppError } = require("../middlewares/errorHandler");
 const { sendPushToUser } = require("../utils/push");
 const { getNextAssignee } = require("../utils/assignLead");
@@ -383,6 +385,35 @@ const leadService = {
     }
 
     return lead;
+  },
+
+  // Read-only WhatsApp chat history for a lead — lets an agent who's about to
+  // call see exactly what the bot/human already discussed with this lead,
+  // without digging through the Inbox. Same ownership rule as getById: an
+  // agent can only read it for a lead assigned to or created by them.
+  async getWhatsAppMessages(id, user) {
+    const lead = await Lead.findOne({ _id: id, orgId: user.orgId }).select("assignedTo createdBy").lean();
+    if (!lead) throw new AppError("Lead not found", 404);
+
+    if (
+      user.role === "agent" &&
+      lead.createdBy?.toString() !== user._id.toString() &&
+      lead.assignedTo?.toString() !== user._id.toString()
+    ) {
+      throw new AppError("Access denied", 403);
+    }
+
+    const conversation = await WaConversation.findOne({ orgId: user.orgId, leadId: id })
+      .select("_id contactPhone status botEnabled assignedToName lastMessageAt")
+      .lean();
+    if (!conversation) return { conversation: null, messages: [] };
+
+    const messages = await WaMessage.find({ conversationId: conversation._id })
+      .sort({ timestamp: 1 })
+      .select("direction sender senderName body mediaType mediaUrl interactiveOptions timestamp isGreeting")
+      .lean();
+
+    return { conversation, messages };
   },
 
   // ── Update ─────────────────────────────────────────────────────────────────

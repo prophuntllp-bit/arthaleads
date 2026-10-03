@@ -71,6 +71,15 @@ const leadController = {
     }
   },
 
+  async getWhatsAppMessages(req, res, next) {
+    try {
+      const data = await leadService.getWhatsAppMessages(req.params.id, req.user);
+      res.json({ success: true, ...data });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async update(req, res, next) {
     try {
       const lead = await leadService.update(req.params.id, req.body, req.user);

@@ -29,7 +29,7 @@ const rateLimit      = require("express-rate-limit");
 const { generateWhatsAppTemplate } = require("../utils/openai");
 const onboarding = require("../services/whatsappOnboardingService");
 const { getNextAssignee } = require("../utils/assignLead");
-const { matchRoutingRule } = require("../utils/routingRules");
+const { matchRoutingRule, fileLeadInRoutedProject } = require("../utils/routingRules");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { scoreLead, scoreLabel } = require("../utils/leadScorer");
 const { fillTemplate } = require("../utils/formFieldMapper");
@@ -391,6 +391,7 @@ async function autoCaptureWhatsAppLead(org, phone, name, campaignRef) {
       meta: campaignRef ? { adId: campaignRef.adId } : {},
     }],
   });
+  if (ruleMatch) await fileLeadInRoutedProject(ruleMatch, lead);
   return lead;
 }
 

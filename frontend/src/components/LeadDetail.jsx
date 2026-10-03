@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useCopilot } from "../context/CopilotContext";
-import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText, Clock, Headphones, PhoneIncoming, PhoneOutgoing, Trash2, Check, X, MapPin, AlertCircle, ChevronDown } from "lucide-react";
+import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText, Clock, Headphones, PhoneIncoming, PhoneOutgoing, Trash2, Check, X, MapPin, AlertCircle, ChevronDown, Bot, MessageCircle } from "lucide-react";
 import api from "../services/api";
 import { ConfirmDialog, Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
 import { useSoftPhone } from "../context/SoftPhoneContext";
@@ -217,6 +217,11 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   // Which Vistrow voice call is expanded in the Transcript tab — null means
   // "none yet decided", which the render below defaults to the most recent one.
   const [expandedVoiceCall, setExpandedVoiceCall] = useState(undefined);
+  // WhatsApp chat history (read-only) — null means "not fetched yet", fetched
+  // lazily the same way the Calls tab fetches call history.
+  const [waMessages, setWaMessages] = useState(null);
+  const [waConversation, setWaConversation] = useState(null);
+  const [waLoading, setWaLoading] = useState(false);
 
   const handleRetryFacebook = async () => {
     setRetrying(true);
@@ -240,6 +245,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     setCallHistory([]);
     setExpandedCall(null);
     setNote("");
+    setWaMessages(null);
+    setWaConversation(null);
   }, [lead?._id, open]);
 
   // Newest first. The tab counts every note, so the list has to show every
@@ -261,6 +268,23 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
       .catch(() => toast.error("Failed to load call history"))
       .finally(() => setCallsLoading(false));
   }, [tab, lead?._id]);
+
+  // Chat tab — fetched once per lead, the first time it's opened. Project
+  // leads don't carry a WaConversation link, so this is skipped for them
+  // (checked via lead?._type directly — isProjectLead isn't declared until
+  // after the early `if (!lead) return null` below, and hooks can't follow
+  // a conditional return).
+  useEffect(() => {
+    if (tab !== "chat" || !lead?._id || lead._type === "project" || waMessages !== null) return;
+    setWaLoading(true);
+    api.get(`/leads/${lead._id}/whatsapp-messages`)
+      .then(({ data }) => {
+        setWaMessages(data.messages || []);
+        setWaConversation(data.conversation || null);
+      })
+      .catch(() => toast.error("Failed to load WhatsApp chat"))
+      .finally(() => setWaLoading(false));
+  }, [tab, lead?._id, lead?._type, waMessages]);
 
   const sp = useSoftPhone();   // null outside the authed CRM shell
 
@@ -357,7 +381,12 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     : [];
   const hasVoice = voiceCalls.some((c) =>
     c.transcript?.length || c.sentiment || c.channel || c.durationSeconds || c.agentName || c.recordingUrl);
-  const tabList = ["info", "notes", "activity", "calls", ...(hasVoice ? ["transcript"] : [])];
+  // Chat tab: read-only WhatsApp history, for leads that came in (or were
+  // reached) over WhatsApp — so an agent about to call can see what the
+  // bot/team already discussed before dialing. Project leads don't carry a
+  // WaConversation link, so they never get this tab.
+  const hasWhatsApp = !isProjectLead && lead.source === "WhatsApp";
+  const tabList = ["info", "notes", "activity", "calls", ...(hasWhatsApp ? ["chat"] : []), ...(hasVoice ? ["transcript"] : [])];
 
   const refreshLead = async () => {
     if (isProjectLead) return null;
@@ -847,6 +876,76 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {tab === "chat" && (
+          <div>
+            {waLoading ? (
+              <div className="flex justify-center py-10"><Spinner /></div>
+            ) : !waConversation ? (
+              <div className="rounded-[1.25rem] p-6 text-center stitch-surface-muted">
+                <MessageCircle className="w-8 h-8 mx-auto mb-2 text-app-soft opacity-40" />
+                <p className="text-sm font-semibold text-app">No WhatsApp conversation</p>
+                <p className="text-xs text-app-soft mt-1">This lead hasn't exchanged any WhatsApp messages yet.</p>
+              </div>
+            ) : (waMessages || []).length === 0 ? (
+              <div className="rounded-[1.25rem] p-6 text-center stitch-surface-muted">
+                <MessageCircle className="w-8 h-8 mx-auto mb-2 text-app-soft opacity-40" />
+                <p className="text-sm font-semibold text-app">No messages yet</p>
+              </div>
+            ) : (
+              <div className="rounded-[1.25rem] p-4 space-y-1 stitch-surface-muted" style={{ maxHeight: 480, overflowY: "auto" }}>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-3 flex items-center gap-1.5">
+                  <AlertCircle className="w-3 h-3 opacity-60" /> Read-only — for context before you call. Reply from the Inbox.
+                </p>
+                {waMessages.map((msg, i) => {
+                  const isOut = msg.direction === "outbound";
+                  const isBot = msg.sender === "bot";
+                  return (
+                    <div key={msg._id || i} className={`flex flex-col ${isOut ? "items-end" : "items-start"} mb-3`}>
+                      {isBot && (
+                        <p className="text-[10px] font-bold text-green-600 mb-1 px-1 flex items-center gap-1">
+                          <Bot className="w-3 h-3" /> {msg.senderName ? `${msg.senderName} (Bot)` : "Bot"}
+                        </p>
+                      )}
+                      {isOut && !isBot && msg.senderName && (
+                        <p className="text-[10px] font-bold mb-1 px-1 text-app-soft">{msg.senderName}</p>
+                      )}
+                      <div className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 ${isOut ? "rounded-tr-[4px] wa-bubble-out" : "rounded-tl-[4px] wa-bubble-in"}`}>
+                        {msg.mediaType === "image" && msg.mediaUrl && (
+                          <img src={msg.mediaUrl} alt={msg.body || "Photo"} className="rounded-xl mb-1.5 max-w-full max-h-64 object-cover" loading="lazy" />
+                        )}
+                        {msg.mediaType === "document" && msg.mediaUrl && (
+                          <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-2 rounded-xl px-2.5 py-2 mb-1.5 transition hover:opacity-80"
+                            style={{ background: "rgba(0,0,0,0.05)" }}>
+                            <FileText className="w-5 h-5 shrink-0" style={{ color: "#ef4444" }} />
+                            <span className="text-xs font-semibold truncate">{msg.body || "Document"}</span>
+                          </a>
+                        )}
+                        {msg.body && (!msg.mediaType || msg.mediaType === "text" || (msg.mediaType !== "image" && msg.mediaType !== "document")) && (
+                          <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{msg.body}</p>
+                        )}
+                        {msg.interactiveOptions?.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2 pt-2" style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+                            {msg.interactiveOptions.map((o) => (
+                              <span key={o.id} className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                                style={{ border: "1px solid rgba(0,0,0,0.15)", color: "inherit" }}>
+                                {o.title}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-app-soft mt-1 px-1">
+                        {msg.timestamp ? fmtDateTime(msg.timestamp) : ""}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

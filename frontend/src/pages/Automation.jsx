@@ -2511,12 +2511,13 @@ function matchFieldHint(source, matchField) {
 function LeadRoutingSection() {
   const [rules, setRules] = useState([]);
   const [agents, setAgents] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [domains, setDomains] = useState([]);
   const [sitePages, setSitePages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ label: "", source: "facebook", matchField: "form_id", matchValue: "", assignTo: "" });
+  const [form, setForm] = useState({ label: "", source: "facebook", matchField: "form_id", matchValue: "", assignTo: "", assignToProject: "" });
 
   useEffect(() => {
     Promise.all([
@@ -2525,13 +2526,15 @@ function LeadRoutingSection() {
       // Same endpoint the Leads page filter uses — real domains/pages leads
       // have already come in from, so a rule can be picked instead of typed.
       api.get("/leads/domains"),
+      api.get("/projects"),
     ])
-      .then(([rulesRes, agentsRes, domainsRes]) => {
+      .then(([rulesRes, agentsRes, domainsRes, projectsRes]) => {
         const agentList = agentsRes.data.agents || [];
         setRules(rulesRes.data.rules || []);
         setAgents(agentList);
         setDomains(domainsRes.data.domains || []);
         setSitePages(domainsRes.data.pages || []);
+        setProjects(projectsRes.data.data || []);
         if (agentList.length > 0) {
           setForm((f) => ({ ...f, assignTo: f.assignTo || agentList[0]._id }));
         }
@@ -2571,7 +2574,7 @@ function LeadRoutingSection() {
     try {
       const { data } = await api.post("/routing-rules", form);
       setRules((prev) => [data.rule, ...prev]);
-      setForm({ label: "", source: "facebook", matchField: "form_id", matchValue: "", assignTo: agents[0]?._id || "" });
+      setForm({ label: "", source: "facebook", matchField: "form_id", matchValue: "", assignTo: agents[0]?._id || "", assignToProject: "" });
       setShowForm(false);
       toast.success("Routing rule added");
     } catch (err) {
@@ -2693,6 +2696,20 @@ function LeadRoutingSection() {
               />
               <p className="text-xs text-app-soft">{matchFieldHint(form.source, form.matchField)}</p>
             </div>
+
+            <div className="space-y-1 sm:col-span-2">
+              <label className="label">Also file into project (optional)</label>
+              <CustomSelect
+                value={form.assignToProject}
+                onChange={(v) => setForm((f) => ({ ...f, assignToProject: v }))}
+                options={[{ value: "", label: "— Don't file into a project —" }, ...projects.map((p) => ({ value: p._id, label: p.name }))]}
+                placeholder="— Don't file into a project —"
+                style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+              />
+              <p className="text-xs text-app-soft">
+                Besides assigning the agent, also drop a copy of the lead straight into this project's Leads tab — skips the manual "Transfer to Project" step. The lead still stays in the main pipeline too.
+              </p>
+            </div>
           </div>
 
           <div className="flex gap-3 justify-end">
@@ -2735,6 +2752,9 @@ function LeadRoutingSection() {
                   {MATCH_FIELD_LABELS[rule.matchField]} <code className="text-orange-400 font-mono">{rule.matchValue}</code>
                   {" → "}
                   <span className="text-emerald-400 font-medium">{rule.assignToName}</span>
+                  {rule.assignToProject && (
+                    <> {" + filed into "}<span className="text-emerald-400 font-medium">{rule.assignToProjectName}</span></>
+                  )}
                 </p>
               </div>
 

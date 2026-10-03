@@ -1,6 +1,7 @@
 const express = require("express");
 const RoutingRule = require("../models/RoutingRule");
 const User = require("../models/User");
+const Project = require("../models/Project");
 const { protect, authorize } = require("../middlewares/auth");
 const { planGate } = require("../middlewares/planGate");
 
@@ -35,6 +36,13 @@ router.post("/", async (req, res) => {
     const agent = await User.findOne({ _id: assignTo, orgId: req.orgId }).select("_id name");
     if (!agent) return res.status(404).json({ success: false, message: "Agent not found" });
 
+    // Optional: also file matched leads into a project's lead list.
+    let project = null;
+    if (req.body.assignToProject) {
+      project = await Project.findOne({ _id: req.body.assignToProject, orgId: req.orgId, isArchived: { $ne: true } }).select("_id name");
+      if (!project) return res.status(404).json({ success: false, message: "Project not found" });
+    }
+
     const rule = await RoutingRule.create({
       label,
       source,
@@ -42,6 +50,8 @@ router.post("/", async (req, res) => {
       matchValue: value,
       assignTo: agent._id,
       assignToName: agent.name,
+      assignToProject: project?._id || null,
+      assignToProjectName: project?.name || "",
       isActive: true,
       orgId: req.orgId,
       createdBy: req.user._id,
