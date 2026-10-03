@@ -8,7 +8,7 @@ const Automation = require("../models/Automation");
 const logger = require("../config/logger");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { getNextAssignee } = require("../utils/assignLead");
-const { matchRoutingRule, matchWebsiteRoutingRule } = require("../utils/routingRules");
+const { matchRoutingRule, matchWebsiteRoutingRule, fileLeadInRoutedProject } = require("../utils/routingRules");
 const Organization    = require("../models/Organization");
 const { mapGoogleLeadFields, fromWebhookColumns } = require("../utils/googleLeadFields");
 const { mapCustomFieldsToLead } = require("../utils/formFieldMapper");
@@ -658,6 +658,8 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           ],
         });
 
+        if (ruleMatch && !isTestLead) await fileLeadInRoutedProject(ruleMatch, createdLead);
+
         if (automation) {
           automation.status = "connected";
           automation.lastSyncAt = new Date();
@@ -881,6 +883,8 @@ router.post("/website", express.json(), websiteLeadLimiter, async (req, res) => 
         },
       ],
     });
+
+    if (ruleMatch) await fileLeadInRoutedProject(ruleMatch, lead);
 
     automation.status = "connected";
     automation.lastSyncAt = new Date();
@@ -1518,6 +1522,8 @@ router.post("/google", express.json(), googleLeadLimiter, async (req, res) => {
         },
       ],
     });
+
+    if (ruleMatch && !isTestLead) await fileLeadInRoutedProject(ruleMatch, lead);
 
     automation.status = "connected";
     automation.lastSyncAt = new Date();

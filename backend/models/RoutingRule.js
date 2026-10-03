@@ -33,6 +33,13 @@ const routingRuleSchema = new mongoose.Schema(
     // Agent to assign to when rule matches
     assignTo: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     assignToName: { type: String, trim: true, default: "" },
+    // Optional: also file the matched lead into this project's lead list
+    // (a ProjectLead copy, same shape as the manual "Transfer to Project"
+    // action — see utils/routingRules.js#fileLeadInRoutedProject). Null
+    // means "leave it in the main pipeline only", same as before this field
+    // existed.
+    assignToProject:     { type: mongoose.Schema.Types.ObjectId, ref: "Project", default: null },
+    assignToProjectName: { type: String, trim: true, default: "" },
     isActive: { type: Boolean, default: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: true, index: true },

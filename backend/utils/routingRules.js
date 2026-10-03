@@ -1,4 +1,6 @@
 const RoutingRule = require("../models/RoutingRule");
+const ProjectLead = require("../models/ProjectLead");
+const logger = require("../config/logger");
 
 // Finds the active routing rule (if any) that matches this lead's attribution
 // data for the given source. `candidates` is a plain object of
@@ -46,4 +48,33 @@ async function matchWebsiteRoutingRule(orgId, { domain, pageUrl }) {
   return pathRules.find((r) => r.matchValue && pageUrl.includes(r.matchValue)) || null;
 }
 
-module.exports = { matchRoutingRule, matchWebsiteRoutingRule };
+// When the matched rule names a project, also file the lead into that
+// project's own lead list — the same copy the manual "Transfer to Project"
+// action makes (see leadService.transferToProject), minus the archive step:
+// the original Lead stays live in the main pipeline on purpose. Archiving it
+// immediately would break findLiveLeadByPhone (whatsappRoutes.js), which
+// excludes archived leads and is how an in-progress WhatsApp/CTWA
+// conversation keeps finding and enriching this same lead on every
+// subsequent inbound message. Best-effort: a failure here must never fail
+// the webhook that already created the real Lead record.
+async function fileLeadInRoutedProject(rule, lead) {
+  if (!rule?.assignToProject || !lead) return;
+  try {
+    await ProjectLead.create({
+      project: rule.assignToProject,
+      name: lead.name,
+      phone: lead.phone,
+      email: lead.email || "",
+      source: lead.source || "Manual",
+      leadSourceLabel: lead.leadSourceLabel || "",
+      sourcePage: lead.sourcePage || "",
+      sourceDomain: lead.sourceDomain || "",
+      importedBy: rule.assignTo,
+      orgId: lead.orgId,
+    });
+  } catch (err) {
+    logger.error(`[routing rule] failed to file lead ${lead._id} into project ${rule.assignToProject}: ${err.message}`);
+  }
+}
+
+module.exports = { matchRoutingRule, matchWebsiteRoutingRule, fileLeadInRoutedProject };
