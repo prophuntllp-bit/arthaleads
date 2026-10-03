@@ -1219,13 +1219,15 @@ export default function Leads() {
                 {[
                   { key: "priority", placeholder: "All Priorities", opts: PRIORITY_OPTIONS },
                   { key: "booking",  placeholder: "All Outcomes",   opts: BOOKING_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label, color: o.color })) },
-                  // Campaigns only reach "given"; the campaign builder links here
-                  // to show exactly who it skipped.
-                  { key: "consent",  placeholder: "Any WhatsApp consent", opts: [
+                  // Not a filter people pick by hand, so it stays out of the
+                  // way. It only appears when the WhatsApp campaign builder
+                  // links here to show who a campaign skipped, so that list
+                  // explains itself and can be cleared.
+                  ...(filters.consent ? [{ key: "consent",  placeholder: "Any WhatsApp consent", opts: [
                     { value: "granted", label: "Consent given" },
                     { value: "unknown", label: "Consent not recorded" },
                     { value: "denied",  label: "Consent refused" },
-                  ] },
+                  ] }] : []),
                 ].map(({ key, placeholder, opts }) => (
                   <CustomSelect
                     key={key}
