@@ -165,6 +165,20 @@ export default function Sidebar() {
   const gsWrapRef    = useRef(null);
   const gsInputRef   = useRef(null);
 
+  // Width of the page's scrollbar (0 on Mac overlay scrollbars, ~15px on
+  // Windows), so the top bar's right edge matches the cards below it.
+  const [mainScrollbar, setMainScrollbar] = useState(0);
+  useEffect(() => {
+    const main = document.querySelector("main");
+    if (!main || typeof ResizeObserver === "undefined") return undefined;
+    const measure = () => setMainScrollbar(Math.max(0, main.offsetWidth - main.clientWidth));
+    const ro = new ResizeObserver(measure);
+    ro.observe(main);
+    if (main.firstElementChild) ro.observe(main.firstElementChild);
+    measure();
+    return () => ro.disconnect();
+  }, [location.pathname]);
+
   // Ctrl+K (Windows/Linux) or Cmd+K (Mac) opens search from anywhere.
   const [cmdOpen, setCmdOpen] = useState(false);
   useEffect(() => {
@@ -1109,8 +1123,13 @@ export default function Sidebar() {
 
   const DesktopTopbarPortal = createPortal(
     <div
-      className="hidden lg:flex items-center gap-4 px-5"
+      className="hidden lg:flex items-center gap-4"
       style={{
+        // Same side padding as every page (stitch-page: 32px), plus the
+        // page's own scrollbar on the right, so the breadcrumb lines up with
+        // the cards' left edge and the avatar with their right edge.
+        paddingLeft:  32,
+        paddingRight: `calc(32px + ${mainScrollbar}px)`,
         position:   "fixed",
         top:        0,
         left:       pinned ? 240 : 64,

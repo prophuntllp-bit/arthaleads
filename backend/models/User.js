@@ -45,6 +45,10 @@ const userSchema = new mongoose.Schema(
     },
     isActive: { type: Boolean, default: true },
     lastLogin: { type: Date, default: null },
+    // When this person hid the dashboard's "Get started" checklist. Kept on
+    // the account, not in the browser, so it stays hidden after logging in
+    // again, on another browser or on another device.
+    checklistDismissedAt: { type: Date, default: null },
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: false, default: null, index: true },
     passwordResetToken:   { type: String, select: false },
     passwordResetExpires: { type: Date,   select: false },

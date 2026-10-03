@@ -44,6 +44,14 @@ router.get("/account/deletion",    authController.accountDeletionStatus);
 router.post("/account/deletion",   authLimiter, authController.requestAccountDeletion);
 router.delete("/account/deletion", authLimiter, authController.cancelAccountDeletion);
 router.put("/me",             validate(updateProfileSchema), authController.updateProfile);
+// Hide the dashboard's "Get started" checklist for good (this person only).
+router.post("/me/checklist-dismissed", async (req, res, next) => {
+  try {
+    const User = require("../models/User");
+    await User.updateOne({ _id: req.user._id }, { $set: { checklistDismissedAt: new Date() } });
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
 router.get("/agents",         authController.getAgents);
 router.get("/performance",    authorize("admin", "manager"), authController.getPerformance);
 router.get("/performance/leads", authorize("admin", "manager"), authController.getPerformanceLeads);

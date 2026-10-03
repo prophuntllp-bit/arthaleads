@@ -49,7 +49,7 @@ const STEPS = [
 ];
 
 export default function OnboardingChecklist({ totalLeads }) {
-  const { org } = useAuth();
+  const { org, user, updateUserState } = useAuth();
   const orgId = org?._id || "guest";
 
   const storageKey  = `ol_${orgId}`;
@@ -58,10 +58,14 @@ export default function OnboardingChecklist({ totalLeads }) {
   const [manualDone, setManualDone] = useState(
     () => JSON.parse(localStorage.getItem(storageKey) || "[]")
   );
-  const [dismissed, setDismissed] = useState(
+  // Hidden for good once this person dismisses it. The account remembers it
+  // (user.checklistDismissedAt), so it stays hidden after logging in again,
+  // in another browser or on another device. The browser keys are kept only
+  // for anyone who dismissed it before this was stored on the account.
+  const [dismissedHere, setDismissed] = useState(
     () => localStorage.getItem(dismissKey) === "1"
-       || sessionStorage.getItem(dismissKey) === "1"
   );
+  const dismissed = dismissedHere || Boolean(user?.checklistDismissedAt);
   const [expanded, setExpanded]               = useState(true);
   const [facebookConnected, setFacebookConnected] = useState(false);
   const [agentsCount, setAgentsCount]         = useState(1);
@@ -97,17 +101,15 @@ export default function OnboardingChecklist({ totalLeads }) {
     localStorage.setItem(storageKey, JSON.stringify(next));
   };
 
-  // Permanent dismiss (X button) — never shows again for this org.
+  // ✕ and "Hide checklist" both hide it for good.
   const dismiss = () => {
     setDismissed(true);
-    localStorage.setItem(dismissKey, "1");
+    try { localStorage.setItem(dismissKey, "1"); } catch { /* storage blocked */ }
+    api.post("/auth/me/checklist-dismissed")
+      .then(() => user && updateUserState?.({ ...user, checklistDismissedAt: new Date().toISOString() }))
+      .catch(() => {});
   };
-
-  // Skip for now — hidden only for this session, reappears on next login.
-  const skip = () => {
-    setDismissed(true);
-    sessionStorage.setItem(dismissKey, "1");
-  };
+  const skip = dismiss;
 
   if (dismissed) return null;
 
@@ -260,7 +262,7 @@ export default function OnboardingChecklist({ totalLeads }) {
               className="text-xs font-semibold px-3 py-1.5 rounded-lg transition text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
               style={{ border: "1px solid var(--app-border)" }}
             >
-              {allDone ? "Dismiss" : "Skip for now"}
+              {allDone ? "Dismiss" : "Hide checklist"}
             </button>
           </div>
         </div>
