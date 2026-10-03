@@ -2363,6 +2363,12 @@ function LeadRoutingSection() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ label: "", source: "facebook", matchField: "form_id", matchValue: "", assignTo: "", assignToProject: "" });
+  // Multiple real-lead values ticked in the quick-pick (e.g. several WhatsApp
+  // ads that should all route the same way) — when non-empty this creates one
+  // rule per ticked value instead of the single `form.matchValue`. Cleared
+  // whenever Source or Match By changes, since the ticked values belong to
+  // that specific field.
+  const [matchValues, setMatchValues] = useState([]);
 
   useEffect(() => {
     Promise.all([
@@ -2419,15 +2425,20 @@ function LeadRoutingSection() {
     if (form.source === "website") return null;
     const list = campaignOptions[form.source]?.[form.matchField];
     if (!list?.length) return null;
-    return [
-      { value: "", label: "— Type manually below —" },
-      ...list.map((o) => ({ value: o.value, label: `${o.label}${o.count ? ` (${o.count})` : ""}` })),
-    ];
+    return list.map((o) => ({ value: o.value, label: o.label, count: o.count }));
   }, [form.source, form.matchField, campaignOptions]);
+
+  // Ticked values belong to one specific source+matchField — switching
+  // either one invalidates whatever was ticked for the previous field.
+  useEffect(() => { setMatchValues([]); }, [form.source, form.matchField]);
+
+  const toggleMatchValue = (value) => {
+    setMatchValues((prev) => prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]);
+  };
 
   const handleAdd = async (e) => {
     e.preventDefault();
-    if (!form.label.trim() || !form.matchValue.trim()) {
+    if (!form.label.trim() || (matchValues.length === 0 && !form.matchValue.trim())) {
       toast.error("Please fill in all fields"); return;
     }
     if (!form.assignTo) {
@@ -2435,11 +2446,29 @@ function LeadRoutingSection() {
     }
     setSaving(true);
     try {
-      const { data } = await api.post("/routing-rules", form);
-      setRules((prev) => [data.rule, ...prev]);
+      if (matchValues.length > 0) {
+        // One rule per ticked value, same label/source/matchField/agent/
+        // project — each matched value gets a distinct rule row (so any one
+        // of them can later be paused/deleted/reassigned on its own) rather
+        // than one rule holding an array of values.
+        const results = await Promise.allSettled(matchValues.map((value) => {
+          const pick = campaignQuickPickOptions?.find((o) => o.value === value);
+          const label = pick?.label && pick.label !== value ? `${form.label} — ${pick.label}` : form.label;
+          return api.post("/routing-rules", { ...form, label, matchValue: value });
+        }));
+        const created = results.filter((r) => r.status === "fulfilled").map((r) => r.value.data.rule);
+        const failed = results.length - created.length;
+        if (created.length) setRules((prev) => [...created, ...prev]);
+        if (failed) toast.error(`${created.length} of ${results.length} rules saved — ${failed} failed`);
+        else toast.success(`${created.length} routing rule${created.length > 1 ? "s" : ""} added`);
+      } else {
+        const { data } = await api.post("/routing-rules", form);
+        setRules((prev) => [data.rule, ...prev]);
+        toast.success("Routing rule added");
+      }
       setForm({ label: "", source: "facebook", matchField: "form_id", matchValue: "", assignTo: agents[0]?._id || "", assignToProject: "" });
+      setMatchValues([]);
       setShowForm(false);
-      toast.success("Routing rule added");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to save rule");
     } finally {
@@ -2548,15 +2577,24 @@ function LeadRoutingSection() {
 
             {campaignQuickPickOptions && (
               <div className="space-y-1 sm:col-span-2">
-                <label className="label">Pick from your real leads</label>
-                <CustomSelect
-                  value=""
-                  onChange={(v) => { if (v) setForm((f) => ({ ...f, matchValue: v })); }}
-                  options={campaignQuickPickOptions}
-                  placeholder="— Type manually below —"
-                  style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
-                />
-                <p className="text-xs text-app-soft">Only shows {MATCH_FIELD_LABELS[form.matchField].toLowerCase()} values already seen on a lead that came in — a brand-new campaign won't be listed yet, so paste it in manually below.</p>
+                <label className="label">
+                  Pick from your real leads{matchValues.length > 0 ? ` (${matchValues.length} selected)` : ""}
+                </label>
+                <div className="rounded-xl divide-y max-h-56 overflow-y-auto" style={{ border: "1px solid var(--app-border)" }}>
+                  {campaignQuickPickOptions.map((o) => (
+                    <label key={o.value} className="flex items-center gap-2.5 px-3 py-2 text-sm cursor-pointer hover:bg-[var(--app-surface-low)]">
+                      <input type="checkbox" className="shrink-0"
+                        checked={matchValues.includes(o.value)} onChange={() => toggleMatchValue(o.value)} />
+                      <span className="flex-1 min-w-0 truncate text-app">{o.label}</span>
+                      {o.count > 0 && <span className="text-xs text-app-soft shrink-0">{o.count} lead{o.count === 1 ? "" : "s"}</span>}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-app-soft">
+                  {matchValues.length > 0
+                    ? `Tick as many as you need — Save will create ${matchValues.length} rule${matchValues.length > 1 ? "s" : ""}, all assigned to the same agent${form.assignToProject ? " and project" : ""}.`
+                    : "Tick one or more to route them all the same way — leave everything unticked to type a single value manually below instead."}
+                </p>
               </div>
             )}
 
@@ -2564,14 +2602,17 @@ function LeadRoutingSection() {
               <label className="label">{MATCH_FIELD_LABELS[form.matchField]} Value</label>
               <input
                 className="input font-mono text-sm"
-                placeholder={MATCH_FIELD_PLACEHOLDERS[form.matchField]}
+                placeholder={matchValues.length > 0 ? "Using ticked selections above" : MATCH_FIELD_PLACEHOLDERS[form.matchField]}
                 value={form.matchValue}
+                disabled={matchValues.length > 0}
                 onChange={(e) => {
                   const raw = e.target.value.trim();
                   setForm((f) => ({ ...f, matchValue: f.matchField === "domain" ? raw.toLowerCase() : raw }));
                 }}
               />
-              <p className="text-xs text-app-soft">{matchFieldHint(form.source, form.matchField)}</p>
+              <p className="text-xs text-app-soft">
+                {matchValues.length > 0 ? "Clear your ticked selections above to type a single value here instead." : matchFieldHint(form.source, form.matchField)}
+              </p>
             </div>
 
             <div className="space-y-1 sm:col-span-2">
