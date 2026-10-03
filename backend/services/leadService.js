@@ -799,7 +799,7 @@ const leadService = {
     }
     if (search) {
       const rx = { $regex: escapeRegex(search), $options: "i" };
-      andConditions.push({ $or: [{ name: rx }, { phone: rx }, { email: rx }] });
+      andConditions.push({ $or: [{ name: rx }, { phone: rx }, { email: rx }, { sourceDomain: rx }, { leadSourceLabel: rx }] });
     }
     if (siteFilter) {
       const rx = { $regex: escapeRegex(siteFilter), $options: "i" };
@@ -823,6 +823,7 @@ const leadService = {
     // fields, are kept out of the plain browse view.
     const transferredOnly = !wantsProjectLeads && !projectId && !siteFilter && !sitePage;
     let projLeads = [], projTotal = 0;
+    let projFilterNoStatus = null;
 
     {
       const projFilter = { orgId: user.orgId };
@@ -844,7 +845,7 @@ const leadService = {
       const projAndConditions = [];
       if (search) {
         const rx = { $regex: escapeRegex(search), $options: "i" };
-        projAndConditions.push({ $or: [{ name: rx }, { phone: rx }, { email: rx }] });
+        projAndConditions.push({ $or: [{ name: rx }, { phone: rx }, { email: rx }, { sourceDomain: rx }, { leadSourceLabel: rx }] });
       }
       if (siteFilter) {
         const rx = { $regex: escapeRegex(siteFilter), $options: "i" };
@@ -865,6 +866,8 @@ const leadService = {
         projFilter.$and = projAndConditions;
       }
       if (projectId) projFilter.project = projectId;
+      projFilterNoStatus = { ...projFilter };
+      delete projFilterNoStatus.status;
 
       [projLeads, projTotal] = await Promise.all([
         ProjectLead.find(projFilter)
@@ -925,7 +928,30 @@ const leadService = {
       .slice(skip, skip + limitInt);
 
     const total = leadTotal + projTotal;
-    return { leads: merged, total, page: pageInt, pages: Math.ceil(total / limitInt) };
+
+    // statusCounts=1: how many leads each status tab would show, with every
+    // other active filter applied (so the tabs always add up to "All").
+    // countDocuments, not an aggregate, so ids sent as strings (agent,
+    // project) are cast exactly as they are for the list itself.
+    let statusCounts;
+    if (query.statusCounts === "1" || query.statusCounts === true) {
+      const leadNoStatus = { ...leadFilter };
+      delete leadNoStatus.status;
+      const skipLeads = projectId || !wantsPlainLeads;
+      const countFor = async (st) => {
+        const [a, b] = await Promise.all([
+          skipLeads ? 0 : Lead.countDocuments(st ? { ...leadNoStatus, status: st } : leadNoStatus),
+          projFilterNoStatus ? ProjectLead.countDocuments(st ? { ...projFilterNoStatus, status: st } : projFilterNoStatus) : 0,
+        ]);
+        return a + b;
+      };
+      const statuses = OPTS.STATUS;
+      const counts = await Promise.all([countFor(null), ...statuses.map(countFor)]);
+      statusCounts = { all: counts[0] };
+      statuses.forEach((st, i) => { statusCounts[st] = counts[i + 1]; });
+    }
+
+    return { leads: merged, total, page: pageInt, pages: Math.ceil(total / limitInt), ...(statusCounts ? { statusCounts } : {}) };
   },
 
   async getAnalytics(user, query = {}) {

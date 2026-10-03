@@ -1,4 +1,5 @@
 ﻿import { useEffect, useRef, useState } from "react";
+import LeadFilters from "../components/leads/LeadFilters";
 import IconButton from "../components/IconButton";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -289,7 +290,7 @@ export default function Leads() {
   const location = useLocation();
   const navigate = useNavigate();
   const {
-    leads, total, loading, page, setPage,
+    leads, total, statusCounts, loading, page, setPage,
     filters, setFilter,
     upsertLead, removeLead, refetch, pages, limit, changeLimit,
   } = useLeads("unified", {
@@ -1114,178 +1115,28 @@ export default function Leads() {
           </div>
         </div>
 
-        {/* Row 2: filters — 3-col × 3-row grid on sm+ */}
-        {(() => {
-          const activeFilterCount = [
-            filters.status, filters.source, filters.priority, filters.booking, filters.siteFilter,
-            filters.assignedTo, filters.projectId, filters.consent,
-            filters.myOnly === "true" ? "t" : null,
-          ].filter(Boolean).length;
-          return (
-            <div className="space-y-2 pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
-              {/* Mobile: search + filters toggle always visible */}
-              <div className="flex items-center gap-2 sm:hidden">
-                <div className="relative flex-1 min-w-0">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
-                  <input
-                    style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
-                    placeholder="Search name, phone…"
-                    value={filters.search}
-                    onChange={(e) => setFilter("search", e.target.value)}
-                  />
-                </div>
-                <button
-                  className="inline-flex items-center gap-1.5 rounded-full text-xs font-semibold relative transition-all flex-shrink-0"
-                  style={{ padding: "5px 12px", border: "1px solid var(--app-border)", background: showFilters ? "var(--app-primary)" : "var(--app-surface-low)", color: showFilters ? "#fff" : "var(--app-text-soft)" }}
-                  onClick={() => setShowFilters(f => !f)}
-                >
-                  <Filter className="h-3.5 w-3.5" />
-                  Filters
-                  {activeFilterCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-orange-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </button>
-              </div>
-
-              {/* Filter grid: 3-col on sm+; 2-col expandable on mobile */}
-              <div className={`${showFilters ? "grid" : "hidden"} grid-cols-2 gap-2 sm:grid sm:grid-cols-3`} data-tour="leads-search">
-                {/* R1C1: Search — sm+ only */}
-                <div className="relative hidden sm:block">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
-                  <input
-                    style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
-                    placeholder="Search name, phone…"
-                    value={filters.search}
-                    onChange={(e) => setFilter("search", e.target.value)}
-                  />
-                </div>
-                {/* R1C2: Domain */}
-                <div className="relative">
-                  <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
-                  <input
-                    style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
-                    placeholder="Domain…"
-                    value={filters.siteFilter || ""}
-                    onChange={(e) => { setFilter("siteFilter", e.target.value); setFilter("sitePage", ""); }}
-                  />
-                </div>
-                {/* R1C3: Agent filter — admin/manager only */}
-                {isAdmin && agents.length > 0 && (
-                  <CustomSelect
-                    value={filters.assignedTo || ""}
-                    onChange={(v) => setFilter("assignedTo", v)}
-                    placeholder="All Agents"
-                    options={agents.map((a) => ({ value: a._id, label: a.name }))}
-                    style={{ width: "100%" }}
-                  />
-                )}
-                {/* R2C1: Projects — filters the same unified table/list below */}
-                {projects.length > 0 && (
-                  <CustomSelect
-                    value={filters.projectId || ""}
-                    onChange={(v) => setFilter("projectId", v)}
-                    placeholder="All Projects"
-                    options={projects.map((p) => ({ value: p._id, label: `${p.name} (${p.leadCount || 0})` }))}
-                    style={{ width: "100%" }}
-                  />
-                )}
-                {/* Status */}
-                <CustomSelect
-                  value={filters.status}
-                  onChange={(v) => setFilter("status", v)}
-                  placeholder="All Statuses"
-                  options={STATUS_OPTIONS}
-                  style={{ width: "100%" }}
-                />
-                {/* Source — "Website" expands into a sub-menu of actual domains */}
-                <SourceDomainSelect
-                  value={filters.source}
-                  domain={filters.siteFilter}
-                  page={filters.sitePage || ""}
-                  domains={domains}
-                  pages={sitePages}
-                  onChange={(source, dom, pg) => {
-                    setFilter("source", source);
-                    setFilter("siteFilter", dom);
-                    setFilter("sitePage", pg || "");
-                  }}
-                  placeholder="All Sources"
-                  options={SOURCE_OPTIONS}
-                  style={{ width: "100%" }}
-                />
-                {/* Priority, Booking */}
-                {[
-                  { key: "priority", placeholder: "All Priorities", opts: PRIORITY_OPTIONS },
-                  { key: "booking",  placeholder: "All Outcomes",   opts: BOOKING_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label, color: o.color })) },
-                  // Not a filter people pick by hand, so it stays out of the
-                  // way. It only appears when the WhatsApp campaign builder
-                  // links here to show who a campaign skipped, so that list
-                  // explains itself and can be cleared.
-                  ...(filters.consent ? [{ key: "consent",  placeholder: "Any WhatsApp consent", opts: [
-                    { value: "granted", label: "Consent given" },
-                    { value: "unknown", label: "Consent not recorded" },
-                    { value: "denied",  label: "Consent refused" },
-                  ] }] : []),
-                ].map(({ key, placeholder, opts }) => (
-                  <CustomSelect
-                    key={key}
-                    value={filters[key]}
-                    onChange={(v) => setFilter(key, v)}
-                    placeholder={placeholder}
-                    options={opts}
-                    style={{ width: "100%" }}
-                  />
-                ))}
-                {/* Date range — presets plus an exact custom range, same
-                    control already used on the Dashboard. `compact` keeps the
-                    pill to just the preset label ("Last 30 Days") rather than
-                    also appending the literal date span, so it stays the same
-                    length as its siblings ("All Priorities" etc.) in this row. */}
-                <DateRangePicker
-                  compact
-                  value={dateRangeValue}
-                  onChange={handleDateRangeChange}
-                  triggerClassName="w-full justify-between"
-                  triggerStyle={{ width: "100%", padding: "5px 10px", borderRadius: 10, fontSize: 13, backdropFilter: "none", WebkitBackdropFilter: "none" }}
-                />
-                {/* My Leads — admin/manager only */}
-                {isAdmin && (
-                  <div className="col-span-2 sm:col-auto">
-                    <button
-                      onClick={toggleMyOnly}
-                      className="w-full inline-flex items-center justify-between gap-2 rounded-xl text-xs font-semibold transition-all"
-                      style={{ padding: "7px 12px", border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <User className="w-3.5 h-3.5 shrink-0" />
-                        <span>My Leads</span>
-                      </div>
-                      <span style={{ display: "inline-flex", alignItems: "center", width: 32, height: 18, borderRadius: 9, padding: "0 2px", background: filters.myOnly === "true" ? "var(--app-primary, #f97316)" : "rgba(128,128,128,0.25)", transition: "background 0.2s", flexShrink: 0 }}>
-                        <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.3)", transform: filters.myOnly === "true" ? "translateX(14px)" : "translateX(0)", transition: "transform 0.2s", display: "block" }} />
-                      </span>
-                    </button>
-                  </div>
-                )}
-                {/* Clear */}
-                {Object.values(filters).some(Boolean) && (
-                  <div className="col-span-2 sm:col-auto">
-                    <button
-                      className="w-full flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition border border-red-500/20"
-                      onClick={() => {
-                        ["search", "siteFilter", "sitePage", "status", "source", "priority", "booking", "dateRange", "from", "to", "myOnly", "assignedTo", "projectId", "consent"].forEach((k) => setFilter(k, ""));
-                        try { localStorage.removeItem("leads_myOnly"); } catch {}
-                      }}
-                    >
-                      <X className="h-3 w-3" /> Clear all filters
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })()}
+        {/* Row 2: filters (search, dates, My Leads, Filters panel, status tabs, chips) */}
+        <LeadFilters
+          filters={filters}
+          setFilter={setFilter}
+          isAdmin={isAdmin}
+          agents={agents}
+          projects={projects}
+          domains={domains}
+          sitePages={sitePages}
+          statusCounts={statusCounts}
+          statusOptions={STATUS_OPTIONS}
+          sourceOptions={SOURCE_OPTIONS}
+          priorityOptions={PRIORITY_OPTIONS}
+          bookingOptions={BOOKING_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label, color: o.color }))}
+          dateRangeValue={dateRangeValue}
+          onDateRangeChange={handleDateRangeChange}
+          onToggleMyOnly={toggleMyOnly}
+          onClearAll={() => {
+            ["search", "siteFilter", "sitePage", "status", "source", "priority", "booking", "dateRange", "from", "to", "myOnly", "assignedTo", "projectId", "consent", "followUpToday"].forEach((k) => setFilter(k, ""));
+            try { localStorage.removeItem("leads_myOnly"); } catch { /* storage blocked */ }
+          }}
+        />
       </div>
 
       <section className="card overflow-hidden">

@@ -670,21 +670,20 @@ export default function Sidebar() {
                             end={endMatch !== undefined ? endMatch : true}
                             tabIndex={isExpanded && gExpanded ? 0 : -1}
                             onClick={() => setOpen(false)}
-                            {...(noActive ? { isActive: () => false } : {})}
-                            className={({ isActive }) =>
+                            className={({ isActive: hit }) => { const isActive = hit && !noActive; return (
                               `flex items-center rounded-2xl py-2 pr-3 text-sm transition-all ${
                                 isActive
                                   ? "font-semibold"
                                   : "font-medium text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
-                              }`
+                              }`); }
                             }
-                            style={({ isActive }) => ({
+                            style={({ isActive: hit }) => { const isActive = hit && !noActive; return ({
                               paddingLeft: 44,
                               ...(isActive ? {
                                 color: "var(--app-primary)",
                                 background: "rgba(var(--app-primary-rgb),0.10)",
                               } : {}),
-                            })}
+                            }); }}
                           >
                             <span className="truncate">{label}</span>
                           </NavLink>
@@ -1051,15 +1050,14 @@ export default function Sidebar() {
               to={to}
               end={endMatch !== undefined ? endMatch : true}
               onClick={() => setFlyout(null)}
-              {...(noActive ? { isActive: () => false } : {})}
-              className={({ isActive }) =>
+              className={({ isActive: hit }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-                  isActive
+                  hit && !noActive
                     ? "font-semibold"
                     : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
                 }`
               }
-              style={({ isActive }) => isActive ? {
+              style={({ isActive: hit }) => hit && !noActive ? {
                 color: "var(--app-primary)",
                 background: "rgba(var(--app-primary-rgb),0.10)",
               } : {}}

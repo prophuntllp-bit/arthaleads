@@ -5,6 +5,8 @@ export function useLeads(mode = "normal", initialFilters = {}) {
   const [limit, setLimit] = useState(10);
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
+  // Per-status counts for the Leads page's status tabs (unified mode only).
+  const [statusCounts, setStatusCounts] = useState(null);
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -22,12 +24,13 @@ export function useLeads(mode = "normal", initialFilters = {}) {
       setLoading(true);
       try {
         const { data } = await api.get(endpoint, {
-          params: { ...filters, page, limit },
+          params: { ...filters, page, limit, ...(mode === "unified" ? { statusCounts: "1" } : {}) },
           signal: controller.signal
         });
         setLeads(data.leads || []);
         setTotal(data.total || 0);
         setPages(data.pages || 1);
+        if (data.statusCounts) setStatusCounts(data.statusCounts);
       } catch (err) {
         if (err.name !== "CanceledError") {
           setLeads([]);
@@ -49,7 +52,7 @@ export function useLeads(mode = "normal", initialFilters = {}) {
   // without a manual reload. Silent: no loading flash, and it never wipes the
   // list on a failed poll. Skipped while the tab is hidden.
   const paramsRef = useRef({});
-  paramsRef.current = { endpoint, params: { ...filters, page, limit } };
+  paramsRef.current = { endpoint, params: { ...filters, page, limit, ...(mode === "unified" ? { statusCounts: "1" } : {}) } };
   useEffect(() => {
     const tick = async () => {
       if (document.hidden) return;
@@ -60,6 +63,7 @@ export function useLeads(mode = "normal", initialFilters = {}) {
         setLeads(data.leads || []);
         setTotal(data.total || 0);
         setPages(data.pages || 1);
+        if (data.statusCounts) setStatusCounts(data.statusCounts);
       } catch { /* keep the current list */ }
     };
     const iv = setInterval(tick, 15000);
@@ -105,6 +109,7 @@ export function useLeads(mode = "normal", initialFilters = {}) {
   return {
     leads,
     total,
+    statusCounts,
     pages,
     page,
     setPage,
