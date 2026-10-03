@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Search, SlidersHorizontal, User, X } from "lucide-react";
 import CustomSelect from "../CustomSelect";
@@ -44,6 +44,24 @@ export default function LeadFilters({
   const [pos, setPos] = useState({ top: 0, right: 0 });
   const btnRef = useRef(null);
   const searchRef = useRef(null);
+
+  // Sliding highlight behind the selected status tab.
+  const stripRef = useRef(null);
+  const tabRefs = useRef({});
+  const [pill, setPill] = useState(null); // { left, width }
+  const [pillReady, setPillReady] = useState(false); // no slide on first paint
+  const activeStatus = filters.status || "";
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = tabRefs.current[activeStatus];
+      if (el) setPill({ left: el.offsetLeft, width: el.offsetWidth });
+    };
+    measure();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    if (ro && stripRef.current) ro.observe(stripRef.current);
+    return () => ro?.disconnect();
+  }, [activeStatus, statusCounts]);
+  useEffect(() => { const t = setTimeout(() => setPillReady(true), 50); return () => clearTimeout(t); }, []);
 
   // "/" jumps to this search (Ctrl/Cmd+K stays the app-wide search).
   useEffect(() => {
@@ -167,19 +185,23 @@ export default function LeadFilters({
       {/* 2. Status tabs with counts: a bordered strip, the selected tab raised */}
       <div className="hidden w-full overflow-x-auto sm:block">
         {/* Full width of the card, tabs left-aligned (min-w-max lets it scroll when narrow). */}
-        <div role="tablist" aria-label="Status" className="flex w-full min-w-max gap-1 rounded-xl p-1"
+        <div ref={stripRef} role="tablist" aria-label="Status" className="relative flex w-full min-w-max gap-1 rounded-xl p-1"
           style={{ border: "1px solid var(--app-border-strong)", background: "var(--app-surface-low)" }}>
+          {/* The raised highlight is one element that slides to the selected tab. */}
+          {pill && (
+            <span aria-hidden="true" className={`tab-pill pointer-events-none absolute bottom-1 top-1 rounded-lg ${pillReady ? "tab-pill-animate" : ""}`}
+              style={{ left: pill.left, width: pill.width, background: "var(--app-surface-solid)",
+                boxShadow: "0 0 0 1px rgba(var(--app-primary-rgb),0.45), 0 1px 2px rgba(16,24,40,0.06)" }} />
+          )}
           {tabs.map((t) => {
-            const on = (filters.status || "") === t.value;
+            const on = activeStatus === t.value;
             return (
-              <button key={t.label} type="button" role="tab" aria-selected={on} onClick={() => setFilter("status", t.value)}
-                className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${on ? "" : "hover:text-app"}`}
-                style={on
-                  ? { background: "var(--app-surface-solid)", color: "var(--app-text)", boxShadow: "0 0 0 1px rgba(var(--app-primary-rgb),0.45), 0 1px 2px rgba(16,24,40,0.06)" }
-                  : { color: "var(--app-text-soft)" }}>
+              <button key={t.label} ref={(el) => { tabRefs.current[t.value] = el; }} type="button" role="tab" aria-selected={on} onClick={() => setFilter("status", t.value)}
+                className={`relative z-[1] inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors duration-200 ${on ? "" : "hover:text-app"}`}
+                style={{ color: on ? "var(--app-text)" : "var(--app-text-soft)" }}>
                 {t.label}
                 {t.count != null && (
-                  <span className="rounded-md px-1.5 py-px text-[11px] font-semibold tabular-nums"
+                  <span className="rounded-md px-1.5 py-px text-[11px] font-semibold tabular-nums transition-colors duration-200"
                     style={on
                       ? { border: "1px solid rgba(var(--app-primary-rgb),0.4)", color: "var(--app-primary)", background: "rgba(var(--app-primary-rgb),0.06)" }
                       : { border: "1px solid var(--app-border-strong)", background: "var(--app-surface-solid)" }}>
