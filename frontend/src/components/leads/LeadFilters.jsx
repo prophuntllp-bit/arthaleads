@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Search, SlidersHorizontal, User, X } from "lucide-react";
 import CustomSelect from "../CustomSelect";
-import SourceDomainSelect from "../SourceDomainSelect";
+import SourceTreeSelect, { decodeSel, encodeSel } from "./SourceTreeSelect";
 import DateRangePicker from "../DateRangePicker";
 
 // The Leads page filters, kept simple:
@@ -13,7 +13,7 @@ import DateRangePicker from "../DateRangePicker";
 //   5. what's applied, as removable chips, with Clear all
 // Every filter works exactly as before; only where they live changed.
 
-const SECONDARY_KEYS = ["assignedTo", "projectId", "source", "siteFilter", "sitePage", "priority", "booking", "consent", "followUpToday"];
+const SECONDARY_KEYS = ["assignedTo", "projectId", "source", "siteFilter", "sitePage", "sourceSel", "priority", "booking", "consent", "followUpToday"];
 
 const CONSENT_OPTIONS = [
   { value: "granted", label: "Consent given" },
@@ -79,14 +79,24 @@ export default function LeadFilters({
     const parts = [filters.source, filters.siteFilter, filters.sitePage].filter(Boolean);
     chips.push({ key: "source", clear: ["source", "siteFilter", "sitePage"], text: `Source: ${parts.join(" › ")}` });
   }
+  // One chip per ticked source / domain / page, each removable on its own.
+  const ticked = decodeSel(filters.sourceSel);
+  ticked.forEach((t) => {
+    const [k, ...rest] = t.split(":");
+    const v = rest.join(":");
+    const pg = k === "page" ? sitePages.find((x) => x.key === v) : null;
+    const name = pg ? `${pg.domain}${pg.path === "/" ? "" : pg.path}` : v;
+    chips.push({ key: `sel-${t}`, text: `Source: ${name}`, onClear: () => setFilter("sourceSel", encodeSel(ticked.filter((x) => x !== t))) });
+  });
   if (filters.priority) chips.push({ key: "priority", text: `Priority: ${filters.priority}` });
   if (filters.booking) chips.push({ key: "booking", text: `Outcome: ${label(bookingOptions, filters.booking)}` });
   if (filters.consent) chips.push({ key: "consent", text: `WhatsApp: ${label(CONSENT_OPTIONS, filters.consent)}` });
   if (filters.followUpToday) chips.push({ key: "followUpToday", text: "Follow-ups due today" });
-  const panelCount = SECONDARY_KEYS.filter((k) => filters[k] && !["siteFilter", "sitePage"].includes(k)).length + (!filters.source && filters.siteFilter ? 1 : 0);
+  const panelCount = SECONDARY_KEYS.filter((k) => filters[k] && !["siteFilter", "sitePage", "sourceSel"].includes(k)).length
+    + (!filters.source && filters.siteFilter ? 1 : 0) + ticked.length;
   const anything = Object.entries(filters).some(([k, v]) => v && k !== "myOnly") || filters.myOnly === "true";
 
-  const clearChip = (c) => (c.clear || [c.key]).forEach((k) => setFilter(k, ""));
+  const clearChip = (c) => (c.onClear ? c.onClear() : (c.clear || [c.key]).forEach((k) => setFilter(k, "")));
 
   const tabs = [{ value: "", label: "All", count: statusCounts?.all }, ...statusOptions.map((s) => ({ value: s, label: s, count: statusCounts?.[s] }))];
 
@@ -233,9 +243,12 @@ export default function LeadFilters({
                 </Field>
               )}
               <Field label="Source">
-                <SourceDomainSelect value={filters.source} domain={filters.siteFilter} page={filters.sitePage || ""} domains={domains} pages={sitePages}
-                  onChange={(source, dom, pg) => { setFilter("source", source); setFilter("siteFilter", dom); setFilter("sitePage", pg || ""); }}
-                  placeholder="All sources" options={sourceOptions} style={selectStyle} />
+                <SourceTreeSelect value={ticked} domains={domains} pages={sitePages} options={sourceOptions} placeholder="All sources" style={selectStyle}
+                  onChange={(tokens) => {
+                    // The tree replaces any single source set by a link (e.g. from the dashboard).
+                    setFilter("source", ""); setFilter("siteFilter", ""); setFilter("sitePage", "");
+                    setFilter("sourceSel", encodeSel(tokens));
+                  }} />
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Priority">

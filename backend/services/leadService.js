@@ -174,6 +174,40 @@ function sitePageCondition(key) {
   return { sourcePage: { $regex: `^https?://(www\\.)?${escapeRegex(domain)}${escapeRegex(path)}/?(?:[?#]|$)`, $options: "i" } };
 }
 
+// Several sources ticked at once in the Leads page's Source tree.
+// `sourceSel` is a comma-separated list of tokens, each URI-encoded:
+//   src:<source>  every lead from that source (e.g. src:WhatsApp)
+//   dom:<domain>  website leads from that domain
+//   page:<key>    website leads from that one page ("host/path")
+// A lead matches if it matches ANY token. Returns null when nothing usable.
+function sourceSelectionCondition(sel) {
+  if (!sel) return null;
+  const tokens = String(sel).split(",").map((t) => t.trim()).filter(Boolean).map((t) => {
+    const i = t.indexOf(":");
+    let v = "";
+    try { v = decodeURIComponent(t.slice(i + 1)); } catch { v = t.slice(i + 1); }
+    return { kind: t.slice(0, i), value: v.trim() };
+  }).filter((t) => t.value && ["src", "dom", "page"].includes(t.kind)).slice(0, 100);
+  if (!tokens.length) return null;
+  const or = [];
+  const srcs = tokens.filter((t) => t.kind === "src").map((t) => t.value);
+  const srcClause = srcs.length ? { source: { $in: srcs } } : null;
+  for (const t of tokens.filter((x) => x.kind === "dom")) {
+    const d = t.value.toLowerCase().replace(/^www\./, "");
+    or.push({ sourceDomain: d });
+    or.push({ sourcePage: { $regex: `^https?://(www\\.)?${escapeRegex(d)}(?:[/?#:]|$)`, $options: "i" } });
+  }
+  for (const t of tokens.filter((x) => x.kind === "page")) or.push(sitePageCondition(t.value));
+  // For project leads a ticked source only counts leads that were moved into
+  // a project (as when browsing normally), never the bulk-imported contacts;
+  // only a ticked website or page reaches those.
+  const build = (importsToo) => ({ $or: [
+    ...(srcClause ? [importsToo ? srcClause : { ...srcClause, fromLeadId: { $ne: null } }] : []),
+    ...or,
+  ] });
+  return { cond: build(true), projCond: (importsToo) => build(importsToo), hasSites: or.length > 0 };
+}
+
 const leadService = {
   // ── Duplicate check ────────────────────────────────────────────────────────
   // Used both by create() (to flag a new lead as a possible duplicate without
@@ -806,6 +840,8 @@ const leadService = {
       andConditions.push({ $or: [{ leadSourceLabel: rx }, { sourcePage: rx }, { sourceDomain: rx }, { "notes.text": rx }] });
     }
     if (sitePage) andConditions.push(sitePageCondition(sitePage));
+    const multiSource = sourceSelectionCondition(query.sourceSel);
+    if (multiSource) andConditions.push(multiSource.cond);
     if (andConditions.length) leadFilter.$and = andConditions;
 
     // ── Project-lead filter ────────────────────────────────────────────────────
@@ -821,7 +857,7 @@ const leadService = {
     // leads, so it stays in this list (with its details) and answers every
     // filter. Only bulk-imported contacts, which have none of the pipeline
     // fields, are kept out of the plain browse view.
-    const transferredOnly = !wantsProjectLeads && !projectId && !siteFilter && !sitePage;
+    const transferredOnly = !wantsProjectLeads && !projectId && !siteFilter && !sitePage && !multiSource?.hasSites;
     let projLeads = [], projTotal = 0;
     let projFilterNoStatus = null;
 
@@ -854,6 +890,7 @@ const leadService = {
         projAndConditions.push({ $or: [{ leadSourceLabel: rx }, { sourcePage: rx }, { sourceDomain: rx }, { "notes.text": rx }] });
       }
       if (sitePage) projAndConditions.push(sitePageCondition(sitePage));
+      if (multiSource) projAndConditions.push(multiSource.projCond(wantsProjectLeads || !!projectId));
       if (projAndConditions.length) projFilter.$and = projAndConditions;
 
       // A project lead belongs to an agent when the agent is on the parent

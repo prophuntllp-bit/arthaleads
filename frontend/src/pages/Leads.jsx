@@ -661,6 +661,8 @@ export default function Leads() {
         if (filters.from)       params.set("from",       filters.from);
         if (filters.to)         params.set("to",         filters.to);
         if (filters.consent)    params.set("consent",    filters.consent);
+        if (filters.sourceSel)  params.set("sourceSel",  filters.sourceSel);
+        if (filters.followUpToday) params.set("followUpToday", filters.followUpToday);
       }
 
       const { data: res } = await api.get(`/leads/export?${params.toString()}`);
@@ -1133,7 +1135,7 @@ export default function Leads() {
           onDateRangeChange={handleDateRangeChange}
           onToggleMyOnly={toggleMyOnly}
           onClearAll={() => {
-            ["search", "siteFilter", "sitePage", "status", "source", "priority", "booking", "dateRange", "from", "to", "myOnly", "assignedTo", "projectId", "consent", "followUpToday"].forEach((k) => setFilter(k, ""));
+            ["search", "siteFilter", "sitePage", "status", "source", "priority", "booking", "dateRange", "from", "to", "myOnly", "assignedTo", "projectId", "consent", "followUpToday", "sourceSel"].forEach((k) => setFilter(k, ""));
             try { localStorage.removeItem("leads_myOnly"); } catch { /* storage blocked */ }
           }}
         />
