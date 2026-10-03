@@ -1038,9 +1038,9 @@ function FollowUpDuePanel({ user, navigate, prefetchedLeads }) {
   const [dismissed, setDismissed] = useState(
     () => sessionStorage.getItem("fup_panel_dismissed") === "1"
   );
-  const [minimized, setMinimized] = useState(
-    () => localStorage.getItem("fup_panel_minimized") !== "0"
-  );
+  // Every collapsible dashboard panel starts closed on each load; the
+  // chevron opens it for this visit only (nothing is remembered).
+  const [minimized, setMinimized] = useState(true);
 
   useEffect(() => {
     // Use pre-fetched data when provided — no duplicate network call
@@ -1134,11 +1134,11 @@ function FollowUpDuePanel({ user, navigate, prefetchedLeads }) {
         <div className="shrink-0 flex items-center gap-1">
           <button
             type="button"
-            onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("fup_panel_minimized", next ? "1" : "0"); return next; })}
+            onClick={() => setMinimized((v) => !v)}
             title={minimized ? "Expand" : "Minimize"}
             className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
           >
-            <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
+            <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "" : "rotate-180"}`} />
           </button>
           <button
             type="button"
@@ -1245,7 +1245,9 @@ function FollowUpDuePanel({ user, navigate, prefetchedLeads }) {
 function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
   const [leads, setLeads] = useState(prefetchedLeads || []);
   const [loading, setLoading] = useState(prefetchedLeads === null || prefetchedLeads === undefined);
-  const [minimized, setMinimized] = useState(() => localStorage.getItem("hot_panel_minimized") === "1");
+  // Every collapsible dashboard panel starts closed on each load; the
+  // chevron opens it for this visit only (nothing is remembered).
+  const [minimized, setMinimized] = useState(true);
 
   useEffect(() => {
     if (prefetchedLeads !== null && prefetchedLeads !== undefined) {
@@ -1336,10 +1338,10 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
             <span className="hidden sm:inline">AI Scored</span>
           </span>
           <button type="button"
-            onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("hot_panel_minimized", next ? "1" : "0"); return next; })}
+            onClick={() => setMinimized((v) => !v)}
             title={minimized ? "Expand" : "Minimize"}
             className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-orange-500/10 cursor-pointer">
-            <ChevronDown className={`h-3.5 w-3.5 text-orange-400 transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
+            <ChevronDown className={`h-3.5 w-3.5 text-orange-400 transition-transform duration-200 ${minimized ? "" : "rotate-180"}`} />
           </button>
         </div>
       </div>
@@ -1481,9 +1483,9 @@ function StaleLeadsWidget({ navigate }) {
   const [dismissed, setDismissed] = useState(
     () => sessionStorage.getItem("stale_panel_dismissed") === "1"
   );
-  const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem("stale_panel_collapsed") === "1"
-  );
+  // Every collapsible dashboard panel starts closed on each load; the
+  // chevron opens it for this visit only (nothing is remembered).
+  const [collapsed, setCollapsed] = useState(true);
 
   useEffect(() => {
     if (dismissed) return;
@@ -1499,7 +1501,6 @@ function StaleLeadsWidget({ navigate }) {
   function toggleCollapsed() {
     const next = !collapsed;
     setCollapsed(next);
-    localStorage.setItem("stale_panel_collapsed", next ? "1" : "0");
   }
 
   return (
@@ -1526,7 +1527,7 @@ function StaleLeadsWidget({ navigate }) {
           </button>
           <button type="button" onClick={toggleCollapsed}
             className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5">
-            <ChevronDown className={`h-4 w-4 text-app-soft transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />
+            <ChevronDown className={`h-4 w-4 text-app-soft transition-transform duration-200 ${collapsed ? "" : "rotate-180"}`} />
           </button>
           <button type="button" onClick={() => { sessionStorage.setItem("stale_panel_dismissed", "1"); setDismissed(true); }}
             className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5">
@@ -1578,9 +1579,9 @@ function StaleLeadsWidget({ navigate }) {
 // ── 3. Project Breakdown Widget ───────────────────────────────────────────────
 function ProjectBreakdownWidget({ navigate }) {
   const [projects, setProjects] = useState(null);
-  const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem("projects_panel_collapsed") === "1"
-  );
+  // Every collapsible dashboard panel starts closed on each load; the
+  // chevron opens it for this visit only (nothing is remembered).
+  const [collapsed, setCollapsed] = useState(true);
 
   useEffect(() => {
     api.get("/projects/stats").then((r) => setProjects(r.data.data || [])).catch(() => setProjects([]));
@@ -1591,7 +1592,6 @@ function ProjectBreakdownWidget({ navigate }) {
   function toggleCollapsed() {
     const next = !collapsed;
     setCollapsed(next);
-    localStorage.setItem("projects_panel_collapsed", next ? "1" : "0");
   }
 
   return (
@@ -1615,7 +1615,7 @@ function ProjectBreakdownWidget({ navigate }) {
           </button>
           <button type="button" onClick={toggleCollapsed}
             className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5">
-            <ChevronDown className={`h-4 w-4 text-app-soft transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />
+            <ChevronDown className={`h-4 w-4 text-app-soft transition-transform duration-200 ${collapsed ? "" : "rotate-180"}`} />
           </button>
         </div>
       </div>
