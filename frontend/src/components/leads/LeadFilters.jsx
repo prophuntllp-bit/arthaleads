@@ -43,6 +43,20 @@ export default function LeadFilters({
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, right: 0 });
   const btnRef = useRef(null);
+  const searchRef = useRef(null);
+
+  // "/" jumps to this search (Ctrl/Cmd+K stays the app-wide search).
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      e.preventDefault();
+      searchRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const openPanel = () => {
     const r = btnRef.current?.getBoundingClientRect();
@@ -80,20 +94,27 @@ export default function LeadFilters({
     <div className="space-y-3 border-t pt-3" style={{ borderColor: "var(--app-border)" }} data-tour="leads-search">
       {/* 3. One row */}
       <div className="flex flex-wrap items-center gap-2">
+        {/* Same look as the header search, but it searches these leads only. */}
         <label className="relative min-w-[220px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-[15px] w-[15px] -translate-y-1/2 text-app-soft" />
           <input
+            ref={searchRef}
             value={filters.search}
             onChange={(e) => setFilter("search", e.target.value)}
-            placeholder="Search name, phone, email or website…"
-            className="w-full rounded-xl py-2 pl-9 pr-8 text-sm text-app outline-none transition focus:border-orange-400"
-            style={{ border: EDGE, background: "var(--app-surface-solid)", boxShadow: LIFT }}
+            onKeyDown={(e) => { if (e.key === "Escape") { setFilter("search", ""); e.currentTarget.blur(); } }}
+            placeholder="Search leads by name, phone, email or website…"
+            aria-label="Search leads"
+            className="w-full rounded-xl py-2 pl-9 pr-10 text-sm text-app outline-none transition placeholder:text-app-soft focus:border-orange-400"
+            style={{ border: EDGE, background: "var(--app-surface-low)", boxShadow: LIFT }}
           />
-          {filters.search && (
+          {filters.search ? (
             <button type="button" aria-label="Clear search" onClick={() => setFilter("search", "")}
               className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-app-soft hover:text-app">
               <X className="h-3.5 w-3.5" />
             </button>
+          ) : (
+            <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-app-soft"
+              style={{ border: "1px solid var(--app-border-strong)", background: "var(--app-surface-solid)" }} title="Press / to search">/</kbd>
           )}
         </label>
 
@@ -133,27 +154,38 @@ export default function LeadFilters({
         </button>
       </div>
 
-      {/* 2. Status tabs with counts */}
-      <div role="tablist" aria-label="Status" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5">
-        {tabs.map((t) => {
-          const on = (filters.status || "") === t.value;
-          return (
-            <button key={t.label} type="button" role="tab" aria-selected={on} onClick={() => setFilter("status", t.value)}
-              className="inline-flex shrink-0 items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition"
-              style={on
-                ? { background: "rgba(var(--app-primary-rgb),0.10)", color: "var(--app-primary)", fontWeight: 600, boxShadow: "inset 0 0 0 1px rgba(var(--app-primary-rgb),0.35)" }
-                : { color: "var(--app-text-soft)", fontWeight: 500 }}>
-              {t.label}
-              {t.count != null && (
-                <span className="rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums"
-                  style={on ? { background: "var(--app-primary)", color: "#fff" } : { background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-                  {t.count.toLocaleString("en-IN")}
-                </span>
-              )}
-            </button>
-          );
-        })}
+      {/* 2. Status tabs with counts: a bordered strip, the selected tab raised */}
+      <div className="hidden w-full overflow-x-auto sm:block">
+        <div role="tablist" aria-label="Status" className="inline-flex gap-1 rounded-xl p-1"
+          style={{ border: "1px solid var(--app-border-strong)", background: "var(--app-surface-low)" }}>
+          {tabs.map((t) => {
+            const on = (filters.status || "") === t.value;
+            return (
+              <button key={t.label} type="button" role="tab" aria-selected={on} onClick={() => setFilter("status", t.value)}
+                className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${on ? "" : "hover:text-app"}`}
+                style={on
+                  ? { background: "var(--app-surface-solid)", color: "var(--app-text)", boxShadow: "0 0 0 1px rgba(var(--app-primary-rgb),0.45), 0 1px 2px rgba(16,24,40,0.06)" }
+                  : { color: "var(--app-text-soft)" }}>
+                {t.label}
+                {t.count != null && (
+                  <span className="rounded-md px-1.5 py-px text-[11px] font-semibold tabular-nums"
+                    style={on
+                      ? { border: "1px solid rgba(var(--app-primary-rgb),0.4)", color: "var(--app-primary)", background: "rgba(var(--app-primary-rgb),0.06)" }
+                      : { border: "1px solid var(--app-border-strong)", background: "var(--app-surface-solid)" }}>
+                    {t.count.toLocaleString("en-IN")}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
+      {/* Phones: the same choice as a dropdown */}
+      <select aria-label="Status" value={filters.status || ""} onChange={(e) => setFilter("status", e.target.value)}
+        className="w-full rounded-xl px-3 py-2 text-sm font-semibold text-app sm:hidden"
+        style={{ border: EDGE, background: "var(--app-surface-solid)", boxShadow: LIFT }}>
+        {tabs.map((t) => <option key={t.label} value={t.value}>{t.label}{t.count != null ? ` (${t.count})` : ""}</option>)}
+      </select>
 
       {/* 5. What's applied */}
       {(chips.length > 0 || anything) && (
