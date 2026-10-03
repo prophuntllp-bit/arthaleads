@@ -831,7 +831,9 @@ const leadService = {
       if (priority) projFilter.priority = priority;
       if (consent === "unknown") projFilter["whatsappConsent.status"] = { $nin: ["granted", "denied"] };
       else if (consent)          projFilter["whatsappConsent.status"] = consent;
-      if (status)  projFilter.status  = status;
+      // A project lead with no status is shown as "New" (see the mapping
+      // below), so the New filter has to find it too.
+      if (status)  projFilter.status  = status === "New" ? { $in: ["New", "", null] } : status;
       if (source)  projFilter.source  = source;
       // Same rule as regular leads above.
       if (booking) projFilter.booking = booking;
@@ -941,7 +943,7 @@ const leadService = {
       const countFor = async (st) => {
         const [a, b] = await Promise.all([
           skipLeads ? 0 : Lead.countDocuments(st ? { ...leadNoStatus, status: st } : leadNoStatus),
-          projFilterNoStatus ? ProjectLead.countDocuments(st ? { ...projFilterNoStatus, status: st } : projFilterNoStatus) : 0,
+          projFilterNoStatus ? ProjectLead.countDocuments(st ? { ...projFilterNoStatus, status: st === "New" ? { $in: ["New", "", null] } : st } : projFilterNoStatus) : 0,
         ]);
         return a + b;
       };
