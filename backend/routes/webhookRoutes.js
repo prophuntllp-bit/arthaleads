@@ -634,6 +634,12 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
                 formId: leadDetails.form_id || leadData.form_id || "",
                 pageId: leadDetails.page_id || leadData.page_id || "",
                 automationId: automation?._id?.toString() || "",
+                // Same values matchRoutingRule already checked above — kept
+                // here too so getCampaignOptions can offer a real-lead
+                // quick-pick for Campaign/Ad Set/Ad ID, not just Form ID.
+                campaignId: leadData.campaign_id || "",
+                adsetId:    leadData.adset_id    || leadDetails.adset_id    || "",
+                adId:       leadData.ad_id       || leadDetails.ad_id       || "",
               },
             },
           ],
