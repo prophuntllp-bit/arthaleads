@@ -337,6 +337,70 @@ const leadService = {
     return domains.sort((a, b) => a.localeCompare(b));
   },
 
+  // ── Real campaign/ad/form IDs already seen on this org's leads — powers the
+  // Lead Routing form's quick-pick, same idea as getDomains/getSitePages but
+  // for Facebook/WhatsApp/Google instead of Website: an admin building a rule
+  // picks the actual campaign a lead came from instead of hunting the raw ID
+  // down in Ads Manager by hand. Facebook's campaign_id/adset_id/ad_id only
+  // started being recorded recently (see webhookRoutes.js's Facebook activity
+  // meta), so those three stay empty until new leads arrive even though
+  // form_id works immediately.
+  async getCampaignOptions(user) {
+    const base = { orgId: user.orgId, isDeleted: { $ne: true } };
+
+    const fbField = async (metaKey) => Lead.aggregate([
+      { $match: { ...base, source: "Facebook" } },
+      { $unwind: "$activities" },
+      { $match: { [`activities.meta.${metaKey}`]: { $nin: ["", null] } } },
+      { $group: {
+          _id: `$activities.meta.${metaKey}`,
+          label: { $first: "$leadSourceLabel" },
+          count: { $sum: 1 },
+          lastSeen: { $max: "$createdAt" },
+      } },
+      { $sort: { lastSeen: -1 } },
+      { $limit: 50 },
+    ]);
+
+    const [formId, campaignId, adsetId, adId, waAdId, googleCampaignId] = await Promise.all([
+      fbField("formId"),
+      fbField("campaignId"),
+      fbField("adsetId"),
+      fbField("adId"),
+      Lead.aggregate([
+        { $match: { ...base, source: "WhatsApp", "campaignRef.adId": { $nin: ["", null] } } },
+        { $group: {
+            _id: "$campaignRef.adId",
+            label: { $first: "$campaignRef.headline" },
+            count: { $sum: 1 },
+            lastSeen: { $max: "$createdAt" },
+        } },
+        { $sort: { lastSeen: -1 } },
+        { $limit: 50 },
+      ]),
+      Lead.aggregate([
+        { $match: { ...base, source: "Google" } },
+        { $unwind: "$activities" },
+        { $match: { "activities.meta.campaignId": { $nin: ["", null] } } },
+        { $group: {
+            _id: "$activities.meta.campaignId",
+            label: { $first: "$activities.meta.campaignName" },
+            count: { $sum: 1 },
+            lastSeen: { $max: "$createdAt" },
+        } },
+        { $sort: { lastSeen: -1 } },
+        { $limit: 50 },
+      ]),
+    ]);
+
+    const shape = (rows) => rows.map((r) => ({ value: r._id, label: r.label || r._id, count: r.count }));
+    return {
+      facebook: { form_id: shape(formId), campaign_id: shape(campaignId), adset_id: shape(adsetId), ad_id: shape(adId) },
+      whatsapp: { ad_id: shape(waAdId) },
+      google:   { campaign_id: shape(googleCampaignId) },
+    };
+  },
+
   // ── List with filters + pagination ─────────────────────────────────────────
   async getAll(query, user) {
     const {

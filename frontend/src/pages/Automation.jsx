@@ -2354,6 +2354,11 @@ function LeadRoutingSection() {
   const [projects, setProjects] = useState([]);
   const [domains, setDomains] = useState([]);
   const [sitePages, setSitePages] = useState([]);
+  // Real form/campaign/ad-set/ad IDs already seen on this org's leads, keyed
+  // by source then matchField — e.g. campaignOptions.facebook.form_id — so
+  // the rule form can offer a pick-from-real-leads dropdown instead of
+  // making you dig the raw ID out of Ads Manager by hand.
+  const [campaignOptions, setCampaignOptions] = useState({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -2367,14 +2372,16 @@ function LeadRoutingSection() {
       // have already come in from, so a rule can be picked instead of typed.
       api.get("/leads/domains"),
       api.get("/projects"),
+      api.get("/leads/campaign-options"),
     ])
-      .then(([rulesRes, agentsRes, domainsRes, projectsRes]) => {
+      .then(([rulesRes, agentsRes, domainsRes, projectsRes, campaignRes]) => {
         const agentList = agentsRes.data.agents || [];
         setRules(rulesRes.data.rules || []);
         setAgents(agentList);
         setDomains(domainsRes.data.domains || []);
         setSitePages(domainsRes.data.pages || []);
         setProjects(projectsRes.data.data || []);
+        setCampaignOptions(campaignRes.data.options || {});
         if (agentList.length > 0) {
           setForm((f) => ({ ...f, assignTo: f.assignTo || agentList[0]._id }));
         }
@@ -2401,6 +2408,22 @@ function LeadRoutingSection() {
     }
     return opts;
   }, [domains, sitePages]);
+
+  // Facebook/WhatsApp/Google quick-pick: the real form/campaign/ad-set/ad
+  // IDs already seen on this org's leads for whichever source+matchField is
+  // currently selected — picking one fills Value directly, no copy-pasting
+  // out of Ads Manager. null when there's nothing to offer yet (brand-new
+  // org, or a matchField that hasn't appeared on a lead yet), in which case
+  // the form falls back to the plain manual input below it.
+  const campaignQuickPickOptions = useMemo(() => {
+    if (form.source === "website") return null;
+    const list = campaignOptions[form.source]?.[form.matchField];
+    if (!list?.length) return null;
+    return [
+      { value: "", label: "— Type manually below —" },
+      ...list.map((o) => ({ value: o.value, label: `${o.label}${o.count ? ` (${o.count})` : ""}` })),
+    ];
+  }, [form.source, form.matchField, campaignOptions]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -2520,6 +2543,20 @@ function LeadRoutingSection() {
                   style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
                 />
                 <p className="text-xs text-app-soft">Only shows domains/pages that have already sent at least one lead — a brand-new page won't be listed yet, so type it in manually below.</p>
+              </div>
+            )}
+
+            {campaignQuickPickOptions && (
+              <div className="space-y-1 sm:col-span-2">
+                <label className="label">Pick from your real leads</label>
+                <CustomSelect
+                  value=""
+                  onChange={(v) => { if (v) setForm((f) => ({ ...f, matchValue: v })); }}
+                  options={campaignQuickPickOptions}
+                  placeholder="— Type manually below —"
+                  style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+                />
+                <p className="text-xs text-app-soft">Only shows {MATCH_FIELD_LABELS[form.matchField].toLowerCase()} values already seen on a lead that came in — a brand-new campaign won't be listed yet, so paste it in manually below.</p>
               </div>
             )}
 

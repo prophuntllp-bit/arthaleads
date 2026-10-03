@@ -62,6 +62,15 @@ const leadController = {
     }
   },
 
+  async getCampaignOptions(req, res, next) {
+    try {
+      const options = await leadService.getCampaignOptions(req.user);
+      res.json({ success: true, options });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async getById(req, res, next) {
     try {
       const lead = await leadService.getById(req.params.id, req.user);

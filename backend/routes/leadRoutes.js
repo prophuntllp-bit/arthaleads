@@ -96,6 +96,10 @@ router.get("/alerts", leadController.getAlerts);
 router.get("/followups-due", leadController.getFollowUpsDue);
 router.get("/unified", leadController.getAllUnified);
 router.get("/domains", leadController.getDomains);
+// GET /api/leads/campaign-options — real form/campaign/ad-set/ad IDs already
+// seen on this org's leads, for the Lead Routing quick-pick (same idea as
+// /domains, for Facebook/WhatsApp/Google instead of Website).
+router.get("/campaign-options", leadController.getCampaignOptions);
 // "Bulk lead export" is a Growth feature. Import stays open — Starter is sold
 // with "unlimited lead imports".
 router.get("/export", planGate("growth"), leadController.exportLeads);
