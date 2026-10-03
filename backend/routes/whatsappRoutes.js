@@ -503,6 +503,7 @@ async function maybeSendAwayMessage(org, agent, conversation) {
     if (fmt(new Date(last)) === fmt(new Date())) return;
   }
   const botName = agent?.name || "Artha Assistant";
+  const q = await credits.quote(org._id, "service", 1);
   let held = 0;
   try {
     held = await credits.reserve(org._id, { category: "service", count: 1 });
@@ -521,7 +522,7 @@ async function maybeSendAwayMessage(org, agent, conversation) {
     orgId: org._id, conversationId: conversation._id, waMsgId: msgId,
     direction: "outbound", sender: "bot", senderName: botName,
     body: bh.awayMessage.trim(), status: "sent", timestamp: new Date(),
-    reservedPaise: held, creditCategory: "service",
+    reservedPaise: held, creditCategory: "service", freeTierApplied: q.freeCount > 0,
   });
   await WaConversation.findByIdAndUpdate(conversation._id, {
     lastMessageAt: new Date(), lastMessagePreview: bh.awayMessage.trim().slice(0, 80),
@@ -900,6 +901,7 @@ async function sendBotGreeting(org, agent, conversation) {
   try {
     const greeting = fillTemplate(agent.greeting, { name: conversation.contactName || "there" }).trim();
     const botName = agent.name || "Artha Assistant";
+    const q = await credits.quote(org._id, "service", 1);
     let held = 0;
     try {
       held = await credits.reserve(org._id, { category: "service", count: 1 });
@@ -918,7 +920,7 @@ async function sendBotGreeting(org, agent, conversation) {
       orgId: org._id, conversationId: conversation._id, waMsgId: msgId,
       direction: "outbound", sender: "bot", senderName: botName,
       body: greeting, status: "sent", timestamp: new Date(),
-      reservedPaise: held, creditCategory: "service",
+      reservedPaise: held, creditCategory: "service", freeTierApplied: q.freeCount > 0,
       isGreeting: true,
     });
     await WaConversation.findByIdAndUpdate(conversation._id, {

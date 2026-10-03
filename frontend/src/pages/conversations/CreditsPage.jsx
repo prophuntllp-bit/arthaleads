@@ -462,7 +462,11 @@ export default function CreditsPage() {
         <div className="flex items-center justify-between gap-3 px-5 py-4 flex-wrap" style={{ borderBottom: "1px solid var(--app-border)" }}>
           <div>
             <h2 className="text-base font-bold text-app">Statement</h2>
-            <p className="text-xs text-app-soft mt-0.5">Every top-up and every message charged</p>
+            <p className="text-xs text-app-soft mt-0.5">
+              {credits?.billedDirectlyByMeta
+                ? "Meta bills your WhatsApp messages directly, so this wallet is not charged. The estimate is in Credits utilization above; the real figure is on Meta's invoice."
+                : "Every top-up and every message charged"}
+            </p>
           </div>
           {total > 0 && (
             <button onClick={exportCsv} disabled={exporting}
@@ -499,6 +503,9 @@ export default function CreditsPage() {
               <tbody>
                 {rows.map((r) => {
                   const credit = r.amountPaise >= 0 && r.type !== "debit";
+                  // On a directly-billed account a send costs the wallet nothing:
+                  // say who does bill it instead of a bare "−₹0.00".
+                  const metaBilled = credits?.billedDirectlyByMeta && r.type === "debit" && !r.amountPaise;
                   return (
                     <tr key={r._id} style={{
                       borderBottom: "1px solid var(--app-border)",
@@ -518,11 +525,11 @@ export default function CreditsPage() {
                         </div>
                       </td>
                       <td className="px-5 py-3 text-right text-xs font-bold whitespace-nowrap tabular-nums"
-                        style={{ color: credit ? "#15803d" : "var(--app-text)" }}>
-                        {credit ? "+" : "−"}{rupees(r.amountPaise)}
+                        style={{ color: credit ? "#15803d" : metaBilled ? "var(--app-text-soft)" : "var(--app-text)", fontWeight: metaBilled ? 500 : undefined }}>
+                        {metaBilled ? "Billed by Meta" : `${credit ? "+" : "−"}${rupees(r.amountPaise)}`}
                       </td>
                       <td className="px-5 py-3 text-right text-xs text-app-soft whitespace-nowrap tabular-nums">
-                        {rupees(r.balanceAfterPaise)}
+                        {metaBilled ? "—" : rupees(r.balanceAfterPaise)}
                       </td>
                     </tr>
                   );

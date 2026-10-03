@@ -1106,14 +1106,24 @@ export default function Sidebar() {
     // Pages below a menu entry.
     const rest = base ? here.slice(base.length).replace(/^\/|\/$/g, "") : "";
     if (rest) {
+      // Inbox tabs and the pages under them, each step clickable back up.
+      const C = "/conversations";
       const named = [
-        [/^agent\/new$/, ["AI Agents", "New agent"]], [/^agent\/[^/]+$/, ["AI Agents", "Edit agent"]],
-        [/^campaigns\/new$/, ["Campaigns", "New campaign"]], [/^campaigns\/[^/]+$/, ["Campaigns", "Campaign"]],
-        [/^templates\/new$/, ["Templates", "New template"]], [/^templates\/[^/]+\/edit$/, ["Templates", "Edit template"]],
-        [/^telephony$/, ["Telephony"]], [/^whatsapp$/, ["WhatsApp"]],
+        [/^templates$/, [{ label: "Templates" }]],
+        [/^templates\/new$/, [{ label: "Templates", to: `${C}/templates` }, { label: "New template" }]],
+        [/^templates\/[^/]+\/edit$/, [{ label: "Templates", to: `${C}/templates` }, { label: "Edit template" }]],
+        [/^campaigns$/, [{ label: "Campaigns" }]],
+        [/^campaigns\/new$/, [{ label: "Campaigns", to: `${C}/campaigns` }, { label: "New campaign" }]],
+        [/^campaigns\/[^/]+$/, [{ label: "Campaigns", to: `${C}/campaigns` }, { label: "Campaign" }]],
+        [/^credits$/, [{ label: "Credits" }]],
+        [/^agent$/, [{ label: "AI Agents" }]],
+        [/^agent\/new$/, [{ label: "AI Agents", to: `${C}/agent` }, { label: "New agent" }]],
+        [/^agent\/[^/]+$/, [{ label: "AI Agents", to: `${C}/agent` }, { label: "Edit agent" }]],
+        [/^settings$/, [{ label: "Settings" }]],
+        [/^telephony$/, [{ label: "Telephony" }]], [/^whatsapp$/, [{ label: "WhatsApp" }]],
       ].find(([re]) => re.test(rest));
-      const labels = named ? named[1] : [base === "/conversations" ? "Chat" : base === "/projects" ? "Project" : "Details"];
-      labels.forEach((label) => out.push({ label }));
+      const steps = named ? named[1] : [{ label: base === "/conversations" ? "Chat" : base === "/projects" ? "Project" : "Details" }];
+      steps.forEach((st) => out.push(st));
     }
     return out;
   })();

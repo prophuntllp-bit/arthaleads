@@ -29,7 +29,17 @@ router.get("/balance", async (req, res) => {
     const fs = org?.credits?.freeService || {};
     const now = new Date();
     const yyyymm = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-    const freeUsed = fs.yyyymm === yyyymm ? (fs.used || 0) : 0;
+    // Replies actually sent this IST month, so "free replies left" agrees with
+    // Credits utilization. The running counter alone undercounted (a few send
+    // paths never added to it); the larger of the two is what's really used.
+    const istNow = Date.now() + IST_MS;
+    const monthStart = (() => { const d = new Date(istNow); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - IST_MS; })();
+    const sentThisMonth = await WaMessage.countDocuments({
+      orgId: new mongoose.Types.ObjectId(String(req.orgId)), direction: "outbound", status: { $ne: "failed" },
+      timestamp: { $gte: new Date(monthStart) },
+      $or: [{ creditCategory: "service" }, { creditCategory: { $in: [null, ""] } }],
+    });
+    const freeUsed = Math.max(fs.yyyymm === yyyymm ? (fs.used || 0) : 0, sentThisMonth);
 
     res.json({
       ...bal,
@@ -86,7 +96,9 @@ router.get("/ledger", async (req, res) => {
 // ledger row, are included), money comes from the ledger.
 //
 // META_RATE_PAISE is Meta's own published India rate per delivered message, ex
-// GST. It is shown only as an ESTIMATE for orgs that pay Meta directly, whose
+// GST, from Meta's INR rate card effective 1 October 2026 (India: marketing
+// 0.8631, utility 0.115, authentication 0.115, service 0.115; unchanged from
+// July 2026). developers.facebook.com/docs/whatsapp/pricing It is shown only as an ESTIMATE for orgs that pay Meta directly, whose
 // wallet rates are 0 and whose real bill arrives on Meta's invoice.
 const META_RATE_PAISE = { marketing: 86.31, utility: 11.5, authentication: 11.5, service: 11.5 };
 const UTIL_CATEGORIES = [
@@ -129,13 +141,40 @@ router.get("/utilization", async (req, res) => {
     ]);
 
     const m = msgAgg[0] || { byCategory: [], bySource: [], byDay: [] };
-    const key = (c) => (UTIL_CATEGORIES.some(([k]) => k === c) && c !== "other" ? c : "other");
+    // A message saved before categories were recorded has none. A plain
+    // (non-template) outbound message can only ever be a service reply, so
+    // that is what it is counted as.
+    const key = (c) => (c == null || c === "" ? "service" : UTIL_CATEGORIES.some(([k]) => k === c) && c !== "other" ? c : "other");
+
+    // Free vs paid replies, from the allowance itself: the first
+    // FREE_SERVICE_PER_MONTH replies of each IST calendar month are free.
+    // Worked out from the messages, not from each message's freeTierApplied
+    // flag, because some send paths (the greeting, the away message) did not
+    // record that flag and their replies showed as paid when they were not.
+    const serviceMatch = { orgId, direction: "outbound", status: { $ne: "failed" }, $or: [{ creditCategory: "service" }, { creditCategory: { $in: [null, ""] } }] };
+    const istMonthStart = (t) => { const d = new Date(t + IST_MS); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - IST_MS; };
+    const firstMonth = istMonthStart(since.getTime());
+    const [priorInFirstMonth, perMonth] = await Promise.all([
+      WaMessage.countDocuments({ ...serviceMatch, timestamp: { $gte: new Date(firstMonth), $lt: since } }),
+      WaMessage.aggregate([
+        { $match: { ...serviceMatch, timestamp: { $gte: since } } },
+        { $group: { _id: { $dateToString: { format: "%Y-%m", date: "$timestamp", timezone: "Asia/Kolkata" } }, n: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
+    const firstKey = new Date(firstMonth + IST_MS).toISOString().slice(0, 7);
+    const serviceFree = perMonth.reduce((sum, r) => {
+      const already = r._id === firstKey ? priorInFirstMonth : 0;
+      return sum + Math.min(r.n, Math.max(0, credits.FREE_SERVICE_PER_MONTH - already));
+    }, 0);
     const spentBy = Object.fromEntries(ledgerAgg.map((r) => [key(r._id), r.spentPaise]));
 
     const categories = UTIL_CATEGORIES.map(([cat, label]) => {
       const rows = m.byCategory.filter((r) => key(r._id.c) === cat);
       const messages = rows.reduce((a, r) => a + r.n, 0);
-      const free = rows.filter((r) => r._id.free).reduce((a, r) => a + r.n, 0);
+      const free = cat === "service"
+        ? Math.min(messages, serviceFree)
+        : rows.filter((r) => r._id.free).reduce((a, r) => a + r.n, 0);
       const paid = messages - free;
       return {
         category: cat, label, messages, free, paid,
