@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { InfoTip } from "../Tooltip";
 import { AlertTriangle } from "lucide-react";
 import { connectionTitle, hostOf } from "../ConnectionCard";
 
@@ -56,7 +57,10 @@ export default function AutomationHealth({ automations, Logo, onOpen }) {
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <p className="stitch-kicker mb-1">Integrations</p>
-          <h3 className="text-base font-bold text-app">Lead Sources Health</h3>
+          <h3 className="flex items-center gap-1.5 text-base font-bold text-app">
+            Lead Sources Health
+            <InfoTip text="Each connected lead source and when its last lead arrived. Amber means no lead for 24 hours, which can mean a connection has broken." />
+          </h3>
         </div>
         {problems > 0 ? (
           <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "rgba(245,158,11,0.14)", color: "#d97706" }}>

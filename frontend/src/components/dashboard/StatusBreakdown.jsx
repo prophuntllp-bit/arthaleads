@@ -1,3 +1,5 @@
+import { InfoTip } from "../Tooltip";
+
 // Leads by Status for the selected range, one row per pipeline stage in
 // pipeline order. Replaces both the old recharts bar chart (which dropped
 // labels and left a tall empty card) and the separate "Pipeline Drop-off"
@@ -20,7 +22,10 @@ export default function StatusBreakdown({ byStatus, scope = "", onSelect }) {
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="shrink-0">
           <p className="stitch-kicker mb-0.5">Pipeline</p>
-          <h3 className="text-sm font-bold text-app">Leads by Status</h3>
+          <h3 className="flex items-center gap-1.5 text-sm font-bold text-app">
+            Leads by Status
+            <InfoTip text="Where the leads from these dates are in your pipeline right now. Click a stage to see those leads." />
+          </h3>
         </div>
         <span className="stitch-pill min-w-0 max-w-[60%] truncate text-xs">{total} leads{scope ? ` · ${scope}` : ""}</span>
       </div>

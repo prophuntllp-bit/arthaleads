@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { InfoTip } from "../Tooltip";
 
 // Leads by Source as a donut that always fits its card: drawn in a fixed
 // viewBox, so it scales with the container instead of being clipped by it.
@@ -46,7 +47,10 @@ export default function SourceDonut({ bySource, scope = "", onSelect }) {
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="shrink-0">
           <p className="stitch-kicker mb-0.5">Acquisition mix</p>
-          <h3 className="text-sm font-bold text-app">Leads by Source</h3>
+          <h3 className="flex items-center gap-1.5 text-sm font-bold text-app">
+            Leads by Source
+            <InfoTip text="Where the leads from these dates came from. Click a source to see its leads." />
+          </h3>
         </div>
         {scope && <span className="stitch-pill min-w-0 max-w-[60%] truncate text-xs">{scope}</span>}
       </div>

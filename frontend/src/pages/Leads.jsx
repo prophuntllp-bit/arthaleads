@@ -1,4 +1,5 @@
 ﻿import { useEffect, useRef, useState } from "react";
+import IconButton from "../components/IconButton";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -1465,18 +1466,11 @@ export default function Leads() {
                     </td>
                     <td className="whitespace-nowrap text-sm text-app-soft">{lead.assignedToName || lead.assignedTo?.name || "-"}</td>
                     <td>
-                      <div className="flex justify-end gap-1.5 opacity-50 transition-opacity group-hover:opacity-100">
-                        <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-amber-500/10 hover:text-amber-400" onClick={() => { setEditLead(lead); setShowForm(true); }} title="Edit">
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-orange-500/10 hover:text-orange-500" onClick={() => setTransferMeta({ lead, leadType: lead._type || "lead", projectId: lead._type === "project" ? lead.projectId : null })} title="Transfer to project">
-                          <ArrowRightLeft className="h-4 w-4" />
-                        </button>
-                        {canDelete && (
-                          <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-red-500/10 hover:text-red-400" onClick={() => setDeletingLead(lead)} title="Delete">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
+                      <div className="flex justify-end gap-1.5">
+                        <IconButton icon={Pencil} label="Edit lead" onClick={() => { setEditLead(lead); setShowForm(true); }} />
+                        <IconButton icon={ArrowRightLeft} label="Move to a project"
+                          onClick={() => setTransferMeta({ lead, leadType: lead._type || "lead", projectId: lead._type === "project" ? lead.projectId : null })} />
+                        {canDelete && <IconButton icon={Trash2} label="Delete lead" tone="danger" onClick={() => setDeletingLead(lead)} />}
                       </div>
                     </td>
                   </tr>

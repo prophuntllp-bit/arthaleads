@@ -11,6 +11,7 @@
 // backdrop-filter: blur(48px) saturate(140%), and the frosted panel read as
 // unfinished rather than premium — that treatment is what this replaces.
 import { useState } from "react";
+import Stepper from "./Stepper";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
@@ -142,13 +143,13 @@ export default function OnboardingGate() {
   const firstName = (form.fullName.trim().split(/\s+/)[0]) || "there";
 
   // ── Shared bits ────────────────────────────────────────────────────────────
+  // Named steps instead of bare bars, so it's clear what's left.
   const Progress = () => (
-    <div className="flex items-center gap-1.5 mb-7" aria-hidden="true">
-      {Array.from({ length: totalSteps }, (_, i) => (
-        <div key={i} className="h-1 flex-1 rounded-full transition-colors duration-300"
-          style={{ background: i < step ? "#ff6b00" : "var(--app-border)" }} />
-      ))}
-    </div>
+    <Stepper className="mb-7" current={step - 1} steps={[
+      { title: "About you", hint: "Name and mobile" },
+      { title: "Your business", hint: "Invoices and forms" },
+      { title: "Lead sources", hint: "Start receiving leads" },
+    ]} />
   );
 
   const Field = ({ label, children, helper }) => (

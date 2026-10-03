@@ -1,4 +1,5 @@
 import { sourceSlot } from "./SourceDonut";
+import { InfoTip } from "../Tooltip";
 
 // Which source brings leads that actually go somewhere, for the selected
 // range. The donut answers "how many from where"; this answers "and are they
@@ -27,7 +28,10 @@ export default function SourcePerformance({ rows = [], scope = "", onSelect }) {
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="shrink-0">
           <p className="stitch-kicker mb-0.5">Source quality</p>
-          <h3 className="text-sm font-bold text-app">Sources this period</h3>
+          <h3 className="flex items-center gap-1.5 text-sm font-bold text-app">
+            Sources this period
+            <InfoTip text="Which source brings leads that go somewhere, not just the most leads. Click a source to see its leads." />
+          </h3>
         </div>
         {scope && <span className="stitch-pill min-w-0 max-w-[60%] truncate text-xs">{scope}</span>}
       </div>

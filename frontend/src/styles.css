@@ -15,6 +15,7 @@
        especially at the 10–11px sizes used in kickers and table headers. */
     --app-text-soft: #5f5f66;
     /* Leads-by-source colours (fixed per source, validated for colour-blind separation) */
+    --tip-bg: #111113; --tip-text: #ffffff;
     --src-1: #2563eb; --src-2: #ea580c; --src-3: #16a34a; --src-4: #7c3aed; --src-5: #0891b2; --src-6: #db2777;
     /* Brand-colour tokens — overridden at runtime by applyBrandColor() in App.jsx */
     --app-primary:           #ff6b00;
@@ -40,6 +41,7 @@
     --app-text: #ededed;
     --app-text-soft: #969696;
     --app-border: rgba(255, 255, 255, 0.10);
+    --tip-bg: #f4f4f5; --tip-text: #18181b;
     --src-1: #3b82f6; --src-2: #ea580c; --src-3: #16a34a; --src-4: #8b5cf6; --src-5: #0891b2; --src-6: #ec4899;
     --app-border-strong:    rgba(var(--app-primary-rgb), 0.28);
     --app-primary:          #ff6b00;
@@ -733,3 +735,6 @@ html.is-native .top-scroll-mirror::-webkit-scrollbar { display: block !important
 .pill-info { color: #0e7490; background: rgba(6, 182, 212, 0.14);  border-color: rgba(14, 116, 144, 0.35); }
 :root.dark .pill-ok   { color: #6ee7b7; background: rgba(16, 185, 129, 0.18); border-color: rgba(110, 231, 183, 0.35); }
 :root.dark .pill-info { color: #67e8f9; background: rgba(6, 182, 212, 0.18);  border-color: rgba(103, 232, 249, 0.35); }
+
+@keyframes tip-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { [role="tooltip"] { animation: none !important; } }

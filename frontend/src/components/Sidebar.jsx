@@ -8,7 +8,7 @@ import {
   FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
   PenLine, ChevronDown, ChevronUp, Tag, FileText, Plus, List,
   PanelLeftClose, PanelLeft, Zap, Search, X as XIcon, CornerDownLeft,
-  Receipt, BookMarked, FileCheck, Building2, ClipboardList, Phone, Mail, ChevronsUpDown,
+  Receipt, BookMarked, FileCheck, Building2, ClipboardList, Phone, Mail, ChevronsUpDown, ChevronRight, Home,
 } from "lucide-react";
 import WhatsAppIcon from "./WhatsAppIcon";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -20,6 +20,8 @@ import toast from "react-hot-toast";
 import AttendanceCapture from "./AttendanceCapture";
 import { SmartImage } from "./UI";
 import AccountSwitcher from "./AccountSwitcher";
+import Tooltip from "./Tooltip";
+import CommandMenu from "./CommandMenu";
 
 const navItems = [
   { to: "/super-admin", label: "Super Admin",  icon: ShieldCheck, roles: ["super_admin"], end: true },
@@ -32,47 +34,47 @@ const navItems = [
       { to: "/super-admin/blog/tags",        label: "Tags",        icon: Tag,      end: true },
     ],
   },
-  { to: "/dashboard",   label: "Dashboard",    icon: LayoutDashboard },
-  { to: "/leads",       label: "Leads",        icon: Users },
-  { to: "/pipeline",    label: "Pipeline",     icon: Kanban },
-  { to: "/projects",    label: "Projects",     icon: FolderKanban },
+  { to: "/dashboard",   label: "Dashboard",    icon: LayoutDashboard, hint: "Today's numbers, follow-ups due and how each lead source is doing" },
+  { to: "/leads",       label: "Leads",        icon: Users, hint: "Every lead from every source. Filter, assign, import and export" },
+  { to: "/pipeline",    label: "Pipeline",     icon: Kanban, hint: "Drag leads from New to Contacted, Site Visit and beyond" },
+  { to: "/projects",    label: "Projects",     icon: FolderKanban, hint: "Your projects with their leads, photos, brochures and advisor" },
   { divider: true },
   {
-    label: "Bookings & Invoices", icon: Receipt,
+    label: "Bookings & Invoices", icon: Receipt, hint: "Bookings, invoices and developer partners",
     roles: ["admin", "manager", "super_admin"],
     children: [
-      { to: "/bookings",   label: "Bookings",   icon: BookMarked },
-      { to: "/invoices",   label: "Invoices",   icon: FileCheck  },
-      { to: "/developers", label: "Developers", icon: Building2  },
+      { to: "/bookings",   label: "Bookings",   icon: BookMarked, hint: "Units your clients have booked" },
+      { to: "/invoices",   label: "Invoices",   icon: FileCheck , hint: "Invoices raised for completed bookings" },
+      { to: "/developers", label: "Developers", icon: Building2 , hint: "Developer partners and the projects you sell for them" },
     ],
   },
-  { to: "/calls",       label: "Calls",        icon: Phone },
-  { to: "/followups",   label: "Follow Ups",   icon: CalendarClock },
+  { to: "/calls",       label: "Calls",        icon: Phone, hint: "Click-to-call history and call recordings" },
+  { to: "/followups",   label: "Follow Ups",   icon: CalendarClock, hint: "Follow-ups that are overdue, due today and coming up" },
   // Flat on purpose. The section navigates itself with in-page tabs — a
   // sidebar flyout for five WhatsApp screens buried the ones that matter and
   // put nav in two places at once.
-  { to: "/conversations", label: "Inbox", icon: WhatsAppIcon },
+  { to: "/conversations", label: "Inbox", icon: WhatsAppIcon, hint: "WhatsApp chats, templates, campaigns, credits and AI agents" },
   {
-    label: "Tasks", icon: ClipboardList,
+    label: "Tasks", icon: ClipboardList, hint: "Tasks for you and your team",
     children: [
-      { to: "/tasks",     label: "Manage Tasks", icon: List },
-      { to: "/tasks?new=1", label: "Add Task",   icon: Plus, roles: ["admin", "manager", "super_admin"], noActive: true },
+      { to: "/tasks",     label: "Manage Tasks", icon: List, hint: "All tasks for you and your team, with due dates" },
+      { to: "/tasks?new=1", label: "Add Task",   icon: Plus, roles: ["admin", "manager", "super_admin"], noActive: true, hint: "Create a task and assign it to someone" },
     ],
   },
   { divider: true },
-  { to: "/attendance",  label: "Attendance",   icon: Clock,     minPlan: "growth" },
-  { to: "/dump-leads",  label: "Dump Leads",   icon: Archive,   roles: ["admin", "manager", "super_admin"] },
-  { to: "/team",        label: "Team",         icon: UserCheck, roles: ["admin", "manager", "super_admin"] },
-  { to: "/integrations",  label: "Integrations", icon: Workflow,  roles: ["admin", "manager", "super_admin"] },
-  { to: "/performance", label: "Performance",  icon: BarChart3, roles: ["admin", "manager", "super_admin"], minPlan: "growth" },
+  { to: "/attendance",  label: "Attendance",   icon: Clock,     minPlan: "growth", hint: "Clock-ins, selfies and hours worked for your team" },
+  { to: "/dump-leads",  label: "Dump Leads",   icon: Archive,   roles: ["admin", "manager", "super_admin"], hint: "Deleted and Closed Lost leads. Restore any of them from here" },
+  { to: "/team",        label: "Team",         icon: UserCheck, roles: ["admin", "manager", "super_admin"], hint: "Add teammates, set their roles and turn accounts on or off" },
+  { to: "/integrations",  label: "Integrations", icon: Workflow,  roles: ["admin", "manager", "super_admin"], hint: "Connect Facebook, websites, Google Ads, Vistrow Voice and more" },
+  { to: "/performance", label: "Performance",  icon: BarChart3, roles: ["admin", "manager", "super_admin"], minPlan: "growth", hint: "Each person's leads, calls and conversions" },
   // Admin-only: buying a plan or adding seats is an admin action server-side
   // (billingRoutes gates /order and /verify on authorize("admin")), so showing
   // this to an agent offers something they cannot act on. Seat usage is still
   // visible to everyone on the Team page.
   { divider: true },
-  { to: "/plans",       label: "Plan & Billing", icon: Zap, roles: ["admin"] },
-  { to: "/settings",    label: "Settings",     icon: Settings },
-  { to: "/help-support", label: "Help & Support", icon: LifeBuoy },
+  { to: "/plans",       label: "Plan & Billing", icon: Zap, roles: ["admin"], hint: "Your plan, seats and payments" },
+  { to: "/settings",    label: "Settings",     icon: Settings, hint: "Your profile, workspace and notification settings" },
+  { to: "/help-support", label: "Help & Support", icon: LifeBuoy, hint: "Guides, raise a support ticket or talk to us" },
 ];
 
 // Live elapsed clock timer
@@ -161,6 +163,20 @@ export default function Sidebar() {
   const [gsShowDrop,    setGsShowDrop]    = useState(false);
   const [gsLoading,     setGsLoading]     = useState(false);
   const gsWrapRef    = useRef(null);
+  const gsInputRef   = useRef(null);
+
+  // Ctrl+K (Windows/Linux) or Cmd+K (Mac) opens search from anywhere.
+  const [cmdOpen, setCmdOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCmdOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const gsDebounce   = useRef(null);
 
   useEffect(() => {
@@ -481,6 +497,10 @@ export default function Sidebar() {
   // SHARED NAV CONTENT (rendered inside both mobile drawer and desktop sidebar)
   // `isExpanded` controls whether labels are visible
   // ──────────────────────────────────────────────────────────────────────────
+  // Called as a plain function, not rendered as <NavContent/>: a component
+  // defined inside Sidebar is a new type on every render, so the whole menu
+  // was torn down and rebuilt every second (the clock ticks), which reset
+  // hover states and dropped tooltips mid-hover.
   const NavContent = ({ isExpanded, showPin = false, showProfile = true, showAccountCard = false }) => {
     // Label fade style - fade in/out when sidebar expands/collapses
     const labelStyle = {
@@ -583,6 +603,8 @@ export default function Sidebar() {
 
               return (
                 <div key={item.label}>
+                  <Tooltip side="right" className="flex w-full" delay={isExpanded ? 600 : 150} disabled={!isExpanded}
+                    content={item.hint}>
                   <button
                     // Full sidebar (pinned, hovered or the phone drawer):
                     // the group opens in place, under itself. Icon-only rail:
@@ -591,7 +613,6 @@ export default function Sidebar() {
                     onMouseEnter={!isExpanded ? (e) => openFlyoutForItem(item, filteredChildren, e) : undefined}
                     onMouseLeave={!isExpanded ? scheduleFlyoutClose : undefined}
                     aria-expanded={isExpanded ? gExpanded : undefined}
-                    title={!isExpanded ? item.label : undefined}
                     className={`w-full flex items-center px-3 py-2.5 rounded-2xl text-sm font-medium transition-all ${
                       isGroupActive && !(isExpanded && gExpanded)
                         ? "font-semibold"
@@ -618,6 +639,7 @@ export default function Sidebar() {
                       style={{ width: 16, height: 16, opacity: isExpanded ? 1 : 0, transition: "opacity 150ms, transform 200ms" }}
                     />
                   </button>
+                  </Tooltip>
                   {/* Inline submenu: plain labels lined up under the group's
                       own label, no icons, same row height as the main menu. */}
                   <div
@@ -626,7 +648,8 @@ export default function Sidebar() {
                   >
                     <div className="overflow-hidden">
                       <div className="space-y-0.5 pt-0.5">
-                        {filteredChildren.map(({ to, label, end: endMatch, noActive }) => (
+                        {filteredChildren.map(({ to, label, end: endMatch, noActive, hint }) => (
+                          <Tooltip key={to} side="right" className="flex w-full" delay={600} content={hint}>
                           <NavLink
                             key={to}
                             to={to}
@@ -651,6 +674,7 @@ export default function Sidebar() {
                           >
                             <span className="truncate">{label}</span>
                           </NavLink>
+                          </Tooltip>
                         ))}
                       </div>
                     </div>
@@ -659,17 +683,18 @@ export default function Sidebar() {
               );
             }
 
-            const { to, label, icon: Icon, end: endMatch, minPlan } = item;
+            const { to, label, icon: Icon, end: endMatch, minPlan, hint } = item;
             const locked = minPlan && !canAccess(org, minPlan) && user?.role !== "super_admin";
             return (
+              <Tooltip key={to} side="right" className="flex w-full" delay={isExpanded ? 600 : 150}
+                title={isExpanded ? undefined : label}
+                content={locked ? `${hint || ""} Available on the Growth plan.`.trim() : hint}>
               <NavLink
-                key={to}
                 to={to}
                 end={endMatch !== undefined ? endMatch : to === "/"}
-                title={!isExpanded ? label : undefined}
                 onClick={() => setOpen(false)}
                 className={({ isActive }) =>
-                  `flex items-center px-3 py-2.5 rounded-2xl text-sm font-medium transition-all ${
+                  `flex w-full items-center px-3 py-2.5 rounded-2xl text-sm font-medium transition-all ${
                     isActive
                       ? "font-semibold"
                       : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
@@ -694,6 +719,7 @@ export default function Sidebar() {
                   </span>
                 )}
               </NavLink>
+              </Tooltip>
             );
           })}
         </nav>
@@ -1035,9 +1061,55 @@ export default function Sidebar() {
   ) : null;
 
   // ── Desktop topbar portal ─────────────────────────────────────────────────
+  const isMacLike = (() => {
+    try {
+      const p = navigator.userAgentData?.platform || navigator.platform || navigator.userAgent || "";
+      return /mac|iphone|ipad|ipod/i.test(p);
+    } catch { return false; }
+  })();
+
+  // Pages offered in the command menu, with their one-line hints.
+  const cmdPages = filtered.filter((n) => !n.divider).flatMap((n) => n.children
+    ? n.children.filter((c) => (!c.roles || c.roles.includes(user?.role)) && !c.to.includes("?"))
+        .map((c) => ({ to: c.to, label: c.label, icon: c.icon, hint: c.hint, parent: n.label }))
+    : [{ to: n.to, label: n.label, icon: n.icon, hint: n.hint }]);
+
+  // Where you are, for the top bar: "Bookings & Invoices › Invoices".
+  const crumbs = (() => {
+    const here = location.pathname;
+    const hit = (to) => { const path = to.split("?")[0]; return here === path || here.startsWith(path + "/"); };
+    const out = [];
+    let base = "";
+    for (const n of navItems) {
+      if (n.divider) continue;
+      const child = n.children?.find((c) => hit(c.to));
+      if (child) { out.push({ label: n.label }, { label: child.label, to: child.to.split("?")[0] }); base = child.to.split("?")[0]; break; }
+      if (n.to && n.to !== "/super-admin" && hit(n.to)) { out.push({ label: n.label, to: n.to }); base = n.to; break; }
+    }
+    if (!out.length) {
+      const extra = { "/referrals": "Referrals", "/automation": "Integrations" };
+      const k = Object.keys(extra).find((p) => hit(p));
+      if (k) { out.push({ label: extra[k], to: k }); base = k; }
+    }
+    // Pages below a menu entry.
+    const rest = base ? here.slice(base.length).replace(/^\/|\/$/g, "") : "";
+    if (rest) {
+      const named = [
+        [/^agent\/new$/, ["AI Agents", "New agent"]], [/^agent\/[^/]+$/, ["AI Agents", "Edit agent"]],
+        [/^campaigns\/new$/, ["Campaigns", "New campaign"]], [/^campaigns\/[^/]+$/, ["Campaigns", "Campaign"]],
+        [/^templates\/new$/, ["Templates", "New template"]], [/^templates\/[^/]+\/edit$/, ["Templates", "Edit template"]],
+        [/^telephony$/, ["Telephony"]], [/^whatsapp$/, ["WhatsApp"]],
+      ].find(([re]) => re.test(rest));
+      const labels = named ? named[1] : [base === "/conversations" ? "Chat" : base === "/projects" ? "Project" : "Details"];
+      labels.forEach((label) => out.push({ label }));
+    }
+    return out;
+  })();
+  const showUpgrade = user?.role === "admin" && ["trial", "starter"].includes(org?.plan);
+
   const DesktopTopbarPortal = createPortal(
     <div
-      className="hidden lg:flex items-center justify-between px-4"
+      className="hidden lg:flex items-center gap-4 px-5"
       style={{
         position:   "fixed",
         top:        0,
@@ -1049,168 +1121,103 @@ export default function Sidebar() {
         backdropFilter:         "blur(20px) saturate(160%)",
         WebkitBackdropFilter:   "blur(20px) saturate(160%)",
         borderBottom:           "1px solid var(--app-border)",
-        boxShadow:              "0 2px 12px rgba(0,0,0,0.06)",
         transition:             "left 220ms cubic-bezier(0.4,0,0.2,1)",
       }}
     >
-      {/* Search */}
-      <div ref={gsWrapRef} style={{ width: 320 }} className="relative">
-        <form
-          className="relative"
-          onSubmit={(e) => { e.preventDefault(); doGsNavigate(gsInput.trim()); }}
-        >
-          {/* Search icon left */}
-          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-soft" style={{ width: 15, height: 15 }} />
-
-          {/* Controlled input */}
-          <input
-            name="globalSearch"
-            value={gsInput}
-            onChange={handleGsChange}
-            onFocus={(e) => {
-              e.target.style.borderColor = "var(--app-primary)";
-              if (gsSuggestions.length > 0) setGsShowDrop(true);
-            }}
-            onBlur={(e) => { e.target.style.borderColor = "var(--app-border)"; }}
-            placeholder="Search leads by name, phone…"
-            className="w-full rounded-xl pl-9 pr-10 py-2 text-sm text-app"
-            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", outline: "none" }}
-            autoComplete="off"
-          />
-
-          {/* Go button (right) — glows orange when text is present */}
-          <button
-            type="submit"
-            title="Search"
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center w-7 h-7 rounded-lg transition-all"
-            style={{
-              background:  gsInput ? "var(--app-primary)" : "transparent",
-              color:       gsInput ? "#fff" : "var(--app-text-soft)",
-            }}
-          >
-            <CornerDownLeft style={{ width: 13, height: 13 }} />
+      {/* Where you are: Home › Section › Page */}
+      <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-1 text-sm">
+        <Tooltip content="Dashboard" side="bottom">
+          <button type="button" onClick={() => navigate("/dashboard")} aria-label="Dashboard"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-app-soft transition hover:bg-black/5 hover:text-app dark:hover:bg-white/5">
+            <Home style={{ width: 16, height: 16 }} />
           </button>
-        </form>
+        </Tooltip>
+        {crumbs.map((c, i) => {
+          const last = i === crumbs.length - 1;
+          return (
+            <span key={`${c.label}-${i}`} className="flex min-w-0 items-center gap-1">
+              <ChevronRight className="flex-shrink-0 text-app-soft opacity-60" style={{ width: 14, height: 14 }} />
+              {last ? (
+                <span className="truncate rounded-lg px-1.5 py-1 font-semibold" style={{ color: "var(--app-primary)" }}>{c.label}</span>
+              ) : c.to ? (
+                <button type="button" onClick={() => navigate(c.to)}
+                  className="truncate rounded-lg px-1.5 py-1 font-medium text-app-soft transition hover:bg-black/5 hover:text-app dark:hover:bg-white/5">
+                  {c.label}
+                </button>
+              ) : (
+                <span className="truncate px-1.5 py-1 font-medium text-app-soft">{c.label}</span>
+              )}
+            </span>
+          );
+        })}
+      </nav>
 
-        {/* Suggestions dropdown */}
-        {gsShowDrop && (gsSuggestions.length > 0 || gsLoading) && (
-          <div
-            className="absolute top-full left-0 right-0 mt-1.5 overflow-hidden z-[200]"
-            style={{
-              background:   "var(--app-surface-solid)",
-              border:       "1px solid var(--app-border)",
-              borderRadius: "1rem",
-              boxShadow:    "0 8px 32px rgba(0,0,0,0.18)",
-            }}
-          >
-            {gsLoading && gsSuggestions.length === 0 ? (
-              <div className="px-4 py-3 text-xs text-app-soft">Searching…</div>
-            ) : (
-              <>
-                {gsSuggestions.map((lead) => (
-                  <button
-                    key={lead._id}
-                    type="button"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      setGsShowDrop(false);
-                      setGsInput("");
-                      setGsSuggestions([]);
-                      // Stay on current page if it supports lead detail; otherwise go to /leads
-                      const LEAD_DETAIL_PAGES = ["/leads", "/followups", "/calls"];
-                      const target = LEAD_DETAIL_PAGES.some(p => location.pathname.startsWith(p))
-                        ? location.pathname
-                        : "/leads";
-                      navigate(target, { state: { openLeadId: lead._id } });
-                    }}
-                    className="w-full text-left flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-                  >
-                    {/* Avatar */}
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold text-white"
-                      style={{ background: "var(--app-primary)" }}>
-                      {(lead.name || "?").charAt(0).toUpperCase()}
-                    </div>
-                    {/* Name + phone */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-app truncate leading-tight">{lead.name || "Unknown"}</p>
-                      {lead.phone && <p className="text-xs text-app-soft truncate leading-tight">{lead.phone}</p>}
-                    </div>
-                    {/* Status pill */}
-                    {lead.status && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
-                        style={{ background: "var(--app-surface-low)", color: "var(--app-text-soft)", border: "1px solid var(--app-border)" }}>
-                        {lead.status}
-                      </span>
-                    )}
-                  </button>
-                ))}
-                {/* "See all results" footer */}
-                <div style={{ borderTop: "1px solid var(--app-border)" }}>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); doGsNavigate(gsInput.trim()); }}
-                    className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-xs font-semibold transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-                    style={{ color: "var(--app-primary)" }}
-                  >
-                    <span>See all results for "{gsInput}"</span>
-                    <CornerDownLeft style={{ width: 13, height: 13 }} />
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+      {/* Everything else on one line, right-aligned */}
+      <div className="flex flex-shrink-0 items-center gap-2">
+        {/* Search: opens the command menu (leads, people, pages, actions) */}
+        <button type="button" onClick={() => setCmdOpen(true)}
+          className="flex w-[280px] items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-app-soft transition hover:text-app"
+          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+          <Search style={{ width: 15, height: 15 }} className="flex-shrink-0" />
+          <span className="flex-1 truncate">Search leads, people, pages…</span>
+          <kbd className="flex-shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
+            style={{ border: "1px solid var(--app-border-strong)", background: "var(--app-surface-solid)" }}>
+            {isMacLike ? "⌘K" : "Ctrl K"}
+          </kbd>
+        </button>
+
+        {showUpgrade && (
+          <button type="button" onClick={() => navigate("/plans")}
+            className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-app transition hover:bg-black/5 dark:hover:bg-white/5"
+            style={{ border: "1px solid var(--app-border-strong)" }}>
+            <Zap style={{ width: 15, height: 15, color: "var(--app-primary)" }} />
+            {trialInfo && !trialInfo.expired ? `Upgrade · ${trialInfo.daysLeft}d left` : "Upgrade"}
+          </button>
         )}
-      </div>
 
-      <div className="flex items-center gap-1">
+        <div className="mx-1 h-6 w-px" style={{ background: "var(--app-border)" }} />
+
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-app-soft transition hover:bg-black/5 hover:text-app dark:hover:bg-white/5"
           title={isDark ? "Switch to light mode" : "Switch to dark mode"}
         >
-          {isDark
-            ? <MoonStar className="w-5 h-5" style={{ color: "var(--app-primary)" }} />
-            : <SunMedium className="w-5 h-5" style={{ color: "var(--app-primary)" }} />}
+          {isDark ? <MoonStar style={{ width: 18, height: 18 }} /> : <SunMedium style={{ width: 18, height: 18 }} />}
         </button>
 
         {/* Bell */}
         <div ref={desktopBellRef}>
           <button
             onClick={openAlerts}
-            className="relative p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+            className="relative flex h-9 w-9 items-center justify-center rounded-xl text-app-soft transition hover:bg-black/5 hover:text-app dark:hover:bg-white/5"
             title="New lead alerts"
-            style={{ color: alertCount > 0 ? "var(--app-primary)" : undefined }}
           >
-            <Bell className={`w-5 h-5${alertCount > 0 ? " bell-ringing" : ""}`} />
+            <Bell className={alertCount > 0 ? "bell-ringing" : ""} style={{ width: 18, height: 18 }} />
             {alertCount > 0 && (
-              <span className="badge-glow absolute -top-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full text-[9px] font-bold text-white"
-                style={{ background: "var(--app-primary)" }}>
+              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white"
+                style={{ background: "#ef4444", boxShadow: "0 0 0 2px var(--app-surface-solid)" }}>
                 {alertCount > 9 ? "9+" : alertCount}
               </span>
             )}
           </button>
         </div>
 
-        {/* Profile button */}
+        {/* Avatar: opens the profile menu */}
         <button
           ref={desktopProfileBtnRef}
           onClick={openDesktopProfileMenu}
           title={user?.name}
-          className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all ml-1"
+          className="relative ml-1 flex-shrink-0 rounded-full transition"
+          style={{ boxShadow: desktopProfileOpen ? "0 0 0 2px var(--app-primary)" : "0 0 0 2px rgba(var(--app-primary-rgb),0.25)" }}
         >
-          <div
-            className="flex-shrink-0 rounded-full flex items-center justify-center font-bold text-sm overflow-hidden"
-            style={{ width: 32, height: 32, background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}
-          >
-            {user?.avatar
-              ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-              : user?.name?.[0]?.toUpperCase()}
-          </div>
-          <ChevronDown
-            className={`flex-shrink-0 text-app-soft transition-transform ${desktopProfileOpen ? "rotate-180" : ""}`}
-            style={{ width: 13, height: 13 }}
-          />
+          <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full text-sm font-bold"
+            style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>
+            {user?.avatar ? <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" /> : user?.name?.[0]?.toUpperCase()}
+          </span>
+          {isClockedIn && (
+            <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500" style={{ border: "2px solid var(--app-surface-solid)" }} />
+          )}
         </button>
       </div>
     </div>,
@@ -1218,9 +1225,19 @@ export default function Sidebar() {
   );
 
   // ── Desktop profile dropdown portal ──────────────────────────────────────
+  const MenuRow = ({ icon: Icon, label, onClick, right }) => (
+    <button type="button" onClick={onClick}
+      className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-app transition hover:bg-black/5 dark:hover:bg-white/5">
+      <Icon className="flex-shrink-0 text-app-soft" style={{ width: 16, height: 16 }} />
+      <span className="flex-1">{label}</span>
+      {right}
+    </button>
+  );
+  const closeMenu = () => setDesktopProfileOpen(false);
+
   const DesktopProfilePortal = desktopProfileOpen ? createPortal(
     <>
-      <div style={{ position: "fixed", inset: 0, zIndex: 9997 }} onClick={() => setDesktopProfileOpen(false)} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 9997 }} onClick={closeMenu} />
       <div
         style={{
           position:     "fixed",
@@ -1228,103 +1245,79 @@ export default function Sidebar() {
             ? { bottom: desktopProfilePos.bottom, left: desktopProfilePos.left, maxHeight: "calc(100vh - 16px)", overflowY: "auto" }
             : { top: desktopProfilePos.top, right: desktopProfilePos.right }),
           zIndex:       9999,
-          width:        260,
-          background:   isDark ? "rgb(30,29,32)" : "#fff",
-          border:       "1px solid var(--app-border)",
-          borderRadius: "1.25rem",
+          width:        288,
+          background:   "var(--app-surface-solid)",
+          border:       "1px solid var(--app-border-strong)",
+          borderRadius: "1rem",
           overflow:     "hidden",
-          boxShadow:    "0 16px 48px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.10)",
+          boxShadow:    "var(--app-shadow-lg)",
         }}
       >
-        {/* ── User card: two-column ── */}
+        {/* Who you are */}
         <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "var(--app-border)" }}>
-          {/* Small avatar */}
-          <div className="rounded-full overflow-hidden flex items-center justify-center font-bold text-base flex-shrink-0"
-            style={{ width: 44, height: 44, background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)", border: "2px solid rgba(var(--app-primary-rgb),0.2)" }}>
-            {user?.avatar
-              ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-              : user?.name?.[0]?.toUpperCase()}
-          </div>
-          {/* Right: name, role, contact */}
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-app leading-tight truncate">{user?.name}</p>
-            <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize"
-              style={{ background: "rgba(var(--app-primary-rgb),0.10)", color: "var(--app-primary)" }}>
-              {user?.role?.replace("_", " ")}
+          <span className="relative flex-shrink-0">
+            <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full text-base font-bold"
+              style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>
+              {user?.avatar ? <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" /> : user?.name?.[0]?.toUpperCase()}
             </span>
-            <div className="mt-1.5 space-y-0.5">
-              {user?.phone && (
-                <div className="flex items-center gap-1.5 text-[11px] text-app-soft">
-                  <Phone style={{ width: 10, height: 10, flexShrink: 0 }} />
-                  <span>{user.phone}</span>
-                </div>
-              )}
-              {user?.email && (
-                <div className="flex items-center gap-1.5 text-[11px] text-app-soft">
-                  <Mail style={{ width: 10, height: 10, flexShrink: 0 }} />
-                  <span className="truncate">{user.email}</span>
-                </div>
-              )}
-            </div>
-          </div>
+            {isClockedIn && <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500" style={{ border: "2px solid var(--app-surface-solid)" }} />}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold text-app">{user?.name}</span>
+            <span className="block truncate text-xs text-app-soft">{user?.email || user?.phone}</span>
+          </span>
+          <span className="flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize"
+            style={{ background: "rgba(var(--app-primary-rgb),0.10)", color: "var(--app-primary)" }}>
+            {user?.role?.replace("_", " ")}
+          </span>
         </div>
 
-        {/* ── Clock In / Out ── */}
+        <div className="p-1.5">
+          <MenuRow icon={User} label="My profile" onClick={() => { navigate("/settings"); closeMenu(); }} />
+          <MenuRow icon={Settings} label="Settings" onClick={() => { navigate("/settings"); closeMenu(); }} />
+          <MenuRow icon={isDark ? MoonStar : SunMedium} label="Dark mode" onClick={toggleTheme}
+            right={
+              <span className="relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition"
+                style={{ background: isDark ? "var(--app-primary)" : "var(--app-border-strong)" }}>
+                <span className="absolute h-4 w-4 rounded-full bg-white shadow transition-all" style={{ left: isDark ? 18 : 2 }} />
+              </span>
+            } />
+        </div>
+
+        <div className="p-1.5 border-t" style={{ borderColor: "var(--app-border)" }}>
+          <MenuRow icon={Gift} label="Referrals" onClick={() => { navigate("/referrals"); closeMenu(); }} />
+          <MenuRow icon={LifeBuoy} label="Help & Support" onClick={() => { navigate("/help-support"); closeMenu(); }} />
+        </div>
+
+        {/* Attendance, one row */}
         {attendanceEnabled && (
-          <div className="px-3 pt-3 pb-1">
-            {isClockedOut ? (
-              <div className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-semibold text-app-soft"
-                style={{ background: "var(--app-surface-low)" }}>
-                <Clock style={{ width: 13, height: 13 }} />
-                Done for today
-              </div>
-            ) : isClockedIn ? (
-              <button onClick={() => { handleClockOut(); setDesktopProfileOpen(false); }} disabled={clocking}
-                className="w-full py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
-                style={{ background: "rgba(239,68,68,0.10)", color: "#ef4444" }}>
-                <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                {clockTimer || "Active"} · Clock Out
-              </button>
-            ) : (
-              <button onClick={() => { handleClockIn(); setDesktopProfileOpen(false); }} disabled={clocking}
-                className="w-full py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
-                style={{ background: "#22c55e", color: "#fff" }}>
-                <LogInIcon style={{ width: 13, height: 13 }} />
-                Clock IN
+          <div className="flex items-center gap-3 px-4 py-2.5 border-t" style={{ borderColor: "var(--app-border)" }}>
+            <Clock className="flex-shrink-0 text-app-soft" style={{ width: 16, height: 16 }} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate whitespace-nowrap text-sm font-medium tabular-nums text-app">
+                {isClockedOut ? "Done for today" : isClockedIn ? `Clocked in · ${clockTimer || "active"}` : "Not clocked in"}
+              </span>
+              <span className="block truncate whitespace-nowrap text-[11px] tabular-nums text-app-soft">{wallClock}</span>
+            </span>
+            {!isClockedOut && (
+              <button type="button" disabled={clocking}
+                onClick={() => { (isClockedIn ? handleClockOut : handleClockIn)(); closeMenu(); }}
+                className="flex-shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold transition disabled:opacity-60"
+                style={isClockedIn ? { background: "rgba(239,68,68,0.10)", color: "#ef4444" } : { background: "#22c55e", color: "#fff" }}>
+                {isClockedIn ? "Clock out" : "Clock in"}
               </button>
             )}
           </div>
         )}
 
-        {/* ── Live date & time ── */}
-        <div className="mx-3 mb-2 mt-2 px-3 py-1.5 rounded-xl flex items-center gap-2"
-          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-          <p className="text-[9px] font-semibold uppercase tracking-wider text-app-soft flex-shrink-0">Date &amp; Time</p>
-          <p className="text-[10px] font-bold text-app tabular-nums truncate">{wallClock}</p>
-        </div>
+        <AccountSwitcher onDone={closeMenu} />
 
-        {/* ── Quick links ── */}
-        <div className="px-2 pb-1">
-          <button onClick={() => { navigate("/settings"); setDesktopProfileOpen(false); }}
-            className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
-            <User style={{ width: 13, height: 13, flexShrink: 0 }} />
-            My Profile
-          </button>
-          <button onClick={() => { navigate("/referrals"); setDesktopProfileOpen(false); }}
-            className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
-            <Gift style={{ width: 13, height: 13, flexShrink: 0, color: "#ff6b00" }} />
-            Referrals
-          </button>
-        </div>
-
-        <AccountSwitcher onDone={() => setDesktopProfileOpen(false)} />
-
-        {/* ── Sign out ── */}
-        <div className="px-3 pb-3 border-t pt-1.5" style={{ borderColor: "var(--app-border)" }}>
-          <button onClick={() => { handleLogout(); setDesktopProfileOpen(false); }}
-            className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-xl transition-all text-red-500 hover:bg-red-500/10 text-left">
-            <LogOut style={{ width: 13, height: 13, flexShrink: 0 }} />
-            Log Out
+        <div className="p-2 border-t" style={{ borderColor: "var(--app-border)" }}>
+          <button type="button" onClick={() => { handleLogout(); closeMenu(); }}
+            className="flex w-full items-center justify-center gap-2 rounded-xl py-2 text-sm font-semibold text-app transition hover:bg-black/5 dark:hover:bg-white/5"
+            style={{ border: "1px solid var(--app-border-strong)" }}>
+            <LogOut style={{ width: 15, height: 15 }} />
+            Sign out
           </button>
         </div>
       </div>
@@ -1337,6 +1330,9 @@ export default function Sidebar() {
     <>
       {AlertsPortal}
       {FlyoutPortal}
+      <CommandMenu open={cmdOpen} onClose={() => setCmdOpen(false)} pages={cmdPages} user={user}
+        navigate={navigate} location={location} isDark={isDark} onToggleTheme={toggleTheme}
+        onSearchAll={(term) => doGsNavigate(term)} />
       {DesktopTopbarPortal}
       {DesktopProfilePortal}
 
@@ -1460,7 +1456,7 @@ export default function Sidebar() {
         className={`lg:hidden fixed top-0 left-0 bottom-0 z-40 w-72 transform transition-transform duration-200 sidebar-glass flex flex-col overflow-hidden ${open ? "translate-x-0" : "-translate-x-full"}`}
         style={{ overscrollBehavior: "contain" }}
       >
-        <NavContent isExpanded={true} />
+        {NavContent({ isExpanded: true })}
       </div>
 
       {/* ── Desktop sidebar ──────────────────────────────────────────────────
@@ -1493,7 +1489,7 @@ export default function Sidebar() {
             zIndex:     30,
           }}
         >
-          <NavContent isExpanded={expanded} showPin={true} showProfile={false} showAccountCard={true} />
+          {NavContent({ isExpanded: expanded, showPin: true, showProfile: false, showAccountCard: true })}
         </div>
       </aside>
 

@@ -5,6 +5,7 @@ import StatusBreakdown from "../components/dashboard/StatusBreakdown";
 import SourceDonut from "../components/dashboard/SourceDonut";
 import SourcePerformance from "../components/dashboard/SourcePerformance";
 import AutomationHealth from "../components/dashboard/AutomationHealth";
+import { InfoTip } from "../components/Tooltip";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
 import {
@@ -788,11 +789,13 @@ function ZonedKPIRow({ data, navigate, scope = "", range = {} }) {
       sub: delta !== null ? `${delta >= 0 ? "↑" : "↓"} ${Math.abs(delta)}% vs previous period` : (scope ? `created ${scope}` : "All time"),
       subColor: delta !== null ? (delta >= 0 ? "#22c55e" : "#ef4444") : undefined,
       onClick: () => navigate("/leads", { state: { ...range } }),
+      tip: "Leads that came in during the selected dates, including any later moved into a project.",
     },
     {
       label: "New", value: data?.byStatus?.New ?? 0, color: "#6366f1",
       sub: "Not contacted yet",
       onClick: () => navigate("/leads", { state: { ...range, presetStatus: "New" } }),
+      tip: "Leads from these dates still in New: nobody has marked them contacted yet.",
     },
     {
       // Share of the period's leads a person reached within an hour (a call,
@@ -800,21 +803,24 @@ function ZonedKPIRow({ data, navigate, scope = "", range = {} }) {
       label: "Reached in 1 hr", value: in1h === null ? "-" : `${in1h}%`,
       color: in1h === null ? "var(--app-text-soft)" : in1h >= 60 ? "#22c55e" : in1h >= 30 ? "#f59e0b" : "#ef4444",
       sub: speed?.total ? `${speed.within5m} in 5 min · ${speed.notContacted} not yet` : "No leads in this period",
-      title: "A person reached the lead within an hour: a call, marked Contacted, or an agent's WhatsApp message. The WhatsApp bot's replies don't count.",
+      tip: "Share of these leads a person reached within an hour of arriving: a call, marking them Contacted, or an agent's own WhatsApp message. The WhatsApp bot's replies don't count.",
     },
     {
       label: "Site Visits", value: visits, color: "#8b5cf6",
       sub: visits ? "Reached site visit or later" : "None yet this period",
+      tip: "Leads from these dates at the Site Visit stage or later, or with a site visit date set.",
       onClick: () => navigate("/leads", { state: { ...range, presetStatus: "Site Visit" } }),
     },
     {
       label: "Closed Won", value: closedWon, color: "#22c55e",
       sub: closedWon ? `${conversion}% of leads ${scope}`.trim() : "None marked Closed Won",
+      tip: "Leads from these dates marked Closed Won.",
       onClick: () => navigate("/leads", { state: { ...range, presetStatus: "Closed Won" } }),
     },
     {
       label: "Follow-ups", value: data?.todayFollowUps ?? 0, color: "#f59e0b",
       sub: "Due today, all leads",
+      tip: "Follow-ups due today across all your leads. This one ignores the date range above.",
       onClick: () => navigate("/leads", { state: { presetFollowUpToday: true } }),
     },
   ];
@@ -824,9 +830,12 @@ function ZonedKPIRow({ data, navigate, scope = "", range = {} }) {
         {stats.map((s) => {
           const inner = (
             <>
-              <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold truncate leading-none">{s.label}</p>
+              <p className="flex items-center gap-1 text-[9px] text-app-soft uppercase tracking-wider font-semibold leading-none">
+                <span className="truncate">{s.label}</span>
+                {s.tip && <InfoTip text={s.tip} size={12} />}
+              </p>
               <p className="text-xl sm:text-2xl font-black leading-none truncate mt-1" style={{ color: s.color }}>{s.value}</p>
-              <p className="text-[9px] truncate mt-0.5" style={{ color: s.subColor || "var(--app-text-soft)" }} title={s.title || s.sub}>{s.sub}</p>
+              <p className="text-[9px] truncate mt-0.5" style={{ color: s.subColor || "var(--app-text-soft)" }} title={s.sub}>{s.sub}</p>
             </>
           );
           return s.onClick ? (
@@ -835,7 +844,7 @@ function ZonedKPIRow({ data, navigate, scope = "", range = {} }) {
               {inner}
             </button>
           ) : (
-            <div key={s.label} className="card p-3 flex flex-col gap-0" title={s.title}>
+            <div key={s.label} className="card p-3 flex flex-col gap-0">
               {inner}
             </div>
           );
@@ -1309,7 +1318,10 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
             </span>
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-bold text-app leading-tight">Hot Today</h3>
+            <h3 className="flex items-center gap-1.5 text-sm font-bold text-app leading-tight">
+              Hot Today
+              <InfoTip text="Ranked by recent WhatsApp replies, how new the lead is, follow-ups due, budget and pipeline stage. Leads tagged Not a buyer are left out." />
+            </h3>
             <p className="text-[11px] text-app-soft truncate">
               {topScore !== null ? `Top score: ${topScore} pts · ${leads.length} ranked` : "AI-ranked leads to call first"}
             </p>

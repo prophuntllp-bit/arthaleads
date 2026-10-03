@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Stepper from "../components/Stepper";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, Zap, Bell, Users, BarChart3, Shield, PhoneCall,
@@ -311,6 +312,14 @@ export default function Signup() {
               <h1 className="text-2xl font-black tracking-tight text-app">Create your account</h1>
               <p className="mt-1 text-sm text-app-soft">Start managing real estate leads with your team.</p>
             </div>
+
+            {/* Where you are in signup */}
+            <Stepper className="mb-6" current={{ email: 0, otp: 1, details: 2, pending: 3 }[step] ?? 0} steps={[
+              { title: "Your email", hint: "Where we reach you" },
+              { title: "Verify", hint: "6-digit code" },
+              { title: "Your details", hint: "You and your business" },
+              { title: "Review", hint: "We activate your trial" },
+            ]} />
 
             {/* ── Step 4: request submitted, awaiting approval ── */}
             {step === "pending" && (
