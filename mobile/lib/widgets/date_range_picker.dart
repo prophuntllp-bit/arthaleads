@@ -23,6 +23,7 @@ const dateRangePresets = [
   {'value': 'thismonth', 'label': 'This month'},
   {'value': 'lastmonth', 'label': 'Last month'},
   {'value': 'thisyear', 'label': 'This year'},
+  {'value': 'lastyear', 'label': 'Last year'},
   {'value': '', 'label': 'Maximum'},
 ];
 

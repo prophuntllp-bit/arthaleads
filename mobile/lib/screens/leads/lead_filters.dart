@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/constants.dart';
 import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/date_range_picker.dart' show dateRangeLabel;
 import '../../widgets/labeled_field.dart';
 
 /// Filter model for GET /leads/unified — field names match the query params.
@@ -18,6 +19,10 @@ class LeadFilters {
   final String consent;
   final DateTime? from;
   final DateTime? to;
+  /// A preset range ("today", "last30days", ...) the backend resolves on the
+  /// IST calendar, as the web does. Used when the dashboard opens Leads with
+  /// its own range; picking a From/To date by hand replaces it.
+  final String dateRange;
   final bool myOnly;
   final bool followUpToday;
 
@@ -32,6 +37,7 @@ class LeadFilters {
     this.consent = '',
     this.from,
     this.to,
+    this.dateRange = '',
     this.myOnly = false,
     this.followUpToday = false,
   });
@@ -47,6 +53,7 @@ class LeadFilters {
         if (consent.isNotEmpty) 'consent': consent,
         if (from != null) 'from': from!.toIso8601String().substring(0, 10),
         if (to != null) 'to': to!.toIso8601String().substring(0, 10),
+        if (dateRange.isNotEmpty && from == null && to == null) 'dateRange': dateRange,
         if (myOnly) 'myOnly': 'true',
         if (followUpToday) 'followUpToday': 'true',
       };
@@ -66,6 +73,7 @@ class LeadFilters {
     DateTime? to,
     bool clearFrom = false,
     bool clearTo = false,
+    String? dateRange,
     bool? myOnly,
     bool? followUpToday,
   }) =>
@@ -80,6 +88,7 @@ class LeadFilters {
         consent: consent ?? this.consent,
         from: clearFrom ? null : (from ?? this.from),
         to: clearTo ? null : (to ?? this.to),
+        dateRange: dateRange ?? this.dateRange,
         myOnly: myOnly ?? this.myOnly,
         followUpToday: followUpToday ?? this.followUpToday,
       );
@@ -163,16 +172,28 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
                 f.assignedTo,
                 (v) => setState(() => f = f.copyWith(assignedTo: v)),
               ),
+            if (f.dateRange.isNotEmpty && f.from == null && f.to == null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: InputChip(
+                    avatar: const Icon(Icons.event_rounded, size: 16),
+                    label: Text('Created: ${dateRangeLabel(f.dateRange)}'),
+                    onDeleted: () => setState(() => f = f.copyWith(dateRange: '')),
+                  ),
+                ),
+              ),
             Row(
               children: [
                 Expanded(
                   child: _dateField('From', f.from,
-                      (d) => setState(() => f = f.copyWith(from: d, clearFrom: d == null))),
+                      (d) => setState(() => f = f.copyWith(from: d, clearFrom: d == null, dateRange: ''))),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _dateField('To', f.to,
-                      (d) => setState(() => f = f.copyWith(to: d, clearTo: d == null))),
+                      (d) => setState(() => f = f.copyWith(to: d, clearTo: d == null, dateRange: ''))),
                 ),
               ],
             ),

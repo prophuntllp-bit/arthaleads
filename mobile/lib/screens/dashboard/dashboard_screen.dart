@@ -20,26 +20,10 @@ import '../../widgets/glass.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/onboarding_checklist.dart';
 import '../attendance/attendance_capture_sheet.dart';
+import '../leads/lead_filters.dart';
 import '../leads/lead_form.dart';
+import 'dashboard_widgets.dart';
 import '../projects/project_detail_screen.dart';
-
-final _sourcePalette = <String, Color>{
-  'Facebook': const Color(0xFF1877F2),
-  'Google': const Color(0xFFEA4335),
-  'WhatsApp': const Color(0xFF25D366),
-  'Website': const Color(0xFF8B5CF6),
-  'Referral': const Color(0xFFEC4899),
-  'Manual': const Color(0xFF6B7280),
-};
-Color _sourceColor(String s, int i) {
-  const fallback = [
-    Color(0xFF3B82F6),
-    Color(0xFFF59E0B),
-    Color(0xFF14B8A6),
-    Color(0xFFF97316),
-  ];
-  return _sourcePalette[s] ?? fallback[i % fallback.length];
-}
 
 /// Dashboard — GET /leads/analytics + /leads/hot + /leads/followups-due.
 /// Mobile-first condensation of the web dashboard's zoned layout.
@@ -239,6 +223,83 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   String get _dateRangeLabel => dateRangeLabel(_dateRange);
+  String get _scope => describeRange(_dateRange);
+
+  /// Opens the Leads tab showing exactly what a dashboard card counted: this
+  /// dashboard's date range, plus a status or source when the card has one.
+  void _openLeadsFiltered({String status = '', String source = ''}) {
+    final r = _dateRange;
+    DeepLink.leadFilters.value = r is Map
+        ? LeadFilters(
+            status: status,
+            source: source,
+            from: DateTime.tryParse('${r['from']}'),
+            to: DateTime.tryParse('${r['to']}'),
+          )
+        : LeadFilters(status: status, source: source, dateRange: (r as String?) ?? '');
+    widget.onNavigate?.call('Leads');
+  }
+
+  /// Follow-up shortcuts from the dashboard list, same as the web: move to
+  /// tomorrow 11 AM IST, or clear it.
+  Future<void> _setFollowUp(Map<String, dynamic> lead, String? isoDate) async {
+    final name = lead['name']?.toString() ?? 'Lead';
+    try {
+      await _api.dio.patch('/leads/${lead['_id']}', data: {'followUpDate': isoDate});
+      if (!mounted) return;
+      setState(() => _due.removeWhere((l) => l['_id'] == lead['_id']));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isoDate == null ? '$name: follow-up cleared' : '$name: moved to tomorrow 11 AM'),
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ApiClient.errorMessage(e, "Couldn't update that follow-up")),
+        backgroundColor: AppColors.danger,
+      ));
+    }
+  }
+
+  String _tomorrow11Ist() {
+    final ist = DateTime.now().toUtc().add(const Duration(hours: 5, minutes: 30, days: 1));
+    final key = ist.toIso8601String().substring(0, 10);
+    return DateTime.parse('${key}T11:00:00+05:30').toUtc().toIso8601String();
+  }
+
+  Future<void> _clearStaleFollowUps() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear old follow-ups?'),
+        content: const Text(
+          'Removes every follow-up that is more than 30 days overdue. The leads stay as they are; only the old date is removed, and it is noted on each lead.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Clear', style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final res = await _api.dio.post('/leads/followups/clear-stale', data: {'olderThanDays': 30});
+      final n = (res.data['cleared'] as num?)?.toInt() ?? 0;
+      if (!mounted) return;
+      setState(() => _due.removeWhere((l) => ((l['daysOverdue'] as num?)?.toInt() ?? 0) > 30));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Cleared $n old follow-up${n == 1 ? '' : 's'}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ApiClient.errorMessage(e, "Couldn't clear old follow-ups")),
+        backgroundColor: AppColors.danger,
+      ));
+    }
+  }
 
   /// Deep-links into the specific record on another tab (Shell caches tab
   /// screens, so DeepLink is how an already-built screen finds out it
@@ -773,14 +834,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ListTile(
                     dense: true,
                     onTap: () => _openLead(lead['_id'] as String?),
+                    // Days overdue ("45d"), same as the web, so the name
+                    // keeps its own line next to the row's shortcuts.
                     leading: _smallBadge(
-                      overdueLeads.contains(lead) ? 'OVERDUE' : 'TODAY',
+                      overdueLeads.contains(lead)
+                          ? '${(lead['daysOverdue'] as num?)?.toInt() ?? '!'}d'
+                          : 'TODAY',
                       overdueLeads.contains(lead)
                           ? AppColors.danger
                           : AppColors.warning,
                     ),
+                    minLeadingWidth: 0,
+                    horizontalTitleGap: 10,
                     title: Text(
                       lead['name']?.toString() ?? 'Lead',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     subtitle: Text(
@@ -788,14 +857,54 @@ class _DashboardScreenState extends State<DashboardScreen>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    trailing: IconButton(
-                      tooltip: 'Call',
-                      onPressed: () => _call(
-                        phone: lead['phone']?.toString(),
-                        name: lead['name']?.toString(),
-                        leadId: lead['_id']?.toString(),
-                      ),
-                      icon: Icon(FontAwesomeIcons.phone.data, size: 17),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            minimumSize: const Size(0, 32),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          onPressed: () => _setFollowUp(lead, _tomorrow11Ist()),
+                          child: const Text('Tomorrow', style: TextStyle(fontSize: 11.5)),
+                        ),
+                        IconButton(
+                          tooltip: 'Clear this follow-up',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => _setFollowUp(lead, null),
+                          icon: const Icon(Icons.close_rounded, size: 18),
+                        ),
+                        IconButton(
+                          tooltip: 'Call',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => _call(
+                            phone: lead['phone']?.toString(),
+                            name: lead['name']?.toString(),
+                            leadId: lead['_id']?.toString(),
+                          ),
+                          icon: Icon(FontAwesomeIcons.phone.data, size: 16),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (context.read<AuthState>().isAdmin &&
+                    _due.any((l) => ((l['daysOverdue'] as num?)?.toInt() ?? 0) > 30))
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 4, 8, 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${_due.where((l) => ((l['daysOverdue'] as num?)?.toInt() ?? 0) > 30).length} of these are more than 30 days overdue.',
+                            style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _clearStaleFollowUps,
+                          child: const Text('Clear old', style: TextStyle(color: AppColors.danger, fontSize: 12)),
+                        ),
+                      ],
                     ),
                   ),
                 if (overdueLeads.length + todayLeads.length > 8)
@@ -1220,7 +1329,12 @@ class _DashboardScreenState extends State<DashboardScreen>
           _liveAgentStatusWidget(context),
           const SizedBox(height: 12),
         ],
-        if (_automations.isNotEmpty) _automationHealthWidget(context),
+        if (_automations.isNotEmpty)
+          DashSourcesHealth(
+            automations: _automations,
+            iconFor: _platformIcon,
+            onOpen: () => widget.onNavigate?.call('Integrations'),
+          ),
       ],
     );
   }
@@ -1481,290 +1595,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   /// Mirrors web's AutomationHealthWidget — per-connection live/off status.
-  Widget _automationHealthWidget(BuildContext context) {
-    final t = AppTheme.of(context);
-    final active = _automations
-        .where((a) => a['status'] == 'connected' && a['isActive'] != false)
-        .length;
-    final inactive = _automations.length - active;
-    return SoftSurface(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('INTEGRATIONS', style: AppText.kicker(context)),
-                    const Text(
-                      'Automation Health',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (active > 0) _smallBadge('$active live', AppColors.success),
-              if (active > 0 && inactive > 0) const SizedBox(width: 6),
-              if (inactive > 0) _smallBadge('$inactive off', AppColors.danger),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final a in _automations.take(6))
-                Builder(
-                  builder: (context) {
-                    final isLive =
-                        a['status'] == 'connected' && a['isActive'] != false;
-                    return Container(
-                      width: 158,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: t.surfaceLow,
-                        borderRadius: BorderRadius.circular(13),
-                        border: Border.all(color: t.border),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            _platformIcon(a['platform'] as String?),
-                            size: 16,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  (a['name'] as String?)?.isNotEmpty == true
-                                      ? a['name'] as String
-                                      : a['platform'] as String? ?? '—',
-                                  style: const TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  a['platform'] as String? ?? '',
-                                  style: TextStyle(
-                                    fontSize: 9.5,
-                                    color: t.textSoft,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isLive
-                                  ? AppColors.success
-                                  : AppColors.danger,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _weeklyTrendSection(BuildContext context, Map<String, dynamic> data) {
-    final raw = (data['recentDailyLeads'] as List? ?? [])
-        .cast<Map<String, dynamic>>();
-    final counts = <String, int>{
-      for (final item in raw)
-        item['_id']?.toString() ?? '': (item['count'] as num?)?.toInt() ?? 0,
-    };
-    final now = DateTime.now();
-    final days = List.generate(7, (index) {
-      final date = DateTime(
-        now.year,
-        now.month,
-        now.day,
-      ).subtract(Duration(days: 6 - index));
-      final key = DateFormat('yyyy-MM-dd').format(date);
-      return (date: date, count: counts[key] ?? 0);
-    });
-    final maxCount = days.fold<int>(
-      1,
-      (max, item) => item.count > max ? item.count : max,
-    );
-    final total = days.fold<int>(0, (sum, item) => sum + item.count);
-    return SoftSurface(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('TRENDS', style: AppText.kicker(context)),
-                    const Text(
-                      'Leads This Week',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                '$total',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'last 7 days',
-                style: TextStyle(
-                  fontSize: 9,
-                  color: AppTheme.of(context).textSoft,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            height: 92,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                for (final item in days)
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 3),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            '${item.count}',
-                            style: const TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Container(
-                            height: 52 * item.count / maxCount + 3,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            DateFormat('E').format(item.date),
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: AppTheme.of(context).textSoft,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _dropoffSection(BuildContext context, Map<String, dynamic> data) {
-    const stages = [
-      'New',
-      'Contacted',
-      'Site Visit',
-      'Negotiation',
-      'Closed Won',
-      'Closed Lost',
-    ];
-    final values = (data['allTimeByStatus'] as Map?) ?? {};
-    final total = stages.fold<int>(
-      0,
-      (sum, stage) => sum + ((values[stage] as num?)?.toInt() ?? 0),
-    );
-    if (total == 0) return const SizedBox.shrink();
-    return SoftSurface(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('CONVERSION', style: AppText.kicker(context)),
-          const SizedBox(height: 3),
-          const Text(
-            'Pipeline Drop-off',
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-          ),
-          const SizedBox(height: 12),
-          for (final stage in stages) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: Text(stage, style: const TextStyle(fontSize: 11)),
-                ),
-                Text(
-                  '${values[stage] ?? 0}',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 32,
-                  child: Text(
-                    '${(((values[stage] as num?)?.toDouble() ?? 0) / total * 100).round()}%',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.of(context).textSoft,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            LinearProgressIndicator(
-              value: ((values[stage] as num?)?.toDouble() ?? 0) / total,
-              minHeight: 7,
-              borderRadius: BorderRadius.circular(99),
-              backgroundColor: AppTheme.of(context).surfaceLow,
-              color: statusColor(stage),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ],
-      ),
-    );
-  }
-
   Widget _miniMetric(
     String label,
     String value,
@@ -1938,71 +1768,117 @@ class _DashboardScreenState extends State<DashboardScreen>
           if (a != null) ...[
             FadeSlideIn(
               delay: const Duration(milliseconds: 40),
-              child: GridView.count(
-                crossAxisCount: 2,
+              // Two columns on a phone, three on a small tablet, all six in
+              // a row on a large one, so cards never stretch into big empty
+              // boxes on wide screens.
+              child: LayoutBuilder(builder: (context, box) {
+                final cols = box.maxWidth >= 1000 ? 6 : box.maxWidth >= 560 ? 3 : 2;
+                final cellW = (box.maxWidth - 10 * (cols - 1)) / cols;
+                return GridView.count(
+                crossAxisCount: cols,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
-                childAspectRatio: 1.85,
+                childAspectRatio: cellW / 100,
                 children: [
+                  // Same six cards as the web, all for the selected range
+                  // except Follow-ups (due today is due today).
                   Builder(
                     builder: (context) {
-                      final delta = _calcDelta(
-                        (a['thisMonthLeads'] as num?)?.toInt(),
-                        (a['lastMonthLeads'] as num?)?.toInt(),
-                      );
+                      final total = (a['totalLeads'] as num?)?.toInt() ?? 0;
+                      final prev = (a['previousPeriodLeads'] as num?)?.toInt();
+                      final delta = prev == null ? null : _calcDelta(total, prev);
                       return _MetricCard(
                         label: 'Total Leads',
-                        value: '${a['allTimeTotal'] ?? 0}',
+                        value: '$total',
                         sub: delta != null
-                            ? '${delta >= 0 ? '↑' : '↓'} ${delta.abs()}% vs last month'
-                            : 'All time',
+                            ? '${delta >= 0 ? '↑' : '↓'} ${delta.abs()}% vs previous'
+                            : 'created $_scope',
                         subColor: delta == null
                             ? null
                             : delta >= 0
                             ? AppColors.success
                             : AppColors.danger,
                         color: AppColors.primary,
-                        onTap: () => widget.onNavigate?.call('Leads'),
+                        onTap: () => _openLeadsFiltered(),
                       );
                     },
                   ),
                   _MetricCard(
-                    label: 'Pipeline',
-                    value: fmtBudget(a['pipelineValue'] as num?),
-                    sub: '${a['pipelineLeads'] ?? 0} active leads',
-                    color: AppTheme.of(context).text,
-                  ),
-                  _MetricCard(
                     label: 'New',
-                    value: '${a['allTimeNew'] ?? 0}',
-                    sub: 'Uncontacted',
+                    value: '${((a['byStatus'] as Map?) ?? {})['New'] ?? 0}',
+                    sub: 'Not contacted yet',
                     color: const Color(0xFF6366F1),
-                    onTap: () => widget.onNavigate?.call('Leads'),
+                    onTap: () => _openLeadsFiltered(status: 'New'),
                   ),
-                  _MetricCard(
-                    label: 'Closed Won',
-                    value: '${a['allTimeClosedWon'] ?? 0}',
-                    sub: '${a['conversionRate'] ?? 0}% conversion',
-                    color: AppColors.success,
-                    onTap: () => widget.onNavigate?.call('Leads'),
+                  Builder(
+                    builder: (context) {
+                      // A person reached the lead within an hour: a call,
+                      // marked Contacted, or an agent's WhatsApp message.
+                      // The WhatsApp bot's replies don't count.
+                      final sp = (a['speedToLead'] as Map?) ?? {};
+                      final tot = (sp['total'] as num?)?.toInt() ?? 0;
+                      final pct = tot == 0 ? null : (((sp['within1h'] as num?) ?? 0) / tot * 100).round();
+                      return _MetricCard(
+                        label: 'Reached in 1 hr',
+                        value: pct == null ? '-' : '$pct%',
+                        sub: tot == 0
+                            ? 'No leads in this period'
+                            : '${sp['within5m'] ?? 0} in 5 min · ${sp['notContacted'] ?? 0} not yet',
+                        color: pct == null
+                            ? AppTheme.of(context).textSoft
+                            : pct >= 60
+                            ? AppColors.success
+                            : pct >= 30
+                            ? AppColors.warning
+                            : AppColors.danger,
+                      );
+                    },
+                  ),
+                  Builder(
+                    builder: (context) {
+                      final visits = ((a['sourcePerformance'] as List?) ?? [])
+                          .fold<int>(0, (n, r) => n + (((r as Map)['visits'] as num?)?.toInt() ?? 0));
+                      return _MetricCard(
+                        label: 'Site Visits',
+                        value: '$visits',
+                        sub: visits > 0 ? 'Reached site visit or later' : 'None yet this period',
+                        color: const Color(0xFF8B5CF6),
+                        onTap: () => _openLeadsFiltered(status: 'Site Visit'),
+                      );
+                    },
+                  ),
+                  Builder(
+                    builder: (context) {
+                      final won = (((a['byStatus'] as Map?) ?? {})['Closed Won'] as num?)?.toInt() ?? 0;
+                      final total = (a['totalLeads'] as num?)?.toInt() ?? 0;
+                      return _MetricCard(
+                        label: 'Closed Won',
+                        value: '$won',
+                        sub: won > 0 && total > 0
+                            ? '${(won / total * 1000).round() / 10}% of leads'
+                            : 'None marked Closed Won',
+                        color: AppColors.success,
+                        onTap: () => _openLeadsFiltered(status: 'Closed Won'),
+                      );
+                    },
                   ),
                   _MetricCard(
                     label: 'Follow-ups',
                     value: '${a['todayFollowUps'] ?? 0}',
-                    sub: 'Due today',
+                    sub: 'Due today, all leads',
                     color: AppColors.warning,
                     onTap: () => widget.onNavigate?.call('Follow-ups'),
                   ),
-                  _MetricCard(
-                    label: 'Avg Response',
-                    value: _fmtResponse(a['avgResponseMs'] as num?),
-                    sub: 'First contact',
-                    color: AppColors.success,
-                  ),
                 ],
-              ),
+              );
+              }),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Showing leads created $_scope.${a['allTimeTotal'] != null ? ' ${NumberFormat.decimalPattern('en_IN').format(a['allTimeTotal'])} leads in total.' : ''}',
+              style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
             ),
             const SizedBox(height: 20),
 
@@ -2023,168 +1899,38 @@ class _DashboardScreenState extends State<DashboardScreen>
                 _staleSection(context),
                 const SizedBox(height: 12),
               ],
-              _forecastSection(context, a),
-              const SizedBox(height: 12),
-              _weeklyTrendSection(context, a),
+              // Projects from closed deals; with none yet it could only show
+              // dashes and zeros, so it waits for the first one.
+              if (((a['allTimeClosedWon'] as num?)?.toInt() ?? 0) > 0) ...[
+                _forecastSection(context, a),
+                const SizedBox(height: 12),
+              ],
+              DashLeadsTrend(data: a, scope: _scope),
               const SizedBox(height: 12),
               _liveOperationsSection(context),
               const SizedBox(height: 20),
             ],
 
-            // ── Status breakdown ──
+            // ── Performance: all for the selected range ──
             const _SectionHeader(label: 'Performance'),
             const SizedBox(height: 12),
-            SoftSurface(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children:
-                    statusOptions.map((s) {
-                      final count =
-                          ((a['allTimeByStatus'] as Map?) ?? {})[s] as int? ??
-                          0;
-                      final total = a['allTimeTotal'] as int? ?? 1;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 100,
-                              child: Text(
-                                s,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ),
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: total > 0 ? count / total : 0,
-                                  minHeight: 8,
-                                  backgroundColor: statusColor(
-                                    s,
-                                  ).withValues(alpha: 0.12),
-                                  color: statusColor(s),
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              width: 40,
-                              child: Text(
-                                '$count',
-                                textAlign: TextAlign.end,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList()..insert(
-                      0,
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('PIPELINE', style: AppText.kicker(context)),
-                            const SizedBox(height: 2),
-                            const Text(
-                              'Leads by Status',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-              ),
+            DashStatusBreakdown(
+              byStatus: (a['byStatus'] as Map?) ?? {},
+              scope: _scope,
+              onSelect: (status) => _openLeadsFiltered(status: status),
             ),
-            const SizedBox(height: 16),
-
-            // ── Source breakdown ──
-            if (((a['bySource'] as Map?) ?? {}).values.any(
-              (v) => (v as num) > 0,
-            )) ...[
-              Text(
-                'Acquisition Mix · Leads by Source',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              SoftSurface(
-                padding: const EdgeInsets.all(12),
-                child: Builder(
-                  builder: (ctx) {
-                    final src =
-                        ((a['bySource'] as Map?) ?? {}).entries
-                            .where((e) => (e.value as num) > 0)
-                            .toList()
-                          ..sort(
-                            (x, y) =>
-                                (y.value as num).compareTo(x.value as num),
-                          );
-                    final total = src.fold<num>(
-                      0,
-                      (s, e) => s + (e.value as num),
-                    );
-                    return Column(
-                      children: [
-                        for (var i = 0; i < src.length; i++)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 100,
-                                  child: Text(
-                                    '${src[i].key}',
-                                    style: Theme.of(ctx).textTheme.bodySmall,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: LinearProgressIndicator(
-                                      value: total > 0
-                                          ? (src[i].value as num) / total
-                                          : 0,
-                                      minHeight: 8,
-                                      backgroundColor: _sourceColor(
-                                        src[i].key,
-                                        i,
-                                      ).withValues(alpha: 0.12),
-                                      color: _sourceColor(src[i].key, i),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: 40,
-                                  child: Text(
-                                    '${src[i].value}',
-                                    textAlign: TextAlign.end,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            _dropoffSection(context, a),
+            const SizedBox(height: 12),
+            DashSourceDonut(
+              bySource: (a['bySource'] as Map?) ?? {},
+              scope: _scope,
+              onSelect: (source) => _openLeadsFiltered(source: source),
+            ),
+            const SizedBox(height: 12),
+            DashSourcePerformance(
+              rows: ((a['sourcePerformance'] as List?) ?? []).cast<Map<String, dynamic>>(),
+              scope: _scope,
+              onSelect: (source) => _openLeadsFiltered(source: source),
+            ),
             const SizedBox(height: 16),
           ],
 
@@ -2390,17 +2136,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (hour < 17) return 'Good afternoon';
     if (hour < 21) return 'Good evening';
     return 'Good night';
-  }
-
-  String _fmtResponse(num? milliseconds) {
-    if (milliseconds == null || milliseconds <= 0) return 'No data';
-    final minutes = milliseconds / 60000;
-    if (minutes < 1) return '< 1 min';
-    if (minutes < 60) return '${minutes.round()} min';
-    final hours = minutes / 60;
-    return hours < 24
-        ? '${hours.toStringAsFixed(1)} hr'
-        : '${(hours / 24).toStringAsFixed(1)} d';
   }
 }
 

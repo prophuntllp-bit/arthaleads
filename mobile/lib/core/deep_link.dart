@@ -17,4 +17,9 @@ class DeepLink {
   /// Set to a user `_id` to ask the Performance tab to scroll to and
   /// highlight that agent's card.
   static final ValueNotifier<String?> focusAgentId = ValueNotifier(null);
+
+  /// Set to a filter set (a `LeadFilters`) to make the Leads tab show exactly
+  /// those leads, e.g. a dashboard card's date range and status. Typed as
+  /// Object to keep this file free of screen imports.
+  static final ValueNotifier<Object?> leadFilters = ValueNotifier(null);
 }

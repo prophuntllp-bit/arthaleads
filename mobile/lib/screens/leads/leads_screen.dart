@@ -67,9 +67,20 @@ class LeadsScreenState extends State<LeadsScreen> {
   List<Map<String, dynamic>> _agents = [];
   List<String> _domains = [];
 
+  // Bumped on every load; a response that comes back after a newer request
+  // was sent is dropped, so two overlapping loads can't mix their results.
+  int _loadSeq = 0;
+
   @override
   void initState() {
     super.initState();
+    // Opened from a dashboard card: take its filters before the first load,
+    // so the screen never fetches (and shows) the unfiltered list first.
+    final pending = DeepLink.leadFilters.value;
+    if (pending is LeadFilters) {
+      DeepLink.leadFilters.value = null;
+      _filters = pending;
+    }
     _load(reset: true);
     _loadMeta();
     _scroll.addListener(() {
@@ -84,11 +95,28 @@ class LeadsScreenState extends State<LeadsScreen> {
     if (DeepLink.openLeadId.value != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _handleDeepLink());
     }
+    DeepLink.leadFilters.addListener(_handleFilterLink);
+    if (DeepLink.leadFilters.value != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _handleFilterLink());
+    }
+  }
+
+  /// A dashboard card asked for a specific slice of leads (its date range,
+  /// a status, a source): show exactly that, replacing any filters left over
+  /// from earlier.
+  void _handleFilterLink() {
+    final f = DeepLink.leadFilters.value;
+    if (f is! LeadFilters) return;
+    DeepLink.leadFilters.value = null;
+    _searchCtrl.clear();
+    _filters = f;
+    _load(reset: true);
   }
 
   @override
   void dispose() {
     DeepLink.openLeadId.removeListener(_handleDeepLink);
+    DeepLink.leadFilters.removeListener(_handleFilterLink);
     _scroll.dispose();
     _searchCtrl.dispose();
     super.dispose();
@@ -132,6 +160,7 @@ class LeadsScreenState extends State<LeadsScreen> {
       _selected.clear();
     }
     setState(() => _loading = true);
+    final seq = ++_loadSeq;
     try {
       final res = await _api.dio.get(
         '/leads/unified',
@@ -143,6 +172,7 @@ class LeadsScreenState extends State<LeadsScreen> {
           ..._filters.toParams(),
         },
       );
+      if (seq != _loadSeq || !mounted) return;
       final rows = (res.data['leads'] as List? ?? [])
           .cast<Map<String, dynamic>>();
       setState(() {
@@ -151,11 +181,11 @@ class LeadsScreenState extends State<LeadsScreen> {
         _pages = res.data['pages'] as int? ?? 1;
       });
     } catch (e) {
-      if (mounted) {
+      if (mounted && seq == _loadSeq) {
         _snack(ApiClient.errorMessage(e, 'Failed to load leads'), error: true);
       }
     } finally {
-      if (mounted) {
+      if (mounted && seq == _loadSeq) {
         setState(() {
           _loading = false;
           _initialLoaded = true;

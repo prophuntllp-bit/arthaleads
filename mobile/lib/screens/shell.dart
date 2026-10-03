@@ -63,7 +63,19 @@ class _ArthaFabState extends State<_ArthaFab>
       vsync: this,
       duration: const Duration(milliseconds: 1600),
     );
-    if (!MediaQuery.of(context).disableAnimations) {
+  }
+
+  // The "reduce motion" setting is read here, not in initState: reading
+  // MediaQuery that early is not allowed (debug builds showed a red error box
+  // where this button should be). This also follows the setting if it
+  // changes while the app is open.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    if (reduceMotion && _pulse.isAnimating) {
+      _pulse.stop();
+    } else if (!reduceMotion && !_pulse.isAnimating) {
       _pulse.repeat();
     }
   }
