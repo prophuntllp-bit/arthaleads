@@ -166,7 +166,8 @@ export default function LeadFilters({
 
       {/* 2. Status tabs with counts: a bordered strip, the selected tab raised */}
       <div className="hidden w-full overflow-x-auto sm:block">
-        <div role="tablist" aria-label="Status" className="inline-flex gap-1 rounded-xl p-1"
+        {/* Full width of the card, tabs left-aligned (min-w-max lets it scroll when narrow). */}
+        <div role="tablist" aria-label="Status" className="flex w-full min-w-max gap-1 rounded-xl p-1"
           style={{ border: "1px solid var(--app-border-strong)", background: "var(--app-surface-low)" }}>
           {tabs.map((t) => {
             const on = (filters.status || "") === t.value;
