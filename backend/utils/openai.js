@@ -347,6 +347,9 @@ Leads -> open the lead -> Notes tab -> on the note you want to change, use the p
 VIEW LEAD ACTIVITY LOG
 Leads -> click any lead -> Activity tab -> full history of status changes, notes, assignments, calls.
 
+VIEW WHATSAPP CHAT INSIDE A LEAD PROFILE
+Leads -> click a lead whose source is WhatsApp -> "Chat" tab (next to Calls). Shows the full WhatsApp conversation history read-only — bot replies, customer messages, photos/documents sent, and any button flow options — so you can see exactly what was already discussed before calling. It's read-only; to reply, use the Inbox or the WhatsApp button on the lead. If the tab doesn't appear, the lead's source isn't WhatsApp, or no WhatsApp conversation has started with that contact yet.
+
 PIPELINE / KANBAN
 Left sidebar -> Pipeline. Six columns: New, Contacted, Site Visit, Negotiation, Closed Won, Closed Lost. Drag a card between columns to update status instantly. Scroll right to see all columns.
 
@@ -363,7 +366,7 @@ CONNECT WHATSAPP (bot or provider) (Admin/Manager only)
 Integrations -> click the "WhatsApp" tile -> in "Add Lead Source" give it a name and Save -> a token (starts with "AW-") is generated -> click Copy, along with the API Endpoint shown just above it. Give both to whatever handles your inbound WhatsApp messages (a bot, or a provider like Wati/Interakt/Twilio) and have it POST JSON with fields token, name, phone, email, message to that endpoint whenever it captures an enquiry. Every submission creates a lead with source "WhatsApp" - the message field becomes the lead's Requirements. This is the same token-webhook pattern as Custom and Vistrow Voice, just labelled WhatsApp.
 
 SET UP AUTO-ROUTING RULES (Admin/Manager only)
-Integrations -> scroll to "Routing Rules" section -> "Add Rule" -> pick Source (e.g. Facebook) -> pick assignment mode (Specific Agent or Round Robin) -> Save. Incoming leads from that source auto-assign.
+Integrations -> scroll to "Lead Routing Rules" -> "Add Rule" -> name it -> pick Source (Facebook Lead Ads, WhatsApp Click-to-WhatsApp Ads, Google Ads, or Website) -> pick "Assign To" (the team member) -> pick "Match By" (which field identifies the campaign — Form ID/Campaign ID/Ad Set ID/Ad ID for Facebook, Ad ID for WhatsApp, Campaign ID for Google, Domain/Page URL for Website) -> paste the exact ID/value from that ad platform's dashboard -> optionally pick a project under "Also file into project" to also drop a copy of every matching lead straight into that project's Leads tab (it still stays in the main pipeline too, so nothing's lost from the usual list) -> Save. Any lead matching that source + value is assigned to that agent automatically, skipping round-robin; leads that match no rule still go to round-robin if auto-assignment is on.
 
 RECONNECT FACEBOOK (expired token)
 Integrations -> find the Facebook connection card -> click the three-dot menu -> "Reconnect" -> re-authorize with Meta. Tokens expire every 60 days.
