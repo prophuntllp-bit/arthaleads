@@ -90,7 +90,7 @@ export default function SourceTreeSelect({ value = [], onChange, options = [], d
   // Sources that open into their own items: WhatsApp into its ads, Facebook into its lead forms.
   const kids = { WhatsApp: { kind: "ad", items: ads, icon: Megaphone }, Facebook: { kind: "form", items: forms, icon: FileText } };
   const hasKids = (v) => (kids[v]?.items?.length || 0) > 0;
-  const kidTok = (v, it) => `${kids[v].kind}:${it.value}`;
+  const kidTok = (v, it) => `${it.kind || kids[v].kind}:${it.value}`;
   const kidState = (v, it) => (sel.has(`src:${v}`) || sel.has(kidTok(v, it)) ? "on" : "off");
   const srcState = (v) => (sel.has(`src:${v}`) ? "on" : kids[v]?.items.some((it) => sel.has(kidTok(v, it))) ? "some" : "off");
   const kidLabel = (v, it) => (it.label && it.label !== it.value ? it.label : `${v} ${it.value}`);
@@ -155,7 +155,8 @@ export default function SourceTreeSelect({ value = [], onChange, options = [], d
     const [k, ...rest] = t.split(":");
     const v = rest.join(":");
     if (k === "page") { const p = pages.find((x) => x.key === v); return p ? `${p.domain}${p.path === "/" ? "" : p.path}` : v; }
-    if (k === "ad") { const a = ads.find((x) => x.value === v); return a ? `WhatsApp ad: ${a.label}` : `WhatsApp ad ${v}`; }
+    if (k === "ad") { const a = ads.find((x) => x.value === v && !x.kind); return a ? `WhatsApp ad: ${a.label}` : `WhatsApp ad ${v}`; }
+    if (k === "noad") return v.replace(/^Facebook Ad · /, "");
     if (k === "form") { const f = forms.find((x) => x.value === v); return f ? `Facebook form: ${f.label}` : `Facebook form ${v}`; }
     return v;
   };

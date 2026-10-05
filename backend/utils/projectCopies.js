@@ -189,4 +189,4 @@ async function mirrorLeadEdit(lead, op, user) {
   }
 }
 
-module.exports = { phoneVariants, projectCopiesFor, findCopyInProject, moveLeadIntoProject, mirrorProjectEdit, mirrorLeadEdit };
+module.exports = { phoneVariants, projectCopiesFor, findCopyInProject, moveLeadIntoProject, mirrorProjectEdit, mirrorLeadEdit, mergeLeadIntoCopy };

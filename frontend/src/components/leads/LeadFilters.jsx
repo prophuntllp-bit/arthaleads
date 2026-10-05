@@ -103,9 +103,9 @@ export default function LeadFilters({
     const [k, ...rest] = t.split(":");
     const v = rest.join(":");
     const pg = k === "page" ? sitePages.find((x) => x.key === v) : null;
-    const ad = k === "ad" ? adOptions.find((x) => x.value === v) : null;
+    const ad = k === "ad" ? adOptions.find((x) => x.value === v && !x.kind) : null;
     const fm = k === "form" ? formOptions.find((x) => x.value === v) : null;
-    const name = pg ? `${pg.domain}${pg.path === "/" ? "" : pg.path}` : ad ? `WhatsApp ad: ${ad.label}` : fm ? `Facebook form: ${fm.label}` : v;
+    const name = pg ? `${pg.domain}${pg.path === "/" ? "" : pg.path}` : ad ? `WhatsApp ad: ${ad.label}` : k === "noad" ? v.replace(/^Facebook Ad · /, "") : fm ? `Facebook form: ${fm.label}` : v;
     chips.push({ key: `sel-${t}`, text: `Source: ${name}`, onClear: () => setFilter("sourceSel", encodeSel(ticked.filter((x) => x !== t))) });
   });
   if (filters.priority) chips.push({ key: "priority", text: `Priority: ${filters.priority}` });

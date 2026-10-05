@@ -404,7 +404,8 @@ export default function Leads() {
   useEffect(() => {
     api.get("/leads/domains").then((r) => { setDomains(r.data.domains || []); setSitePages(r.data.pages || []); }).catch(() => {});
     api.get("/leads/campaign-options").then((r) => {
-      setAdOptions(r.data.options?.whatsapp?.ad_id || []);
+      // Leads Meta sent no ad for are listed after the ads, under the project their message named.
+      setAdOptions([...(r.data.options?.whatsapp?.ad_id || []), ...(r.data.options?.whatsapp?.no_ad || []).map((o) => ({ ...o, kind: "noad", label: o.label.replace(/^Facebook Ad · /, "") }))]);
       setFormOptions(r.data.options?.facebook?.form_id || []);
     }).catch(() => {});
   }, []);

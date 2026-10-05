@@ -183,6 +183,8 @@ function sitePageCondition(key) {
 //   page:<key>    website leads from that one page ("host/path")
 //   ad:<adId>     leads from one WhatsApp (click-to-WhatsApp) ad
 //   form:<formId> leads from one Facebook lead form
+//   noad:<label>  WhatsApp leads whose ad Meta did not identify, grouped by the
+//                 project their first message named (e.g. "...Khopoli Plots (ad not identified)")
 // A lead matches if it matches ANY token. Returns null when nothing usable.
 function sourceSelectionCondition(sel) {
   if (!sel) return null;
@@ -191,7 +193,7 @@ function sourceSelectionCondition(sel) {
     let v = "";
     try { v = decodeURIComponent(t.slice(i + 1)); } catch { v = t.slice(i + 1); }
     return { kind: t.slice(0, i), value: v.trim() };
-  }).filter((t) => t.value && ["src", "dom", "page", "ad", "form"].includes(t.kind)).slice(0, 100);
+  }).filter((t) => t.value && ["src", "dom", "page", "ad", "form", "noad"].includes(t.kind)).slice(0, 100);
   if (!tokens.length) return null;
   const or = [];
   const srcs = tokens.filter((t) => t.kind === "src").map((t) => t.value);
@@ -201,6 +203,7 @@ function sourceSelectionCondition(sel) {
     ...(srcs.length ? [{ source: { $in: srcs } }] : []),
     ...tokens.filter((t) => t.kind === "ad").flatMap((t) => [{ "campaignRef.adId": t.value }, { "activities.meta.adId": t.value }]),
     ...tokens.filter((t) => t.kind === "form").map((t) => ({ "activities.meta.formId": t.value })),
+    ...tokens.filter((t) => t.kind === "noad").map((t) => ({ source: "WhatsApp", leadSourceLabel: t.value })),
   ];
   const srcClause = srcOr.length ? { $or: srcOr } : null;
   for (const t of tokens.filter((x) => x.kind === "dom")) {
@@ -402,10 +405,18 @@ const leadService = {
       ]),
     ]);
 
+    // Click-to-WhatsApp leads Meta sent no ad details for, grouped by the label
+    // the bot gave them from what they wrote ("... (ad not identified)").
+    const waNoAd = await Lead.aggregate([
+      { $match: { ...base, source: "WhatsApp", "campaignRef.adId": { $in: ["", null] }, leadSourceLabel: /\(ad not identified\)$/ } },
+      { $group: { _id: "$leadSourceLabel", count: { $sum: 1 }, lastSeen: { $max: "$createdAt" } } },
+      { $sort: { lastSeen: -1 } },
+    ]);
+
     const shape = (rows) => rows.map((r) => ({ value: r._id, label: r.label || r._id, count: r.count }));
     return {
       facebook: { form_id: shape(formId), campaign_id: shape(campaignId), adset_id: shape(adsetId), ad_id: shape(adId) },
-      whatsapp: { ad_id: shape(waAdId) },
+      whatsapp: { ad_id: shape(waAdId), no_ad: shape(waNoAd) },
       google:   { campaign_id: shape(googleCampaignId) },
     };
   },
