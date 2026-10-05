@@ -77,7 +77,6 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
       widget.initialPlatform ??
       'Google';
   late String _status = widget.automation?['status'] as String? ?? 'draft';
-  late bool _isActive = widget.automation?['isActive'] as bool? ?? true;
   bool _saving = false;
 
   bool get _isEdit => widget.automation != null;
@@ -120,7 +119,8 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
         'externalSourceId': _externalSourceId.text.trim(),
         'externalSourceUrl': _externalSourceUrl.text.trim(),
         'mappingNotes': _mappingNotes.text.trim(),
-        'isActive': _isActive,
+        // Pause and resume live on the card; this Status field only has to agree.
+        'isActive': _status != 'paused',
       },
     };
     try {
@@ -409,12 +409,6 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
                     ),
                   ),
                 ),
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('This source is active'),
-                value: _isActive,
-                onChanged: (v) => setState(() => _isActive = v),
               ),
             ],
             const SizedBox(height: 20),

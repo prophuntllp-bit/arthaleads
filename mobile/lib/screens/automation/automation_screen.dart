@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
@@ -11,6 +10,7 @@ import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 import 'automation_form.dart';
+import 'connection_card.dart';
 import 'routing_rules_screen.dart';
 import 'telephony_integration_screen.dart';
 import '../inbox/wa_settings_page.dart';
@@ -91,28 +91,51 @@ class _AutomationScreenState extends State<AutomationScreen> {
     }
   }
 
+  static bool _isPaused(Map<String, dynamic> a) =>
+      a['isActive'] == false || a['status'] == 'paused';
+
+  // Pause or resume one connection. Paused means the webhook ignores new
+  // leads from it (isActive false); nothing already received is touched.
+  // Same call and wording as the web's pause button on the connection card.
+  String? _togglingId;
   Future<void> _toggleActive(Map<String, dynamic> a) async {
+    final resume = _isPaused(a);
+    setState(() => _togglingId = a['_id'] as String?);
     try {
       final res = await _api.dio.patch(
         '/automations/${a['_id']}',
-        data: {'isActive': !(a['isActive'] == true)},
+        data: {'isActive': resume, 'status': resume ? 'connected' : 'paused'},
       );
       setState(() {
         final idx = _automations.indexWhere((x) => x['_id'] == a['_id']);
         if (idx != -1) {
-          _automations[idx] = (res.data['automation'] as Map)
-              .cast<String, dynamic>();
+          final saved = (res.data['automation'] as Map?)?.cast<String, dynamic>();
+          _automations[idx] = {
+            ..._automations[idx],
+            ...?saved,
+            'isActive': resume,
+            'status': saved?['status'] ?? (resume ? 'connected' : 'paused'),
+          };
         }
       });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(resume
+              ? 'Connection resumed'
+              : 'Connection paused: new leads from it are ignored'),
+        ));
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(ApiClient.errorMessage(e, 'Failed to update')),
+            content: Text(ApiClient.errorMessage(e, 'Could not change this connection')),
             backgroundColor: AppColors.danger,
           ),
         );
       }
+    } finally {
+      if (mounted) setState(() => _togglingId = null);
     }
   }
 
@@ -1502,15 +1525,115 @@ class _AutomationScreenState extends State<AutomationScreen> {
     );
   }
 
+  static const _ruleSources = {
+    'facebook': 'Facebook Lead Ads',
+    'whatsapp': 'WhatsApp ads',
+    'google': 'Google Ads',
+    'website': 'Website',
+  };
+  static const _ruleFields = {
+    'form_id': 'Form ID',
+    'campaign_id': 'Campaign ID',
+    'adset_id': 'Ad Set ID',
+    'ad_id': 'Ad ID',
+    'domain': 'Website Domain',
+    'page_path': 'Page URL Contains',
+  };
+
+  // One routing rule, as the web lists it: name and source, what it matches,
+  // who it goes to (and the project it is filed into), and whether it is on.
+  Widget _routingRuleRow(Map<String, dynamic> r) {
+    final t = AppTheme.of(context);
+    final on = r['isActive'] != false;
+    final source = _ruleSources['${r['source'] ?? 'facebook'}'] ?? '${r['source'] ?? ''}';
+    final field = _ruleFields['${r['matchField']}'] ?? '${r['matchField'] ?? ''}';
+    final project = '${r['assignToProjectName'] ?? ''}';
+    final who = '${r['assignToName'] ?? ''}';
+    return Opacity(
+      opacity: on ? 1 : 0.55,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: t.border),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${r['label'] ?? 'Routing rule'}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+                  Text(source.toUpperCase(),
+                      style: TextStyle(fontSize: 9.5, letterSpacing: 0.6, fontWeight: FontWeight.w700, color: t.textSoft)),
+                  const SizedBox(height: 4),
+                  Text.rich(
+                    TextSpan(
+                      style: TextStyle(fontSize: 12, color: t.textSoft),
+                      children: [
+                        TextSpan(text: '$field '),
+                        TextSpan(
+                          text: '${r['matchValue'] ?? ''}',
+                          style: const TextStyle(fontFamily: 'monospace', color: AppColors.primary),
+                        ),
+                        const TextSpan(text: '  ->  '),
+                        TextSpan(
+                          text: who.isNotEmpty ? who : 'team member',
+                          style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF10B981)),
+                        ),
+                        if (project.isNotEmpty) ...[
+                          const TextSpan(text: '  + filed into '),
+                          TextSpan(
+                            text: project,
+                            style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF10B981)),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: on ? const Color(0x1A10B981) : t.surfaceLow,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                on ? 'Active' : 'Paused',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: on ? const Color(0xFF10B981) : t.textSoft,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _statCard(String label, int value, String subtitle, Color color) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: AppTheme.of(context).surfaceSolid,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppTheme.of(context).border),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -1522,11 +1645,11 @@ class _AutomationScreenState extends State<AutomationScreen> {
               color: AppTheme.of(context).textSoft,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             '$value',
             style: TextStyle(
-              fontSize: 32,
+              fontSize: 26,
               fontWeight: FontWeight.w800,
               color: color,
             ),
@@ -1555,10 +1678,10 @@ class _AutomationScreenState extends State<AutomationScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(22),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppTheme.of(context).surfaceSolid,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AppTheme.of(context).border),
         ),
         child: Column(
@@ -1567,12 +1690,12 @@ class _AutomationScreenState extends State<AutomationScreen> {
             Row(
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 42,
+                  height: 42,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: .08),
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(13),
                   ),
                   child: icon,
                 ),
@@ -1598,12 +1721,12 @@ class _AutomationScreenState extends State<AutomationScreen> {
                   ),
               ],
             ),
-            const Spacer(),
+            const SizedBox(height: 10),
             Text(
               title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               description,
               maxLines: 3,
@@ -1619,254 +1742,41 @@ class _AutomationScreenState extends State<AutomationScreen> {
     );
   }
 
-  String _fmtSyncDate(dynamic value) {
-    final date = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
-    return date == null ? '—' : DateFormat('d MMM yyyy, hh:mm a').format(date);
-  }
-
   Widget _connectionCard(Map<String, dynamic> a) {
-    final active = a['isActive'] != false;
     final platform = a['platform']?.toString() ?? 'Custom';
-    final endpoint = platform == 'Facebook'
-        ? null
-        : '$_serverBase${a['webhookPath'] ?? '/api/leads'}';
-    final icon = _platformIcons[platform] ?? FontAwesomeIcons.bolt.data;
-    final tokenBadge = platform == 'Facebook' ? _tokenHealthBadge(a) : null;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: AppColors.primary.withValues(alpha: .1),
-                  child: Icon(icon, color: AppColors.primary, size: 18),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        a['name']?.toString() ?? 'Connection',
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      Text(
-                        platform,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.of(context).textSoft,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Switch.adaptive(
-                  value: active,
-                  onChanged: (_) => _toggleActive(a),
-                ),
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'edit') _openForm(automation: a);
-                    if (value == 'diagnose') _diagnoseFacebook(a);
-                    if (value == 'sync') _syncGoogle(a);
-                    if (value == 'delete') _delete(a);
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    if (platform == 'Facebook')
-                      const PopupMenuItem(
-                        value: 'diagnose',
-                        child: Text('Diagnose'),
-                      ),
-                    if (platform == 'Google' && a['mode'] == 'oauth')
-                      const PopupMenuItem(
-                        value: 'sync',
-                        child: Text('Sync Now'),
-                      ),
-                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
-                  ],
-                ),
-              ],
-            ),
-            if (platform == 'Facebook') ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Page: ${a['pageName'] ?? a['pageId'] ?? 'All pages'}',
-                      style: const TextStyle(fontSize: 11),
-                    ),
-                  ),
-                  Text(
-                    'Form: ${a['formId'] ?? 'All forms'}',
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                ],
-              ),
-              ?tokenBadge,
-              const SizedBox(height: 8),
-              _FormLabelsEditor(
-                automation: a,
-                onUpdated: (labels) => setState(() {
-                  final idx = _automations.indexWhere(
-                    (x) => x['_id'] == a['_id'],
-                  );
-                  if (idx != -1) {
-                    _automations[idx] = {
-                      ..._automations[idx],
-                      'formLabels': labels,
-                    };
-                  }
-                }),
-              ),
-            ] else if (platform == 'Website Form') ...[
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.of(context).surfaceLow,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if ((a['siteName'] as String? ?? '').isNotEmpty ||
-                        (a['siteUrl'] as String? ?? '').isNotEmpty) ...[
-                      Text(
-                        'Connected Website',
-                        style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
-                      ),
-                      Text(
-                        (a['siteName'] as String?)?.isNotEmpty == true
-                            ? a['siteName'] as String
-                            : 'WordPress Site',
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                      ),
-                      if ((a['siteUrl'] as String? ?? '').isNotEmpty)
-                        Text(
-                          a['siteUrl'] as String,
-                          style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
-                        ),
-                      const SizedBox(height: 6),
-                    ],
-                    if ((a['connectedForms'] as List?)?.isNotEmpty ?? false) ...[
-                      Text(
-                        'Active Forms',
-                        style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
-                      ),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: (a['connectedForms'] as List)
-                            .map(
-                              (f) => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppColors.success.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
-                                ),
-                                child: Text(
-                                  '✓ $f',
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.success),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                      const SizedBox(height: 6),
-                    ],
-                    if (endpoint != null)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              endpoint,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 11, color: AppColors.primary),
-                            ),
-                          ),
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            onPressed: () => Clipboard.setData(ClipboardData(text: endpoint)),
-                            icon: const Icon(Icons.copy, size: 16),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-            ] else if (platform == 'Google' && a['mode'] == 'oauth') ...[
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.of(context).surfaceLow,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Google Ads Account',
-                      style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
-                    ),
-                    Text(
-                      (a['googleCustomerName'] as String?)?.isNotEmpty == true
-                          ? a['googleCustomerName'] as String
-                          : 'Not selected',
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if ((a['googleCustomerId'] as String? ?? '').isNotEmpty)
-                      Text(
-                        a['googleCustomerId'] as String,
-                        style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
-                      ),
-                    const SizedBox(height: 4),
-                    Text(
-                      a['lastSyncAt'] != null
-                          ? 'Last synced: ${_fmtSyncDate(a['lastSyncAt'])} — Edit to sync now.'
-                          : 'Not synced yet — Edit to sync now.',
-                      style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
-                    ),
-                  ],
-                ),
-              ),
-            ] else if (endpoint != null) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      endpoint,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () =>
-                        Clipboard.setData(ClipboardData(text: endpoint)),
-                    icon: const Icon(Icons.copy, size: 16),
-                  ),
-                ],
-              ),
-            ],
-          ],
-        ),
+    final path = (a['webhookPath'] as String?)?.isNotEmpty == true
+        ? a['webhookPath'] as String
+        : platform == 'Website Form'
+            ? '/webhook/website'
+            : platform == 'Google'
+                ? '/webhook/google'
+                : '/webhook/lead';
+    return ConnectionCard(
+      key: ValueKey(a['_id']),
+      item: a,
+      serverBase: _serverBase,
+      endpointPath: path,
+      onCopy: (_) => ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Copied'), duration: Duration(seconds: 1)),
       ),
+      onEdit: () => _openForm(automation: a),
+      onDelete: () => _delete(a),
+      onToggleActive: () => _toggleActive(a),
+      toggling: _togglingId == a['_id'],
+      onDiagnose: platform == 'Facebook' ? () => _diagnoseFacebook(a) : null,
+      onSync: platform == 'Google' && a['mode'] == 'oauth' ? () => _syncGoogle(a) : null,
+      onRefreshToken: platform == 'Facebook' ? () => _refreshToken(a) : null,
+      formNamesEditor: platform == 'Facebook'
+          ? _FormLabelsEditor(
+              automation: a,
+              onUpdated: (labels) => setState(() {
+                final idx = _automations.indexWhere((x) => x['_id'] == a['_id']);
+                if (idx != -1) {
+                  _automations[idx] = {..._automations[idx], 'formLabels': labels};
+                }
+              }),
+            )
+          : null,
     );
   }
 
@@ -1954,7 +1864,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
             physics: const NeverScrollableScrollPhysics(),
             mainAxisSpacing: 10,
             crossAxisSpacing: 10,
-            childAspectRatio: 1.15,
+            childAspectRatio: 1.9,
             children: [
               _statCard(
                 'Connected',
@@ -1989,7 +1899,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
             physics: const NeverScrollableScrollPhysics(),
             mainAxisSpacing: 10,
             crossAxisSpacing: 10,
-            childAspectRatio: .83,
+            childAspectRatio: 1.12,
             children: [
               _sourceCard(
                 icon: const FaIcon(
@@ -2122,7 +2032,11 @@ class _AutomationScreenState extends State<AutomationScreen> {
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
-            ..._automations.map(_connectionCard),
+            for (final g in groupConnections(_automations)) ...[
+              ConnectionGroupHeader(g),
+              ...g.rows.map(_connectionCard),
+              const SizedBox(height: 8),
+            ],
           ],
           const SizedBox(height: 14),
           Card(
@@ -2139,7 +2053,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Campaign Routing Rules',
+                              'Lead Routing Rules',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
@@ -2147,7 +2061,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Route leads from specific Facebook campaigns or forms directly to a team member. All other leads follow round-robin.',
+                              'Route leads from specific Facebook or Google campaigns, WhatsApp ads, or website domains and pages directly to a team member. All other leads follow the round-robin rotation.',
                               style: TextStyle(
                                 height: 1.4,
                                 color: AppTheme.of(context).textSoft,
@@ -2181,31 +2095,24 @@ class _AutomationScreenState extends State<AutomationScreen> {
                         borderRadius: BorderRadius.circular(18),
                       ),
                       child: Text(
-                        'No routing rules yet. Add one above to route specific campaigns to a team member.',
+                        'No routing rules yet. Add one above to route specific campaigns, ads, or website pages to a team member.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: AppTheme.of(context).textSoft),
                       ),
                     )
                   else
-                    ..._routingRules
-                        .take(4)
-                        .map(
-                          (rule) => ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(
-                              Icons.alt_route,
-                              color: AppColors.primary,
-                            ),
-                            title: Text(
-                              rule['name']?.toString() ??
-                                  rule['campaignName']?.toString() ??
-                                  'Routing rule',
-                            ),
-                            subtitle: Text(
-                              'Assigned to ${rule['assignedToName'] ?? rule['agentName'] ?? 'team member'}',
-                            ),
-                          ),
+                    ..._routingRules.map(_routingRuleRow),
+                  if (_routingRules.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Center(
+                        child: Text(
+                          'All other leads (no match) are assigned round-robin to your team',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSoft),
                         ),
+                      ),
+                    ),
                 ],
               ),
             ),
