@@ -88,7 +88,12 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<String> _insights = [];
   bool _insightsOpen = false;
   bool _insightsLoading = false;
+  // Like the web, these panels load closed on every visit; the chevron
+  // opens one for this visit only.
   bool _dueExpanded = false;
+  bool _hotExpanded = false;
+  bool _staleExpanded = false;
+  bool _projectsExpanded = false;
   Timer? _refreshTimer;
   DateTime? _lastLoadedAt;
 
@@ -929,7 +934,10 @@ class _DashboardScreenState extends State<DashboardScreen>
             padding: EdgeInsets.zero,
             child: Column(
               children: [
-                Padding(
+                InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => setState(() => _hotExpanded = !_hotExpanded),
+                  child: Padding(
                   padding: const EdgeInsets.all(13),
                   child: Row(
                     children: [
@@ -951,12 +959,19 @@ class _DashboardScreenState extends State<DashboardScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Hot Today',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                              ),
+                            const Row(
+                              children: [
+                                Text(
+                                  'Hot Today',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                InfoTip(
+                                  'Ranked by recent WhatsApp replies, how new the lead is, follow-ups due, budget and pipeline stage. Leads tagged Not a buyer are left out.',
+                                ),
+                              ],
                             ),
                             Text(
                               '${_hot.length} ranked leads',
@@ -973,9 +988,18 @@ class _DashboardScreenState extends State<DashboardScreen>
                         size: 17,
                         color: AppColors.primary,
                       ),
+                      const SizedBox(width: 6),
+                      Icon(
+                        _hotExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        size: 18,
+                      ),
                     ],
                   ),
                 ),
+                ),
+                if (_hotExpanded)
                 for (final hot in _hot) ...[
                   Divider(height: 1, color: AppTheme.of(context).border),
                   InkWell(
@@ -1203,6 +1227,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: Column(
         children: [
           ListTile(
+            onTap: () => setState(() => _staleExpanded = !_staleExpanded),
             leading: const Icon(
               Icons.history_rounded,
               color: AppColors.warning,
@@ -1212,11 +1237,21 @@ class _DashboardScreenState extends State<DashboardScreen>
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
             subtitle: const Text('No activity in 7+ days'),
-            trailing: TextButton(
-              onPressed: () => widget.onNavigate?.call('Leads'),
-              child: const Text('View all'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextButton(
+                  onPressed: () => widget.onNavigate?.call('Leads'),
+                  child: const Text('View all'),
+                ),
+                Icon(
+                  _staleExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                ),
+              ],
             ),
           ),
+          if (_staleExpanded)
           for (final lead in _stale.take(4))
             ListTile(
               dense: true,
@@ -1354,6 +1389,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: Column(
         children: [
           ListTile(
+            onTap: () => setState(() => _projectsExpanded = !_projectsExpanded),
             leading: Container(
               width: 28,
               height: 28,
@@ -1375,12 +1411,22 @@ class _DashboardScreenState extends State<DashboardScreen>
             subtitle: Text(
               '${projects.length} active project${projects.length == 1 ? '' : 's'}',
             ),
-            trailing: TextButton(
-              onPressed: () => widget.onNavigate?.call('Projects'),
-              child: const Text('View all'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextButton(
+                  onPressed: () => widget.onNavigate?.call('Projects'),
+                  child: const Text('View all'),
+                ),
+                Icon(
+                  _projectsExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                ),
+              ],
             ),
           ),
-          Divider(height: 1, color: t.border),
+          if (_projectsExpanded) Divider(height: 1, color: t.border),
+          if (_projectsExpanded)
           for (final p in projects.take(6))
             Builder(
               builder: (context) {
@@ -1801,6 +1847,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ? AppColors.success
                             : AppColors.danger,
                         color: AppColors.primary,
+                        tip: 'Leads that came in during the selected dates, including any later moved into a project.',
                         onTap: () => _openLeadsFiltered(),
                       );
                     },
@@ -1810,6 +1857,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     value: '${((a['byStatus'] as Map?) ?? {})['New'] ?? 0}',
                     sub: 'Not contacted yet',
                     color: const Color(0xFF6366F1),
+                    tip: 'Leads from these dates still in New: nobody has marked them contacted yet.',
                     onTap: () => _openLeadsFiltered(status: 'New'),
                   ),
                   Builder(
@@ -1822,6 +1870,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       final pct = tot == 0 ? null : (((sp['within1h'] as num?) ?? 0) / tot * 100).round();
                       return _MetricCard(
                         label: 'Reached in 1 hr',
+                        tip: "Share of these leads a person reached within an hour of arriving: a call, marking them Contacted, or an agent's own WhatsApp message. The WhatsApp bot's replies don't count.",
                         value: pct == null ? '-' : '$pct%',
                         sub: tot == 0
                             ? 'No leads in this period'
@@ -1845,6 +1894,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         value: '$visits',
                         sub: visits > 0 ? 'Reached site visit or later' : 'None yet this period',
                         color: const Color(0xFF8B5CF6),
+                        tip: 'Leads from these dates at the Site Visit stage or later, or with a site visit date set.',
                         onTap: () => _openLeadsFiltered(status: 'Site Visit'),
                       );
                     },
@@ -1860,6 +1910,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ? '${(won / total * 1000).round() / 10}% of leads'
                             : 'None marked Closed Won',
                         color: AppColors.success,
+                        tip: 'Leads from these dates marked Closed Won.',
                         onTap: () => _openLeadsFiltered(status: 'Closed Won'),
                       );
                     },
@@ -1869,6 +1920,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     value: '${a['todayFollowUps'] ?? 0}',
                     sub: 'Due today, all leads',
                     color: AppColors.warning,
+                    tip: 'Follow-ups due today across all your leads. This one ignores the date range above.',
                     onTap: () => widget.onNavigate?.call('Follow-ups'),
                   ),
                 ],
@@ -2191,6 +2243,7 @@ class _MetricCard extends StatelessWidget {
   final Color color;
   final Color? subColor;
   final VoidCallback? onTap;
+  final String? tip;
 
   const _MetricCard({
     required this.label,
@@ -2199,6 +2252,7 @@ class _MetricCard extends StatelessWidget {
     required this.color,
     this.subColor,
     this.onTap,
+    this.tip,
   });
 
   @override
@@ -2210,16 +2264,24 @@ class _MetricCard extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontSize: 8.5,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
-              color: AppTheme.of(context).textSoft,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: AppTheme.of(context).textSoft,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (tip != null)
+                SizedBox(width: 20, height: 14, child: OverflowBox(maxWidth: 20, maxHeight: 24, child: InfoTip(tip!, size: 12))),
+            ],
           ),
           const SizedBox(height: 4),
           FittedBox(

@@ -41,6 +41,36 @@ String describeRange(dynamic range) {
   return _rangePhrases[range] ?? 'in this period';
 }
 
+/// A small "?" that explains a number or widget. Tap to read (phones have no
+/// hover). Same wording as the web dashboard's InfoTip.
+class InfoTip extends StatelessWidget {
+  const InfoTip(this.text, {super.key, this.size = 14});
+
+  final String text;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: text,
+      triggerMode: TooltipTriggerMode.tap,
+      showDuration: const Duration(seconds: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      textStyle: const TextStyle(fontSize: 12.5, height: 1.35, color: Colors.white),
+      decoration: BoxDecoration(color: const Color(0xFF26262B), borderRadius: BorderRadius.circular(10)),
+      child: Semantics(
+        label: 'More info',
+        button: true,
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Icon(Icons.help_outline_rounded, size: size, color: AppTheme.of(context).textSoft),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Source colours ──────────────────────────────────────────────────────────
 // Fixed per source (colour follows the source, never its rank), five named
 // slots then "Other". Same validated palette as the web (styles.css --src-*),
@@ -59,7 +89,7 @@ Color sourceColor(BuildContext context, String name) {
 /// Card title block. The date range sits on its own line under the title (a
 /// phone is too narrow to fit it in the pill without cutting it off); the pill
 /// is kept for a short figure such as "53 leads".
-Widget _cardHeader(BuildContext context, String kicker, String title, {String? pill, String? scope}) {
+Widget _cardHeader(BuildContext context, String kicker, String title, {String? pill, String? scope, String? tip}) {
   final t = AppTheme.of(context);
   return Row(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,7 +100,12 @@ Widget _cardHeader(BuildContext context, String kicker, String title, {String? p
           children: [
             Text(kicker.toUpperCase(), style: AppText.kicker(context)),
             const SizedBox(height: 2),
-            Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+            Row(
+              children: [
+                Flexible(child: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800))),
+                if (tip != null) InfoTip(tip),
+              ],
+            ),
             if (scope != null && scope.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
@@ -121,7 +156,8 @@ class DashStatusBreakdown extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _cardHeader(context, 'Pipeline', 'Leads by Status', pill: '$total leads', scope: scope),
+          _cardHeader(context, 'Pipeline', 'Leads by Status', pill: '$total leads', scope: scope,
+              tip: 'Where the leads from these dates are in your pipeline right now. Tap a stage to see those leads.'),
           const SizedBox(height: 10),
           if (total == 0)
             Padding(
@@ -246,7 +282,8 @@ class _DashSourceDonutState extends State<DashSourceDonut> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _cardHeader(context, 'Acquisition mix', 'Leads by Source', scope: widget.scope),
+          _cardHeader(context, 'Acquisition mix', 'Leads by Source', scope: widget.scope,
+              tip: 'Where the leads from these dates came from. Tap a source to see its leads.'),
           const SizedBox(height: 12),
           if (total == 0)
             Padding(
@@ -446,7 +483,8 @@ class DashSourcePerformance extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _cardHeader(context, 'Source quality', 'Sources this period', scope: scope),
+          _cardHeader(context, 'Source quality', 'Sources this period', scope: scope,
+              tip: 'Which source brings leads that go somewhere, not just the most leads. Tap a source to see its leads.'),
           const SizedBox(height: 10),
           Row(
             children: [
@@ -723,7 +761,12 @@ class DashSourcesHealth extends StatelessWidget {
                   children: [
                     Text('INTEGRATIONS', style: AppText.kicker(context)),
                     const SizedBox(height: 2),
-                    const Text('Lead Sources Health', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                    const Row(
+                      children: [
+                        Flexible(child: Text('Lead Sources Health', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800))),
+                        InfoTip('Each connected lead source and when its last lead arrived. Amber means no lead for 24 hours, which can mean a connection has broken.'),
+                      ],
+                    ),
                   ],
                 ),
               ),

@@ -6,6 +6,7 @@ import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/date_range_picker.dart' show dateRangeLabel;
 import '../../widgets/labeled_field.dart';
+import 'source_tree_select.dart';
 
 /// Filter model for GET /leads/unified — field names match the query params.
 class LeadFilters {
@@ -16,6 +17,9 @@ class LeadFilters {
   final String projectId;
   final String assignedTo;
   final String siteFilter;
+  /// Several sources / website domains / pages ticked at once (the web's
+  /// source tree), encoded as tokens: src:..,dom:..,page:..
+  final String sourceSel;
   final String consent;
   final DateTime? from;
   final DateTime? to;
@@ -34,6 +38,7 @@ class LeadFilters {
     this.projectId = '',
     this.assignedTo = '',
     this.siteFilter = '',
+    this.sourceSel = '',
     this.consent = '',
     this.from,
     this.to,
@@ -50,6 +55,7 @@ class LeadFilters {
         if (projectId.isNotEmpty) 'projectId': projectId,
         if (assignedTo.isNotEmpty) 'assignedTo': assignedTo,
         if (siteFilter.isNotEmpty) 'siteFilter': siteFilter,
+        if (sourceSel.isNotEmpty) 'sourceSel': sourceSel,
         if (consent.isNotEmpty) 'consent': consent,
         if (from != null) 'from': from!.toIso8601String().substring(0, 10),
         if (to != null) 'to': to!.toIso8601String().substring(0, 10),
@@ -68,6 +74,7 @@ class LeadFilters {
     String? projectId,
     String? assignedTo,
     String? siteFilter,
+    String? sourceSel,
     String? consent,
     DateTime? from,
     DateTime? to,
@@ -85,6 +92,7 @@ class LeadFilters {
         projectId: projectId ?? this.projectId,
         assignedTo: assignedTo ?? this.assignedTo,
         siteFilter: siteFilter ?? this.siteFilter,
+        sourceSel: sourceSel ?? this.sourceSel,
         consent: consent ?? this.consent,
         from: clearFrom ? null : (from ?? this.from),
         to: clearTo ? null : (to ?? this.to),
@@ -105,6 +113,7 @@ class LeadFiltersSheet extends StatefulWidget {
   final List<Map<String, dynamic>> projects;
   final List<Map<String, dynamic>> agents;
   final List<String> domains;
+  final List<Map<String, dynamic>> sitePages;
   final bool isAdmin;
 
   const LeadFiltersSheet({
@@ -113,6 +122,7 @@ class LeadFiltersSheet extends StatefulWidget {
     required this.projects,
     required this.agents,
     this.domains = const [],
+    this.sitePages = const [],
     required this.isAdmin,
   });
 
@@ -146,10 +156,7 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
               ],
             ),
             _dropdown('Status', statusOptions, f.status, (v) => setState(() => f = f.copyWith(status: v))),
-            _dropdown('Source', sourceOptions, f.source, (v) => setState(() => f = f.copyWith(source: v))),
-            if (widget.domains.isNotEmpty)
-              _dropdown('Website Domain', widget.domains, f.siteFilter,
-                  (v) => setState(() => f = f.copyWith(siteFilter: v))),
+            _sourceTile(),
             _dropdown('Priority', priorityOptions, f.priority, (v) => setState(() => f = f.copyWith(priority: v))),
             _dropdown(
               'Lead Outcome',
@@ -216,6 +223,55 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
               child: const Text('Apply Filters'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Same tick-several source tree as the web. A single source or domain set
+  /// the old way (e.g. from a dashboard card) shows up ticked and is folded
+  /// into the new selection once the sheet is used.
+  List<String> get _ticked => [
+        ...decodeSel(f.sourceSel),
+        if (f.source.isNotEmpty) 'src:${f.source}',
+        if (f.siteFilter.isNotEmpty) 'dom:${f.siteFilter}',
+      ];
+
+  Widget _sourceTile() {
+    final ticked = _ticked;
+    final label = ticked.isEmpty
+        ? 'All'
+        : ticked.length == 1
+            ? selLabel(ticked.first, widget.sitePages)
+            : '${selLabel(ticked.first, widget.sitePages)} +${ticked.length - 1}';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: InkWell(
+        onTap: () async {
+          final r = await showModalBottomSheet<List<String>>(
+            context: context,
+            isScrollControlled: true,
+            showDragHandle: true,
+            builder: (_) => SourceTreeSheet(
+              selected: ticked,
+              options: sourceOptions,
+              domains: widget.domains,
+              pages: widget.sitePages,
+            ),
+          );
+          if (r != null) {
+            setState(() => f = f.copyWith(source: '', siteFilter: '', sourceSel: encodeSel(r)));
+          }
+        },
+        child: LabeledField(
+          label: 'Source',
+          child: InputDecorator(
+            decoration: const InputDecoration(
+              isDense: true,
+              suffixIcon: Icon(Icons.keyboard_arrow_down_rounded),
+            ),
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
         ),
       ),
     );

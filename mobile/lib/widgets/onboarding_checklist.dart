@@ -51,7 +51,6 @@ class _OnboardingChecklistState extends State<OnboardingChecklist> {
 
   bool _loaded = false;
   bool _dismissed = false;
-  bool _skippedThisSession = false;
   Set<String> _manualDone = {};
   bool _expanded = true;
   bool _facebookConnected = false;
@@ -73,7 +72,11 @@ class _OnboardingChecklistState extends State<OnboardingChecklist> {
     if (!mounted) return;
     setState(() {
       _manualDone = (doneRaw?.split(',') ?? const []).where((s) => s.isNotEmpty).toSet();
-      _dismissed = dismissedRaw == '1';
+      // Hidden for good once dismissed on ANY device: the account remembers
+      // it (user.checklistDismissedAt, same as the web). The local key stays
+      // for anyone who dismissed it before that existed.
+      _dismissed = dismissedRaw == '1' ||
+          context.read<AuthState>().user?['checklistDismissedAt'] != null;
       _loaded = true;
     });
     if (!_dismissed) _fetchStatus();
@@ -113,13 +116,14 @@ class _OnboardingChecklistState extends State<OnboardingChecklist> {
     setState(() => _dismissed = true);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('ol_dismissed_$_orgId', '1');
+    try {
+      await _api.dio.post('/auth/me/checklist-dismissed');
+    } catch (_) {/* stays hidden on this device either way */}
   }
-
-  void _skip() => setState(() => _skippedThisSession = true);
 
   @override
   Widget build(BuildContext context) {
-    if (!_loaded || _dismissed || _skippedThisSession) return const SizedBox.shrink();
+    if (!_loaded || _dismissed) return const SizedBox.shrink();
     final t = AppTheme.of(context);
     final completedCount = _steps.where(_isComplete).length;
     final allDone = completedCount == _steps.length;
@@ -231,8 +235,9 @@ class _OnboardingChecklistState extends State<OnboardingChecklist> {
                     ),
                   ),
                   TextButton(
-                    onPressed: allDone ? _dismiss : _skip,
-                    child: Text(allDone ? 'Dismiss' : 'Skip for now', style: const TextStyle(fontSize: 11.5)),
+                    // Same as the web: both hide it for good.
+                    onPressed: _dismiss,
+                    child: Text(allDone ? 'Dismiss' : 'Hide checklist', style: const TextStyle(fontSize: 11.5)),
                   ),
                 ],
               ),

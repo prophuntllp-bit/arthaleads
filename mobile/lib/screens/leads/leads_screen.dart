@@ -66,6 +66,8 @@ class LeadsScreenState extends State<LeadsScreen> {
   List<Map<String, dynamic>> _projects = [];
   List<Map<String, dynamic>> _agents = [];
   List<String> _domains = [];
+  List<Map<String, dynamic>> _sitePages = [];
+  Map<String, int> _statusCounts = {};
 
   // Bumped on every load; a response that comes back after a newer request
   // was sent is dropped, so two overlapping loads can't mix their results.
@@ -149,6 +151,7 @@ class LeadsScreenState extends State<LeadsScreen> {
     try {
       final res = await _api.dio.get('/leads/domains');
       _domains = (res.data['domains'] as List? ?? []).cast<String>();
+      _sitePages = (res.data['pages'] as List? ?? []).cast<Map<String, dynamic>>();
     } catch (_) {}
     if (mounted) setState(() {});
   }
@@ -167,6 +170,7 @@ class LeadsScreenState extends State<LeadsScreen> {
         queryParameters: {
           'page': _page,
           'limit': 25,
+          if (_page == 1) 'statusCounts': '1',
           if (_searchCtrl.text.trim().isNotEmpty)
             'search': _searchCtrl.text.trim(),
           ..._filters.toParams(),
@@ -179,6 +183,10 @@ class LeadsScreenState extends State<LeadsScreen> {
         _leads.addAll(rows);
         _total = res.data['total'] as int? ?? 0;
         _pages = res.data['pages'] as int? ?? 1;
+        final sc = res.data['statusCounts'];
+        if (sc is Map) {
+          _statusCounts = {for (final e in sc.entries) e.key.toString(): (e.value as num?)?.toInt() ?? 0};
+        }
       });
     } catch (e) {
       if (mounted && seq == _loadSeq) {
@@ -732,6 +740,37 @@ class LeadsScreenState extends State<LeadsScreen> {
 
   // ── UI ──────────────────────────────────────────────────────────────────────
 
+  // Status tabs with counts (the web's tab strip): the count is how many leads
+  // that tab would show with every other filter applied.
+  Widget _statusTabs() {
+    final tabs = <(String, String)>[('', 'All'), for (final s in statusOptions) (s, s)];
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        itemCount: tabs.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
+        itemBuilder: (context, i) {
+          final (value, label) = tabs[i];
+          final active = _filters.status == value;
+          final n = _statusCounts[value.isEmpty ? 'all' : value];
+          return ChoiceChip(
+            selected: active,
+            showCheckmark: false,
+            visualDensity: VisualDensity.compact,
+            label: Text(n == null ? label : '$label $n'),
+            onSelected: (_) {
+              if (active) return;
+              setState(() => _filters = _filters.copyWith(status: value));
+              _load(reset: true);
+            },
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
@@ -848,6 +887,7 @@ class LeadsScreenState extends State<LeadsScreen> {
                         projects: _projects,
                         agents: _agents,
                         domains: _domains,
+                        sitePages: _sitePages,
                         isAdmin: auth.isAdmin,
                       ),
                     );
@@ -865,6 +905,7 @@ class LeadsScreenState extends State<LeadsScreen> {
               ],
             ),
           ),
+          _statusTabs(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
