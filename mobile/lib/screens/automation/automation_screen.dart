@@ -12,6 +12,7 @@ import '../../widgets/labeled_field.dart';
 import 'automation_form.dart';
 import 'connection_card.dart';
 import 'routing_rules_screen.dart';
+import 'routing_section.dart';
 import 'telephony_integration_screen.dart';
 import '../inbox/wa_settings_page.dart';
 
@@ -30,7 +31,6 @@ class AutomationScreen extends StatefulWidget {
 class _AutomationScreenState extends State<AutomationScreen> {
   final _api = ApiClient.instance;
   List<Map<String, dynamic>> _automations = [];
-  List<Map<String, dynamic>> _routingRules = [];
   bool _loading = true;
   // WhatsApp Business (the real Inbox connection — Meta/AiSensy/Wati/Interakt
   // credentials, managed on WaSettingsPage) is a different thing from the
@@ -61,19 +61,10 @@ class _AutomationScreenState extends State<AutomationScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final results = await Future.wait([
-        _api.dio.get('/automations'),
-        _api.dio.get('/routing-rules'),
-      ]);
-      final routingPayload = results[1].data as Map;
+      final res = await _api.dio.get('/automations');
       setState(() {
-        _automations = (results[0].data['automations'] as List? ?? [])
+        _automations = (res.data['automations'] as List? ?? [])
             .cast<Map<String, dynamic>>();
-        _routingRules =
-            (routingPayload['rules'] as List? ??
-                    routingPayload['data'] as List? ??
-                    [])
-                .cast<Map<String, dynamic>>();
       });
     } catch (e) {
       if (mounted) {
@@ -1525,105 +1516,6 @@ class _AutomationScreenState extends State<AutomationScreen> {
     );
   }
 
-  static const _ruleSources = {
-    'facebook': 'Facebook Lead Ads',
-    'whatsapp': 'WhatsApp ads',
-    'google': 'Google Ads',
-    'website': 'Website',
-  };
-  static const _ruleFields = {
-    'form_id': 'Form ID',
-    'campaign_id': 'Campaign ID',
-    'adset_id': 'Ad Set ID',
-    'ad_id': 'Ad ID',
-    'domain': 'Website Domain',
-    'page_path': 'Page URL Contains',
-  };
-
-  // One routing rule, as the web lists it: name and source, what it matches,
-  // who it goes to (and the project it is filed into), and whether it is on.
-  Widget _routingRuleRow(Map<String, dynamic> r) {
-    final t = AppTheme.of(context);
-    final on = r['isActive'] != false;
-    final source = _ruleSources['${r['source'] ?? 'facebook'}'] ?? '${r['source'] ?? ''}';
-    final field = _ruleFields['${r['matchField']}'] ?? '${r['matchField'] ?? ''}';
-    final project = '${r['assignToProjectName'] ?? ''}';
-    final who = '${r['assignToName'] ?? ''}';
-    return Opacity(
-      opacity: on ? 1 : 0.55,
-      child: Container(
-        width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: t.border),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${r['label'] ?? 'Routing rule'}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                  ),
-                  Text(source.toUpperCase(),
-                      style: TextStyle(fontSize: 9.5, letterSpacing: 0.6, fontWeight: FontWeight.w700, color: t.textSoft)),
-                  const SizedBox(height: 4),
-                  Text.rich(
-                    TextSpan(
-                      style: TextStyle(fontSize: 12, color: t.textSoft),
-                      children: [
-                        TextSpan(text: '$field '),
-                        TextSpan(
-                          text: '${r['matchValue'] ?? ''}',
-                          style: const TextStyle(fontFamily: 'monospace', color: AppColors.primary),
-                        ),
-                        const TextSpan(text: '  ->  '),
-                        TextSpan(
-                          text: who.isNotEmpty ? who : 'team member',
-                          style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF10B981)),
-                        ),
-                        if (project.isNotEmpty) ...[
-                          const TextSpan(text: '  + filed into '),
-                          TextSpan(
-                            text: project,
-                            style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF10B981)),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: on ? const Color(0x1A10B981) : t.surfaceLow,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                on ? 'Active' : 'Paused',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: on ? const Color(0xFF10B981) : t.textSoft,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _statCard(String label, int value, String subtitle, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -2039,84 +1931,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
             ],
           ],
           const SizedBox(height: 14),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Lead Routing Rules',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Route leads from specific Facebook or Google campaigns, WhatsApp ads, or website domains and pages directly to a team member. All other leads follow the round-robin rotation.',
-                              style: TextStyle(
-                                height: 1.4,
-                                color: AppTheme.of(context).textSoft,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton.icon(
-                        onPressed: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const RoutingRulesScreen(),
-                            ),
-                          );
-                          _load();
-                        },
-                        icon: const Icon(Icons.add, size: 17),
-                        label: const Text('Add Rule'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  if (_routingRules.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(22),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppTheme.of(context).border),
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Text(
-                        'No routing rules yet. Add one above to route specific campaigns, ads, or website pages to a team member.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppTheme.of(context).textSoft),
-                      ),
-                    )
-                  else
-                    ..._routingRules.map(_routingRuleRow),
-                  if (_routingRules.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Center(
-                        child: Text(
-                          'All other leads (no match) are assigned round-robin to your team',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSoft),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
+          const LeadRoutingSection(),
         ],
       ),
     );

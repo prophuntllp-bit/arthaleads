@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -45,10 +48,11 @@ class ConnectionLogo extends StatelessWidget {
     switch (platform) {
       case 'Facebook':
         bg = const Color(0xFF1877F2);
-        inner = const FaIcon(FontAwesomeIcons.facebookF, color: Colors.white, size: 18);
+        inner = const FaIcon(FontAwesomeIcons.facebook, color: Colors.white, size: 26);
       case 'Vistrow Voice':
-        bg = const Color(0xFF7C3AED);
-        inner = const Icon(Icons.mic_rounded, color: Colors.white, size: 20);
+        // The brand's own waveform mark on its purple to pink tile, drawn the
+        // same way as the web's icon.
+        return SizedBox(width: size, height: size, child: CustomPaint(painter: _VistrowPainter()));
       case 'WhatsApp':
         bg = const Color(0x1F25D366);
         inner = const FaIcon(FontAwesomeIcons.whatsapp, color: Color(0xFF25D366), size: 20);
@@ -57,16 +61,7 @@ class ConnectionLogo extends StatelessWidget {
       case 'Website Form':
         final host = '${item['siteUrl'] ?? ''}'.isNotEmpty ? hostOfUrl('${item['siteUrl']}') : '';
         final fallback = const Icon(Icons.public_rounded, color: AppColors.primary, size: 20);
-        inner = host.isEmpty
-            ? fallback
-            : Image.network(
-                'https://www.google.com/s2/favicons?domain=${Uri.encodeComponent(host)}&sz=64',
-                width: size - 14,
-                height: size - 14,
-                fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => fallback,
-                loadingBuilder: (_, child, p) => p == null ? child : fallback,
-              );
+        inner = host.isEmpty ? fallback : SiteFavicon(host: host, size: size - 14, fallback: fallback);
       default:
         inner = const Icon(Icons.link_rounded, color: AppColors.primary, size: 20);
     }
@@ -512,6 +507,122 @@ class ConnectionCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+
+/// Vistrow Voice's logo: a rounded square with a purple to pink gradient and a
+/// white waveform, the same 40 by 40 drawing the web uses.
+class _VistrowPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final k = size.width / 40;
+    canvas.save();
+    canvas.scale(k);
+    final rect = RRect.fromRectAndRadius(const Rect.fromLTWH(0, 0, 40, 40), const Radius.circular(9));
+    canvas.drawRRect(
+      rect,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.bottomLeft,
+          end: Alignment.topRight,
+          colors: [Color(0xFF4C1D95), Color(0xFF9333EA), Color(0xFFEC4899)],
+          stops: [0, 0.5, 1],
+        ).createShader(const Rect.fromLTWH(0, 0, 40, 40)),
+    );
+    final path = Path()
+      ..moveTo(6, 20)
+      ..lineTo(11, 20)
+      ..cubicTo(12.5, 20, 13, 15.5, 14.5, 15.5)
+      ..cubicTo(16, 15.5, 16.5, 24.5, 18, 24.5)
+      ..cubicTo(19.2, 24.5, 19.8, 10, 21.5, 10)
+      ..cubicTo(23.2, 10, 23.8, 24.5, 25, 24.5)
+      ..cubicTo(26.2, 24.5, 26.8, 20, 28, 20)
+      ..lineTo(31, 20)
+      ..cubicTo(32, 20, 32, 17, 34, 17);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.6
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+
+/// A website's own favicon, fetched the way a browser's image tag does: the
+/// favicon service answers 404 with its default globe picture for a site it
+/// has no icon for, and a browser still shows that picture, while Flutter's
+/// Image.network treats the 404 as a failure. So the bytes are read whatever
+/// the status is (and kept for the session), and the plain fallback only
+/// shows when nothing at all can be loaded.
+class SiteFavicon extends StatefulWidget {
+  final String host;
+  final double size;
+  final Widget fallback;
+  const SiteFavicon({super.key, required this.host, required this.size, required this.fallback});
+
+  static final Map<String, Uint8List?> _cache = {};
+  static final Dio _dio = Dio(BaseOptions(
+    responseType: ResponseType.bytes,
+    validateStatus: (_) => true,
+    connectTimeout: const Duration(seconds: 8),
+    receiveTimeout: const Duration(seconds: 8),
+  ));
+
+  static Future<Uint8List?> load(String host) async {
+    if (_cache.containsKey(host)) return _cache[host];
+    Uint8List? bytes;
+    try {
+      final r = await _dio.get<List<int>>(
+        'https://www.google.com/s2/favicons?domain=${Uri.encodeComponent(host)}&sz=64',
+      );
+      final data = r.data;
+      final type = r.headers.value('content-type') ?? '';
+      if (data != null && data.length > 80 && type.startsWith('image/')) {
+        bytes = Uint8List.fromList(data);
+      }
+    } catch (_) {}
+    _cache[host] = bytes;
+    return bytes;
+  }
+
+  @override
+  State<SiteFavicon> createState() => _SiteFaviconState();
+}
+
+class _SiteFaviconState extends State<SiteFavicon> {
+  late Future<Uint8List?> _future = SiteFavicon.load(widget.host);
+
+  @override
+  void didUpdateWidget(covariant SiteFavicon old) {
+    super.didUpdateWidget(old);
+    if (old.host != widget.host) _future = SiteFavicon.load(widget.host);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Uint8List?>(
+      future: _future,
+      builder: (context, snap) {
+        final bytes = snap.data;
+        if (bytes == null) return widget.fallback;
+        return Image.memory(
+          bytes,
+          width: widget.size,
+          height: widget.size,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) => widget.fallback,
+        );
+      },
     );
   }
 }
