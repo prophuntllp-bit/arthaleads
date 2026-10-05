@@ -1,7 +1,7 @@
 // services/leadService.js
 const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
-const { projectLeadFromLead } = require("../utils/projectLeadFromLead");
+const { projectCopiesFor, moveLeadIntoProject, mirrorLeadEdit } = require("../utils/projectCopies");
 const Project = require("../models/Project");
 const User = require("../models/User");
 const Organization = require("../models/Organization");
@@ -586,6 +586,7 @@ const leadService = {
 
     Object.assign(lead, updates);
     await lead.save();
+    await mirrorLeadEdit(lead, { fields: Object.keys(updates).filter((f) => ["status", "remark", "remark1", "remark2", "remark3", "remark4", "booking"].includes(f)) }, user);
     // Return a fresh read so the response always reflects what's in the DB
     return Lead.findById(lead._id).populate("assignedTo", "name").lean();
   },
@@ -607,6 +608,8 @@ const leadService = {
       { _id: { $in: ids }, orgId: user.orgId },
       { $set: { status } }
     );
+    const touched = await Lead.find({ _id: { $in: ids }, orgId: user.orgId }).select("phone orgId status").lean();
+    for (const l of touched) await mirrorLeadEdit(l, { fields: ["status"] }, user);
     return { matched: result.matchedCount, modified: result.modifiedCount };
   },
 
@@ -709,6 +712,7 @@ const leadService = {
     lead.notes.push({ text, addedBy: user._id, addedByName: user.name });
     logActivity(lead, "note_added", `Note added by ${user.name}`, user);
     await lead.save();
+    await mirrorLeadEdit(lead, { note: { op: "add", note: lead.notes[lead.notes.length - 1] } }, user);
     return lead;
   },
 
@@ -746,14 +750,17 @@ const leadService = {
     note.text = text;
     logActivity(lead, "note_updated", `Note edited by ${user.name}`, user);
     await lead.save();
+    await mirrorLeadEdit(lead, { note: { op: "edit", note } }, user);
     return lead;
   },
 
   async deleteNote(id, noteId, user) {
     const { lead, note } = await leadService._noteFor(id, noteId, user);
+    const gone = note.toObject();
     note.deleteOne();
     logActivity(lead, "note_deleted", `Note deleted by ${user.name}`, user);
     await lead.save();
+    await mirrorLeadEdit(lead, { note: { op: "delete", note: gone } }, user);
     return lead;
   },
 
@@ -1020,7 +1027,10 @@ const leadService = {
           Lead.countDocuments(leadFilter),
         ]);
 
-    const taggedLeads = leads.map((l) => ({ ...l, _type: "lead" }));
+    // A lead a routing rule (or an import) also put into a project shows that
+    // project, so nobody has to guess whether it went there.
+    const copies = leads.length ? await projectCopiesFor(user.orgId, leads) : new Map();
+    const taggedLeads = leads.map((l) => ({ ...l, _type: "lead", inProjects: copies.get(String(l._id)) || [] }));
     const taggedProjLeads = projLeads.map((pl) => ({
       _id:          pl._id,
       _type:        "project",
@@ -1555,11 +1565,13 @@ const leadService = {
     const project = await Project.findOne({ _id: toProjectId, isArchived: { $ne: true }, orgId: user.orgId });
     if (!project) throw new AppError("Project not found", 404);
     // Everything on the lead comes across (see utils/projectLeadFromLead.js),
-    // not just its contact details and remarks.
-    const pl = await ProjectLead.create(projectLeadFromLead(lead, toProjectId, user, { projectName: project.name }));
+    // not just its contact details and remarks. If the project already has
+    // this person (a routing rule filed them there, or an import), the lead is
+    // merged into that entry rather than added a second time.
+    const { projectLead, merged } = await moveLeadIntoProject(lead, project, user);
     lead.isArchived = true;
     await lead.save({ validateBeforeSave: false });
-    return pl;
+    return { ...projectLead.toObject(), merged, projectName: project.name };
   },
 
   // ── Bulk Transfer to Project ─────────────────────────────────────────────
@@ -1581,10 +1593,14 @@ const leadService = {
       throw new AppError("No leads found to transfer", 404);
     }
 
+    let merged = 0;
     if (leadsToTransfer.length) {
-      const docs = leadsToTransfer.map((lead) => projectLeadFromLead(lead, toProjectId, user, { projectName: project.name }));
-
-      await ProjectLead.insertMany(docs);
+      // One at a time, so a person already in the project is merged into
+      // their entry there instead of getting a second row.
+      for (const lead of leadsToTransfer) {
+        const r = await moveLeadIntoProject(lead, project, user);
+        if (r.merged) merged += 1;
+      }
       await Lead.updateMany(
         { _id: { $in: leadsToTransfer.map((l) => l._id) } },
         { $set: { isArchived: true } }
@@ -1601,7 +1617,7 @@ const leadService = {
       );
     }
 
-    return { count: leadsToTransfer.length + projectLeadsToTransfer.length, project };
+    return { count: leadsToTransfer.length + projectLeadsToTransfer.length, merged, project };
   },
 
   async getDump(user, { page = 1, limit = 50 } = {}) {

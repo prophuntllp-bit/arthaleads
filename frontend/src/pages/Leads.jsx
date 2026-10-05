@@ -13,6 +13,7 @@ import LeadDetail from "../components/LeadDetail";
 import CustomSelect from "../components/CustomSelect";
 import SourceDomainSelect from "../components/SourceDomainSelect";
 import TransferModal from "../components/TransferModal";
+import Tooltip from "../components/Tooltip";
 import QrModal from "../components/QrModal";
 import { useLeads } from "../hooks/useLeads";
 import { useColumnResize, RTh } from "../hooks/useColumnResize";
@@ -1255,7 +1256,17 @@ export default function Leads() {
                     <td>
                       {lead.projectName
                         ? <span className="text-[11px] font-semibold text-violet-600 truncate max-w-[130px] block" title={lead.projectName}>{lead.projectName}</span>
-                        : <span className="text-xs text-app-soft">-</span>}
+                        : lead.inProjects?.length
+                          ? (
+                            <Tooltip title={`Also in ${lead.inProjects.map((p) => p.projectName).join(", ")}`}
+                              content="This person is in that project's lead list too, and still here in Leads. Transfer them to that project to merge the two into one entry.">
+                              <span className="flex max-w-[130px] flex-col">
+                                <span className="truncate text-[11px] font-semibold text-violet-600">{lead.inProjects[0].projectName}</span>
+                                <span className="text-[10px] text-app-soft">{lead.inProjects.length > 1 ? `+${lead.inProjects.length - 1} more · ` : ""}Also in project</span>
+                              </span>
+                            </Tooltip>
+                          )
+                          : <span className="text-xs text-app-soft">-</span>}
                     </td>
                     <td className="whitespace-nowrap"><StatusBadge status={lead.status} /></td>
                     <td className="whitespace-nowrap"><PriorityBadge priority={lead.priority} /></td>

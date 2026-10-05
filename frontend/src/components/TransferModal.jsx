@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Modal, Spinner } from "./UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { ArrowRightLeft } from "lucide-react";
+import { ArrowRightLeft, Info } from "lucide-react";
 import CustomSelect from "./CustomSelect";
 
 const SOURCES = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Referral", "Walk-in", "99acres", "MagicBricks", "Other"];
@@ -18,7 +18,8 @@ export default function TransferModal({ open, onClose, lead, leadType, currentPr
   useEffect(() => {
     if (!open) return;
     setMode("project");
-    setToProjectId("");
+    // A lead already filed into a project is most likely headed there.
+    setToProjectId(leadType === "lead" ? String(lead?.inProjects?.[0]?.projectId || "") : "");
     setSource("Facebook");
     setProjLoading(true);
     api.get("/projects")
@@ -40,7 +41,13 @@ export default function TransferModal({ open, onClose, lead, leadType, currentPr
       } else {
         // main lead → project
         if (!toProjectId) { toast.error("Select a project"); setLoading(false); return; }
-        await api.post(`/leads/${lead._id}/transfer`, { toProjectId });
+        const r = await api.post(`/leads/${lead._id}/transfer`, { toProjectId });
+        if (r.data?.data?.merged) {
+          toast.success(`${lead.name || "This lead"} was already in ${r.data.data.projectName}, so the two were merged into one entry`);
+          onTransferred?.();
+          onClose();
+          return;
+        }
       }
       toast.success("Lead transferred successfully");
       onTransferred?.();
@@ -74,6 +81,16 @@ export default function TransferModal({ open, onClose, lead, leadType, currentPr
             >
               → Main Pipeline
             </button>
+          </div>
+        )}
+
+        {leadType === "lead" && lead?.inProjects?.length > 0 && (
+          <div className="flex gap-2 rounded-2xl border p-3 text-xs leading-relaxed text-app" style={{ borderColor: "rgba(124,58,237,0.25)", background: "rgba(124,58,237,0.06)" }}>
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-600" />
+            <span>
+              Already in <b>{lead.inProjects.map((p) => p.projectName).join(", ")}</b>. Transferring there merges this lead into that entry: remarks
+              already written in the project stay, anything missing is filled in from here, and nothing is duplicated.
+            </span>
           </div>
         )}
 

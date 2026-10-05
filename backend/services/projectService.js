@@ -4,6 +4,7 @@ const ProjectLead = require("../models/ProjectLead");
 const Lead = require("../models/Lead");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
+const { mirrorProjectEdit } = require("../utils/projectCopies");
 
 // Escape special regex characters in user-supplied search strings to prevent ReDoS
 function escapeRegex(str) {
@@ -265,6 +266,7 @@ const projectService = {
     }
     lead.notes.push({ text: text.trim(), addedBy: user._id, addedByName: user.name || "", createdAt: new Date() });
     await lead.save();
+    await mirrorProjectEdit(lead, { note: { op: "add", note: lead.notes[lead.notes.length - 1] } }, user);
     return lead;
   },
 
@@ -291,13 +293,16 @@ const projectService = {
     const { lead, note } = await projectService._noteFor(projectId, leadId, noteId, user);
     note.text = text.trim();
     await lead.save();
+    await mirrorProjectEdit(lead, { note: { op: "edit", note } }, user);
     return lead;
   },
 
   async deleteNote(projectId, leadId, noteId, user) {
     const { lead, note } = await projectService._noteFor(projectId, leadId, noteId, user);
+    const gone = note.toObject();
     note.deleteOne();
     await lead.save();
+    await mirrorProjectEdit(lead, { note: { op: "delete", note: gone } }, user);
     return lead;
   },
 
@@ -321,6 +326,7 @@ const projectService = {
     const lead = await ProjectLead.findByIdAndUpdate(leadId, update, { new: true })
       .populate("remarkUpdatedBy", "name");
     if (!lead) throw new AppError("Lead not found", 404);
+    await mirrorProjectEdit(lead, { fields: ["remark", "remarkNote"] }, user);
     return lead;
   },
 
@@ -349,6 +355,7 @@ const projectService = {
     }
 
     await lead.save();
+    await mirrorProjectEdit(lead, { fields: allowed.filter((f) => f in data) }, user);
     return lead;
   },
 
@@ -426,6 +433,8 @@ const projectService = {
       { _id: { $in: ids }, project: projectId, orgId: user.orgId },
       { $set: { booking } }
     );
+    const changed = await ProjectLead.find({ _id: { $in: ids }, project: projectId, orgId: user.orgId, fromLeadId: null }).lean();
+    for (const pl of changed) await mirrorProjectEdit(pl, { fields: ["booking"] }, user);
     return result.modifiedCount;
   },
 

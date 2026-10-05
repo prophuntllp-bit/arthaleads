@@ -57,9 +57,15 @@ async function matchWebsiteRoutingRule(orgId, { domain, pageUrl }) {
 // conversation keeps finding and enriching this same lead on every
 // subsequent inbound message. Best-effort: a failure here must never fail
 // the webhook that already created the real Lead record.
+//
+// Someone already in that project (they clicked a second ad, or were imported
+// there earlier) is not added again. The copy carries the rule's agent, so it
+// shows up as theirs in the project too.
 async function fileLeadInRoutedProject(rule, lead) {
   if (!rule?.assignToProject || !lead) return;
   try {
+    const { findCopyInProject } = require("./projectCopies");
+    if (await findCopyInProject(lead.orgId, rule.assignToProject, lead)) return;
     await ProjectLead.create({
       project: rule.assignToProject,
       name: lead.name,
@@ -69,6 +75,9 @@ async function fileLeadInRoutedProject(rule, lead) {
       leadSourceLabel: lead.leadSourceLabel || "",
       sourcePage: lead.sourcePage || "",
       sourceDomain: lead.sourceDomain || "",
+      campaignRef: lead.campaignRef || undefined,
+      assignedTo: lead.assignedTo || rule.assignTo || null,
+      assignedToName: lead.assignedToName || rule.assignToName || "",
       importedBy: rule.assignTo,
       orgId: lead.orgId,
     });

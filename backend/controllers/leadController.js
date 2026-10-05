@@ -301,8 +301,9 @@ const leadController = {
       if (!toProjectId) {
         return res.status(400).json({ success: false, message: "toProjectId is required" });
       }
-      const { count, project } = await leadService.bulkTransferToProject(ids, toProjectId, req.user);
-      res.json({ success: true, message: `${count} lead${count !== 1 ? "s" : ""} transferred to ${project.name}` });
+      const { count, merged, project } = await leadService.bulkTransferToProject(ids, toProjectId, req.user);
+      const already = merged ? ` (${merged} already there, merged into ${merged !== 1 ? "their entries" : "their entry"})` : "";
+      res.json({ success: true, message: `${count} lead${count !== 1 ? "s" : ""} transferred to ${project.name}${already}` });
     } catch (err) {
       next(err);
     }
