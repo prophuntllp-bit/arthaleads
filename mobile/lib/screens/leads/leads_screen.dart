@@ -1066,6 +1066,12 @@ class LeadsScreenState extends State<LeadsScreen> {
               const SizedBox(height: 8),
               Row(
                 children: [
+                  // The left side takes every free pixel so the call and
+                  // WhatsApp buttons always end at the same right edge,
+                  // whatever the row holds.
+                  Expanded(
+                    child: Row(
+                      children: [
                   BookingChip(lead['booking'] as String?),
                   if (showCreatedFallback) ...[
                     Icon(
@@ -1110,7 +1116,9 @@ class LeadsScreenState extends State<LeadsScreen> {
                       ),
                     ),
                   ],
-                  const Spacer(),
+                      ],
+                    ),
+                  ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     icon: Icon(
