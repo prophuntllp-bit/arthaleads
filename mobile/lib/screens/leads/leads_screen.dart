@@ -928,7 +928,7 @@ class LeadsScreenState extends State<LeadsScreen> {
                 // First page only — later pages append under the existing
                 // list and keep their own inline spinner.
                 ? const LeadListSkeleton()
-                : _leads.isEmpty
+                : _leads.isEmpty && !_loading
                 ? const Center(child: Text('No leads found'))
                 : RefreshIndicator(
                     color: AppColors.primary,
