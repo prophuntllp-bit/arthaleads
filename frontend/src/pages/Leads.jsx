@@ -50,7 +50,7 @@ const fmtBudget = (val) => {
 };
 import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, QrCode, Search, Send, ShieldCheck, Trash2, Upload, User, Users, X } from "lucide-react";
 import { read as xlsxRead, utils as xlsxUtils } from "xlsx";
-import { downloadCsv, downloadXlsx, parseCsv } from "../utils/sheetExport";
+import { downloadCsv, downloadXlsx, downloadXlsxSheets, parseCsv } from "../utils/sheetExport";
 import DateTimePicker from "../components/DateTimePicker";
 import DateRangePicker from "../components/DateRangePicker";
 
@@ -736,7 +736,13 @@ export default function Leads() {
 
       // Phone is written as text in both formats, so Excel never turns it
       // into 9.19689E+11 or drops a leading zero (see utils/sheetExport.js).
-      if (type === "excel") downloadXlsx(rows, `leads-${label}-${date}.xlsx`, { sheetName: "Leads" });
+      // Leads from more than one source go into one workbook with a sheet per
+      // source (WhatsApp, Website, ...); a single source stays one sheet.
+      const bySource = rows.reduce((acc, r) => { (acc[r.Source || "Other"] ||= []).push(r); return acc; }, {});
+      const sourceNames = Object.keys(bySource).sort((a, b) => bySource[b].length - bySource[a].length);
+      if (type === "excel" && sourceNames.length > 1) {
+        downloadXlsxSheets(Object.fromEntries(sourceNames.map((n) => [n, bySource[n]])), `leads-${label}-${date}.xlsx`);
+      } else if (type === "excel") downloadXlsx(rows, `leads-${label}-${date}.xlsx`, { sheetName: "Leads" });
       else downloadCsv(rows, `leads-${label}-${date}.csv`);
 
       toast.success(`Exported ${rows.length} lead${rows.length !== 1 ? "s" : ""}`);

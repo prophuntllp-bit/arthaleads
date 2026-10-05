@@ -36,7 +36,7 @@ export function downloadCsv(rows, filename, opts) {
   download(new Blob([toCsv(rows, opts)], { type: "text/csv;charset=utf-8" }), filename);
 }
 
-export function downloadXlsx(rows, filename, { sheetName = "Leads", textColumns = ["Phone"] } = {}) {
+function sheetFrom(rows, textColumns) {
   const ws = xlsxUtils.json_to_sheet(rows);
   const cols = Object.keys(rows[0] || {});
   for (const name of textColumns) {
@@ -52,8 +52,24 @@ export function downloadXlsx(rows, filename, { sheetName = "Leads", textColumns 
   ws["!cols"] = cols.map((k) => ({
     wch: Math.min(60, Math.max(k.length, ...rows.slice(0, 500).map((r) => String(r[k] ?? "").length)) + 2),
   }));
+  return ws;
+}
+
+export function downloadXlsx(rows, filename, { sheetName = "Leads", textColumns = ["Phone"] } = {}) {
+  downloadXlsxSheets({ [sheetName]: rows }, filename, { textColumns });
+}
+
+// One workbook with a sheet per name, e.g. { WhatsApp: [...], Website: [...] }.
+// Excel sheet names are at most 31 characters and cannot contain : \ / ? * [ ].
+export function downloadXlsxSheets(sheets, filename, { textColumns = ["Phone"] } = {}) {
   const wb = xlsxUtils.book_new();
-  xlsxUtils.book_append_sheet(wb, ws, sheetName);
+  const used = new Set();
+  for (const [name, rows] of Object.entries(sheets)) {
+    let title = String(name).replace(/[:\\/?*[\]]/g, " ").trim().slice(0, 31) || "Leads";
+    for (let i = 2; used.has(title.toLowerCase()); i++) title = `${title.slice(0, 28)} ${i}`;
+    used.add(title.toLowerCase());
+    xlsxUtils.book_append_sheet(wb, sheetFrom(rows, textColumns), title);
+  }
   xlsxWriteFile(wb, filename, { bookType: "xlsx" });
 }
 
