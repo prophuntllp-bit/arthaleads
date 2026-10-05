@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, ChevronRight, FileText, Globe, Minus } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, FileText, Globe, Megaphone, Minus } from "lucide-react";
 
 // Source filter as a checkbox tree: tick any mix of sources, website domains
 // and single pages. Website › domain › page; a parent shows a dash when only
 // some of what's under it is ticked. The value is a list of tokens the API
 // understands (GET /leads/unified?sourceSel=...):
 //   src:<source>   dom:<domain>   page:<domain/path>
+//   ad:<adId> (one WhatsApp ad)   form:<formId> (one Facebook lead form)
 export const encodeSel = (tokens) => tokens.map((t) => {
   const i = t.indexOf(":");
   return `${t.slice(0, i)}:${encodeURIComponent(t.slice(i + 1))}`;
@@ -62,10 +63,11 @@ function Branch({ children }) {
   return <div className="ml-3 border-l pl-2" style={{ borderColor: "var(--app-border-strong)" }}>{children}</div>;
 }
 
-export default function SourceTreeSelect({ value = [], onChange, options = [], domains = [], pages = [], placeholder = "All sources", style = {} }) {
+export default function SourceTreeSelect({ value = [], onChange, options = [], domains = [], pages = [], ads = [], forms = [], placeholder = "All sources", style = {} }) {
   const [open, setOpen] = useState(false);
   const [websiteOpen, setWebsiteOpen] = useState(false);
   const [openDomains, setOpenDomains] = useState({});
+  const [openKids, setOpenKids] = useState({});
   const [pos, setPos] = useState({ top: 0, left: 0, width: 300 });
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
@@ -84,6 +86,30 @@ export default function SourceTreeSelect({ value = [], onChange, options = [], d
   };
   const pageState = (d, p) => (websiteOn || sel.has(`dom:${d}`) || sel.has(`page:${p.key}`) ? "on" : "off");
   const websiteState = websiteOn ? "on" : domains.some((d) => domainState(d) !== "off") ? "some" : "off";
+
+  // Sources that open into their own items: WhatsApp into its ads, Facebook into its lead forms.
+  const kids = { WhatsApp: { kind: "ad", items: ads, icon: Megaphone }, Facebook: { kind: "form", items: forms, icon: FileText } };
+  const hasKids = (v) => (kids[v]?.items?.length || 0) > 0;
+  const kidTok = (v, it) => `${kids[v].kind}:${it.value}`;
+  const kidState = (v, it) => (sel.has(`src:${v}`) || sel.has(kidTok(v, it)) ? "on" : "off");
+  const srcState = (v) => (sel.has(`src:${v}`) ? "on" : kids[v]?.items.some((it) => sel.has(kidTok(v, it))) ? "some" : "off");
+  const kidLabel = (v, it) => (it.label && it.label !== it.value ? it.label : `${v} ${it.value}`);
+  // Facebook forms often share a name, so the id's tail tells them apart.
+  const kidShown = (v, it) => (v === "Facebook" ? `${kidLabel(v, it)} · …${String(it.value).slice(-4)}` : kidLabel(v, it));
+  const tickKidSource = (v) => {
+    const next = new Set(sel);
+    const toks = kids[v].items.map((it) => kidTok(v, it));
+    if (srcState(v) !== "off") { next.delete(`src:${v}`); toks.forEach((t) => next.delete(t)); }
+    else { toks.forEach((t) => next.delete(t)); next.add(`src:${v}`); }
+    commit([...next]);
+  };
+  const tickKid = (v, it) => {
+    const next = new Set(sel);
+    const t = kidTok(v, it);
+    if (next.has(`src:${v}`)) { next.delete(`src:${v}`); kids[v].items.forEach((x) => next.add(kidTok(v, x))); next.delete(t); }
+    else next.has(t) ? next.delete(t) : next.add(t);
+    commit([...next]);
+  };
 
   // ── ticking
   const commit = (next) => onChange?.([...next]);
@@ -129,6 +155,8 @@ export default function SourceTreeSelect({ value = [], onChange, options = [], d
     const [k, ...rest] = t.split(":");
     const v = rest.join(":");
     if (k === "page") { const p = pages.find((x) => x.key === v); return p ? `${p.domain}${p.path === "/" ? "" : p.path}` : v; }
+    if (k === "ad") { const a = ads.find((x) => x.value === v); return a ? `WhatsApp ad: ${a.label}` : `WhatsApp ad ${v}`; }
+    if (k === "form") { const f = forms.find((x) => x.value === v); return f ? `Facebook form: ${f.label}` : `Facebook form ${v}`; }
     return v;
   };
   const triggerLabel = value.length === 0 ? placeholder : value.length === 1 ? nameOf(value[0]) : `${nameOf(value[0])} +${value.length - 1}`;
@@ -149,6 +177,7 @@ export default function SourceTreeSelect({ value = [], onChange, options = [], d
     // Start with the ticked parts unfolded.
     setWebsiteOpen(websiteState !== "off");
     setOpenDomains(Object.fromEntries(domains.filter((d) => domainState(d) === "some").map((d) => [d, true])));
+    setOpenKids(Object.fromEntries(Object.keys(kids).filter((v) => srcState(v) === "some").map((v) => [v, true])));
     const away = (e) => { if (!triggerRef.current?.contains(e.target) && !panelRef.current?.contains(e.target)) setOpen(false); };
     const esc = (e) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("mousedown", away);
@@ -202,6 +231,24 @@ export default function SourceTreeSelect({ value = [], onChange, options = [], d
                             </div>
                           );
                         })}
+                      </Branch>
+                    )}
+                  </div>
+                );
+              }
+              if (hasKids(item.value)) {
+                const k = kids[item.value];
+                return (
+                  <div key={item.value}>
+                    <Row label={item.label} count={k.items.reduce((n, it) => n + (it.count || 0), 0)} state={srcState(item.value)}
+                      expandable expanded={!!openKids[item.value]} onToggleOpen={() => setOpenKids((o) => ({ ...o, [item.value]: !o[item.value] }))}
+                      onTick={() => tickKidSource(item.value)} />
+                    {openKids[item.value] && (
+                      <Branch>
+                        {k.items.map((it) => (
+                          <Row key={it.value} label={kidShown(item.value, it)} title={`${kidLabel(item.value, it)} (${it.value})`} icon={k.icon}
+                            count={it.count} state={kidState(item.value, it)} onTick={() => tickKid(item.value, it)} />
+                        ))}
                       </Branch>
                     )}
                   </div>

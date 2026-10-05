@@ -373,6 +373,9 @@ export default function Leads() {
   // ── Distinct website domains — powers the "Website" source sub-menu below ──
   const [domains, setDomains] = useState([]);
   const [sitePages, setSitePages] = useState([]);
+  // WhatsApp ads and Facebook lead forms that have actually brought leads in
+  const [adOptions, setAdOptions] = useState([]);
+  const [formOptions, setFormOptions] = useState([]);
 
   // ── Column widths for main leads table (resizable via drag, persisted) ──────
   const [colW, startResize] = useColumnResize("leads", {
@@ -400,6 +403,10 @@ export default function Leads() {
 
   useEffect(() => {
     api.get("/leads/domains").then((r) => { setDomains(r.data.domains || []); setSitePages(r.data.pages || []); }).catch(() => {});
+    api.get("/leads/campaign-options").then((r) => {
+      setAdOptions(r.data.options?.whatsapp?.ad_id || []);
+      setFormOptions(r.data.options?.facebook?.form_id || []);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -1127,6 +1134,8 @@ export default function Leads() {
           projects={projects}
           domains={domains}
           sitePages={sitePages}
+          adOptions={adOptions}
+          formOptions={formOptions}
           statusCounts={statusCounts}
           statusOptions={STATUS_OPTIONS}
           sourceOptions={SOURCE_OPTIONS}

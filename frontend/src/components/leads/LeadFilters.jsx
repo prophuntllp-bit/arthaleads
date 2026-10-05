@@ -36,7 +36,7 @@ const LIFT = "0 1px 2px rgba(16,24,40,0.05)";
 const selectStyle = { width: "100%", padding: "8px 12px", borderRadius: 12, fontSize: 13, borderColor: "var(--app-border-strong)", boxShadow: LIFT, background: "var(--app-surface-solid)" };
 
 export default function LeadFilters({
-  filters, setFilter, isAdmin, agents = [], projects = [], domains = [], sitePages = [],
+  filters, setFilter, isAdmin, agents = [], projects = [], domains = [], sitePages = [], adOptions = [], formOptions = [],
   statusCounts, statusOptions, sourceOptions, priorityOptions, bookingOptions,
   dateRangeValue, onDateRangeChange, onToggleMyOnly, onClearAll,
 }) {
@@ -103,7 +103,9 @@ export default function LeadFilters({
     const [k, ...rest] = t.split(":");
     const v = rest.join(":");
     const pg = k === "page" ? sitePages.find((x) => x.key === v) : null;
-    const name = pg ? `${pg.domain}${pg.path === "/" ? "" : pg.path}` : v;
+    const ad = k === "ad" ? adOptions.find((x) => x.value === v) : null;
+    const fm = k === "form" ? formOptions.find((x) => x.value === v) : null;
+    const name = pg ? `${pg.domain}${pg.path === "/" ? "" : pg.path}` : ad ? `WhatsApp ad: ${ad.label}` : fm ? `Facebook form: ${fm.label}` : v;
     chips.push({ key: `sel-${t}`, text: `Source: ${name}`, onClear: () => setFilter("sourceSel", encodeSel(ticked.filter((x) => x !== t))) });
   });
   if (filters.priority) chips.push({ key: "priority", text: `Priority: ${filters.priority}` });
@@ -266,7 +268,7 @@ export default function LeadFilters({
                 </Field>
               )}
               <Field label="Source">
-                <SourceTreeSelect value={ticked} domains={domains} pages={sitePages} options={sourceOptions} placeholder="All sources" style={selectStyle}
+                <SourceTreeSelect value={ticked} domains={domains} pages={sitePages} ads={adOptions} forms={formOptions} options={sourceOptions} placeholder="All sources" style={selectStyle}
                   onChange={(tokens) => {
                     // The tree replaces any single source set by a link (e.g. from the dashboard).
                     setFilter("source", ""); setFilter("siteFilter", ""); setFilter("sitePage", "");

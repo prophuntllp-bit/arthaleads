@@ -181,6 +181,8 @@ function sitePageCondition(key) {
 //   src:<source>  every lead from that source (e.g. src:WhatsApp)
 //   dom:<domain>  website leads from that domain
 //   page:<key>    website leads from that one page ("host/path")
+//   ad:<adId>     leads from one WhatsApp (click-to-WhatsApp) ad
+//   form:<formId> leads from one Facebook lead form
 // A lead matches if it matches ANY token. Returns null when nothing usable.
 function sourceSelectionCondition(sel) {
   if (!sel) return null;
@@ -189,11 +191,18 @@ function sourceSelectionCondition(sel) {
     let v = "";
     try { v = decodeURIComponent(t.slice(i + 1)); } catch { v = t.slice(i + 1); }
     return { kind: t.slice(0, i), value: v.trim() };
-  }).filter((t) => t.value && ["src", "dom", "page"].includes(t.kind)).slice(0, 100);
+  }).filter((t) => t.value && ["src", "dom", "page", "ad", "form"].includes(t.kind)).slice(0, 100);
   if (!tokens.length) return null;
   const or = [];
   const srcs = tokens.filter((t) => t.kind === "src").map((t) => t.value);
-  const srcClause = srcs.length ? { source: { $in: srcs } } : null;
+  // A source, an ad or a form all count as "from that source", so a lead moved
+  // into a project follows the same rule for all three.
+  const srcOr = [
+    ...(srcs.length ? [{ source: { $in: srcs } }] : []),
+    ...tokens.filter((t) => t.kind === "ad").flatMap((t) => [{ "campaignRef.adId": t.value }, { "activities.meta.adId": t.value }]),
+    ...tokens.filter((t) => t.kind === "form").map((t) => ({ "activities.meta.formId": t.value })),
+  ];
+  const srcClause = srcOr.length ? { $or: srcOr } : null;
   for (const t of tokens.filter((x) => x.kind === "dom")) {
     const d = t.value.toLowerCase().replace(/^www\./, "");
     or.push({ sourceDomain: d });
