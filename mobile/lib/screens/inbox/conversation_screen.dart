@@ -341,6 +341,57 @@ class _ConversationScreenState extends State<ConversationScreen> {
     return widget.contactName;
   }
 
+  // "+91 98230 05959 · Contacted · Medium priority", like the web header.
+  String _headerSubtitle(Map<String, dynamic>? lead) {
+    final raw = (_conv?['contactPhone'] as String?) ?? (lead?['phone'] as String?) ?? '';
+    final phone = raw.isEmpty ? '' : (raw.startsWith('+') ? raw : '+$raw');
+    final status = (lead?['status'] as String?) ?? '';
+    final priority = (lead?['priority'] as String?) ?? '';
+    return [
+      phone,
+      status,
+      if (priority.isNotEmpty) priority,
+    ].where((e) => e.isNotEmpty).join(' · ');
+  }
+
+  Widget _headerChip(
+    WaTheme wa, {
+    required IconData icon,
+    required String label,
+    required bool strong,
+    required VoidCallback? onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: strong ? 0.24 : 0.12),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: wa.headerFg),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: wa.headerFg,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   int? get _leadScore {
     final lead = _conv?['leadId'];
     if (lead is! Map) return null;
@@ -651,7 +702,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   ),
               ],
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
+            // The name and number get the whole width: the controls live on
+            // their own row underneath, so no phone size can squeeze them out.
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -667,12 +720,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       color: wa.headerFg,
                     ),
                   ),
-                  if (lead != null)
+                  if (_headerSubtitle(lead).isNotEmpty)
                     Text(
-                      '${lead['name'] ?? ''} · ${lead['status'] ?? ''}',
+                      _headerSubtitle(lead),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11.5, color: wa.headerFgSoft),
+                      style: TextStyle(fontSize: 12, color: wa.headerFgSoft),
                     ),
                 ],
               ),
@@ -680,108 +733,52 @@ class _ConversationScreenState extends State<ConversationScreen> {
           ],
         ),
         actions: [
-          if (_conv != null &&
-              (_conv!['flowState'] as Map?)?['step'] == null)
-            IconButton(
-              tooltip: 'Manually kick off this assistant\'s button-driven qualification flow on this thread',
-              onPressed: _startingFlow ? null : _startQualificationFlow,
-              icon: _startingFlow
-                  ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: wa.headerFg),
-                    )
-                  : Icon(Icons.checklist_rounded, color: wa.headerFg),
-            ),
           if (lead != null)
             IconButton(
               tooltip: 'Open linked lead',
               onPressed: _openLead,
-              icon: Icon(Icons.person_search_rounded, color: wa.headerFg),
+              icon: Icon(Icons.open_in_new_rounded, color: wa.headerFg),
             ),
-          if (_conv != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: Center(
-                child: GestureDetector(
-                  onTap: _toggleAssignToMe,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(
-                        alpha: assignedName != null ? 0.22 : 0.1,
-                      ),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.assignment_ind_outlined,
-                          size: 13,
-                          color: wa.headerFg,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          assignedName == null
-                              ? 'Unassigned'
-                              : (assignedToMe ? 'You' : assignedName),
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: wa.headerFg,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          if (_conv != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Center(
-                child: GestureDetector(
-                  onTap: _toggleBot,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(
-                        alpha: botEnabled ? 0.22 : 0.1,
-                      ),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          botEnabled ? Icons.smart_toy : Icons.person,
-                          size: 13,
-                          color: wa.headerFg,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          botEnabled ? 'Bot ON' : 'Manual',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: wa.headerFg,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          const SizedBox(width: 4),
         ],
+        bottom: _conv == null
+            ? null
+            : PreferredSize(
+                preferredSize: const Size.fromHeight(46),
+                child: SizedBox(
+                  height: 46,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.fromLTRB(16, 0, 12, 8),
+                    children: [
+                      _headerChip(
+                        wa,
+                        icon: Icons.assignment_ind_outlined,
+                        label: assignedName == null
+                            ? 'Unassigned'
+                            : (assignedToMe ? 'You' : assignedName),
+                        strong: assignedName != null,
+                        onTap: _toggleAssignToMe,
+                      ),
+                      _headerChip(
+                        wa,
+                        icon: botEnabled ? Icons.smart_toy : Icons.person,
+                        label: botEnabled ? 'Bot ON' : 'Manual',
+                        strong: botEnabled,
+                        onTap: _toggleBot,
+                      ),
+                      if ((_conv!['flowState'] as Map?)?['step'] == null)
+                        _headerChip(
+                          wa,
+                          icon: Icons.checklist_rounded,
+                          label: _startingFlow ? 'Starting…' : 'Start qualification flow',
+                          strong: false,
+                          onTap: _startingFlow ? null : _startQualificationFlow,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
       ),
       body: Column(
         children: [
