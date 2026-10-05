@@ -26,6 +26,7 @@ import '../../widgets/motion.dart';
 import '../../widgets/qr_sheet.dart';
 import 'lead_detail_sheet.dart';
 import 'lead_filters.dart';
+import 'lead_origin.dart';
 import 'lead_form.dart';
 import 'lead_import.dart';
 import 'wa_broadcast_sheet.dart';
@@ -1061,6 +1062,7 @@ class LeadsScreenState extends State<LeadsScreen> {
                   ],
                 ],
               ),
+              LeadOriginLine(lead),
               const SizedBox(height: 8),
               Row(
                 children: [

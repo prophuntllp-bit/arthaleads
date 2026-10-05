@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'lead_origin.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';
@@ -872,6 +873,7 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
               if (_tab == 'transcript' && _hasVoice) ..._transcriptTab(),
 
               if (_tab == 'info') ...[
+                LeadOriginCard(lead),
                 // ── Booking ──
                 Text(_bookingLabel, style: Theme.of(context).textTheme.labelLarge),
                 const SizedBox(height: 6),
@@ -1256,6 +1258,16 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
   /// edit/delete menu, plus the compose field.
   List<Widget> _notesTab() {
     return [
+      if (_notes.isEmpty) ...[
+        LeadOriginCard(lead),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            'No notes yet. Add one below.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+      ],
       ..._notes.reversed.map(
         (n) => Padding(
           padding: const EdgeInsets.only(bottom: 8),
