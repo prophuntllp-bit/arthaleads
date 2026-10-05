@@ -66,9 +66,18 @@ module.exports = {
     // warnings, a manual "Start qualification flow" recovery button,
     // numbered project lead lists, Template Builder advisory warnings +
     // CRM-field labels, and a Campaigns "Record consent" shortcut.
-    build: 35,
+    //
+    // 5 Oct 2026: 36 brings the app level with the web dashboard and
+    // Integrations: the dashboard charts and Lead Sources Health, status tabs
+    // and a multi-source filter on Leads, a "where this lead came from" line
+    // on every lead card and in the detail, a WhatsApp chat header that always
+    // fits the name and number, and Integrations with grouped connections,
+    // real logos, pause/resume and Lead Routing Rules. Not marked mandatory
+    // (minBuild unchanged). Verified on a real phone as an in-place upgrade
+    // from 35 (same signing key, versionCode 2036 over 2035).
+    build: 36,
     // Human-readable, shown in the update prompt.
-    version: "1.0.9",
+    version: "1.0.10",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
     //
@@ -87,9 +96,9 @@ module.exports = {
     // we cannot see who is on a 32-bit device; the download block's own
     // comment already documents why an ABI split is the wrong call for an
     // audience we don't control. Bigger file, installs everywhere.
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.9-35/arthaleads-1.0.9-35.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.10-36/arthaleads-1.0.10-36.apk",
     // Optional short "what's new" line, shown in that prompt.
-    notes: "New Plan & Billing screen, a fix for random sign-outs on launch, CTWA test-lock warnings, a manual Start-qualification-flow button, numbered lead lists, and Template/Campaign builder improvements.",
+    notes: "Dashboard now matches the web with charts and Lead Sources Health. Every lead shows where it came from (website page, WhatsApp ad, campaign). New Leads status tabs and multi-source filter, a cleaner WhatsApp chat header, and Integrations with logos, pause/resume and Lead Routing Rules.",
 
     // ── The public download page (new installs) ──────────────────────────────
     // Ahead of the block above by design. Anyone arriving at /download-app has
@@ -99,26 +108,27 @@ module.exports = {
     // 29 Sep 2026: matches the fleet block above — 35 is going out to
     // everyone in this same push, so download and fleet stay in step rather
     // than one leading the other.
+    // 5 Oct 2026: same again for 36, in step with the fleet block above.
     download: {
-      version: "1.0.9",
+      version: "1.0.10",
       // The plain build number, not Android's versionCode — the APK is stamped
       // 2035 and the app reports it back as 35 (% 1000). mobile/pubspec.yaml
       // explains why the two differ; the short version is that every install
       // in the field is on versionCode 2024 and cannot be given a lower one.
-      build: 35,
+      build: 36,
       // Universal APK, not the arm64 split: this link is public, we cannot see
       // whose phone is on the other end, and a 32-bit device meeting an arm64
       // APK fails with a bare "App not installed" that the user cannot fix.
       // Bigger file, but it installs everywhere the page claims it will.
-      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.9-35/arthaleads-1.0.9-35.apk",
+      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.10-36/arthaleads-1.0.10-36.apk",
       // Bytes, so the page can format it. 0 hides the figure rather than
       // showing a wrong one.
-      sizeBytes: 81893263,
+      sizeBytes: 82171951,
       // Minimum Android version, for the requirements line on that page. This
       // is the human-readable form of minSdk in mobile/android/app/build.gradle.kts
       // — keep the two in step.
       minAndroid: "7.0",
-      notes: "New Plan & Billing screen, a fix for random sign-outs on launch, CTWA test-lock warnings, a manual Start-qualification-flow button, numbered lead lists, and Template/Campaign builder improvements.",
+      notes: "Dashboard now matches the web with charts and Lead Sources Health. Every lead shows where it came from (website page, WhatsApp ad, campaign). New Leads status tabs and multi-source filter, a cleaner WhatsApp chat header, and Integrations with logos, pause/resume and Lead Routing Rules.",
     },
   },
 };
