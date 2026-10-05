@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { AlertTriangle, Check, ChevronDown, Copy, ExternalLink, Pencil, RefreshCw, SearchCheck, ShieldCheck, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, Copy, ExternalLink, Pause, Pencil, Play, RefreshCw, SearchCheck, ShieldCheck, Trash2 } from "lucide-react";
+import Tooltip from "./Tooltip";
 
 // One card per lead-source connection on the Integrations page. Every card has
 // the same three parts, so a row of mixed connections lines up:
@@ -78,10 +79,12 @@ function maskToken(t) {
 export default function ConnectionCard({
   item, leading, serverBase = "", endpointPath = "",
   onEdit, onDelete, onCopy, onDiagnose, onRefreshToken, onReconnect, refreshing = false,
+  onToggleActive, toggling = false,
   formNamesEditor = null,
 }) {
   const [showForms, setShowForms] = useState(false);
-  const status = STATUS[item.status] || STATUS.draft;
+  const paused = item.isActive === false || item.status === "paused";
+  const status = paused ? STATUS.paused : (STATUS[item.status] || STATUS.draft);
   const isFb = item.platform === "Facebook";
   const isWebsite = item.platform === "Website Form";
   const isGoogle = item.platform === "Google";
@@ -107,7 +110,7 @@ export default function ConnectionCard({
   const url = `${serverBase}${endpointPath}`;
 
   return (
-    <article className="card flex h-full flex-col p-5">
+    <article className={`card flex h-full w-full max-w-[660px] flex-col p-5 transition-opacity ${paused ? "opacity-80" : ""}`}>
       <header className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[color:var(--app-border)] bg-white">
           {leading}
@@ -215,7 +218,18 @@ export default function ConnectionCard({
         {item.externalSourceUrl && (
           <a href={item.externalSourceUrl} target="_blank" rel="noreferrer" className="btn-secondary rounded-xl"><ExternalLink className="h-4 w-4" /> Open</a>
         )}
-        <button type="button" className="btn-danger ml-auto rounded-xl" onClick={onDelete} aria-label="Delete connection"><Trash2 className="h-4 w-4" /></button>
+        <div className="ml-auto flex items-center gap-2">
+          {onToggleActive && (
+            <Tooltip content={paused ? "Resume this connection: new leads from it are accepted again" : "Pause this connection: new leads from it are ignored until you resume it"}>
+              <button type="button" onClick={onToggleActive} disabled={toggling}
+                aria-label={paused ? "Resume connection" : "Pause connection"}
+                className="btn-secondary flex h-9 w-9 items-center justify-center rounded-full !px-0 !py-0 disabled:opacity-40">
+                {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+              </button>
+            </Tooltip>
+          )}
+          <button type="button" className="btn-danger rounded-xl" onClick={onDelete} aria-label="Delete connection"><Trash2 className="h-4 w-4" /></button>
+        </div>
       </footer>
     </article>
   );

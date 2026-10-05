@@ -668,11 +668,12 @@ function SourceModal({ open, onClose, editingItem, onSaved, apiBase }) {
     setSaving(true);
     try {
       if (editingItem) {
-        const { data } = await api.patch(`/automations/${editingItem._id}`, form);
+        // Pause and resume live on the card; the Status field here only has to agree with it.
+        const { data } = await api.patch(`/automations/${editingItem._id}`, { ...form, isActive: form.status !== "paused" });
         onSaved("update", data.automation);
         toast.success("Source updated");
       } else {
-        const { data } = await api.post("/automations", form);
+        const { data } = await api.post("/automations", { ...form, isActive: form.status !== "paused" });
         onSaved("create", data.automation);
         toast.success("Source added");
       }
@@ -777,10 +778,6 @@ function SourceModal({ open, onClose, editingItem, onSaved, apiBase }) {
           <label className="label">Notes</label>
           <textarea className="input min-h-[80px]" value={form.mappingNotes} onChange={set("mappingNotes")} placeholder="Notes about field mapping or setup details" />
         </div>
-        <label className="flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm text-app" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
-          <input type="checkbox" checked={form.isActive} onChange={set("isActive")} />
-          This source is active
-        </label>
         <div className="flex justify-end gap-3 pt-1">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn-primary" disabled={saving}>{saving ? "Saving…" : editingItem ? "Update" : "Save Source"}</button>
@@ -1918,6 +1915,23 @@ export default function Automation() {
     );
   };
 
+  // Pause or resume one connection. Paused means the webhook ignores new leads
+  // from it (isActive false); nothing already received is touched.
+  const [togglingId, setTogglingId] = useState(null);
+  const toggleActive = async (item) => {
+    const next = item.isActive === false || item.status === "paused";
+    setTogglingId(item._id);
+    try {
+      const { data } = await api.patch(`/automations/${item._id}`, { isActive: next, status: next ? "connected" : "paused" });
+      setItems((prev) => prev.map((i) => (i._id === item._id ? { ...i, isActive: next, status: data.automation?.status || (next ? "connected" : "paused") } : i)));
+      toast.success(next ? "Connection resumed" : "Connection paused: new leads from it are ignored");
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Could not change this connection");
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   const openEdit = (item) => {
     if (item.platform === "Facebook") {
       setFbEditingItem(item);
@@ -2164,6 +2178,8 @@ export default function Automation() {
                   onCopy={copyEndpoint}
                   onEdit={() => openEdit(item)}
                   onDelete={() => setDeleting(item)}
+                  onToggleActive={() => toggleActive(item)}
+                  toggling={togglingId === item._id}
                   onDiagnose={() => runDiagnostic(item)}
                   onRefreshToken={() => handleRefreshFbTokens(item._id, item.orgId)}
                   onReconnect={() => { setFbEditingItem(item); setFbWizardOpen(true); }}
