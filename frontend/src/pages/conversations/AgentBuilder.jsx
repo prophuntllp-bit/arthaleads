@@ -721,7 +721,7 @@ export default function AgentBuilder() {
                     ? <><strong>This assistant is live, but locked to testing</strong> — only the {form.ctwaFlow.testPhones.length} number{form.ctwaFlow.testPhones.length > 1 ? "s" : ""} below get this flow. Every real lead reaching it right now silently falls back to the normal conversation instead. Clear the list below to actually turn this flow on for real leads.</>
                     : <>Locked to testing — only the {form.ctwaFlow.testPhones.length} number{form.ctwaFlow.testPhones.length > 1 ? "s" : ""} below get this flow right now. Everyone else, including genuine leads, gets the normal conversation. Clear the list below once you're done verifying it.</>)
                 : form.adIds.length
-                ? <>Reserved for leads from the {form.adIds.length} ad{form.adIds.length > 1 ? "s" : ""} routed above — anyone else reaching this assistant gets the normal free-text conversation instead.</>
+                ? <>Runs for every new lead this assistant answers: the {form.adIds.length} ad{form.adIds.length > 1 ? "s" : ""} routed above, and any other ad whose message names this assistant's project, so a new ad never silently loses the flow.</>
                 : <>"Route ads to this agent" above is empty, so this runs for <strong>every</strong> conversation this assistant handles — including genuine leads reaching it right now. Add test numbers below to restrict it to just your own team while you verify it, or add an Ad ID above once you're ready to restrict it to actual ad clicks.</>}
             </p>
 

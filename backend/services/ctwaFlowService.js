@@ -51,16 +51,11 @@ module.exports = function createCtwaFlowService({
    * True only when this agent+conversation should start the button flow
    * instead of the usual greeting/GPT path.
    *
-   * Whether a real ad click is required depends on how "Route ads to this
-   * agent" (WaAgent.adIds) is set up:
-   *   - left empty → nothing to restrict to, so the flow runs for every
-   *     conversation this agent handles. This is also what makes the flow
-   *     testable before a real ad exists — message the number yourself and
-   *     it behaves exactly as it will once ads are live.
-   *   - one or more ad IDs set → the flow is reserved for leads that
-   *     genuinely came from one of those ads (conversation.campaignRef set
-   *     by campaignRefFromReferral); an organic "hi" that reached this
-   *     agent as the org's default still gets the normal free-text agent.
+   * Which agent answers a thread is decided before this (by ad id, else by
+   * the project the first message names), so every genuinely new thread an
+   * enabled agent is answering gets the flow. The ad list on the agent
+   * (WaAgent.adIds) only routes ads to it; it is not a second filter, so a
+   * new ad never silently loses the flow.
    *
    * ctwaFlow.testPhones is a stronger, temporary override on top of either
    * mode: when set, ONLY those exact numbers get the flow — including while
@@ -81,15 +76,14 @@ module.exports = function createCtwaFlowService({
       return agent.ctwaFlow.testPhones.includes(conversation.contactPhone);
     }
     if (!isNewConversation) return false;
-    if (agent.adIds?.length) {
-      const adId = conversation.campaignRef?.adId;
-      if (adId) return agent.adIds.includes(adId);
-      // Meta occasionally delivers an ad click with its ad details missing. A
-      // brand-new chat with no ad that still ended up on an ad-tied agent got
-      // there only because its first message names that agent's project (see
-      // resolveAgentByMessageText), so it is the same lead and gets the same flow.
-      return true;
-    }
+    // Whether this agent should answer the thread at all is decided before we
+    // get here (resolveAgentForConversation: by ad id, else by the project the
+    // first message names, and an ad-tied agent never takes a lead it cannot
+    // place). So an agent that is answering a genuinely new thread runs its
+    // flow, whatever ad id the click carried. This used to also require the
+    // ad id to be on the agent's list, which silently switched the flow off
+    // for every lead from any ad created after the list was last edited (a
+    // new Everglades II ad: every lead got free-text GPT replies, no buttons).
     return true;
   }
 
