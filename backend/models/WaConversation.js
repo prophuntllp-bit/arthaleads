@@ -38,6 +38,20 @@ const waConversationSchema = new mongoose.Schema({
     default: undefined,
   },
 
+  // Every ad this customer has clicked into this thread, newest last. campaignRef
+  // above is always the latest one; this keeps the earlier ones.
+  campaignHistory: [{
+    adId:     { type: String, trim: true, default: "" },
+    headline: { type: String, trim: true, default: "" },
+    at:       { type: Date, default: Date.now },
+    _id: false,
+  }],
+
+  // Set when the customer moved this thread to another assistant (clicked a
+  // different ad, or named another assistant's project). Keeps the new pick
+  // from being undone by the "does this thread belong to its ad" re-check.
+  agentLocked: { type: Boolean, default: false },
+
   // Last time the outside-business-hours away message was sent on this
   // thread — lets the bot send it once per closed day instead of once per
   // message (see isWithinBusinessHours / triggerBotReply in whatsappRoutes.js).

@@ -729,6 +729,13 @@ async function handleInbound(org, parsed) {
     notifyHotSignal(org, conv, `Asked: "${msgText.slice(0, 60)}"`).catch(() => {});
   }
 
+  // Moved to another assistant by a new ad click or by naming its project.
+  let movedToAnotherAgent = false;
+  if (!isNewConversation) {
+    try { movedToAnotherAgent = !!(await maybeSwitchAgent(org, conv, { referral, msgText, interactiveId })); }
+    catch (err) { console.error("[WhatsApp Bot] agent switch check failed:", err.message); }
+  }
+
   if (conv.botEnabled) {
     // No sinceTimestamp here. That guard reads "has the bot said anything
     // since this message arrived?", which is true for the second of two quick
@@ -736,7 +743,7 @@ async function handleInbound(org, parsed) {
     // the second tap was silently dropped: a "Photos & Videos" tap right after
     // "Location Details" never sent the photos. The queue below already keeps
     // turns in order; inboundKey stops the same message being answered twice.
-    await respondAsBot(org, conv, { interactiveId, msgText, isNewConversation, inboundKey: msgId || `t${inboundTimestamp.getTime()}`, inboundAt: inboundTimestamp });
+    await respondAsBot(org, conv, { interactiveId, msgText, isNewConversation: isNewConversation || movedToAnotherAgent, inboundKey: msgId || `t${inboundTimestamp.getTime()}`, inboundAt: inboundTimestamp });
   }
 }
 
@@ -959,6 +966,9 @@ async function resolveAgentForConversation(org, conversation) {
     // A pinned agent that was since deleted falls through and re-resolves,
     // rather than leaving the thread permanently unanswerable.
     if (pinned && pinned.status === "active") {
+      // The customer was moved here on purpose (a different ad, or they named
+      // this assistant's project); the ad re-check below must not undo that.
+      if (conversation.agentLocked) return pinned;
       // An agent tied to specific ads only keeps a thread that came from one
       // of them. A thread that was wrongly placed on it earlier (no ad
       // attached, different subject) is re-resolved instead of staying stuck
@@ -967,7 +977,16 @@ async function resolveAgentForConversation(org, conversation) {
       const cameFromItsAd = tiedToAds && pinned.adIds.includes(conversation.campaignRef?.adId);
       if (!tiedToAds || cameFromItsAd) return pinned;
       const better = await resolveAgentByMessageText(org, conversation);
-      if (!better || String(better._id) === String(pinned._id)) return pinned;
+      if (better && String(better._id) === String(pinned._id)) return pinned;
+      // Nothing places this thread with the ad-tied assistant it was left on:
+      // hand it to the general assistant (all projects) rather than keep an
+      // assistant that can only talk about one project answering a different
+      // one's customer.
+      if (!better) {
+        const general = await findGeneralAgent(org);
+        if (general && String(general._id) !== String(pinned._id)) return general;
+        return pinned;
+      }
     }
   }
 
@@ -992,6 +1011,44 @@ async function resolveAgentForConversation(org, conversation) {
   // that lead waits for a human instead.
   return await WaAgent.findOne({ orgId: org._id, status: "active", isDefault: true }).lean()
     || await WaAgent.findOne({ orgId: org._id, status: "active", $or: [{ adIds: { $exists: false } }, { adIds: { $size: 0 } }] }).sort({ createdAt: 1 }).lean();
+}
+
+// The assistant that is not tied to particular ads: the org default, else the
+// oldest untied one. It knows every project, so it can take any lead.
+async function findGeneralAgent(org) {
+  return await WaAgent.findOne({ orgId: org._id, status: "active", isDefault: true, $or: [{ adIds: { $exists: false } }, { adIds: { $size: 0 } }] }).lean()
+    || await WaAgent.findOne({ orgId: org._id, status: "active", $or: [{ adIds: { $exists: false } }, { adIds: { $size: 0 } }] }).sort({ createdAt: 1 }).lean();
+}
+
+// A customer already in a thread who clicks a different ad, or writes the name
+// of a project that belongs to another assistant, moves to that assistant, and
+// its button flow starts. Returns the assistant moved to, or null.
+// Typed text only moves a thread when exactly one other assistant's project is
+// named, and button taps never do.
+async function maybeSwitchAgent(org, conv, { referral, msgText, interactiveId }) {
+  const newRef = campaignRefFromReferral(referral);
+  const adChanged = !!newRef?.adId && newRef.adId !== conv.campaignRef?.adId;
+  let target = null;
+  if (adChanged) {
+    target = await WaAgent.findOne({ orgId: org._id, status: "active", adIds: newRef.adId }).lean();
+  }
+  if (!target && !interactiveId && msgText && !newRef) {
+    const m = await matchProjectsInText(org, msgText);
+    if (m && String(m.agentId) !== String(conv.agentId || "")) target = await WaAgent.findOne({ _id: m.agentId, status: "active" }).lean();
+  }
+  const set = {};
+  const update = {};
+  if (adChanged) {
+    set.campaignRef = newRef;
+    update.$push = { campaignHistory: { adId: newRef.adId, headline: newRef.headline, at: new Date() } };
+  }
+  const moving = !!target && String(target._id) !== String(conv.agentId || "");
+  if (moving) { set.agentId = target._id; set.agentLocked = true; update.$unset = { flowState: "" }; }
+  if (!Object.keys(set).length && !update.$push) return null;
+  await WaConversation.updateOne({ _id: conv._id }, { $set: set, ...update });
+  if (adChanged) conv.campaignRef = newRef;
+  if (moving) { conv.agentId = target._id; conv.agentLocked = true; conv.flowState = undefined; }
+  return moving ? target : null;
 }
 
 // Source label for a lead whose ad details never reached us. Whatever label
@@ -1027,7 +1084,13 @@ const GENERIC_PROJECT_WORDS = new Set(["project", "projects", "plots", "plot", "
 async function matchByMessageText(org, conversation) {
   const first = await WaMessage.findOne({ conversationId: conversation._id, direction: "inbound" })
     .sort({ timestamp: 1 }).select("body").lean();
-  const text = normalizeForMatch(first?.body);
+  return matchProjectsInText(org, first?.body);
+}
+
+// Which active agent's project a piece of text names. Null unless exactly one
+// agent's projects are named, so anything ambiguous never moves a customer.
+async function matchProjectsInText(org, rawText) {
+  const text = normalizeForMatch(rawText);
   if (!text) return null;
 
   const agents = await WaAgent.find({ orgId: org._id, status: "active", "projectIds.0": { $exists: true } }).select("projectIds").lean();
@@ -1095,8 +1158,53 @@ async function resolveSourceProject(org, agent, campaignRef, lead) {
   return matches.length === 1 ? matches[0] : null;
 }
 
+// What the customer's latest message asks to be sent, in English, Hinglish,
+// Hindi and Marathi. Decided here, not left to the model: it used to answer a
+// Hindi "फोटो" with "I'll ask the team to send it" while the photos sat uploaded.
+const ASK_PHOTOS    = /\b(photos?|pics?|pictures?|images?|snaps?)\b|फोटो|फ़ोटो|फोटोज|फोटोस|फोटू|तस्वीर|तसवीर|इमेज|चित्र|छायाचित्र/i;
+const ASK_VIDEOS    = /\b(videos?|vdo|walkthrough|walk-through)\b|वीडियो|विडियो|व्हिडिओ|व्हिडीओ|विडिओ/i;
+const ASK_BROCHURE  = /\b(brochures?|catalou?gues?)\b|ब्रोशर|ब्रोशुअर|ब्रोचर|ब्रोशर्/i;
+const ASK_FLOORPLAN = /floor\s?-?plans?|\blayouts?\b|फ्लोर\s?प्लान|फ्लोअर\s?प्लान|फ्लोर\s?प्लॅन|नक्शा|नकाशा/i;
+function detectMediaAsk(text) {
+  const t = String(text || "");
+  return { photos: ASK_PHOTOS.test(t), videos: ASK_VIDEOS.test(t), brochure: ASK_BROCHURE.test(t), floorplan: ASK_FLOORPLAN.test(t) };
+}
+
+// Which of the asked-for items this agent may send and the project actually has.
+function mediaPlan(agent, project, ask) {
+  const has = {
+    photos:    !!project?.images?.some((u) => /^https?:/.test(u)),
+    videos:    !!project?.videos?.some((v) => v?.url),
+    brochure:  !!project?.brochureUrl,
+    floorplan: !!project?.floorPlanUrl,
+  };
+  const may = { photos: agent?.shareProjectPhotos === true, videos: agent?.shareVideos === true, brochure: agent?.shareBrochure === true, floorplan: agent?.shareFloorPlan === true };
+  const out = { send: [], missing: [] };
+  for (const k of ["photos", "videos", "brochure", "floorplan"]) {
+    if (!ask[k]) continue;
+    (may[k] && has[k] ? out.send : out.missing).push(k);
+  }
+  return out;
+}
+
+// The name a customer is told when they ask "what's your name". An agent named
+// like a person keeps it; one named like a role or project ("Khopoli Project
+// Advisor") gets a friendly first name, the same one every time.
+const PERSONA_POOL = ["Riya", "Aarav", "Meera", "Kabir", "Anaya", "Rohan", "Isha", "Vihaan", "Tara", "Arjun"];
+function personaFor(agent) {
+  const set = String(agent?.personaName || "").trim();
+  if (set) return set;
+  const n = String(agent?.name || "").trim();
+  const looksLikeRole = !n || /\d/.test(n) || n.split(/\s+/).length > 2
+    || /\b(advisor|adviser|assistant|bot|agent|support|sales|team|project|projects|plots?|homes?|ads?|campaign|desk|khopoli|artha)\b/i.test(n);
+  if (!looksLikeRole) return n;
+  const seed = String(agent?._id || n);
+  let h = 0; for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return PERSONA_POOL[h % PERSONA_POOL.length];
+}
+
 async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef, { isFirstBotReply = false, sourceProjectId = null } = {}) {
-  const botName = agent?.name || "Artha Assistant";
+  const botName = personaFor(agent);
 
   const projectFilter = { orgId: org._id, isArchived: { $ne: true } };
   if (sourceProjectId) {
@@ -1179,6 +1287,7 @@ ${knowledge}
 ${tenantPrompt}
 
 Who you are:
+- Your name is ${botName}. If the customer asks your name, say it. If they ask where you are or where you are based, say you are with the ${org.name} team (name the office city only if "About us" gives one). A project name or a job title is never your name or your location: never answer "what is your name" or "where are you" with a project's name.
 - You are a person on this team, not a system, bot, or AI, and you must never say or imply otherwise — not "I'm an assistant", not "as an AI", not "I don't have the ability to...". If asked whether you're a bot, an AI, human, a developer, or a broker, answer naturally and briefly in one line using whatever "About us" context is given above, then continue the conversation — never dodge the question, and never describe yourself as software.
 - If something is genuinely outside what you know (a fact not in the project data, or a capability that's off), phrase it the way a busy team member would — "let me have the team confirm that" — never "I currently don't have the ability to...", which reads as a system limitation, not a person.
 
@@ -1571,6 +1680,19 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
 
     const botName = agent?.name || "Artha Assistant";
     const sourceProject = await resolveSourceProject(org, agent, conversation.campaignRef, lead);
+
+    // The customer asked for photos / a video / the brochure / the floor plan.
+    // Work out now what can really go out, so the reply says the right thing
+    // and the files are sent whether or not the model remembers its tag.
+    const ask = detectMediaAsk(inboundText);
+    let mediaProject = null, plan = null;
+    if ((ask.photos || ask.videos || ask.brochure || ask.floorplan) && org.whatsapp?.provider === "meta") {
+      const ctx = [inboundText, conversation.campaignRef?.headline, lead?.leadSourceLabel, ...recentMsgs.slice(-6).map((m) => m.body)].filter(Boolean).join(" ");
+      mediaProject = sourceProject || await resolveDiscussedProject(org, agent, ctx);
+      if (mediaProject) plan = mediaPlan(agent, mediaProject, ask);
+    }
+    const MEDIA_NAMES = { photos: "photos", videos: "the video", brochure: "the brochure", floorplan: "the floor plan" };
+    const listNames = (keys) => keys.map((k) => MEDIA_NAMES[k]).join(" and ");
     const systemPrompt = await buildProjectGroundedPrompt(org, agent, leadContext, conversation.campaignRef, { isFirstBotReply, sourceProjectId: sourceProject?._id });
 
     // Fire-and-forget: never let enrichment delay or fail the actual reply.
@@ -1583,6 +1705,8 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
         content: m.body,
       })),
       { role: "user", content: inboundText },
+      ...(plan?.send.length ? [{ role: "system", content: `The customer just asked for ${listNames(plan.send)} of ${mediaProject.name}. It is being sent to them right now, along with your reply. Say in one short line that you are sending it. Do not say the team will send it, and do not add any [SHARE_...] tag.` }] : []),
+      ...(plan?.missing.length ? [{ role: "system", content: `The customer asked for ${listNames(plan.missing)} of ${mediaProject.name}, but that is not available to send yet. Say warmly that the team will share it shortly, and add [NEEDS_TEAM] at the end.` }] : []),
       // Last, so it outweighs the language of earlier assistant turns.
       { role: "system", content: `Language for this reply: ${languageInstruction(
         detectCustomerLanguage([...recentMsgs.filter((m) => m.direction === "inbound").map((m) => m.body), inboundText])
@@ -1609,10 +1733,10 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     const needsTeam      = reply.includes("[NEEDS_TEAM]");
     reply = reply.replace("[NEEDS_TEAM]", "").trim();
     if (needsTeam) notifyHotSignal(org, conversation, `Needs an answer: "${String(inboundText).slice(0, 60)}"`).catch(() => {});
-    const wantsPhotos    = reply.includes("[SHARE_PHOTOS]");
-    const wantsBrochure  = reply.includes("[SHARE_BROCHURE]");
-    const wantsVideos    = reply.includes("[SHARE_VIDEO]");
-    const wantsFloorPlan = reply.includes("[SHARE_FLOORPLAN]");
+    const wantsPhotos    = reply.includes("[SHARE_PHOTOS]")    || !!plan?.send.includes("photos");
+    const wantsBrochure  = reply.includes("[SHARE_BROCHURE]")  || !!plan?.send.includes("brochure");
+    const wantsVideos    = reply.includes("[SHARE_VIDEO]")     || !!plan?.send.includes("videos");
+    const wantsFloorPlan = reply.includes("[SHARE_FLOORPLAN]") || !!plan?.send.includes("floorplan");
     reply = reply.replace(/\[SHARE_(PHOTOS|BROCHURE|VIDEO|FLOORPLAN)\]/g, "").trim();
 
     if (reply) {
@@ -1655,7 +1779,7 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     // the text reply that has already gone out, or trigger a human handoff
     // over something this minor.
     if (wantsPhotos || wantsBrochure || wantsVideos || wantsFloorPlan) {
-      sendQualifiedMedia(org, agent, conversation, botName, reply, { wantsPhotos, wantsBrochure, wantsVideos, wantsFloorPlan })
+      sendQualifiedMedia(org, agent, conversation, botName, reply, { wantsPhotos, wantsBrochure, wantsVideos, wantsFloorPlan, project: plan ? mediaProject : null })
         .then(async ({ missing }) => {
           // The reply already said something was on its way. If the project
           // has no such file, say so instead of leaving the customer waiting.
@@ -2173,7 +2297,7 @@ router.post("/settings/test", authorize("admin", "super_admin"), async (req, res
 
 const AGENT_FIELDS = [
   "name", "description", "greeting", "businessContext", "groundRules",
-  "projectIds", "systemPrompt", "language", "adIds", "status",
+  "projectIds", "systemPrompt", "language", "adIds", "status", "personaName",
   "shareProjectPhotos", "shareBrochure", "shareVideos", "shareFloorPlan", "ctwaFlow",
 ];
 
@@ -2310,6 +2434,7 @@ async function sanitizeAgentBody(orgId, body) {
   // draft is fine to preview but not to save.
   if (out.name !== undefined) out.name = String(out.name).trim().slice(0, 60);
   if (out.description !== undefined) out.description = String(out.description).trim().slice(0, 280);
+  if (out.personaName !== undefined) out.personaName = String(out.personaName).trim().slice(0, 40);
   if (out.status !== undefined && !["active", "paused", "draft"].includes(out.status)) {
     const e = new Error("Unknown status."); e.status = 400; throw e;
   }
@@ -3493,5 +3618,11 @@ router.get("/unread", async (req, res) => {
 router.runFlowNudges = (now) => ctwaFlow.runNudges(now);
 
 router._detectCustomerLanguage = detectCustomerLanguage;
+router._detectMediaAsk = detectMediaAsk;
+router._mediaPlan = mediaPlan;
+router._personaFor = personaFor;
+router._maybeSwitchAgent = maybeSwitchAgent;
+router._triggerBotReply = triggerBotReply;
+router._resolveAgentForConversation = resolveAgentForConversation;
 
 module.exports = router;

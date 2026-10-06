@@ -267,7 +267,7 @@ export default function AgentBuilder() {
   const [readiness, setReadiness] = useState(null);
 
   const [form, setForm] = useState({
-    name: "", description: "", status: "draft", greeting: "",
+    name: "", personaName: "", description: "", status: "draft", greeting: "",
     businessContext: "", groundRules: "", projectIds: [],
     systemPrompt: "", language: "auto", adIds: [],
     shareProjectPhotos: false, shareBrochure: false, shareVideos: false, shareFloorPlan: false,
@@ -306,7 +306,7 @@ export default function AgentBuilder() {
       if (agentRes) {
         const a = agentRes.data.agent;
         setForm({
-          name: a.name || "", description: a.description || "", status: a.status || "draft",
+          name: a.name || "", personaName: a.personaName || "", description: a.description || "", status: a.status || "draft",
           greeting: a.greeting || "", businessContext: a.businessContext || "",
           groundRules: a.groundRules || "",
           projectIds: (a.projectIds || []).map((p) => String(p?._id || p)),
@@ -500,6 +500,14 @@ export default function AgentBuilder() {
                 <CustomSelect value={form.status} onChange={(v) => set({ status: v })}
                   options={STATUSES} style={SELECT_STYLE} />
               </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-app-soft mb-1 block">
+                Name customers hear <span className="font-normal">(when someone asks "what is your name")</span>
+              </label>
+              <input className="input w-full" placeholder="e.g. Riya. Leave blank to use a friendly name automatically"
+                value={form.personaName} onChange={(e) => set({ personaName: e.target.value })} />
             </div>
 
             <div>

@@ -57,6 +57,10 @@ const waAgentSchema = new mongoose.Schema(
     shareBrochure:      { type: Boolean, default: false },
     shareVideos:        { type: Boolean, default: false },
     shareFloorPlan:     { type: Boolean, default: false },
+    // The first name customers are told when they ask "what's your name".
+    // Blank: a person-like agent name is used as is, anything that reads as a
+    // role or project ("Khopoli Project Advisor") gets a stable friendly name.
+    personaName:        { type: String, trim: true, maxlength: 40, default: "" },
 
     // A hint in the prompt, not a translation layer — the model answers in
     // whatever the customer writes unless told otherwise.
