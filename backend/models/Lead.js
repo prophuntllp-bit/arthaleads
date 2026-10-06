@@ -241,6 +241,20 @@ const leadSchema = new mongoose.Schema(
     isArchived: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
     deletedAt:  { type: Date, default: null },
+    // Who deleted it and from where, so Dump can say so and Restore can put it
+    // back. kind "leads": deleted from the Leads list. kind "project": deleted
+    // from that project's lead list. Undefined on rows deleted before this existed.
+    deletedBy:     { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    deletedByName: { type: String, trim: true, default: "" },
+    deletedFrom: {
+      type: {
+        kind:        { type: String, enum: ["leads", "project"] },
+        projectId:   { type: mongoose.Schema.Types.ObjectId, ref: "Project" },
+        projectName: { type: String, trim: true, default: "" },
+      },
+      default: undefined,
+      _id: false,
+    },
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
     // ── WhatsApp marketing consent ───────────────────────────────────────────
   // Meta requires recorded opt-in before a marketing template goes out, and we

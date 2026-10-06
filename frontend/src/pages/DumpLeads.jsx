@@ -5,6 +5,12 @@ import { useAuth } from "../context/AuthContext";
 import { EmptyState, PageLoader, PhoneActions, WhatsAppLink, SourceBadge, StatusBadge } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 import { fmtDate } from "../utils/constants";
+
+// The page a website lead came from, without the site or the query string.
+function pagePath(url) {
+  if (!url) return "";
+  try { const p = new URL(url).pathname; return p === "/" ? "" : p; } catch { return ""; }
+}
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { read as xlsxRead, utils as xlsxUtils } from "xlsx";
@@ -141,9 +147,9 @@ export default function DumpLeads() {
 
   const handleRestore = async (id) => {
     try {
-      await api.patch(`/leads/${id}/restore`);
+      const { data } = await api.patch(`/leads/${id}/restore`);
       setLeads((prev) => prev.filter((l) => l._id !== id));
-      toast.success("Lead restored to main leads");
+      toast.success(data.restoredTo === "project" ? `Lead restored to ${data.projectName}` : "Lead restored to Leads");
     } catch { toast.error("Restore failed"); }
   };
 
@@ -392,7 +398,7 @@ export default function DumpLeads() {
                       />
                     </th>
                   )}
-                  {["Lead", "Phone", "WhatsApp", "Source", "Project", "Pipeline Status", "Lead Outcome", "Reason", "Assigned To", "Remark", "Added", canDelete && "Actions"].filter(Boolean).map((h) => (
+                  {["Lead", "Phone", "WhatsApp", "Source", "Deleted from", "Pipeline Status", "Lead Outcome", "Reason", "Assigned To", "Remark", "Deleted", "Added", canDelete && "Actions"].filter(Boolean).map((h) => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -426,11 +432,28 @@ export default function DumpLeads() {
                     </td>
                     <td><PhoneActions phone={lead.phone} /></td>
                     <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} /></td>
-                    <td><SourceBadge source={lead.source} /></td>
                     <td>
-                      {lead.projectName
-                        ? <span className="text-[11px] font-semibold text-violet-600">{lead.projectName}</span>
-                        : <span className="text-xs text-app-soft">-</span>}
+                      <div className="flex flex-col gap-0.5">
+                        <SourceBadge source={lead.source} />
+                        {(lead.leadSourceLabel || lead.campaignRef?.headline) && (
+                          <span className="max-w-[150px] truncate text-[10px] text-app-soft" title={lead.leadSourceLabel || lead.campaignRef?.headline}>
+                            {lead.leadSourceLabel || lead.campaignRef?.headline}
+                          </span>
+                        )}
+                        {lead.sourceDomain && lead.sourceDomain !== lead.leadSourceLabel && (
+                          <span className="max-w-[150px] truncate text-[10px] text-blue-500" title={lead.sourceDomain}>{lead.sourceDomain}</span>
+                        )}
+                        {pagePath(lead.sourcePage) && (
+                          <span className="max-w-[150px] truncate text-[10px] text-app-soft" title={String(lead.sourcePage).split("?")[0]}>{pagePath(lead.sourcePage)}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      {lead.projectName || lead.deletedFrom?.projectName
+                        ? <span className="block max-w-[140px] truncate text-[11px] font-semibold text-violet-600" title={lead.projectName || lead.deletedFrom?.projectName}>{lead.projectName || lead.deletedFrom?.projectName}</span>
+                        : lead.deletedFrom?.kind === "leads"
+                          ? <span className="text-xs text-app-soft">Leads</span>
+                          : <span className="text-xs text-app-soft" title="Deleted before the CRM recorded where from">Unknown</span>}
                     </td>
                     <td><StatusBadge status={lead.status} /></td>
                     <td>
@@ -449,6 +472,14 @@ export default function DumpLeads() {
                     <td className="text-xs text-app-soft max-w-[180px]">
                       <p className="truncate">{lead.remark || lead.remark1 || "-"}</p>
                     </td>
+                    <td className="text-xs text-app-soft whitespace-nowrap">
+                      {lead.isDeleted && lead.deletedAt ? (
+                        <>
+                          <p>{fmtDate(lead.deletedAt)}</p>
+                          {lead.deletedByName && <p className="text-[10px]">by {lead.deletedByName}</p>}
+                        </>
+                      ) : "-"}
+                    </td>
                     <td className="text-xs text-app-soft whitespace-nowrap">{fmtDate(lead.createdAt)}</td>
                     {canDelete && (
                       <td>
@@ -460,7 +491,8 @@ export default function DumpLeads() {
                             </button>
                           ) : (
                             <button onClick={() => handleRestore(lead._id)}
-                              className="rounded-lg p-1.5 text-green-500 hover:bg-green-500/10 transition" title="Restore lead">
+                              className="rounded-lg p-1.5 text-green-500 hover:bg-green-500/10 transition"
+                              title={lead.deletedFrom?.projectName ? `Restore to ${lead.deletedFrom.projectName}` : "Restore to Leads"}>
                               <RotateCcw className="h-3.5 w-3.5" />
                             </button>
                           )}

@@ -5,6 +5,7 @@ const Lead = require("../models/Lead");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
 const { mirrorProjectEdit } = require("../utils/projectCopies");
+const { leadFromProjectLead } = require("../utils/leadFromProjectLead");
 
 // Escape special regex characters in user-supplied search strings to prevent ReDoS
 function escapeRegex(str) {
@@ -371,19 +372,9 @@ const projectService = {
       // Permanent hard delete - no dump record
       await lead.deleteOne();
     } else {
-      // Soft delete - convert to Lead with isDeleted so it appears in Dump Leads
-      const validSources = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "Other"];
-      const mappedSource = validSources.includes(lead.source) ? lead.source : "Other";
-      await Lead.create({
-        name: lead.name,
-        phone: lead.phone,
-        email: lead.email || "",
-        source: mappedSource,
-        createdBy: user._id,
-        orgId: user.orgId,
-        isDeleted: true,
-        deletedAt: new Date(),
-      });
+      // Soft delete - convert to Lead with isDeleted so it appears in Dump Leads,
+      // carrying everything the project entry had and where it was deleted from.
+      await Lead.create(leadFromProjectLead(lead, user, lead.project));
       await lead.deleteOne();
     }
   },
@@ -406,18 +397,7 @@ const projectService = {
 
     // Soft delete - convert each to a Lead with isDeleted so they appear in Dump Leads
     const projectLeads = await ProjectLead.find({ _id: { $in: ids }, project: projectId });
-    const validSources = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "Other"];
-    const now = new Date();
-    const dumpDocs = projectLeads.map((pl) => ({
-      name: pl.name,
-      phone: pl.phone,
-      email: pl.email || "",
-      source: validSources.includes(pl.source) ? pl.source : "Other",
-      createdBy: user._id,
-      orgId: user.orgId,
-      isDeleted: true,
-      deletedAt: now,
-    }));
+    const dumpDocs = projectLeads.map((pl) => leadFromProjectLead(pl, user, project));
     if (dumpDocs.length > 0) await Lead.insertMany(dumpDocs, { ordered: false });
     const result = await ProjectLead.deleteMany({ _id: { $in: ids }, project: projectId });
     return result.deletedCount;

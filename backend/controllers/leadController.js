@@ -243,8 +243,8 @@ const leadController = {
 
   async restore(req, res, next) {
     try {
-      const lead = await leadService.restore(req.params.id, req.orgId);
-      res.json({ success: true, data: lead });
+      const r = await leadService.restore(req.params.id, req.user);
+      res.json({ success: true, data: r.lead, restoredTo: r.restoredTo, projectName: r.projectName });
     } catch (err) { next(err); }
   },
 

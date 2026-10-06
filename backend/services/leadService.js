@@ -2,6 +2,7 @@
 const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
 const { projectCopiesFor, moveLeadIntoProject, mirrorLeadEdit } = require("../utils/projectCopies");
+const { projectLeadFromLead } = require("../utils/projectLeadFromLead");
 const Project = require("../models/Project");
 const User = require("../models/User");
 const Organization = require("../models/Organization");
@@ -679,6 +680,9 @@ const leadService = {
     } else {
       lead.isDeleted = true;
       lead.deletedAt = new Date();
+      lead.deletedBy = user._id;
+      lead.deletedByName = user.name || "";
+      lead.deletedFrom = { kind: "leads" };
       await lead.save({ validateBeforeSave: false });
     }
   },
@@ -697,7 +701,7 @@ const leadService = {
     }
     const result = await Lead.updateMany(
       { _id: { $in: ids }, orgId: user.orgId, ...ownerFilter },
-      { $set: { isDeleted: true, deletedAt: new Date() } }
+      { $set: { isDeleted: true, deletedAt: new Date(), deletedBy: user._id, deletedByName: user.name || "", deletedFrom: { kind: "leads" } } }
     );
     return result.modifiedCount;
   },
@@ -1504,9 +1508,30 @@ const leadService = {
   },
 
   // ── Restore (undo soft delete) ────────────────────────────────────────────
-  async restore(id, orgId) {
+  // A lead deleted from a project goes back into that project (with its
+  // remarks, notes and follow-ups, which the Dump copy now carries); anything
+  // else, or a project that is gone, goes back to the Leads list.
+  async restore(id, user) {
+    const orgId = user.orgId;
     const lead = await Lead.findOne({ _id: id, orgId });
     if (!lead) throw new AppError("Lead not found", 404);
+
+    const from = lead.deletedFrom;
+    if (from?.kind === "project" && (from.projectId || from.projectName)) {
+      const project = from.projectId
+        ? await Project.findOne({ _id: from.projectId, orgId, isArchived: { $ne: true } })
+        : await Project.findOne({ name: from.projectName, orgId, isArchived: { $ne: true } });
+      if (project) {
+        lead.isDeleted = false;
+        lead.deletedAt = null;
+        const pl = await ProjectLead.create(projectLeadFromLead(lead, project._id, user, { projectName: project.name }));
+        // Same as a transfer: the Lead copy is archived so the person is not listed twice.
+        lead.isArchived = true;
+        await lead.save({ validateBeforeSave: false });
+        return { lead, restoredTo: "project", projectName: project.name, projectLeadId: pl._id };
+      }
+    }
+
     lead.isDeleted = false;
     lead.deletedAt = null;
     // The booking is left alone. It used to be cleared here because a lead
@@ -1514,7 +1539,7 @@ const leadService = {
     // moment it was restored -- but that also silently erased a real answer the
     // agent had recorded. Dump is deletions now, so there is nothing to undo.
     await lead.save({ validateBeforeSave: false });
-    return lead;
+    return { lead, restoredTo: "leads", projectName: from?.kind === "project" ? from.projectName || "" : "" };
   },
 
   // ── Permanent delete ──────────────────────────────────────────────────────
@@ -1669,7 +1694,7 @@ const leadService = {
         .skip(skip)
         .limit(lim)
         .populate("assignedTo", "name email")
-        .select("name phone email source status priority booking assignedToName assignedTo remark1 remark2 remark followUpDate followUp2 createdAt updatedAt isDeleted deletedAt")
+        .select("name phone email source status priority booking assignedToName assignedTo remark1 remark2 remark followUpDate followUp2 createdAt updatedAt isDeleted deletedAt deletedByName deletedFrom leadSourceLabel sourceDomain sourcePage campaignRef.headline")
         .lean(),
       Lead.countDocuments(leadFilter),
     ]);
