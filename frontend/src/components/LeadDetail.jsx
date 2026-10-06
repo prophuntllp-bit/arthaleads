@@ -6,6 +6,7 @@ import api from "../services/api";
 import { ConfirmDialog, Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
 import { useSoftPhone } from "../context/SoftPhoneContext";
 import CustomSelect from "./CustomSelect";
+import CopyButton from "./CopyButton";
 import { fmtCurrency, fmtDate, fmtDateTime, STATUS_OPTIONS } from "../utils/constants";
 
 // Incoming (lead called us) vs outgoing (we called the lead). Kept visually
@@ -449,7 +450,10 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="stitch-kicker mb-2">Lead Profile</p>
-              <h3 className="text-2xl font-black tracking-tight text-app">{lead.name}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-2xl font-black tracking-tight text-app">{lead.name}</h3>
+                <CopyButton value={[lead.name, lead.phone].filter(Boolean).join("\n")} label="Copy name and number" done="Name and number copied" />
+              </div>
               <div className="mt-1 flex flex-wrap items-center gap-3">
                 <PhoneActions phone={lead.phone} />
                 <WhatsAppLink phone={lead.phone} name={lead.name} leadId={!isProjectLead ? lead._id : undefined} />
