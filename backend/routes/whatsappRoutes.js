@@ -29,6 +29,7 @@ const rateLimit      = require("express-rate-limit");
 const { generateWhatsAppTemplate } = require("../utils/openai");
 const onboarding = require("../services/whatsappOnboardingService");
 const { getNextAssignee } = require("../utils/assignLead");
+const RoutingRule = require("../models/RoutingRule");
 const { matchRoutingRule, fileLeadInRoutedProject } = require("../utils/routingRules");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { scoreLead, scoreLabel } = require("../utils/leadScorer");
@@ -1081,16 +1082,34 @@ async function labelAdlessLead(org, conv) {
   if (m?.project) {
     const lead = await Lead.findOne({ _id: conv.leadId, orgId: org._id, isArchived: { $ne: true }, isDeleted: { $ne: true } });
     if (lead) {
+      // The project a WhatsApp rule files this project's ad leads into (for
+      // Khopoli, the campaign project) is where these belong, not the
+      // assistant's own project of the same name.
+      const target = await routedProjectFor(org._id, m.project);
       // Auto-assign can be off, leaving the lead with no owner. The project
       // entry then stays unassigned too, recorded as imported by an admin.
       const owner = lead.assignedTo
         ? { _id: lead.assignedTo, name: lead.assignedToName }
         : await User.findOne({ orgId: org._id, role: "admin", isActive: true }).select("_id name").lean();
       if (owner) {
-        await fileLeadInRoutedProject({ assignToProject: m.project._id, assignTo: owner._id, assignToName: lead.assignedTo ? owner.name : "", keepUnassigned: !lead.assignedTo }, lead);
+        await fileLeadInRoutedProject({ assignToProject: target, assignTo: owner._id, assignToName: lead.assignedTo ? owner.name : "", keepUnassigned: !lead.assignedTo }, lead);
       }
     }
   }
+}
+
+// Among the projects the org's WhatsApp routing rules file leads into, the one
+// that names the same place as `project` (e.g. both say "Khopoli"). Falls back
+// to `project` itself when no rule points at a matching one.
+async function routedProjectFor(orgId, project) {
+  const rules = await RoutingRule.find({ orgId, isActive: true, source: "whatsapp", assignToProject: { $ne: null } }).select("assignToProject").lean();
+  const ids = [...new Set(rules.map((r) => String(r.assignToProject)))];
+  if (!ids.length) return project._id;
+  const candidates = await Project.find({ _id: { $in: ids }, isArchived: { $ne: true } }).select("name location").lean();
+  const words = (p) => normalizeForMatch(`${p.name} ${p.location || ""}`).split(" ").filter((w) => w.length >= 5 && !GENERIC_PROJECT_WORDS.has(w));
+  const mine = new Set(words(project));
+  const hits = candidates.filter((c) => words(c).some((w) => mine.has(w)));
+  return hits.length === 1 ? hits[0]._id : project._id;
 }
 
 async function markAdOrigin(org, conversationId) {
