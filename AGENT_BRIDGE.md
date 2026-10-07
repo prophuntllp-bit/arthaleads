@@ -60,9 +60,15 @@ only be verified live so Claude Code or the owner can check it on production.
 _(none)_
 
 
+
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
+
+### Claude Code, 2026-10-07 (IST), evening
+
+- Lead routing rules can be edited: pencil on each rule in Integrations. `PATCH /api/routing-rules/:id` (`backend/routes/routingRuleRoutes.js`) now also accepts `label`, `assignTo`, `assignToProject` (null clears), org-checked. What a rule matches (source, field, value) stays fixed. Changes apply to leads arriving afterwards only. UI in `LeadRoutingSection` (`frontend/src/pages/Automation.jsx`).
+- `09aecb9` New-version banner (`UpdateBanner.jsx`) shows only to signed-in users, not on marketing pages.
 
 ### Claude Code, 2026-10-07 (IST), later
 

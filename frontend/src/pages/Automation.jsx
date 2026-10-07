@@ -2404,6 +2404,10 @@ function LeadRoutingSection() {
   // whenever Source or Match By changes, since the ticked values belong to
   // that specific field.
   const [matchValues, setMatchValues] = useState([]);
+  // Editing an existing rule: only its name, agent and project can change.
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ label: "", assignTo: "", assignToProject: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -2516,6 +2520,29 @@ function LeadRoutingSection() {
       const { data } = await api.patch(`/routing-rules/${rule._id}`, { isActive: !rule.isActive });
       setRules((prev) => prev.map((r) => r._id === rule._id ? data.rule : r));
     } catch { toast.error("Failed to update rule"); }
+  };
+
+  const startEdit = (rule) => {
+    setEditingId(rule._id);
+    setEditForm({ label: rule.label || "", assignTo: String(rule.assignTo || ""), assignToProject: String(rule.assignToProject || "") });
+  };
+
+  const saveEdit = async (rule) => {
+    if (!editForm.label.trim()) { toast.error("Give the rule a name"); return; }
+    if (!editForm.assignTo) { toast.error("Pick who it should be assigned to"); return; }
+    setSavingEdit(true);
+    try {
+      const { data } = await api.patch(`/routing-rules/${rule._id}`, {
+        label: editForm.label.trim(),
+        assignTo: editForm.assignTo,
+        assignToProject: editForm.assignToProject || null,
+      });
+      setRules((prev) => prev.map((r) => r._id === rule._id ? data.rule : r));
+      setEditingId(null);
+      toast.success("Rule updated. New leads will follow it.");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not update the rule");
+    } finally { setSavingEdit(false); }
   };
 
   const deleteRule = async (id) => {
@@ -2683,7 +2710,46 @@ function LeadRoutingSection() {
         </div>
       ) : (
         <div className="space-y-3">
-          {rules.map((rule) => (
+          {rules.map((rule) => editingId === rule._id ? (
+            <div key={rule._id} className="rounded-2xl border p-4 space-y-3" style={{ borderColor: "var(--app-primary)", background: "var(--app-surface-low)" }}>
+              <p className="text-xs text-app-soft">
+                {SOURCE_LABELS[rule.source || "facebook"]} · {MATCH_FIELD_LABELS[rule.matchField]} <code className="text-orange-400 font-mono">{rule.matchValue}</code>
+                {" "}(what it matches can't be changed here; add a new rule to match something else)
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="label">Rule Name</label>
+                  <input className="input" value={editForm.label} onChange={(e) => setEditForm((f) => ({ ...f, label: e.target.value }))} />
+                </div>
+                <div className="space-y-1">
+                  <label className="label">Assign To</label>
+                  <CustomSelect
+                    value={editForm.assignTo}
+                    onChange={(v) => setEditForm((f) => ({ ...f, assignTo: v }))}
+                    options={agents.map((a) => ({ value: a._id, label: a.name }))}
+                    style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="label">Also file into project</label>
+                  <CustomSelect
+                    value={editForm.assignToProject}
+                    onChange={(v) => setEditForm((f) => ({ ...f, assignToProject: v }))}
+                    options={[{ value: "", label: "— Don't file into a project —" }, ...projects.map((p) => ({ value: p._id, label: p.name }))]}
+                    placeholder="— Don't file into a project —"
+                    style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-app-soft">Applies to leads that arrive from now on. Leads already routed keep the agent they were given.</p>
+              <div className="flex gap-3 justify-end">
+                <button type="button" className="btn-secondary rounded-xl" onClick={() => setEditingId(null)}>Cancel</button>
+                <button type="button" className="btn-primary rounded-xl" disabled={savingEdit} onClick={() => saveEdit(rule)}>
+                  {savingEdit ? <><Spinner size="sm" /> Saving…</> : "Save changes"}
+                </button>
+              </div>
+            </div>
+          ) : (
             <div key={rule._id} className={`flex items-center gap-4 rounded-2xl border px-4 py-3 transition ${rule.isActive ? "border-[var(--app-border)]" : "border-dashed border-[var(--app-border)] opacity-50"}`}>
               {/* Toggle */}
               <button
@@ -2714,6 +2780,10 @@ function LeadRoutingSection() {
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${rule.isActive ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-app-soft"}`}>
                 {rule.isActive ? "Active" : "Paused"}
               </span>
+
+              <button type="button" onClick={() => startEdit(rule)} title="Edit rule" aria-label="Edit rule" className="text-app-soft hover:text-app transition shrink-0">
+                <Pencil className="h-4 w-4" />
+              </button>
 
               <button onClick={() => deleteRule(rule._id)} className="text-app-soft hover:text-red-400 transition shrink-0">
                 <Trash2 className="h-4 w-4" />

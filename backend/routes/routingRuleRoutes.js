@@ -62,12 +62,39 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PATCH /api/routing-rules/:id  (toggle active)
+// PATCH /api/routing-rules/:id  (pause/resume, or change name, agent and project)
+// What a rule matches on (source, field, value) is not editable: that is its
+// identity. To match something else, add a new rule. Changing the agent or
+// project only affects leads that arrive from now on; leads already routed keep
+// the agent they were given.
 router.patch("/:id", async (req, res) => {
   try {
     const rule = await RoutingRule.findOne({ _id: req.params.id, orgId: req.orgId });
     if (!rule) return res.status(404).json({ success: false, message: "Rule not found" });
     if (req.body.isActive !== undefined) rule.isActive = req.body.isActive;
+
+    if (req.body.label !== undefined) {
+      const label = String(req.body.label).trim();
+      if (!label) return res.status(400).json({ success: false, message: "Rule name cannot be empty" });
+      rule.label = label.slice(0, 120);
+    }
+    if (req.body.assignTo !== undefined) {
+      const agent = await User.findOne({ _id: req.body.assignTo, orgId: req.orgId, isActive: { $ne: false } }).select("_id name");
+      if (!agent) return res.status(404).json({ success: false, message: "Agent not found" });
+      rule.assignTo = agent._id;
+      rule.assignToName = agent.name;
+    }
+    if (req.body.assignToProject !== undefined) {
+      if (!req.body.assignToProject) {
+        rule.assignToProject = null;
+        rule.assignToProjectName = "";
+      } else {
+        const project = await Project.findOne({ _id: req.body.assignToProject, orgId: req.orgId, isArchived: { $ne: true } }).select("_id name");
+        if (!project) return res.status(404).json({ success: false, message: "Project not found" });
+        rule.assignToProject = project._id;
+        rule.assignToProjectName = project.name;
+      }
+    }
     await rule.save();
     res.json({ success: true, rule });
   } catch (err) {
