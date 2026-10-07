@@ -59,3 +59,7 @@ Rules:
 - IF graphify-out/wiki/index.md EXISTS, navigate it instead of reading raw files
 - For cross-module "how does X relate to Y" questions, prefer `graphify query "<question>"`, `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"` over grep — these traverse the graph's EXTRACTED + INFERRED edges instead of scanning files
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+## Agent bridge (Claude Code and Codex)
+
+Another AI agent (Codex) also edits this repo. Before making ANY change, `git pull` and read `AGENT_BRIDGE.md` (rules, "Active work", recent change log). Register the task there before editing, and log it with the commit hash when done. If an active entry overlaps what you are about to change, stop and tell the owner.
