@@ -384,12 +384,12 @@ export default function SuperAdminOrgDetail() {
                 <thead>
                   <tr>
                     <th>Month</th>
-                    <th className="text-center">Help Bot</th>
-                    <th className="text-center">WA Drafts</th>
-                    <th className="text-center">WA Agent Replies</th>
-                    <th className="text-center">Template AI</th>
-                    <th className="text-center">Total Calls</th>
-                    <th className="text-right">Tokens Used</th>
+                    <th style={{ textAlign: "center" }}>Help Bot</th>
+                    <th style={{ textAlign: "center" }}>WA Drafts</th>
+                    <th style={{ textAlign: "center" }}>WA Agent Replies</th>
+                    <th style={{ textAlign: "center" }}>Template AI</th>
+                    <th style={{ textAlign: "center" }}>Total Calls</th>
+                    <th style={{ textAlign: "right" }}>Tokens Used</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -397,17 +397,13 @@ export default function SuperAdminOrgDetail() {
                     const helpCalls = (row.calls || 0) - (row.waDraftCalls || 0);
                     return (
                       <tr key={row.month}>
-                        <td className="font-semibold text-app">{fmtMonth(row.month)}</td>
-                        <td className="text-center text-app">{helpCalls}</td>
-                        <td className="text-center text-app">{row.waDraftCalls || 0}</td>
-                        <td className="text-center text-app">{(row.botReplyCalls || 0) + (row.botEnrichCalls || 0)}</td>
-                        <td className="text-center text-app">{row.templateGenCalls || 0}</td>
-                        <td className="text-center">
-                          <span className="font-bold text-indigo-500">{row.calls || 0}</span>
-                        </td>
-                        <td className="text-right">
-                          <span className="font-bold text-app">{(row.totalTokens || 0).toLocaleString()}</span>
-                        </td>
+                        <td className="text-sm font-semibold text-app">{fmtMonth(row.month)}</td>
+                        <td className="text-sm text-app" style={{ textAlign: "center" }}>{helpCalls}</td>
+                        <td className="text-sm text-app" style={{ textAlign: "center" }}>{row.waDraftCalls || 0}</td>
+                        <td className="text-sm text-app" style={{ textAlign: "center" }}>{(row.botReplyCalls || 0) + (row.botEnrichCalls || 0)}</td>
+                        <td className="text-sm text-app" style={{ textAlign: "center" }}>{row.templateGenCalls || 0}</td>
+                        <td className="text-sm font-bold text-indigo-500" style={{ textAlign: "center" }}>{row.calls || 0}</td>
+                        <td className="text-sm font-bold text-app" style={{ textAlign: "right" }}>{(row.totalTokens || 0).toLocaleString()}</td>
                       </tr>
                     );
                   })}
@@ -591,7 +587,7 @@ export default function SuperAdminOrgDetail() {
                 {wa?.connected ? "CONNECTED" : "NOT CONNECTED"}
               </span>
             </div>
-            {wa?.connected && <WhatsAppFacts wa={wa} />}
+            {wa?.connected && <p className="text-xs text-app-soft">Credits, agents and message counts are under Storage &amp; Usage.</p>}
           </div>
         </div>
       )}
@@ -688,9 +684,11 @@ export default function SuperAdminOrgDetail() {
 }
 
 function WhatsAppFacts({ wa }) {
+  // 11 facts fill two rows of six
   const facts = [
     ["Credit balance", fmtRupees(wa.creditsPaise)],
     ["On hold", fmtRupees(wa.creditsReservedPaise)],
+    ["Free replies used (month)", (wa.freeUsedMonth ?? 0).toLocaleString("en-IN")],
     ["AI agents", `${wa.agentsActive ?? 0} active of ${wa.agentsTotal ?? 0}`],
     ["Button-flow agents", wa.ctwaAgents ?? 0],
     ["Bot replies (30 d)", (wa.botMsgs30 ?? 0).toLocaleString("en-IN")],
@@ -701,11 +699,11 @@ function WhatsAppFacts({ wa }) {
     ["Chats, all time", (wa.convosTotal ?? 0).toLocaleString("en-IN")],
   ];
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-3 border-t" style={{ borderColor: "var(--app-border)" }}>
+    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-4 pt-3 border-t" style={{ borderColor: "var(--app-border)" }}>
       {facts.map(([k, v]) => (
         <div key={k}>
-          <p className="text-[11px] text-app-soft">{k}</p>
-          <p className="text-sm font-bold text-app tabular-nums">{v}</p>
+          <p className="text-xs text-app-soft">{k}</p>
+          <p className="text-sm font-semibold text-app tabular-nums">{v}</p>
         </div>
       ))}
     </div>
@@ -744,7 +742,7 @@ function StorageUsageTab({ orgId, storage, wa, org, onSaved }) {
         <div className="p-4 space-y-4">
           <div>
             <div className="flex items-baseline justify-between mb-1.5">
-              <p className="text-2xl font-black text-app">{fmtSize(storage.usedBytes)}</p>
+              <p className="text-xl font-bold text-app">{fmtSize(storage.usedBytes)}</p>
               <p className="text-xs text-app-soft">of {fmtSize(storage.limitBytes)} · {storage.percent}%</p>
             </div>
             <Meter pct={storage.percent} danger={storage.full} />

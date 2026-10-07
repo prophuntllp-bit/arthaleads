@@ -676,6 +676,7 @@ const superAdminController = {
           botEnabled: org.whatsapp?.botEnabled ?? true,
           creditsPaise: org.credits?.balancePaise || 0,
           creditsReservedPaise: org.credits?.reservedPaise || 0,
+          freeUsedMonth: org.credits?.freeService?.yyyymm === new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }).slice(0, 7).replace("-", "") ? (org.credits?.freeService?.used || 0) : 0,
           ...(wa || {}),
         },
       });

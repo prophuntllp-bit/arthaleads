@@ -1682,7 +1682,7 @@ export default function SuperAdmin() {
                           const sz = (n) => n >= 1024 ** 3 ? `${(n / 1024 ** 3).toFixed(1)} GB` : n >= 1024 ** 2 ? `${(n / 1024 ** 2).toFixed(0)} MB` : `${Math.round(n / 1024)} KB`;
                           return (
                             <>
-                              <span className={`font-bold ${pct >= 100 ? "text-red-500" : pct >= 80 ? "text-amber-500" : "text-app"}`}>{sz(used)}</span>
+                              <span className={`font-bold whitespace-nowrap ${pct >= 100 ? "text-red-500" : pct >= 80 ? "text-amber-500" : "text-app"}`}>{sz(used)}</span>
                               <p className="text-[10px] text-app-soft">of {sz(lim)} · {pct}%</p>
                             </>
                           );
