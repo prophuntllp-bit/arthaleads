@@ -5,7 +5,7 @@ import api from "../services/api";
 import { waLink, WA_MESSAGES } from "../utils/crmLinks";
 
 import { useAuth } from "../context/AuthContext";
-import { canAccess, planLabel, upgradeTarget, PLAN_PRICING, formatINR } from "../utils/plan";
+import { canAccess, planLabel, upgradeTarget, PLAN_PRICING, formatINR, formatBytes } from "../utils/plan";
 import CheckoutModal from "../components/CheckoutModal";
 
 const PLANS = [
@@ -34,6 +34,9 @@ const PLANS = [
           "Facebook Lead Ads auto-import",
           "WhatsApp capture",
           "Website / WordPress plugin",
+          "WhatsApp Inbox with manual replies",
+          "2 projects",
+          "2 GB file storage, call recordings kept 30 days",
         ],
       },
       // Roles moved to Starter: the seat minimum is sold as one admin, one
@@ -57,7 +60,10 @@ const PLANS = [
       {
         label: "Everything in Starter, plus",
         items: [
-          "Multiple project pipelines",
+          "Unlimited projects",
+          "WhatsApp AI agent",
+          "WhatsApp templates and campaigns",
+          "15 GB file storage, call recordings kept 90 days",
           "Duplicate lead detection",
           "Auto round-robin lead assignment",
           "Bulk lead export",
@@ -96,6 +102,9 @@ const PLANS = [
         items: [
           "Google Ads integration",
           "Custom webhook & API access",
+          "WhatsApp button flow for click-to-WhatsApp ads",
+          "Vistrow Voice AI calling",
+          "100 GB file storage (more on request), call recordings kept 1 year",
           "Multi-org management",
           "Advanced automation management",
         ],
@@ -127,6 +136,8 @@ export default function Plans() {
   // Where the org sits in its billing cycle: active / grace / lapsed / none.
   const [sub, setSub] = useState(null);
   const [subBusy, setSubBusy] = useState(false);
+  const [storage, setStorage] = useState(null);
+  useEffect(() => { api.get("/org/storage").then((r) => setStorage(r.data.storage)).catch(() => {}); }, []);
 
   const loadSubscription = () =>
     api.get("/billing/me")
@@ -286,6 +297,18 @@ export default function Plans() {
             style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>
             Active
           </span>
+          {storage && (
+            <div className="w-full">
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <span className="font-semibold text-app">File storage</span>
+                <span className="text-app-soft tabular-nums">{formatBytes(storage.usedBytes)} of {formatBytes(storage.limitBytes)} used</span>
+              </div>
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--app-border)" }}>
+                <div className="h-full rounded-full" style={{ width: `${Math.min(100, storage.percent)}%`, background: storage.full ? "#dc2626" : "var(--app-primary)" }} />
+              </div>
+              <p className="mt-1.5 text-[11px] text-app-soft">Photos, brochures, videos and call recordings. Need more? Write to contact@arthaleads.com.</p>
+            </div>
+          )}
         </div>
       </section>
 

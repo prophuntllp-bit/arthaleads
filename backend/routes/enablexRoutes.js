@@ -1418,7 +1418,8 @@ async function saveRecordingFromEnablexUrl(orgId, ownerRef, enablexRecordingUrl,
   const recordingUrl = await uploadCallRecording(
     Buffer.from(audioResp.data),
     `call-${voiceId || ownerRef}.wav`,
-    "audio/wav"
+    "audio/wav",
+    orgId
   );
   console.info("[enablex recording] saved:", recordingUrl);
 

@@ -16,6 +16,7 @@ import { useTheme } from "../context/ThemeContext";
 import api from "../services/api";
 import { fmtDateTime } from "../utils/constants";
 import { canAccess } from "../utils/plan";
+import StorageCard from "./StorageCard";
 import toast from "react-hot-toast";
 import AttendanceCapture from "./AttendanceCapture";
 import { SmartImage } from "./UI";
@@ -763,6 +764,9 @@ export default function Sidebar() {
             </div>
           </div>
         )}
+
+        {/* ── Used space: appears only once 80% of the file allowance is used ── */}
+        {isExpanded && user?.role !== "super_admin" && <StorageCard />}
 
         {/* ── Desktop: account card at the foot of the sidebar ── */}
         {showAccountCard && (

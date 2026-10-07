@@ -7,7 +7,7 @@ import {
   ArrowLeft, Building2, Users, BarChart3, FolderOpen,
   CheckCircle2, XCircle, Clock, ExternalLink, LogIn,
   Mail, Phone, Shield, Zap, RefreshCw, HardDrive,
-  ShieldCheck, ChevronLeft, ChevronRight, Activity, Sparkles,
+  ShieldCheck, ChevronLeft, ChevronRight, Activity, Sparkles, MessageCircle, Save,
 } from "lucide-react";
 
 const PLAN_COLORS = {
@@ -41,6 +41,7 @@ const ACTION_LABELS = {
   logo_changed:        { label: "Logo Changed",    color: "bg-gray-500/10 text-gray-500 border-gray-500/25" },
   brand_color_changed: { label: "Colour Changed",  color: "bg-pink-500/10 text-pink-600 border-pink-500/25" },
   broadcast_sent:      { label: "Broadcast Sent",  color: "bg-orange-500/10 text-orange-600 border-orange-500/25" },
+  storage_updated:     { label: "Storage Changed", color: "bg-teal-500/10 text-teal-600 border-teal-500/25" },
 };
 
 const ALL_ACTIONS = Object.keys(ACTION_LABELS);
@@ -54,6 +55,7 @@ function auditDetailText(log) {
     case "org_name_changed":    return `"${d.from}" → "${d.to}"`;
     case "brand_color_changed": return d.color || "";
     case "broadcast_sent":      return `${d.sent} sent · "${d.subject?.slice(0, 40)}"`;
+    case "storage_updated":     return [d.extraGb !== undefined && `extra ${d.extraGb} GB`, d.limitGb !== undefined && `limit ${d.limitGb ?? "plan default"} GB`, d.recordingDays !== undefined && `recordings ${d.recordingDays ?? "plan default"} d`].filter(Boolean).join(" · ");
     default:                    return "";
   }
 }
@@ -63,6 +65,24 @@ function fmtBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+const fmtSize = (bytes) => {
+  const b = Number(bytes) || 0;
+  if (b >= 1024 ** 3) return `${(b / 1024 ** 3).toFixed(2)} GB`;
+  if (b >= 1024 ** 2) return `${(b / 1024 ** 2).toFixed(1)} MB`;
+  if (b >= 1024) return `${Math.round(b / 1024)} KB`;
+  return `${b} B`;
+};
+const CATEGORY_LABELS = { project_media: "Project photos, PDFs, videos", recordings: "Call recordings", attendance: "Attendance selfies", logo: "Logo", other: "Other" };
+const fmtRupees = (paise) => `₹${((Number(paise) || 0) / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+
+function Meter({ pct, danger }) {
+  return (
+    <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--app-border)" }}>
+      <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, background: danger ? "#dc2626" : pct >= 80 ? "#f59e0b" : "var(--app-primary)" }} />
+    </div>
+  );
 }
 
 const fmtDate     = d => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
@@ -153,13 +173,12 @@ export default function SuperAdminOrgDetail() {
   if (loading) return <PageLoader />;
   if (!data)   return null;
 
-  const { org, users, leadByStatus, totalLeads, projectCount, automations, storageBytes, aiUsage = [] } = data;
+  const { org, users, totalLeads, projectCount, automations = [], storageBytes, aiUsage = [], storage, limits, whatsapp: wa } = data;
   const isTrialExpired = org.trialStatus === "expired";
   const effectivelyActive = org.isActive && !isTrialExpired;
   const planLabel = org.plan === "pro" ? "growth" : org.plan;
 
-  const leadEntries = Object.entries(leadByStatus).sort((a, b) => b[1] - a[1]);
-  const fbAutomation = automations?.find(a => a.platform === "facebook");
+  const activeUsers = users.filter(u => u.isActive).length;
 
   return (
     <div className="stitch-page">
@@ -215,11 +234,11 @@ export default function SuperAdminOrgDetail() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">
         {[
-          { label: "Team Members", value: users.length,           icon: Users,      color: "text-blue-500",   bg: "bg-blue-500/10" },
-          { label: "Total Leads",  value: totalLeads,             icon: BarChart3,  color: "text-violet-500", bg: "bg-violet-500/10" },
-          { label: "Projects",     value: projectCount,           icon: FolderOpen, color: "text-green-500",  bg: "bg-green-500/10" },
-          { label: "Automations",  value: automations?.length || 0, icon: Zap,      color: "text-orange-500", bg: "bg-orange-500/10" },
-          { label: "Storage Used", value: fmtBytes(storageBytes), icon: HardDrive,  color: "text-teal-500",   bg: "bg-teal-500/10",  isText: true },
+          { label: "Team Members", value: limits?.seats?.limit ? `${activeUsers} / ${limits.seats.limit}` : activeUsers, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10", isText: !!limits?.seats?.limit },
+          { label: "Total Leads",  value: totalLeads.toLocaleString("en-IN"), icon: BarChart3,  color: "text-violet-500", bg: "bg-violet-500/10" },
+          { label: "Projects",     value: limits?.projects?.limit ? `${projectCount} / ${limits.projects.limit}` : projectCount, icon: FolderOpen, color: "text-green-500",  bg: "bg-green-500/10", isText: !!limits?.projects?.limit },
+          { label: "Integrations", value: automations.length, icon: Zap,      color: "text-orange-500", bg: "bg-orange-500/10" },
+          { label: "File Storage", value: storage ? `${fmtSize(storage.usedBytes)} / ${fmtSize(storage.limitBytes)}` : "—", icon: HardDrive,  color: storage?.full ? "text-red-500" : storage?.warn ? "text-amber-500" : "text-teal-500", bg: "bg-teal-500/10", isText: true },
         ].map(({ label, value, icon: Icon, color, bg, isText }) => (
           <div key={label} className="card p-4">
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-2 ${bg}`}>
@@ -250,6 +269,7 @@ export default function SuperAdminOrgDetail() {
       <div className="flex gap-1 p-1 rounded-2xl mb-4 w-fit" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
         {[
           { key: "overview",      label: "Overview" },
+          { key: "usage",         label: "Storage & Usage" },
           { key: "billing",       label: "Billing" },
           { key: "users",         label: `Users (${users.length})` },
           { key: "integrations",  label: "Integrations" },
@@ -268,29 +288,33 @@ export default function SuperAdminOrgDetail() {
       {tab === "overview" && (
         <div className="space-y-5">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Lead breakdown */}
+          {/* Plan & limits: what this org's plan allows and how much of it is used */}
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b font-bold text-app text-sm" style={{ borderColor: "var(--app-border)" }}>
-              Lead Pipeline
+              Plan &amp; Limits
             </div>
-            {leadEntries.length === 0
-              ? <p className="text-xs text-app-soft text-center py-10">No leads yet</p>
-              : <div className="p-4 space-y-2">
-                  {leadEntries.map(([status, count]) => (
-                    <div key={status} className="flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ background: LEAD_STATUS_COLORS[status] || "#888" }} />
-                      <span className="text-xs text-app flex-1">{status}</span>
-                      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--app-border)" }}>
-                        <div className="h-full rounded-full"
-                          style={{ width: `${Math.round((count / totalLeads) * 100)}%`, background: LEAD_STATUS_COLORS[status] || "#888" }} />
-                      </div>
-                      <span className="text-xs font-bold text-app w-8 text-right">{count}</span>
-                    </div>
-                  ))}
-                  <p className="text-xs text-app-soft pt-1">Total: <strong className="text-app">{totalLeads}</strong> leads</p>
+            <div className="p-4 space-y-4">
+              {[
+                { label: "Team members", used: limits?.seats?.used ?? activeUsers, limit: limits?.seats?.limit },
+                { label: "Projects",     used: limits?.projects?.used ?? projectCount, limit: limits?.projects?.limit },
+                { label: "File storage", used: storage?.usedBytes || 0, limit: storage?.limitBytes, bytes: true },
+              ].map(({ label, used, limit, bytes }) => (
+                <div key={label}>
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <span className="font-semibold text-app">{label}</span>
+                    <span className="text-app-soft tabular-nums">
+                      {bytes ? fmtSize(used) : used} of {limit ? (bytes ? fmtSize(limit) : limit) : "unlimited"}
+                    </span>
+                  </div>
+                  {limit ? <Meter pct={(used / limit) * 100} danger={used >= limit} /> : <Meter pct={0} />}
                 </div>
-            }
+              ))}
+              <div className="pt-3 border-t grid grid-cols-2 gap-x-4 gap-y-2 text-xs" style={{ borderColor: "var(--app-border)" }}>
+                <span className="text-app-soft">Recordings kept</span><span className="font-semibold text-app">{storage?.recordingDays} days</span>
+                <span className="text-app-soft">Leads</span><span className="font-semibold text-app">{totalLeads.toLocaleString("en-IN")}</span>
+                <span className="text-app-soft">Database size</span><span className="font-semibold text-app">{fmtBytes(storageBytes)}</span>
+              </div>
+            </div>
           </div>
 
           {/* Org details */}
@@ -304,7 +328,8 @@ export default function SuperAdminOrgDetail() {
                 { label: "Status",       value: effectivelyActive ? "Active" : isTrialExpired ? "Trial Expired" : "Inactive" },
                 { label: "Created",      value: fmtDate(org.createdAt) },
                 { label: "Trial Ends",   value: org.trialEndsAt ? fmtDate(org.trialEndsAt) : "N/A" },
-                { label: "Storage",      value: fmtBytes(storageBytes) },
+                { label: "Billing cycle", value: org.billingCycle ? `${org.billingCycle}${org.seats ? ` · ${org.seats} seats` : ""}` : "N/A" },
+                { label: "Paid until",   value: org.paidUntil ? fmtDate(org.paidUntil) : "N/A" },
                 { label: "Brand Colour", value: org.brandColor || "Default" },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-center gap-2">
@@ -348,19 +373,21 @@ export default function SuperAdminOrgDetail() {
             <Sparkles className="w-4 h-4 text-indigo-400 flex-shrink-0" />
             <span className="font-bold text-app text-sm">AI Usage (last 6 months)</span>
             <span className="ml-2 text-[10px] text-app-soft border rounded-full px-2 py-0.5" style={{ borderColor: "var(--app-border)" }}>
-              Help Bot + WA Drafts
+              Help Bot, WhatsApp agent, drafts, templates
             </span>
           </div>
           {aiUsage.length === 0 ? (
             <p className="text-xs text-app-soft text-center py-10">No AI usage recorded yet.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="stitch-table min-w-[480px]">
+              <table className="stitch-table min-w-[720px]">
                 <thead>
                   <tr>
                     <th>Month</th>
                     <th className="text-center">Help Bot</th>
                     <th className="text-center">WA Drafts</th>
+                    <th className="text-center">WA Agent Replies</th>
+                    <th className="text-center">Template AI</th>
                     <th className="text-center">Total Calls</th>
                     <th className="text-right">Tokens Used</th>
                   </tr>
@@ -373,6 +400,8 @@ export default function SuperAdminOrgDetail() {
                         <td className="font-semibold text-app">{fmtMonth(row.month)}</td>
                         <td className="text-center text-app">{helpCalls}</td>
                         <td className="text-center text-app">{row.waDraftCalls || 0}</td>
+                        <td className="text-center text-app">{(row.botReplyCalls || 0) + (row.botEnrichCalls || 0)}</td>
+                        <td className="text-center text-app">{row.templateGenCalls || 0}</td>
                         <td className="text-center">
                           <span className="font-bold text-indigo-500">{row.calls || 0}</span>
                         </td>
@@ -388,6 +417,11 @@ export default function SuperAdminOrgDetail() {
           )}
         </div>
         </div>
+      )}
+
+      {/* Storage & usage tab */}
+      {tab === "usage" && storage && (
+        <StorageUsageTab orgId={id} storage={storage} wa={wa} org={org} onSaved={load} />
       )}
 
       {/* Billing tab */}
@@ -511,61 +545,53 @@ export default function SuperAdminOrgDetail() {
       {/* Integrations tab */}
       {tab === "integrations" && (
         <div className="space-y-4">
-          {/* Facebook */}
-          <div className="card p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: "#1877f2" }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-bold text-app">Facebook Integration</p>
-                <p className="text-xs text-app-soft">Lead ads & page connection</p>
-              </div>
-              {fbAutomation ? (
-                <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  fbAutomation.status === "active"
-                    ? "bg-green-500/10 text-green-600 border-green-500/25"
-                    : "bg-gray-500/10 text-gray-500 border-gray-500/25"
-                }`}>
-                  {fbAutomation.status?.toUpperCase()}
-                </span>
-              ) : (
-                <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full border bg-gray-500/10 text-gray-500 border-gray-500/25">
-                  NOT CONNECTED
-                </span>
-              )}
+          <div className="card overflow-hidden">
+            <div className="px-4 py-3 border-b font-bold text-app text-sm" style={{ borderColor: "var(--app-border)" }}>
+              Lead source connections ({automations.length})
             </div>
-            {fbAutomation && (
-              <div className="space-y-1.5 pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
-                {fbAutomation.pageName && (
-                  <p className="text-xs text-app-soft">Page: <strong className="text-app">{fbAutomation.pageName}</strong></p>
-                )}
-                {fbAutomation.pageId && (
-                  <p className="text-xs text-app-soft">Page ID: <strong className="text-app">{fbAutomation.pageId}</strong></p>
-                )}
-                <p className="text-xs text-app-soft">Connected: <strong className="text-app">{fmtDate(fbAutomation.createdAt)}</strong></p>
+            {automations.length === 0 ? (
+              <p className="text-xs text-app-soft text-center py-10">Nothing connected yet</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="stitch-table min-w-[560px]">
+                  <thead><tr><th>Platform</th><th>Name</th><th>Details</th><th>Connected</th><th className="text-center">Status</th></tr></thead>
+                  <tbody>
+                    {automations.map((a) => {
+                      const on = a.isActive !== false && a.status !== "inactive" && a.status !== "disconnected";
+                      return (
+                        <tr key={a._id}>
+                          <td className="text-sm font-semibold text-app">{a.platform}</td>
+                          <td className="text-xs text-app">{a.name || "—"}</td>
+                          <td className="text-xs text-app-soft">{a.pageName || a.pageId || a.mode || "—"}</td>
+                          <td className="text-xs text-app-soft">{fmtDate(a.createdAt)}</td>
+                          <td className="text-center">
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${on ? "bg-green-500/10 text-green-600 border-green-500/25" : "bg-gray-500/10 text-gray-500 border-gray-500/25"}`}>
+                              {on ? "ACTIVE" : "OFF"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
 
-          {/* WhatsApp placeholder */}
-          <div className="card p-5 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: "#25d366" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
+          <div className="card p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#25d366" }}>
+                <MessageCircle className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-app">WhatsApp</p>
+                <p className="text-xs text-app-soft">{wa?.connected ? `Connected${wa.provider ? ` via ${wa.provider}` : ""}` : "Not connected"}</p>
+              </div>
+              <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full border ${wa?.connected ? "bg-green-500/10 text-green-600 border-green-500/25" : "bg-gray-500/10 text-gray-500 border-gray-500/25"}`}>
+                {wa?.connected ? "CONNECTED" : "NOT CONNECTED"}
+              </span>
             </div>
-            <div>
-              <p className="text-sm font-bold text-app">WhatsApp</p>
-              <p className="text-xs text-app-soft">Not tracked yet</p>
-            </div>
-            <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full border bg-gray-500/10 text-gray-500 border-gray-500/25">
-              N/A
-            </span>
+            {wa?.connected && <WhatsAppFacts wa={wa} />}
           </div>
         </div>
       )}
@@ -655,6 +681,119 @@ export default function SuperAdminOrgDetail() {
               </div>
             )}
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WhatsAppFacts({ wa }) {
+  const facts = [
+    ["Credit balance", fmtRupees(wa.creditsPaise)],
+    ["On hold", fmtRupees(wa.creditsReservedPaise)],
+    ["AI agents", `${wa.agentsActive ?? 0} active of ${wa.agentsTotal ?? 0}`],
+    ["Button-flow agents", wa.ctwaAgents ?? 0],
+    ["Bot replies (30 d)", (wa.botMsgs30 ?? 0).toLocaleString("en-IN")],
+    ["Chats started (30 d)", (wa.convos30 ?? 0).toLocaleString("en-IN")],
+    ["Messages in (30 d)", (wa.msgsIn30 ?? 0).toLocaleString("en-IN")],
+    ["Messages out (30 d)", (wa.msgsOut30 ?? 0).toLocaleString("en-IN")],
+    ["Bot on for new chats", wa.botEnabled ? "Yes" : "No"],
+    ["Chats, all time", (wa.convosTotal ?? 0).toLocaleString("en-IN")],
+  ];
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-3 border-t" style={{ borderColor: "var(--app-border)" }}>
+      {facts.map(([k, v]) => (
+        <div key={k}>
+          <p className="text-[11px] text-app-soft">{k}</p>
+          <p className="text-sm font-bold text-app tabular-nums">{v}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StorageUsageTab({ orgId, storage, wa, org, onSaved }) {
+  const GB = 1024 ** 3;
+  const [extra, setExtra] = useState(String(Math.round((storage.extraBytes / GB) * 100) / 100));
+  const [limit, setLimit] = useState(org.storage?.limitBytes != null ? String(Math.round((org.storage.limitBytes / GB) * 100) / 100) : "");
+  const [days, setDays] = useState(org.storage?.recordingDays != null ? String(org.storage.recordingDays) : "");
+  const [note, setNote] = useState(storage.note || "");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.patch(`/super-admin/orgs/${orgId}/storage`, {
+        extraGb: Number(extra || 0),
+        limitGb: limit === "" ? null : Number(limit),
+        recordingDays: days === "" ? null : Number(days),
+        note,
+      });
+      toast.success("Storage updated");
+      onSaved();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not update storage");
+    } finally { setSaving(false); }
+  };
+
+  const cats = Object.entries(storage.byCategory || {}).sort((a, b) => b[1].bytes - a[1].bytes);
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="card overflow-hidden">
+        <div className="px-4 py-3 border-b font-bold text-app text-sm" style={{ borderColor: "var(--app-border)" }}>File storage</div>
+        <div className="p-4 space-y-4">
+          <div>
+            <div className="flex items-baseline justify-between mb-1.5">
+              <p className="text-2xl font-black text-app">{fmtSize(storage.usedBytes)}</p>
+              <p className="text-xs text-app-soft">of {fmtSize(storage.limitBytes)} · {storage.percent}%</p>
+            </div>
+            <Meter pct={storage.percent} danger={storage.full} />
+            <p className="mt-1.5 text-[11px] text-app-soft">
+              Plan allowance {fmtSize(storage.planBaseBytes)}{storage.extraBytes ? ` + ${fmtSize(storage.extraBytes)} extra` : ""} · {storage.files} files
+              {storage.full ? " · uploads blocked" : storage.warn ? " · customer sees the 80% warning" : ""}
+            </p>
+          </div>
+          <div className="space-y-2">
+            {cats.length === 0 && <p className="text-xs text-app-soft">No files stored yet.</p>}
+            {cats.map(([cat, v]) => (
+              <div key={cat} className="flex items-center gap-3 text-xs">
+                <span className="flex-1 text-app">{CATEGORY_LABELS[cat] || cat}</span>
+                <span className="text-app-soft tabular-nums">{v.files} files</span>
+                <span className="font-semibold text-app tabular-nums w-20 text-right">{fmtSize(v.bytes)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="px-4 py-3 border-b font-bold text-app text-sm" style={{ borderColor: "var(--app-border)" }}>Grant more space</div>
+        <div className="p-4 space-y-3">
+          {[
+            { label: "Extra space (GB)", value: extra, set: setExtra, hint: "Added on top of the plan allowance. Sold in 10 GB blocks at about ₹99 a month." },
+            { label: "Replace plan allowance with (GB)", value: limit, set: setLimit, hint: "For a negotiated deal. Leave empty to use the plan's allowance." },
+            { label: "Keep call recordings (days)", value: days, set: setDays, hint: "Leave empty to use the plan's period." },
+          ].map(({ label, value, set, hint }) => (
+            <div key={label}>
+              <label className="text-xs font-semibold text-app">{label}</label>
+              <input className="input mt-1" type="number" min="0" step="any" value={value} onChange={(e) => set(e.target.value)} />
+              <p className="text-[11px] text-app-soft mt-1">{hint}</p>
+            </div>
+          ))}
+          <div>
+            <label className="text-xs font-semibold text-app">Note</label>
+            <input className="input mt-1" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Why this was changed" maxLength={300} />
+          </div>
+          <button onClick={save} disabled={saving} className="btn-primary gap-2 cursor-pointer">
+            {saving ? <Spinner size="sm" /> : <Save className="w-4 h-4" />} Save
+          </button>
+        </div>
+      </div>
+
+      {wa?.connected && (
+        <div className="card p-5 lg:col-span-2">
+          <p className="text-sm font-bold text-app mb-3">WhatsApp activity</p>
+          <WhatsAppFacts wa={wa} />
         </div>
       )}
     </div>

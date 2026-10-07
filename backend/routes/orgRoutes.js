@@ -97,6 +97,18 @@ router.patch("/me/auto-assign", planGate("growth"), authorize("admin", "super_ad
   } catch (err) { next(err); }
 });
 
+// GET /api/org/storage — how much of the file allowance the org has used.
+// Backs the "Used space" card in the sidebar, which only appears from 80%.
+// Readable by any signed-in member, same reasoning as /seats.
+router.get("/storage", async (req, res, next) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("plan storage").lean();
+    if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
+    const { summaryFor } = require("../utils/storageLedger");
+    res.json({ success: true, storage: { ...(await summaryFor(org)), plan: org.plan } });
+  } catch (err) { next(err); }
+});
+
 // GET /api/org/seats — how many members the org may have, and how many it has.
 // Backs the seat meter on the Team page. Deliberately readable by any signed-in
 // member: an agent seeing "6 of 10 seats used" is harmless, and hiding it would

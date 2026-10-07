@@ -111,7 +111,7 @@ const attendanceController = {
       let clockInSelfie = "";
       if (selfie && selfie.startsWith("data:")) {
         try {
-          clockInSelfie = await uploadAttendanceSelfie(selfie, String(req.user._id), date, "in");
+          clockInSelfie = await uploadAttendanceSelfie(selfie, String(req.user._id), date, "in", req.user.orgId);
         } catch (e) {
           console.error("[attendance] selfie upload failed:", e.message);
         }
@@ -180,7 +180,7 @@ const attendanceController = {
       let clockOutSelfie = "";
       if (selfie && selfie.startsWith("data:")) {
         try {
-          clockOutSelfie = await uploadAttendanceSelfie(selfie, String(req.user._id), record.date, "out");
+          clockOutSelfie = await uploadAttendanceSelfie(selfie, String(req.user._id), record.date, "out", req.user.orgId);
         } catch (e) {
           console.error("[attendance] selfie upload failed:", e.message);
         }

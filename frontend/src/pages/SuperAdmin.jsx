@@ -1636,6 +1636,7 @@ export default function SuperAdmin() {
                   <th className="text-center">Users</th>
                   <th className="text-center">Leads</th>
                   <th className="text-center">AI Calls</th>
+                  <th className="text-center">Files</th>
                   <th>Logo</th>
                   <th>Brand Colour</th>
                   <th>Change Plan</th>
@@ -1673,6 +1674,19 @@ export default function SuperAdmin() {
                         {org.aiCallsMonth > 0 && (
                           <p className="text-[10px] text-app-soft">{(org.aiTokensMonth || 0).toLocaleString()} tok</p>
                         )}
+                      </td>
+                      <td className="text-center">
+                        {(() => {
+                          const used = org.fileBytes || 0, lim = org.fileLimitBytes || 0;
+                          const pct = lim ? Math.round((used / lim) * 100) : 0;
+                          const sz = (n) => n >= 1024 ** 3 ? `${(n / 1024 ** 3).toFixed(1)} GB` : n >= 1024 ** 2 ? `${(n / 1024 ** 2).toFixed(0)} MB` : `${Math.round(n / 1024)} KB`;
+                          return (
+                            <>
+                              <span className={`font-bold ${pct >= 100 ? "text-red-500" : pct >= 80 ? "text-amber-500" : "text-app"}`}>{sz(used)}</span>
+                              <p className="text-[10px] text-app-soft">of {sz(lim)} · {pct}%</p>
+                            </>
+                          );
+                        })()}
                       </td>
                       <td>
                         <LogoUploader org={org} onUpdated={handleOrgUpdated} />

@@ -97,7 +97,7 @@ const EXT = {
  * object: re-uploading the same key overwrites, which is what the callers that
  * pass a stable key (org logos, attendance selfies) rely on.
  */
-async function put(key, buffer, contentType, { cacheSeconds = 31536000 } = {}) {
+async function put(key, buffer, contentType, { cacheSeconds = 31536000, orgId } = {}) {
   await client().send(new PutObjectCommand({
     Bucket: process.env.B2_BUCKET,
     Key: key,
@@ -108,6 +108,9 @@ async function put(key, buffer, contentType, { cacheSeconds = 31536000 } = {}) {
     // Only reaches a browser via mediaRoutes, which sets its own copy of this.
     CacheControl: `public, max-age=${cacheSeconds}, immutable`,
   }));
+  // Counted against the owning org's storage. Callers that have no org (blog
+  // images, platform assets) simply do not count.
+  if (orgId) await require("./storageLedger").record(orgId, key, buffer.length);
   return publicUrl(key);
 }
 
@@ -138,6 +141,7 @@ async function putDataUri(key, dataUri, opts) {
 async function remove(key) {
   try {
     await client().send(new DeleteObjectCommand({ Bucket: process.env.B2_BUCKET, Key: key }));
+    await require("./storageLedger").forget(key);
   } catch (err) {
     // Deleting media is never worth failing the request that triggered it.
     logger.warn(`[storage] delete failed for ${key}: ${err.message}`);

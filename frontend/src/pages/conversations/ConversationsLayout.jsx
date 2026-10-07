@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Outlet, NavLink, useLocation } from "react-router-dom";
-import { Mail, FileText, Megaphone, Wallet, Settings as SettingsIcon, ShieldCheck, Sparkles } from "lucide-react";
+import { Mail, FileText, Megaphone, Wallet, Settings as SettingsIcon, ShieldCheck, Sparkles, Lock } from "lucide-react";
+import { canAccess } from "../../utils/plan";
 import api from "../../services/api";
 import WhatsAppSettings from "../../components/WhatsAppSettings";
 import WhatsAppIcon from "../../components/WhatsAppIcon";
@@ -27,13 +28,13 @@ import { useAuth } from "../../context/AuthContext";
 
 const TABS = [
   { to: "/conversations",           label: "Inbox",     icon: Mail, end: true },
-  { to: "/conversations/templates", label: "Templates", icon: FileText },
-  { to: "/conversations/campaigns", label: "Campaigns", icon: Megaphone },
+  { to: "/conversations/templates", label: "Templates", icon: FileText, minPlan: "growth" },
+  { to: "/conversations/campaigns", label: "Campaigns", icon: Megaphone, minPlan: "growth" },
   { to: "/conversations/credits",   label: "Credits",   icon: Wallet },
   // PATCH /whatsapp/settings is admin-only, so a manager opening this would
   // get a 403 on save. Hide rather than tease. Same gate on Agent — it saves
   // through the same endpoint.
-  { to: "/conversations/agent",     label: "AI Agents", icon: Sparkles,     roles: ["admin", "super_admin"] },
+  { to: "/conversations/agent",     label: "AI Agents", icon: Sparkles,     roles: ["admin", "super_admin"], minPlan: "growth" },
   { to: "/conversations/settings",  label: "Settings",  icon: SettingsIcon, roles: ["admin", "super_admin"] },
 ];
 
@@ -44,7 +45,7 @@ const TABS = [
 const PROVIDER_NAME = { meta: "Arthaleads", aisensy: "AiSensy", wati: "Wati", interakt: "Interakt" };
 
 export default function ConversationsLayout() {
-  const { user } = useAuth();
+  const { user, org } = useAuth();
   const location = useLocation();
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
 
@@ -146,7 +147,7 @@ export default function ConversationsLayout() {
       <div className="shrink-0 px-4 sm:px-6 lg:px-8 pt-4" style={{ borderBottom: "1px solid var(--app-border)" }}>
         <div className="flex items-center gap-3">
           <div className="flex gap-1 overflow-x-auto pb-3 flex-1 min-w-0" style={{ scrollbarWidth: "none" }}>
-            {tabs.map(({ to, label, icon: Icon, end }) => (
+            {tabs.map(({ to, label, icon: Icon, end, minPlan }) => (
               <NavLink key={to} to={to} end={end}
                 className="shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-semibold transition"
                 style={({ isActive }) => (isActive
@@ -154,6 +155,9 @@ export default function ConversationsLayout() {
                   : { color: "var(--app-text-soft)" })}>
                 <Icon className="w-4 h-4 shrink-0" />
                 {label}
+                {minPlan && user?.role !== "super_admin" && !canAccess(org, minPlan) && (
+                  <Lock className="w-3 h-3 shrink-0 opacity-70" />
+                )}
                 {to === "/conversations" && unread > 0 && (
                   <span className="text-[10px] font-bold min-w-[20px] px-1.5 py-px rounded-full text-center"
                     style={{ background: "rgba(var(--app-primary-rgb),0.16)", color: "var(--app-primary)" }}>

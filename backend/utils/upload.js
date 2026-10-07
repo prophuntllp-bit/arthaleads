@@ -20,6 +20,7 @@
 
 const crypto = require("crypto");
 const storage = require("./storage");
+const ledger = require("./storageLedger");
 
 /** ?v=<ms> so a re-upload to the same key is a different URL to the browser. */
 const versioned = (url) => `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
@@ -63,7 +64,7 @@ const selfieKey = (userId, date, leg) =>
  */
 async function uploadOrgLogo(dataUri, orgId) {
   const { contentType, buffer } = storage.decodeDataUri(dataUri);
-  const url = await storage.put(orgLogoKey(orgId), buffer, contentType);
+  const url = await storage.put(orgLogoKey(orgId), buffer, contentType, { orgId });
   return versioned(url);
 }
 
@@ -88,9 +89,9 @@ async function uploadBlogImage(dataUri) {
  * @param {string} date    "YYYY-MM-DD"
  * @param {string} leg     "in" | "out"
  */
-async function uploadAttendanceSelfie(dataUri, userId, date, leg) {
+async function uploadAttendanceSelfie(dataUri, userId, date, leg, orgId) {
   const { contentType, buffer } = storage.decodeDataUri(dataUri);
-  const url = await storage.put(selfieKey(userId, date, leg), buffer, contentType);
+  const url = await storage.put(selfieKey(userId, date, leg), buffer, contentType, { orgId });
   return versioned(url);
 }
 
@@ -98,14 +99,14 @@ async function uploadAttendanceSelfie(dataUri, userId, date, leg) {
  * Upload a call recording. `buffer` is raw audio bytes, not a data URI —
  * recordings arrive as files on disk or as buffers, never base64.
  */
-async function uploadCallRecording(buffer, key, contentType = "audio/mpeg") {
+async function uploadCallRecording(buffer, key, contentType = "audio/mpeg", orgId) {
   // Same reasoning as the selfies above: a recording of a customer call must
   // not sit at a URL that can be reached by guessing a call id.
   const dot = key.lastIndexOf(".");
   const stamped = dot > 0
     ? `${key.slice(0, dot)}-${token()}${key.slice(dot)}`
     : `${key}-${token()}`;
-  return storage.put(`arthaleads/recordings/${stamped}`, buffer, contentType);
+  return storage.put(`arthaleads/recordings/${stamped}`, buffer, contentType, { orgId });
 }
 
 /**
@@ -113,20 +114,22 @@ async function uploadCallRecording(buffer, key, contentType = "audio/mpeg") {
  * Returns the public HTTPS URL — this is what the WhatsApp AI agent sends
  * when its Share Brochure permission is on (see whatsappRoutes.js).
  */
-async function uploadProjectBrochure(dataUriOrBuffer, projectId) {
+async function uploadProjectBrochure(dataUriOrBuffer, projectId, orgId) {
   const { contentType, buffer } = Buffer.isBuffer(dataUriOrBuffer)
     ? { contentType: "application/pdf", buffer: dataUriOrBuffer }
     : storage.decodeDataUri(dataUriOrBuffer);
-  const url = await storage.put(projectBrochureKey(projectId), buffer, contentType);
+  if (orgId) await ledger.assertCanStore(orgId, buffer.length, projectBrochureKey(projectId));
+  const url = await storage.put(projectBrochureKey(projectId), buffer, contentType, { orgId });
   return versioned(url);
 }
 
 /** Floor-plan PDF: one per project, re-upload overwrites (same as the brochure). */
-async function uploadProjectFloorPlan(dataUriOrBuffer, projectId) {
+async function uploadProjectFloorPlan(dataUriOrBuffer, projectId, orgId) {
   const { contentType, buffer } = Buffer.isBuffer(dataUriOrBuffer)
     ? { contentType: "application/pdf", buffer: dataUriOrBuffer }
     : storage.decodeDataUri(dataUriOrBuffer);
-  const url = await storage.put(projectFloorPlanKey(projectId), buffer, contentType);
+  if (orgId) await ledger.assertCanStore(orgId, buffer.length, projectFloorPlanKey(projectId));
+  const url = await storage.put(projectFloorPlanKey(projectId), buffer, contentType, { orgId });
   return versioned(url);
 }
 async function deleteProjectFloorPlan(projectId) {
@@ -134,8 +137,9 @@ async function deleteProjectFloorPlan(projectId) {
 }
 
 /** One already-prepared (<=10MB MP4) project video. Own key per upload. */
-async function uploadProjectVideo(buffer, projectId) {
-  return storage.put(projectVideoKey(projectId), buffer, "video/mp4");
+async function uploadProjectVideo(buffer, projectId, orgId) {
+  if (orgId) await ledger.assertCanStore(orgId, buffer.length);
+  return storage.put(projectVideoKey(projectId), buffer, "video/mp4", { orgId });
 }
 async function deleteProjectVideo(url) {
   const key = String(url || "").split("/api/media/")[1];
@@ -156,9 +160,10 @@ async function deleteProjectBrochure(projectId) {
  * real bytes over HTTPS — a base64 data URI stored directly on the project
  * document (the old behaviour) is not fetchable and silently fails to send.
  */
-async function uploadProjectImage(dataUri, projectId) {
+async function uploadProjectImage(dataUri, projectId, orgId) {
   const { contentType, buffer } = storage.decodeDataUri(dataUri);
-  return storage.put(projectImageKey(projectId), buffer, contentType);
+  if (orgId) await ledger.assertCanStore(orgId, buffer.length);
+  return storage.put(projectImageKey(projectId), buffer, contentType, { orgId });
 }
 
 /** Delete one project photo by its stored URL. Never throws — see storage.remove. */

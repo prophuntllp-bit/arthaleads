@@ -1056,6 +1056,17 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
     if (!automation) return rejectUnknownToken(res, "custom webhook", token, LEAD_ROUTE_PLATFORMS);
 
     const orgId = automation.orgId;
+    // The Custom webhook / API and Vistrow Voice are Enterprise features. A
+    // connection that outlived its plan stops delivering rather than quietly
+    // keeping a paid feature running.
+    if (["Custom", "Vistrow Voice"].includes(automation.platform)) {
+      const Organization = require("../models/Organization");
+      const { levelOf } = require("../middlewares/planGate");
+      const owner = await Organization.findById(orgId).select("plan").lean();
+      if (!owner || levelOf(owner.plan) < levelOf("enterprise")) {
+        return res.status(403).json({ success: false, message: "This integration is part of the Enterprise plan." });
+      }
+    }
     // Stamp the lead's source from the matched connection's own platform, so a
     // Vistrow Voice token produces "Vistrow Voice" leads, a WhatsApp token
     // produces "WhatsApp" leads, and anything else falls back to "Custom".

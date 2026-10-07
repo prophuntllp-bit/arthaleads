@@ -394,6 +394,8 @@ const CreditsPage           = lazy(() => import("./pages/conversations/CreditsPa
 const ConversationSettings  = lazy(() => import("./pages/conversations/ConversationSettings"));
 const AgentsPage            = lazy(() => import("./pages/conversations/AgentsPage"));
 const AgentBuilder          = lazy(() => import("./pages/conversations/AgentBuilder"));
+import PlanOnly from "./components/PlanOnly";
+import StorageWarningPopup from "./components/StorageWarningPopup";
 const TemplatesPage         = lazy(() => import("./pages/conversations/TemplatesPage"));
 const TemplateBuilder       = lazy(() => import("./pages/conversations/TemplateBuilder"));
 const CampaignsPage         = lazy(() => import("./pages/conversations/CampaignsPage"));
@@ -637,6 +639,7 @@ function RequireAuth() {
       {!pendingDeletion && isInactive && <OrgInactiveScreen onLogout={handleLogout} />}
       {!pendingDeletion && !isInactive && trialExpired && <TrialExpiredScreen onLogout={handleLogout} />}
       {!pendingDeletion && !isInactive && !trialExpired && needsOnboarding && <OnboardingGate />}
+      {!pendingDeletion && !isInactive && !trialExpired && !needsOnboarding && <StorageWarningPopup />}
     </div>
     </SoftPhoneProvider>
   );
@@ -803,16 +806,16 @@ export default function App() {
             <Route path="/conversations" element={<ConversationsLayout />}>
               <Route index element={<Inbox />} />
               <Route path=":id" element={<Inbox />} />
-              <Route path="templates"      element={<TemplatesPage />} />
-              <Route path="templates/new"  element={<TemplateBuilder />} />
-              <Route path="templates/:id/edit" element={<TemplateBuilder />} />
-              <Route path="campaigns"      element={<CampaignsPage />} />
-              <Route path="campaigns/new"  element={<CampaignBuilder />} />
-              <Route path="campaigns/:id"  element={<CampaignBuilder />} />
+              <Route path="templates"      element={<PlanOnly min="growth" feature="WhatsApp templates"><TemplatesPage /></PlanOnly>} />
+              <Route path="templates/new"  element={<PlanOnly min="growth" feature="WhatsApp templates"><TemplateBuilder /></PlanOnly>} />
+              <Route path="templates/:id/edit" element={<PlanOnly min="growth" feature="WhatsApp templates"><TemplateBuilder /></PlanOnly>} />
+              <Route path="campaigns"      element={<PlanOnly min="growth" feature="WhatsApp campaigns"><CampaignsPage /></PlanOnly>} />
+              <Route path="campaigns/new"  element={<PlanOnly min="growth" feature="WhatsApp campaigns"><CampaignBuilder /></PlanOnly>} />
+              <Route path="campaigns/:id"  element={<PlanOnly min="growth" feature="WhatsApp campaigns"><CampaignBuilder /></PlanOnly>} />
               <Route path="credits"  element={<CreditsPage />} />
-              <Route path="agent"      element={<AgentsPage />} />
-              <Route path="agent/new"  element={<AgentBuilder />} />
-              <Route path="agent/:id"  element={<AgentBuilder />} />
+              <Route path="agent"      element={<PlanOnly min="growth" feature="The WhatsApp AI agent"><AgentsPage /></PlanOnly>} />
+              <Route path="agent/new"  element={<PlanOnly min="growth" feature="The WhatsApp AI agent"><AgentBuilder /></PlanOnly>} />
+              <Route path="agent/:id"  element={<PlanOnly min="growth" feature="The WhatsApp AI agent"><AgentBuilder /></PlanOnly>} />
               <Route path="settings" element={<ConversationSettings />} />
             </Route>
             <Route path="/calls"          element={<Calls />} />

@@ -37,8 +37,10 @@ router.post("/facebook/verify-system-token",    automationController.verifySyste
 router.get("/website/token", automationController.getWebsiteToken);
 router.post("/website/create", automationController.createWebsiteConnection);
 
+// Vistrow Voice and the Custom webhook / API are Enterprise features. Reading the
+// list stays open so an org that dropped a plan can still see what it had.
 router.get("/voice/connections", automationController.getVoiceConnections);
-router.post("/voice/create", automationController.createVoiceConnection);
+router.post("/voice/create", planGate("enterprise"), automationController.createVoiceConnection);
 
 // Google Ads is sold as an Enterprise feature; Facebook, WhatsApp and the
 // website plugin above stay available on every plan, per the Starter tier.
@@ -57,12 +59,31 @@ router.post("/facebook/resubscribe", automationController.resubscribeFacebook);
 router.post("/facebook/:id/form-labels", automationController.addFormLabel);
 router.delete("/facebook/:id/form-labels/:formId", automationController.removeFormLabel);
 
+// Custom and Vistrow Voice connections are Enterprise. The platform is read from
+// the request on create and from the stored connection on update.
+const ENTERPRISE_PLATFORMS = ["Custom", "Vistrow Voice"];
+const enterpriseOnlyPlatform = (platformOf) => async (req, res, next) => {
+  try {
+    const platform = await platformOf(req);
+    if (!ENTERPRISE_PLATFORMS.includes(platform)) return next();
+    return planGate("enterprise")(req, res, next);
+  } catch (err) { next(err); }
+};
+
 router.route("/")
   .get(automationController.list)
-  .post(validate(createAutomationSchema), automationController.create);
+  .post(
+    enterpriseOnlyPlatform((req) => req.body?.platform),
+    validate(createAutomationSchema),
+    automationController.create
+  );
 
 router.route("/:id")
-  .patch(validate(updateAutomationSchema), automationController.update)
+  .patch(
+    enterpriseOnlyPlatform(async (req) => (await require("../models/Automation").findOne({ _id: req.params.id, orgId: req.user.orgId }).select("platform").lean())?.platform),
+    validate(updateAutomationSchema),
+    automationController.update
+  )
   .delete(automationController.remove);
 
 // POST /api/automations/facebook/refresh-tokens

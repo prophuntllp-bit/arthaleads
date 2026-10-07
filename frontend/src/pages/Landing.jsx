@@ -1082,6 +1082,9 @@ function Pricing({ isDark }) {
             "Facebook Lead Ads auto-import",
             "WhatsApp capture",
             "Website / WordPress plugin",
+            "WhatsApp Inbox with manual replies",
+            "2 projects",
+            "2 GB file storage, call recordings kept 30 days",
           ],
         },
         {
@@ -1104,7 +1107,10 @@ function Pricing({ isDark }) {
         {
           label: "Everything in Starter, plus",
           items: [
-            "Multiple project pipelines",
+            "Unlimited projects",
+            "WhatsApp AI agent",
+            "WhatsApp templates and campaigns",
+            "15 GB file storage, call recordings kept 90 days",
             "Duplicate lead detection",
             "Auto round-robin lead assignment",
             "Bulk lead export",
@@ -1147,6 +1153,9 @@ function Pricing({ isDark }) {
           items: [
             "Google Ads integration",
             "Custom webhook & API access",
+            "WhatsApp button flow for click-to-WhatsApp ads",
+            "Vistrow Voice AI calling",
+            "100 GB file storage (more on request), call recordings kept 1 year",
             "Multi-org management",
             "Advanced automation management",
           ],

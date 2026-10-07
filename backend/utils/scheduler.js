@@ -299,6 +299,18 @@ cron.schedule("30 23 * * *", () => {
     .catch((err) => logger.error(`[billing] expiry sweep failed: ${err.message}`));
 });
 
+// ── Daily 9:30 AM IST (UTC 04:00): warn admins whose file space is at 80% or full ──
+cron.schedule("0 4 * * *", () => {
+  require("../services/storageAlerts").sweep()
+    .catch((err) => logger.error(`[storage] alert sweep failed: ${err.message}`));
+});
+
+// ── Daily 3 AM IST (UTC 21:30): remove call recordings past their plan's retention ──
+cron.schedule("30 21 * * *", () => {
+  require("../services/recordingRetention").purgeExpiredRecordings()
+    .catch((err) => logger.error(`[storage] recording retention failed: ${err.message}`));
+});
+
 module.exports = { runDailyReminder, runUpcomingReminder, runTaskReminder, runBackup, refreshFacebookTokens };
 
 // ── Every 5 minutes: follow-up nudges for people who stopped mid-way through

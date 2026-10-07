@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import api from "../../services/api";
 import CustomSelect from "../../components/CustomSelect";
+import { useAuth } from "../../context/AuthContext";
+import { canAccess } from "../../utils/plan";
 import toast from "react-hot-toast";
 
 /**
@@ -259,6 +261,9 @@ const PRESET_MENU_OPTIONS = [
 export default function AgentBuilder() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { org, user } = useAuth();
+  // The button flow is an Enterprise feature; the server refuses it below that.
+  const flowAllowed = user?.role === "super_admin" || canAccess(org, "enterprise");
   const isNew = !id || id === "new";
 
   const [loading, setLoading] = useState(!isNew);
@@ -705,11 +710,12 @@ export default function AgentBuilder() {
                 <h3 className="text-base font-bold text-app">CTWA button flow</h3>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
                   style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>
-                  <Lock className="w-2.5 h-2.5" /> Growth+
+                  <Lock className="w-2.5 h-2.5" /> Enterprise
                 </span>
               </div>
-              <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
-                <input type="checkbox" checked={form.ctwaFlow.enabled}
+              <label className="inline-flex items-center gap-2 shrink-0" style={{ cursor: flowAllowed ? "pointer" : "not-allowed", opacity: flowAllowed ? 1 : 0.55 }}
+                title={flowAllowed ? undefined : "The button flow is part of the Enterprise plan"}>
+                <input type="checkbox" checked={form.ctwaFlow.enabled} disabled={!flowAllowed}
                   onChange={(e) => setFlow({ enabled: e.target.checked })} />
                 <span className="text-xs font-semibold text-app">{form.ctwaFlow.enabled ? "On" : "Off"}</span>
               </label>

@@ -669,7 +669,8 @@ async function handleInbound(org, parsed) {
     // predating this setting (the webhook reads it with .lean(), which skips
     // Mongoose defaults) produced a thread with the bot ON but status "open",
     // invisible under the Bot filter while the bot was actively replying to it.
-    const botOn = org.whatsapp?.botEnabled ?? true;
+    // The AI agent is a Growth feature: below it, every thread is a human's.
+    const botOn = (org.whatsapp?.botEnabled ?? true) && levelOf(org.plan) >= levelOf("growth");
     conv = await WaConversation.create({
       orgId: org._id, leadId: lead?._id || null,
       contactPhone: phone, contactName: lead?.name || name,
@@ -830,6 +831,10 @@ async function respondAsBotNow(org, conv, { interactiveId, msgText, isNewConvers
     });
     if (alreadyAnswered) return;
   }
+  // The AI agent is a Growth feature. An org that dropped below it (a lapsed
+  // plan) keeps its Inbox, and its team answers by hand.
+  if (levelOf(org.plan) < levelOf("growth")) return;
+
   // Someone pitching their own services (agency, freelancer) is not a buyer.
   // Checked before any flow step or model call so no tokens or WhatsApp
   // credits are spent on them.
@@ -858,12 +863,14 @@ async function respondAsBotNow(org, conv, { interactiveId, msgText, isNewConvers
   // Mid-flow: the customer's tap (or free-typed message, which exits the
   // flow rather than dead-ending) is handled entirely by ctwaFlowService —
   // never falls through to the greeting/GPT path below for this message.
-  if (conv.flowState?.step) {
+  // The button flow is Enterprise only; below that the agent answers in free text.
+  const flowAllowed = levelOf(org.plan) >= levelOf("enterprise");
+  if (flowAllowed && conv.flowState?.step) {
     const handled = await ctwaFlow.advanceFlow(org, agent, conv, { interactiveId, msgText, inboundAt });
     if (handled) return;
     // advanceFlow already cleared flowState on a no-match — fall through to
     // the normal reply below so this message still gets answered.
-  } else if (ctwaFlow.shouldStartFlow(agent, conv, { isNewConversation })) {
+  } else if (flowAllowed && !conv.flowState?.step && ctwaFlow.shouldStartFlow(agent, conv, { isNewConversation })) {
     await ctwaFlow.startFlow(org, agent, conv);
     return;
   }
@@ -2033,6 +2040,11 @@ router.post("/meta-webhook", async (req, res) => {
 // ── All routes below require authentication ───────────────────────────────────
 router.use(protect);
 
+// The Inbox and manual replies are on every plan. The AI agent, templates and
+// campaigns are Growth and above; the scripted button flow is Enterprise
+// (checked where it is turned on, and again where it runs).
+router.use(["/agents", "/templates", "/campaigns", "/send-template"], planGate("growth"));
+
 // Lightweight connection check any signed-in member can call. /settings is
 // admin/manager-only and carries configuration, so using it to decide whether
 // to show the inbox locked agents out completely: their 403 read as not
@@ -2412,14 +2424,14 @@ function sanitizeCtwaFlow(input) {
   return clean;
 }
 
-// The scripted CTWA flow is a paid feature (Growth+) — same tier the Projects
-// feature is already gated at. Checked here rather than with router.use(planGate(...))
-// because it's conditional on what's actually being turned on, not the whole route.
+// The scripted CTWA button flow is an Enterprise feature. Checked here rather
+// than with router.use(planGate(...)) because it's conditional on what's
+// actually being turned on, not the whole route.
 function assertCtwaFlowAllowed(req, fields) {
   if (!fields.ctwaFlow?.enabled) return;
   if (req.user?.role === "super_admin") return;
-  if (levelOf(req.org?.plan) >= levelOf("growth")) return;
-  const e = new Error("The CTWA button flow needs a Growth plan or higher. Upgrade to turn it on.");
+  if (levelOf(req.org?.plan) >= levelOf("enterprise")) return;
+  const e = new Error("The CTWA button flow is part of the Enterprise plan. Upgrade to turn it on.");
   e.status = 403; throw e;
 }
 

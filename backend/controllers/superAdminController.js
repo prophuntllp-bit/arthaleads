@@ -9,6 +9,13 @@ const Automation  = require("../models/Automation");
 const Ticket      = require("../models/Ticket");
 const AuditLog    = require("../models/AuditLog");
 const AiUsage     = require("../models/AiUsage");
+const StorageObject   = require("../models/StorageObject");
+const WaAgent         = require("../models/WaAgent");
+const WaConversation  = require("../models/WaConversation");
+const WaMessage       = require("../models/WaMessage");
+const { summaryFor }  = require("../utils/storageLedger");
+const { storageFor, storageLimitBytes, STARTER_PROJECT_CAP, GB } = require("../constants/plans");
+const { seatLimitFor } = require("../constants/planPricing");
 const { AppError } = require("../middlewares/errorHandler");
 const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 const { sendSignupApprovedEmail, sendSignupRejectedEmail } = require("../utils/email");
@@ -55,7 +62,7 @@ const superAdminController = {
 
       // Attach user count + lead count + current-month AI usage per org
       const currentMonth = new Date().toISOString().slice(0, 7);
-      const [userCounts, leadCounts, aiUsageDocs] = await Promise.all([
+      const [userCounts, leadCounts, aiUsageDocs, storageRows] = await Promise.all([
         User.aggregate([
           { $group: { _id: "$orgId", count: { $sum: 1 } } },
         ]),
@@ -64,7 +71,9 @@ const superAdminController = {
           { $group: { _id: "$orgId", count: { $sum: 1 } } },
         ]),
         AiUsage.find({ month: currentMonth }).select("orgId calls totalTokens").lean(),
+        StorageObject.aggregate([{ $group: { _id: "$orgId", bytes: { $sum: "$bytes" } } }]),
       ]);
+      const fileMap = Object.fromEntries(storageRows.map((r) => [String(r._id), r.bytes]));
 
       const userMap    = Object.fromEntries(userCounts.map((u) => [String(u._id), u.count]));
       const leadMap    = Object.fromEntries(leadCounts.map((l) => [String(l._id), l.count]));
@@ -77,6 +86,8 @@ const superAdminController = {
         trialExpired: trialStatus(org) === "expired",
         aiCallsMonth: aiUsageMap[String(org._id)]?.calls       || 0,
         aiTokensMonth: aiUsageMap[String(org._id)]?.totalTokens || 0,
+        fileBytes:     fileMap[String(org._id)] || 0,
+        fileLimitBytes: storageLimitBytes(org),
         // Same helper the customer-facing banner uses, so the admin panel and
         // the org see identical billing state rather than two calculations.
         subscription: subscriptionState(org),
@@ -587,7 +598,7 @@ const superAdminController = {
     try {
       const orgId = new mongoose.Types.ObjectId(req.params.id);
 
-      const [org, users, leadStats, projectCount, automations, leadSizeAgg, userSizeAgg, aiUsageHistory] = await Promise.all([
+      const [org, users, leadStats, projectCount, automations, leadSizeAgg, userSizeAgg, aiUsageHistory, wa] = await Promise.all([
         Organization.findById(orgId).lean(),
         User.find({ orgId }).select("name email role phone isActive lastLogin createdAt avatar").lean(),
         Lead.aggregate([
@@ -595,7 +606,7 @@ const superAdminController = {
           { $group: { _id: "$status", count: { $sum: 1 } } },
         ]),
         Project.countDocuments({ orgId }),
-        Automation.find({ orgId }).select("platform status pageId pageName createdAt updatedAt").lean(),
+        Automation.find({ orgId }).select("platform name status isActive mode pageId pageName createdAt updatedAt").lean(),
         Lead.aggregate([
           { $match: { orgId } },
           { $project: { s: { $bsonSize: "$$ROOT" } } },
@@ -607,9 +618,28 @@ const superAdminController = {
           { $group: { _id: null, total: { $sum: "$s" } } },
         ]).catch(() => []),
         AiUsage.find({ orgId }).sort({ month: -1 }).limit(6).lean().catch(() => []),
+        (async () => {
+          const since = new Date(Date.now() - 30 * 86400000);
+          const [agentsActive, agentsTotal, ctwaAgents, convos30, msgsIn30, msgsOut30, botMsgs30, convosTotal] = await Promise.all([
+            WaAgent.countDocuments({ orgId, status: "active" }),
+            WaAgent.countDocuments({ orgId }),
+            WaAgent.countDocuments({ orgId, "ctwaFlow.enabled": true }),
+            WaConversation.countDocuments({ orgId, createdAt: { $gte: since } }),
+            WaMessage.countDocuments({ orgId, direction: "inbound", timestamp: { $gte: since } }),
+            WaMessage.countDocuments({ orgId, direction: "outbound", timestamp: { $gte: since } }),
+            WaMessage.countDocuments({ orgId, direction: "outbound", sender: "bot", timestamp: { $gte: since } }),
+            WaConversation.countDocuments({ orgId }),
+          ]);
+          return { agentsActive, agentsTotal, ctwaAgents, convos30, msgsIn30, msgsOut30, botMsgs30, convosTotal };
+        })().catch(() => null),
       ]);
 
       if (!org) return next(new AppError("Organisation not found", 404));
+
+      const storage = await summaryFor(org);
+      const base = org.storage?.limitBytes ?? storageFor(org.plan).bytes;
+      const seatLimit = seatLimitFor(org.plan, org.seats);
+      const activeUsers = users.filter((u) => u.isActive).length;
 
       const totalLeads   = leadStats.reduce((s, g) => s + g.count, 0);
       const leadByStatus = leadStats.reduce((acc, s) => { acc[s._id] = s.count; return acc; }, {});
@@ -628,10 +658,71 @@ const superAdminController = {
         automations,
         storageBytes,
         aiUsage: aiUsageHistory,
+        // Files (photos, PDFs, videos, recordings) against the plan's allowance.
+        // `storageBytes` above is the database footprint, a different thing.
+        storage: {
+          ...storage,
+          planBaseBytes: base,
+          recordingDays: org.storage?.recordingDays ?? storageFor(org.plan).recordingDays,
+          note: org.storage?.note || "",
+        },
+        limits: {
+          seats:    { used: activeUsers, limit: seatLimit },
+          projects: { used: projectCount, limit: org.plan === "starter" ? STARTER_PROJECT_CAP : null },
+        },
+        whatsapp: {
+          connected: Boolean(org.whatsapp?.enabled),
+          provider: org.whatsapp?.provider || "",
+          botEnabled: org.whatsapp?.botEnabled ?? true,
+          creditsPaise: org.credits?.balancePaise || 0,
+          creditsReservedPaise: org.credits?.reservedPaise || 0,
+          ...(wa || {}),
+        },
       });
     } catch (err) {
       next(err);
     }
+  },
+
+  // PATCH /api/super-admin/orgs/:id/storage — grant extra file space, set a negotiated
+  // limit or retention. Body (all optional): extraGb, limitGb (null clears), recordingDays (null clears), note.
+  async updateStorage(req, res, next) {
+    try {
+      const { extraGb, limitGb, recordingDays, note } = req.body || {};
+      const set = {}, unset = {};
+      if (extraGb !== undefined) {
+        const n = Number(extraGb);
+        if (!Number.isFinite(n) || n < 0 || n > 100000) return next(new AppError("Extra storage must be between 0 and 100000 GB", 400));
+        set["storage.extraBytes"] = Math.round(n * GB);
+      }
+      if (limitGb !== undefined) {
+        if (limitGb === null || limitGb === "") unset["storage.limitBytes"] = "";
+        else {
+          const n = Number(limitGb);
+          if (!Number.isFinite(n) || n < 0 || n > 100000) return next(new AppError("Storage limit must be between 0 and 100000 GB", 400));
+          set["storage.limitBytes"] = Math.round(n * GB);
+        }
+      }
+      if (recordingDays !== undefined) {
+        if (recordingDays === null || recordingDays === "") unset["storage.recordingDays"] = "";
+        else {
+          const n = Math.round(Number(recordingDays));
+          if (!Number.isFinite(n) || n < 1 || n > 3650) return next(new AppError("Recording retention must be 1 to 3650 days", 400));
+          set["storage.recordingDays"] = n;
+        }
+      }
+      if (note !== undefined) set["storage.note"] = String(note).slice(0, 300);
+      const update = {};
+      if (Object.keys(set).length) update.$set = set;
+      if (Object.keys(unset).length) update.$unset = unset;
+      if (!Object.keys(update).length) return next(new AppError("Nothing to change", 400));
+
+      const org = await Organization.findByIdAndUpdate(req.params.id, update, { new: true }).select("name plan storage").lean();
+      if (!org) return next(new AppError("Organisation not found", 404));
+      invalidateOrgCache(req.params.id);
+      await logAudit("storage_updated", req, { targetOrg: org._id, targetOrgName: org.name, details: { extraGb, limitGb, recordingDays, note } });
+      res.json({ success: true, storage: await summaryFor(org) });
+    } catch (err) { next(err); }
   },
 
   // POST /api/super-admin/orgs/:id/impersonate — issue a 2-hour JWT for the org's admin

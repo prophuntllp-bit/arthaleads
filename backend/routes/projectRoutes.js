@@ -3,13 +3,10 @@ const express = require("express");
 const router = express.Router();
 const projectController = require("../controllers/projectController");
 const { protect, authorize } = require("../middlewares/auth");
-const { planGate } = require("../middlewares/planGate");
 
-// Project pipelines are a Growth feature ("Multiple project pipelines").
-// Leads do not depend on a project, so a Starter org keeps the full lead
-// workflow; the callers that fetch projects for a dropdown already swallow the
-// failure and render an empty list.
-router.use(protect, planGate("growth"));
+// Every plan has projects. Starter is capped at two (see projectService.create);
+// Growth and above are unlimited.
+router.use(protect);
 
 const ProjectLead = require("../models/ProjectLead");
 const Project     = require("../models/Project");
@@ -96,14 +93,14 @@ function pdfUploadHandler(field, uploadFn) {
         if (err instanceof PdfError) return res.status(err.statusCode).json({ success: false, message: err.message });
         throw err;
       }
-      project[field] = await uploadFn(prepared.buffer, project._id.toString());
+      project[field] = await uploadFn(prepared.buffer, project._id.toString(), String(req.user.orgId));
       await project.save();
       res.json({ success: true, [field]: project[field], compressed: prepared.compressed, originalBytes: prepared.originalBytes, sizeBytes: prepared.sizeBytes });
     } catch (err) { next(err); }
   };
 }
 router.post("/:id/brochure", authorize("admin", "manager"), rawPdf,
-  pdfUploadHandler("brochureUrl", (buf, id) => require("../utils/upload").uploadProjectBrochure(buf, id)));
+  pdfUploadHandler("brochureUrl", (buf, id, orgId) => require("../utils/upload").uploadProjectBrochure(buf, id, orgId)));
 
 router.delete("/:id/brochure", authorize("admin", "manager"), async (req, res, next) => {
   try {
@@ -119,7 +116,7 @@ router.delete("/:id/brochure", authorize("admin", "manager"), async (req, res, n
 
 // Floor plan: same shape and limits as the brochure — a single PDF sent to customers.
 router.post("/:id/floorplan", authorize("admin", "manager"), rawPdf,
-  pdfUploadHandler("floorPlanUrl", (buf, id) => require("../utils/upload").uploadProjectFloorPlan(buf, id)));
+  pdfUploadHandler("floorPlanUrl", (buf, id, orgId) => require("../utils/upload").uploadProjectFloorPlan(buf, id, orgId)));
 
 router.delete("/:id/floorplan", authorize("admin", "manager"), async (req, res, next) => {
   try {
@@ -156,7 +153,7 @@ router.post("/:id/videos", authorize("admin", "manager"),
         throw err;
       }
       const { uploadProjectVideo } = require("../utils/upload");
-      const url = await uploadProjectVideo(prepared.buffer, project._id.toString());
+      const url = await uploadProjectVideo(prepared.buffer, project._id.toString(), String(req.user.orgId));
       project.videos.push({ url, sizeBytes: prepared.sizeBytes, durationSec: Math.round(prepared.durationSec) });
       await project.save();
       res.json({

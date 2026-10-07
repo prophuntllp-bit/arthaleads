@@ -45,6 +45,19 @@ const orgSchema = new mongoose.Schema(
     lapsedAt: { type: Date },
     isActive: { type: Boolean, default: true },
 
+    // Storage allowance adjustments. The plan decides the base (constants/plans.js);
+    // extraBytes is space the customer bought or the super admin granted, and
+    // limitBytes (optional) replaces the plan's base for a negotiated deal.
+    storage: {
+      extraBytes: { type: Number, default: 0, min: 0 },
+      limitBytes: { type: Number, min: 0 },
+      // Overrides how long call recordings are kept (days) for a negotiated deal.
+      recordingDays: { type: Number, min: 1 },
+      note:       { type: String, trim: true, default: "" },
+      // Highest warning already sent (0, 80 or 100). See services/storageAlerts.js.
+      alertLevel: { type: Number, default: 0 },
+    },
+
     // Set when the organisation's last admin deletes their account. Access is
     // frozen immediately and the purge runs once this date passes -- see
     // services/accountDeletionService.js. Signing back in before then clears

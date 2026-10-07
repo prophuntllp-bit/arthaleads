@@ -96,3 +96,15 @@ export function upgradeTarget(plan) {
   if (planLevel(plan) === 2) return "Enterprise"; // growth/pro -> Enterprise
   return null;                                     // enterprise -> nothing higher
 }
+
+// File storage allowance per plan (GB). Mirrors backend constants/plans.js; the
+// server is what enforces it and what the sidebar card reads.
+export const PLAN_STORAGE_GB = { trial: 1, starter: 2, growth: 15, pro: 15, enterprise: 100 };
+
+export function formatBytes(n) {
+  const b = Number(n) || 0;
+  if (b >= 1024 ** 3) return `${(b / 1024 ** 3).toFixed(b >= 10 * 1024 ** 3 ? 0 : 1)} GB`;
+  if (b >= 1024 ** 2) return `${(b / 1024 ** 2).toFixed(b >= 100 * 1024 ** 2 ? 0 : 1)} MB`;
+  if (b >= 1024) return `${Math.round(b / 1024)} KB`;
+  return `${b} B`;
+}

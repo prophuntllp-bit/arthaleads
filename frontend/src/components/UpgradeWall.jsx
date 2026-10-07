@@ -3,9 +3,11 @@ import { Link } from "react-router-dom";
 import { Lock } from "lucide-react";
 import { upgradeTarget, planLabel } from "../utils/plan";
 
-export default function UpgradeWall({ org, feature, description }) {
+export default function UpgradeWall({ org, feature, description, needs }) {
   const current = planLabel(org?.plan);
-  const next    = upgradeTarget(org?.plan);
+  // `needs` names the plan the feature actually starts at, which can be further
+  // up than the next step (Enterprise features on a Starter plan).
+  const next    = needs ? planLabel(needs) : upgradeTarget(org?.plan);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
@@ -22,7 +24,7 @@ export default function UpgradeWall({ org, feature, description }) {
         Upgrade to <strong className="text-[#ff6b00]">{next}</strong> to unlock it.
       </p>
       <div className="flex items-center gap-3">
-        <Link to="/#pricing"
+        <Link to="/plans"
           className="px-6 py-2.5 rounded-xl bg-[#ff6b00] text-white font-semibold text-sm hover:bg-[#e05f00] transition-colors">
           View Plans
         </Link>

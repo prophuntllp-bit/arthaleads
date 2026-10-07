@@ -3,9 +3,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   CheckCircle2, ChevronRight, Copy, ExternalLink, Globe2,
-  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook, Download, RefreshCw, ShieldCheck, AlertTriangle, Mic, Phone,
+  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook, Download, RefreshCw, ShieldCheck, AlertTriangle, Mic, Phone, Lock,
 } from "lucide-react";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import { canAccess } from "../utils/plan";
 import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 import WhatsAppIcon from "../components/WhatsAppIcon";
@@ -1820,9 +1822,14 @@ function FormLabelsEditor({ item, onUpdated }) {
 }
 
 /* ─── Main Automation page ─────────────────────────────────────────────────── */
+// Google Ads, Vistrow Voice and the Custom webhook / API are Enterprise features.
+const ENTERPRISE_SOURCES = ["Google", "Vistrow Voice", "Custom"];
+
 export default function Automation() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { org, user: authUser } = useAuth();
+  const enterpriseOk = authUser?.role === "super_admin" || canAccess(org, "enterprise");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -2097,13 +2104,17 @@ export default function Automation() {
               const Icon = preset.icon;
               const isWebsiteForm = platform === "Website Form";
               const isVistrowVoice = platform === "Vistrow Voice";
+              const locked = ENTERPRISE_SOURCES.includes(platform) && !enterpriseOk;
               return (
                 <button
                   key={platform}
                   type="button"
                   className="card p-5 text-left transition hover:-translate-y-1 hover:border-orange-500/30"
                   onClick={() => {
-                    if (isWebsiteForm) {
+                    if (locked) {
+                      toast(`${preset.label || platform} is part of the Enterprise plan.`, { icon: "🔒" });
+                      navigate("/plans");
+                    } else if (isWebsiteForm) {
                       setWpWizardOpen(true);
                     } else if (platform === "Vistrow Voice") {
                       setVoiceWizardOpen(true);
@@ -2118,7 +2129,15 @@ export default function Automation() {
                   <div className={`flex h-12 w-12 items-center justify-center rounded-2xl overflow-hidden ${isWebsiteForm ? "bg-[#21759b]" : isVistrowVoice ? "" : preset.tone}`}>
                     {isWebsiteForm ? <WordPressIcon /> : isVistrowVoice ? <VistrowVoiceIcon size={48} /> : <Icon className="h-5 w-5" />}
                   </div>
-                  <h3 className="mt-4 text-base font-semibold text-app">{preset.label || platform}</h3>
+                  <h3 className="mt-4 flex items-center gap-2 text-base font-semibold text-app">
+                    {preset.label || platform}
+                    {locked && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>
+                        <Lock className="h-2.5 w-2.5" /> Enterprise
+                      </span>
+                    )}
+                  </h3>
                   <p className="mt-1 text-xs text-app-soft">{preset.description.split(".")[0]}</p>
                 </button>
               );

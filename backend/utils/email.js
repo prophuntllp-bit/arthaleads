@@ -374,7 +374,39 @@ WhatsApp credits are billed separately from your Arthaleads subscription.
   });
 }
 
+// ── File space at 80% / full ──────────────────────────────────────────────────
+async function sendStorageWarningEmail(toEmail, toName, { orgName, percent, full, usedBytes, limitBytes }) {
+  const url = `${SITE_URL}/plans`;
+  const name = toName || "there";
+  const gb = (b) => (b / 1024 ** 3).toFixed(1) + " GB";
+  return send({
+    to: toEmail,
+    subject: full ? `File space is full — ${orgName}` : `You've used ${percent}% of your file space — ${orgName}`,
+    html: layout({
+      preheader: full ? "New uploads are blocked until you free space." : `${gb(usedBytes)} of ${gb(limitBytes)} used.`,
+      eyebrow: "File space",
+      title: full ? "Your file space is full" : "Your file space is almost full",
+      bodyHtml: `
+        ${paragraph(`Hi ${esc(name)}, ${esc(orgName)} has used ${strong(gb(usedBytes) + " of " + gb(limitBytes))} (${percent}%) of its space for project photos, brochures, videos and call recordings.`)}
+        ${paragraph(full
+          ? "New uploads are blocked until you remove some files or add more space. Your leads and everything already stored are untouched."
+          : "Nothing is blocked yet. Once it is full, new uploads stop until you remove some files or add more space.")}
+        ${button(url, "See your plan")}
+      `,
+    }),
+    text: `Hi ${name},
+
+${orgName} has used ${gb(usedBytes)} of ${gb(limitBytes)} (${percent}%) of its file space.
+${full ? "New uploads are blocked until you free space or add more." : "Nothing is blocked yet. Once it is full, new uploads stop."}
+
+${url}
+
+— Arthaleads`,
+  });
+}
+
 module.exports = {
+  sendStorageWarningEmail,
   sendPasswordResetEmail,
   sendGoogleOnlyAccountEmail,
   sendWelcomeEmail,

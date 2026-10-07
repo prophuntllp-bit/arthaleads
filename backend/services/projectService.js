@@ -14,7 +14,8 @@ function escapeRegex(str) {
 
 const Organization = require("../models/Organization");
 const { levelOf } = require("../middlewares/planGate");
-const { uploadProjectImage } = require("../utils/upload");
+const { uploadProjectImage, deleteProjectImage } = require("../utils/upload");
+const { STARTER_PROJECT_CAP } = require("../constants/plans");
 
 // The images picked in the project form arrive as base64 data URIs (the
 // browser compresses each to a small JPEG thumbnail before sending). Storing
@@ -23,10 +24,10 @@ const { uploadProjectImage } = require("../utils/upload");
 // tries to send a photo (`link` must resolve over HTTPS). So every data URI
 // gets uploaded to B2 here and replaced with the real URL before saving;
 // anything already a URL (pasted by hand) passes through untouched.
-async function migrateImages(images, projectId) {
+async function migrateImages(images, projectId, orgId) {
   if (!Array.isArray(images) || !images.length) return images;
   return Promise.all(images.map((img) =>
-    typeof img === "string" && img.startsWith("data:") ? uploadProjectImage(img, projectId) : img
+    typeof img === "string" && img.startsWith("data:") ? uploadProjectImage(img, projectId, String(orgId)) : img
   ));
 }
 
@@ -39,14 +40,14 @@ function sanitizeAdvisorId(data) {
 
 const projectService = {
   async create(data, user) {
-    // Starter plan: limit to 1 project
+    // Starter plan: limited to STARTER_PROJECT_CAP projects
     if (user.role !== "super_admin") {
       const org = await Organization.findById(user.orgId).select("plan").lean();
       if (org && levelOf(org.plan) === 1) {
         const count = await Project.countDocuments({ orgId: user.orgId, isArchived: { $ne: true } });
-        if (count >= 1) {
+        if (count >= STARTER_PROJECT_CAP) {
           throw new AppError(
-            "Starter plan is limited to 1 project. Upgrade to Growth to create multiple projects.",
+            `Starter plan includes ${STARTER_PROJECT_CAP} projects. Upgrade to Growth to create more.`,
             403
           );
         }
@@ -55,7 +56,7 @@ const projectService = {
     const { images, ...rest } = sanitizeAdvisorId(data);
     const project = await Project.create({ ...rest, createdBy: user._id, orgId: user.orgId });
     if (images?.length) {
-      project.images = await migrateImages(images, project._id.toString());
+      project.images = await migrateImages(images, project._id.toString(), user.orgId);
       await project.save();
     }
     return project;
@@ -111,13 +112,22 @@ const projectService = {
 
   async update(id, data, user) {
     let payload = sanitizeAdvisorId(data);
-    if (payload.images?.length) payload = { ...payload, images: await migrateImages(payload.images, id) };
+    const before = payload.images ? await Project.findOne({ _id: id, orgId: user.orgId }).select("images").lean() : null;
+    if (payload.images?.length) payload = { ...payload, images: await migrateImages(payload.images, id, user.orgId) };
     const project = await Project.findOneAndUpdate(
       { _id: id, isArchived: { $ne: true }, orgId: user.orgId },
       payload,
       { new: true, runValidators: true }
     ).populate("advisorId", "name phone");
     if (!project) throw new AppError("Project not found", 404);
+    // Photos taken off the project are deleted from storage, so they stop
+    // counting against the org's space.
+    if (before?.images?.length) {
+      const kept = new Set((project.images || []).map(String));
+      for (const url of before.images) {
+        if (typeof url === "string" && url.includes("/api/media/") && !kept.has(url)) deleteProjectImage(url).catch(() => {});
+      }
+    }
     return project;
   },
 
