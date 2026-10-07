@@ -7,6 +7,7 @@ import ProjectForm from "../components/ProjectForm";
 import LeadForm from "../components/LeadForm";
 import LeadDetail from "../components/LeadDetail";
 import TransferModal from "../components/TransferModal";
+import ProjectDumpLeads from "../components/ProjectDumpLeads";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { useColumnResize, RTh } from "../hooks/useColumnResize";
@@ -21,7 +22,7 @@ import DateTimePicker from "../components/DateTimePicker";
 import CustomSelect from "../components/CustomSelect";
 import {
   ArrowLeft, ArrowRightLeft, Building2, Calendar, ChevronDown, ChevronLeft, ChevronRight,
-  Download, FileSpreadsheet, FileText, ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users, X as XIcon,
+  Archive, Download, FileSpreadsheet, FileText, ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users, X as XIcon,
 } from "lucide-react";
 
 // Tap to reveal full name; default shows first name only
@@ -441,6 +442,14 @@ export default function ProjectDetail() {
   // Transfer modal
   const [transferTarget, setTransferTarget] = useState(null); // lead object to transfer
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showDump, setShowDump] = useState(false);
+  const [dumpCount, setDumpCount] = useState(null);
+  // Count for the Dump Leads button; refreshed when leads change or the panel closes.
+  useEffect(() => {
+    if (tab !== "leads") return;
+    api.get(`/projects/${id}/dumped-leads`, { params: { limit: 1 } })
+      .then((r) => setDumpCount(r.data.total ?? 0)).catch(() => setDumpCount(null));
+  }, [id, tab, refreshKey, showDump]);
 
   const fileRef = useRef(null);
 
@@ -1105,7 +1114,24 @@ export default function ProjectDetail() {
                 </button>
               );
             })}
+            {/* Leads deleted from this project, with their remarks. Opens a panel
+                rather than filtering the table: they are no longer project leads. */}
+            <button
+              type="button"
+              onClick={() => setShowDump(true)}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all text-center sm:rounded-full sm:py-1 inline-flex items-center justify-center gap-1.5 bg-gray-100 dark:bg-white/5 text-app-soft border border-orange-400/50 hover:text-app hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              <Archive className="h-3 w-3" /> Dump Leads{dumpCount ? ` (${dumpCount})` : ""}
+            </button>
           </div>
+
+          <ProjectDumpLeads
+            open={showDump}
+            onClose={() => setShowDump(false)}
+            projectId={id}
+            projectName={project?.name}
+            onChanged={() => setRefreshKey((k) => k + 1)}
+          />
 
           <div className="card overflow-hidden">
             {leadsLoading ? (

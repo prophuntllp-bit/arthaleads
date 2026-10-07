@@ -178,6 +178,56 @@ router.delete("/:id/videos", authorize("admin", "manager"), async (req, res, nex
   } catch (err) { next(err); }
 });
 
+// GET /api/projects/:id/dumped-leads?page=&limit=&search= — leads deleted from
+// this project, with everything the agent had written on them, so she can see
+// why each was dumped. An agent sees the ones she dumped herself; admins and
+// managers see all. Rows deleted before Dump kept their origin (deletedFrom)
+// cannot be tied to a project and are not listed here; they remain in Dump Leads.
+const isManager = (u) => ["admin", "manager", "super_admin"].includes(u.role);
+function dumpedFilter(req, project) {
+  const filter = { orgId: req.user.orgId, isDeleted: true, "deletedFrom.kind": "project", "deletedFrom.projectId": project._id };
+  if (!isManager(req.user)) filter.deletedBy = req.user._id;
+  return filter;
+}
+router.get("/:id/dumped-leads", async (req, res, next) => {
+  try {
+    const project = await require("../services/projectService").getById(req.params.id, req.user);
+    const Lead = require("../models/Lead");
+    const filter = dumpedFilter(req, project);
+    const search = String(req.query.search || "").trim().slice(0, 60);
+    if (search) {
+      const esc = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const digits = search.replace(/\D/g, "");
+      filter.$or = [{ name: new RegExp(esc, "i") }];
+      if (digits.length >= 3) filter.$or.push({ phone: new RegExp(digits) });
+    }
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const [leads, total] = await Promise.all([
+      Lead.find(filter)
+        .sort({ deletedAt: -1 }).skip((page - 1) * limit).limit(limit)
+        .select("name phone email source leadSourceLabel status booking remark1 remark2 remark3 remark4 remark followUpDate followUp2 followUpNote notes createdAt deletedAt deletedByName")
+        .lean(),
+      Lead.countDocuments(filter),
+    ]);
+    res.json({ success: true, leads, total, page, pages: Math.max(1, Math.ceil(total / limit)) });
+  } catch (err) { next(err); }
+});
+
+// POST /api/projects/:id/dumped-leads/:leadId/restore — put a dumped lead back
+// into this project with its remarks and notes. The agent who dumped it can do
+// it herself; admins and managers can restore any.
+router.post("/:id/dumped-leads/:leadId/restore", async (req, res, next) => {
+  try {
+    const project = await require("../services/projectService").getById(req.params.id, req.user);
+    const Lead = require("../models/Lead");
+    const lead = await Lead.findOne({ _id: req.params.leadId, ...dumpedFilter(req, project) }).select("_id");
+    if (!lead) return res.status(404).json({ success: false, message: "That lead is no longer in this project's dump." });
+    const r = await require("../services/leadService").restore(String(lead._id), req.user);
+    res.json({ success: true, restoredTo: r.restoredTo, projectName: r.projectName });
+  } catch (err) { next(err); }
+});
+
 // Project leads - specific paths before :leadId
 router.post("/:id/leads/import", authorize("admin", "manager"), projectController.importLeads);
 router.get("/:id/leads",          projectController.getLeads);
