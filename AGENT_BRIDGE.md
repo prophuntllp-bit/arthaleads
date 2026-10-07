@@ -27,6 +27,34 @@ overwriting or contradicting each other. It lives in git, so every checkout
 8. Production data: read-only scripts are fine. Anything that writes to the
    production database needs the owner's explicit yes in chat first.
 
+## Running the app without secrets (for Codex and any agent without a .env)
+
+Never ask the owner for, and never use, production secrets (MONGO_URI, API
+keys, tokens). You do not need them. Run everything in the sandbox:
+
+```
+cd backend && npm install && npm run sandbox      # real backend on http://localhost:5000
+npm --prefix frontend install && npm --prefix frontend run dev   # frontend; its default API URL is http://localhost:5000/api
+```
+
+`npm run sandbox` (`backend/scripts/sandbox.js`) starts an in-memory MongoDB,
+overwrites every secret with a fake value, seeds one Enterprise org with an
+admin, manager and agent, 2 projects and 12 leads, and boots the real server.
+Logins (fake): `sandbox-admin@example.com`, `sandbox-manager@example.com`,
+`sandbox-agent@example.com`, all with password `Sandbox#12345`.
+Third-party services (WhatsApp, Meta, OpenAI, Razorpay, file storage, email) are
+deliberately not connected, so calls to them fail or are skipped. Code that
+talks to them must be verified with stubs or tests, not live calls.
+
+Other checks: `npm --prefix frontend run build` must pass. `cd backend && npm
+test` has 7 known failing account-deletion coverage assertions that predate
+this bridge; do not chase them unless asked. Tests that need a database should
+use `mongodb-memory-server` (already a dev dependency), never a real URI.
+
+If you are blocked because a secret or variable is missing: do not stop. Use the
+sandbox, stub the external call, and note in your change-log entry what could
+only be verified live so Claude Code or the owner can check it on production.
+
 ## Active work
 
 _(none)_
