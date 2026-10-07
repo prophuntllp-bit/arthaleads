@@ -57,11 +57,19 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
-- [Codex] 2026-10-07 16:31 IST: Add breathing room to the landing-page hero composition, frontend/src/pages/Landing.jsx
+_(none)_
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
+
+### Codex, 2026-10-07 (IST)
+
+- `136456e` Added breathing room to the landing-page hero in
+  `frontend/src/pages/Landing.jsx`: more outer padding, wider desktop spacing,
+  clearer copy/CTA/stat separation, and more space before the live ticker.
+  Frontend build passed. `graphify update .` could not run because the
+  `graphify` command is unavailable in this environment.
 
 ### Claude Code, 2026-10-07 (IST)
 
