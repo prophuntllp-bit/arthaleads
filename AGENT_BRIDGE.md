@@ -57,7 +57,7 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
-_(none)_
+- [Codex] 2026-10-07 16:31 IST: Add breathing room to the landing-page hero composition, frontend/src/pages/Landing.jsx
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
