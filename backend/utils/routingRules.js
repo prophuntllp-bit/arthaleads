@@ -81,9 +81,26 @@ async function fileLeadInRoutedProject(rule, lead) {
       importedBy: rule.assignTo,
       orgId: lead.orgId,
     });
+    notifyProjectTeam(rule.assignToProject, lead).catch(() => {});
   } catch (err) {
     logger.error(`[routing rule] failed to file lead ${lead._id} into project ${rule.assignToProject}: ${err.message}`);
   }
 }
 
-module.exports = { matchRoutingRule, matchWebsiteRoutingRule, fileLeadInRoutedProject };
+// Tells the people working a project that a lead just landed in it: the lead's
+// own owner, or, when it has none, the agents assigned to the project.
+async function notifyProjectTeam(projectId, lead) {
+  const { sendPushToUser } = require("./push");
+  const Project = require("../models/Project");
+  const project = await Project.findById(projectId).select("name assignedTo").lean();
+  if (!project) return;
+  const ids = lead.assignedTo ? [lead.assignedTo] : (project.assignedTo || []);
+  const payload = {
+    title: `New lead in ${project.name}`,
+    body: `${lead.name} (${lead.phone}) was added to the project.`,
+    data: { url: `/projects/${projectId}` },
+  };
+  await Promise.all(ids.map((u) => sendPushToUser(u, payload).catch(() => {})));
+}
+
+module.exports = { notifyProjectTeam, matchRoutingRule, matchWebsiteRoutingRule, fileLeadInRoutedProject };
