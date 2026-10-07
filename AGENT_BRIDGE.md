@@ -59,9 +59,15 @@ only be verified live so Claude Code or the owner can check it on production.
 
 _(none)_
 
+
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
+
+### Claude Code, 2026-10-07 (IST), later
+
+- Dashboard header source pills (`frontend/src/pages/Dashboard.jsx`): now every source that is connected or has leads in the period, incl. WhatsApp (via `/whatsapp/status`) and an Other bucket for Manual, Referral, walk-in and portals. Before, only Integrations-connected sources showed.
+- Sidebar `StorageCard.jsx`: always shows a compact Storage meter with an Upgrade link for admins; becomes the full card from 80%. Upgrade still goes to /plans. Buying storage packs is NOT built; the pricing and checkout are to be decided with the owner later.
 
 ### Codex, 2026-10-07 (IST)
 

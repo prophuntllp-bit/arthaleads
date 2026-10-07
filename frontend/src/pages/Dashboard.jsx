@@ -535,6 +535,13 @@ export default function Dashboard() {
     api.get("/auth/agents").then((r) => setAgents(r.data.agents || [])).catch(() => {});
   }, []);
 
+  // WhatsApp is not an Automation (it is the org's own connection), so it never
+  // showed up in the connected-sources list. Ask for its status separately.
+  const [waConnected, setWaConnected] = useState(false);
+  useEffect(() => {
+    api.get("/whatsapp/status").then((r) => setWaConnected(!!r.data?.connected)).catch(() => {});
+  }, []);
+
   // Fetch connected automations to drive dynamic source cards
   useEffect(() => {
     api.get("/automations")
@@ -555,12 +562,17 @@ export default function Dashboard() {
 
   if (loading || retrying) return <PageLoader />;
 
-  // Which platforms to show: connected automations first; fallback to platforms with lead data
-  const activePlatforms = (connectedPlatforms && connectedPlatforms.length > 0)
-    ? connectedPlatforms
-    : Object.keys(PLATFORM_CONFIG).filter(
-        (p) => (data?.bySource?.[PLATFORM_CONFIG[p].sourceKey] || 0) > 0
-      );
+  // Which source pills to show: every source that is connected OR has leads in
+  // this period, in a fixed order. Anything that is not one of the named
+  // sources (Manual, Referral, Walk-in, portals...) is counted together as Other.
+  const connectedSet = new Set(connectedPlatforms || []);
+  if (waConnected) connectedSet.add("WhatsApp");
+  const bySrc = data?.bySource || {};
+  const namedKeys = new Set(Object.values(PLATFORM_CONFIG).map((c) => c.sourceKey).filter((k) => k !== "Other"));
+  const otherCount = Object.entries(bySrc).reduce((n, [k, v]) => (namedKeys.has(k) ? n : n + (v || 0)), 0);
+  const pillCount = (p) => (p === "Custom" ? otherCount : (bySrc[PLATFORM_CONFIG[p].sourceKey] || 0));
+  const activePlatforms = ["Facebook", "Google", "WhatsApp", "Website Form", "Vistrow Voice", "Custom"]
+    .filter((p) => connectedSet.has(p) || pillCount(p) > 0);
 
   const monthlyGoal = goalOverride !== null ? goalOverride : (data?.monthlyClosingGoal || 0);
 
@@ -577,9 +589,9 @@ export default function Dashboard() {
             {activePlatforms.map((platform) => {
               const cfg = PLATFORM_CONFIG[platform];
               if (!cfg) return null;
-              const count = data?.bySource?.[cfg.sourceKey] || 0;
+              const count = pillCount(platform);
               return (
-                <div key={platform} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-bold ${cfg.pillTone}`}>
+                <div key={platform} title={cfg.label} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-bold ${cfg.pillTone}`}>
                   <PlatformLogo platform={platform} size={13} />
                   {count}
                 </div>

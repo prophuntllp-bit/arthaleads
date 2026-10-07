@@ -1,6 +1,6 @@
 // StorageCard.jsx — the "Used space" card at the foot of the sidebar.
 //
-// Silent until the org has used 80% of its file allowance (photos, brochures,
+// A quiet meter always; the full card once the org has used 80% of its file allowance (photos, brochures,
 // videos, recordings), then it says how much is left and where to get more.
 // Real figures from GET /org/storage, which sums the files we actually hold.
 import { useCallback, useEffect, useState } from "react";
@@ -34,13 +34,35 @@ export default function StorageCard() {
     return () => clearInterval(iv);
   }, [user, load]);
 
-  if (!s || !s.warn) return null;
-  // A full allowance is not something to hide for a day: uploads are blocked.
-  if (hidden && !s.full) return null;
+  if (!s) return null;
 
   const pct = Math.min(100, Math.round(s.percent));
   const isAdmin = user?.role === "admin";
   const next = upgradeTarget(org?.plan);
+
+  // Under 80%: a quiet one-line meter, always there, so people can see how much
+  // space they use. From 80% it becomes the full card below.
+  if (!s.warn) {
+    return (
+      <div className="mx-2 mb-2 rounded-xl px-3 py-2.5 flex-shrink-0"
+        style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold text-app">Storage</p>
+          {isAdmin && (
+            <Link to="/plans" className="text-[11px] font-semibold" style={{ color: "var(--app-primary)" }}>
+              {next ? "Upgrade" : "Get more"}
+            </Link>
+          )}
+        </div>
+        <div className="mt-1.5 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--app-border)" }}>
+          <div className="h-full rounded-full" style={{ width: `${Math.max(pct, s.usedBytes > 0 ? 2 : 0)}%`, background: "var(--app-primary)" }} />
+        </div>
+        <p className="mt-1 text-[11px] text-app-soft tabular-nums">{formatBytes(s.usedBytes)} of {formatBytes(s.limitBytes)} used</p>
+      </div>
+    );
+  }
+  // A full allowance is not something to hide for a day: uploads are blocked.
+  if (hidden && !s.full) return null;
   const dismiss = () => {
     try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch { /* private mode */ }
     setHidden(true);
