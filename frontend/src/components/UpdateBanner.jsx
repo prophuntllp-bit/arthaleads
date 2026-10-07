@@ -9,6 +9,16 @@ import { RefreshCw, X } from "lucide-react";
 const CHECK_EVERY_MS = 5 * 60 * 1000;
 const CURRENT = typeof __APP_BUILD__ !== "undefined" ? __APP_BUILD__ : "";
 
+// Only people inside the app need the prompt: they keep a tab open all day and
+// would otherwise run old code. A visitor on the marketing pages loads the
+// newest build on their next click, and the banner there only looked like an
+// error. The CRM stores the signed-in user under crm_user (localStorage, or
+// sessionStorage where that is blocked).
+function signedIn() {
+  try { if (localStorage.getItem("crm_user")) return true; } catch { /* blocked */ }
+  try { return !!sessionStorage.getItem("crm_user"); } catch { return false; }
+}
+
 export default function UpdateBanner() {
   const [newer, setNewer] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -38,7 +48,7 @@ export default function UpdateBanner() {
     };
   }, []);
 
-  if (!newer || hidden) return null;
+  if (!newer || hidden || !signedIn()) return null;
   return (
     <div role="status" className="fixed bottom-4 left-1/2 z-[10001] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-3 rounded-2xl px-4 py-3 shadow-xl"
       style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border-strong)" }}>
