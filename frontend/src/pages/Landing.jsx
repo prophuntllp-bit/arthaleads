@@ -118,27 +118,27 @@ function Hero({ isDark }) {
           style={{ opacity: gridOpacity, backgroundImage: "linear-gradient(rgba(255,107,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,1) 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-6 lg:pt-32 lg:pb-8">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12 lg:pt-40 lg:pb-16">
         {/* Copy left, product right on desktop; stacked (copy first) below lg. */}
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-10 lg:gap-10 xl:gap-14 items-center">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-14 lg:gap-16 xl:gap-24 items-center">
 
           {/* ── Copy column ── */}
-          <div className="text-center lg:text-left max-w-2xl mx-auto lg:mx-0">
+          <div className="text-center lg:text-left max-w-xl mx-auto lg:mx-0">
             {/* In half the width the two sentences would break mid-phrase
                 ("Manage Every / Lead. Close More / Deals."), so the second one
                 gets its own line from lg up and the size is tuned to keep each
                 sentence to a single line. */}
-            <h1 className="text-4xl sm:text-5xl lg:text-[2.6rem] xl:text-[3.25rem] font-black leading-[1.08] mb-6" style={{ color: headingClr }}>
+            <h1 className="text-4xl sm:text-5xl lg:text-[2.6rem] xl:text-[3.25rem] font-black leading-[1.08] mb-8" style={{ color: headingClr }}>
               Manage Every Lead.{" "}
               <span className="lg:block text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
                 Close More Deals.
               </span>
             </h1>
-            <p className="text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto lg:mx-0 mb-10 lg:mb-8" style={{ color: bodyClr }}>
+            <p className="text-lg sm:text-xl leading-relaxed max-w-xl mx-auto lg:mx-0 mb-12 lg:mb-10" style={{ color: bodyClr }}>
               Arthaleads brings every property enquiry - Facebook ads, Google campaigns, WhatsApp chats,
               and walk-ins - into one powerful workspace. Built for real estate developers and channel partners.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-12 lg:mb-10">
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-5 mb-16 lg:mb-14">
               <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
                 className="flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-1 text-base">
                 Start Free Trial <ArrowRight className="w-5 h-5" />
@@ -149,7 +149,7 @@ function Hero({ isDark }) {
                 <PlayCircle className="w-5 h-5" /> See How It Works
               </button>
             </div>
-            <div className="grid grid-cols-3 gap-4 max-w-xl mx-auto lg:mx-0">
+            <div className="grid grid-cols-3 gap-8 max-w-xl mx-auto lg:mx-0">
               {[
                 { num: "10,000+", label: "Leads Managed" },
                 { num: "50+",     label: "Teams Onboarded" },
@@ -228,7 +228,7 @@ function Hero({ isDark }) {
         </div>
 
         {/* ── Live lead ticker ── */}
-        <div className="mt-8 relative overflow-hidden"
+        <div className="mt-14 lg:mt-20 relative overflow-hidden"
           style={{ maskImage: "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)", WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)" }}>
           <div style={{ display: "flex", gap: 10, animation: "tickerScroll 30s linear infinite", width: "max-content" }}>
             {[...TICKER_LEADS, ...TICKER_LEADS].map(({ name, src, srcClr, action, city }, i) => (
