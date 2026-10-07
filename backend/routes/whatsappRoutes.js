@@ -1074,6 +1074,16 @@ async function labelAdlessLead(org, conv) {
   if (!conv?.leadId || conv.campaignRef?.adId) return;
   const m = await matchByMessageText(org, conv);
   await labelLeadIfWeaker(conv.leadId, m?.project ? `WhatsApp enquiry · ${m.project.name}` : "");
+  // A routing rule only fires for an ad, so a lead who typed the project's name
+  // with no ad behind it was never filed in that project. Name the project and
+  // it goes in, assigned to whoever the lead already has. Once, at the start of
+  // the thread: someone removed from the project later is not put back.
+  if (m?.project) {
+    const lead = await Lead.findOne({ _id: conv.leadId, orgId: org._id, isArchived: { $ne: true }, isDeleted: { $ne: true } });
+    if (lead?.assignedTo) {
+      await fileLeadInRoutedProject({ assignToProject: m.project._id, assignTo: lead.assignedTo, assignToName: lead.assignedToName }, lead);
+    }
+  }
 }
 
 async function markAdOrigin(org, conversationId) {
