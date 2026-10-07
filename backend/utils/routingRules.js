@@ -76,8 +76,8 @@ async function fileLeadInRoutedProject(rule, lead) {
       sourcePage: lead.sourcePage || "",
       sourceDomain: lead.sourceDomain || "",
       campaignRef: lead.campaignRef || undefined,
-      assignedTo: lead.assignedTo || rule.assignTo || null,
-      assignedToName: lead.assignedToName || rule.assignToName || "",
+      assignedTo: lead.assignedTo || (rule.keepUnassigned ? null : rule.assignTo) || null,
+      assignedToName: lead.assignedToName || (rule.keepUnassigned ? "" : rule.assignToName) || "",
       importedBy: rule.assignTo,
       orgId: lead.orgId,
     });

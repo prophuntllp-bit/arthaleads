@@ -1080,8 +1080,15 @@ async function labelAdlessLead(org, conv) {
   // the thread: someone removed from the project later is not put back.
   if (m?.project) {
     const lead = await Lead.findOne({ _id: conv.leadId, orgId: org._id, isArchived: { $ne: true }, isDeleted: { $ne: true } });
-    if (lead?.assignedTo) {
-      await fileLeadInRoutedProject({ assignToProject: m.project._id, assignTo: lead.assignedTo, assignToName: lead.assignedToName }, lead);
+    if (lead) {
+      // Auto-assign can be off, leaving the lead with no owner. The project
+      // entry then stays unassigned too, recorded as imported by an admin.
+      const owner = lead.assignedTo
+        ? { _id: lead.assignedTo, name: lead.assignedToName }
+        : await User.findOne({ orgId: org._id, role: "admin", isActive: true }).select("_id name").lean();
+      if (owner) {
+        await fileLeadInRoutedProject({ assignToProject: m.project._id, assignTo: owner._id, assignToName: lead.assignedTo ? owner.name : "", keepUnassigned: !lead.assignedTo }, lead);
+      }
     }
   }
 }
