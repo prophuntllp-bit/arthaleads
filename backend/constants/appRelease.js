@@ -75,9 +75,16 @@ module.exports = {
     // real logos, pause/resume and Lead Routing Rules. Not marked mandatory
     // (minBuild unchanged). Verified on a real phone as an in-place upgrade
     // from 35 (same signing key, versionCode 2036 over 2035).
-    build: 36,
+    //
+    // 8 Oct 2026: 37 brings the app level with the rest of the web: copy name
+    // and number, per-project Dump Leads, the WhatsApp Chat tab, WhatsApp ad and
+    // Facebook form filters, storage meter and plan locks, routing rule editing,
+    // and layouts that fit every screen size and font size. Not marked
+    // mandatory (minBuild unchanged). Verified on two real phones; the install
+    // over 36 kept the login (same signing key, versionCode 2037 over 2036).
+    build: 37,
     // Human-readable, shown in the update prompt.
-    version: "1.0.10",
+    version: "1.0.11",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
     //
@@ -96,9 +103,9 @@ module.exports = {
     // we cannot see who is on a 32-bit device; the download block's own
     // comment already documents why an ABI split is the wrong call for an
     // audience we don't control. Bigger file, installs everywhere.
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.10-36/arthaleads-1.0.10-36.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.11-37/arthaleads-1.0.11-37.apk",
     // Optional short "what's new" line, shown in that prompt.
-    notes: "Dashboard now matches the web with charts and Lead Sources Health. Every lead shows where it came from (website page, WhatsApp ad, campaign). New Leads status tabs and multi-source filter, a cleaner WhatsApp chat header, and Integrations with logos, pause/resume and Lead Routing Rules.",
+    notes: "Copy a lead's name and number, a Dump Leads panel in every project, a WhatsApp chat tab in Lead Details, and filters for a single WhatsApp ad or Facebook form. Storage meter and plan locks like the web, editable routing rules, and a cleaner Dashboard. Cards now fit every phone size.",
 
     // ── The public download page (new installs) ──────────────────────────────
     // Ahead of the block above by design. Anyone arriving at /download-app has
@@ -109,26 +116,27 @@ module.exports = {
     // everyone in this same push, so download and fleet stay in step rather
     // than one leading the other.
     // 5 Oct 2026: same again for 36, in step with the fleet block above.
+    // 8 Oct 2026: same again for 37, in step with the fleet block above.
     download: {
-      version: "1.0.10",
+      version: "1.0.11",
       // The plain build number, not Android's versionCode — the APK is stamped
       // 2035 and the app reports it back as 35 (% 1000). mobile/pubspec.yaml
       // explains why the two differ; the short version is that every install
       // in the field is on versionCode 2024 and cannot be given a lower one.
-      build: 36,
+      build: 37,
       // Universal APK, not the arm64 split: this link is public, we cannot see
       // whose phone is on the other end, and a 32-bit device meeting an arm64
       // APK fails with a bare "App not installed" that the user cannot fix.
       // Bigger file, but it installs everywhere the page claims it will.
-      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.10-36/arthaleads-1.0.10-36.apk",
+      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.11-37/arthaleads-1.0.11-37.apk",
       // Bytes, so the page can format it. 0 hides the figure rather than
       // showing a wrong one.
-      sizeBytes: 82171951,
+      sizeBytes: 82630891,
       // Minimum Android version, for the requirements line on that page. This
       // is the human-readable form of minSdk in mobile/android/app/build.gradle.kts
       // — keep the two in step.
       minAndroid: "7.0",
-      notes: "Dashboard now matches the web with charts and Lead Sources Health. Every lead shows where it came from (website page, WhatsApp ad, campaign). New Leads status tabs and multi-source filter, a cleaner WhatsApp chat header, and Integrations with logos, pause/resume and Lead Routing Rules.",
+      notes: "Copy a lead's name and number, a Dump Leads panel in every project, a WhatsApp chat tab in Lead Details, and filters for a single WhatsApp ad or Facebook form. Storage meter and plan locks like the web, editable routing rules, and a cleaner Dashboard. Cards now fit every phone size.",
     },
   },
 };

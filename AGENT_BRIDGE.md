@@ -66,6 +66,13 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-08 (IST), mobile app (owner asked for it; `mobile/` only)
+
+- `c7a5369` + release commit: Arthaleads Mobile **1.0.11 (build 37)** published to the whole fleet (`backend/constants/appRelease.js` `android.build` 37, GitHub Release `mobile-v1.0.11-37`, universal APK, signed with the real key). The app now has: copy name and number, per-project Dump Leads (`GET /projects/:id/dumped-leads`), WhatsApp Chat tab (`GET /leads/:id/whatsapp-messages`), `ad:`/`form:` Source filter tokens, "Also in project" (`inProjects`), storage meter and 80% popup (`GET /org/storage`), plan locks, routing-rule editing (`PATCH /routing-rules/:id`), Dashboard source pills that sum to the total.
+- Layout: shared `AdaptiveGrid` replaces fixed-ratio grids; text scale capped at 1.3x; lead/dump/follow-up/booking/invoice cards rebuilt like the Leads card. Tests in `mobile/test/` (not run by CI).
+- Not in the app yet: the web's "Manage storage" modal (buy extra space, free up files, `/api/storage/*`) and the Meta Conversions card. Plan & Billing "Get more" opens Plan & Billing, not a purchase flow.
+
+
 ### Claude Code, 2026-10-08 (IST)
 
 - Dashboard (`frontend/src/pages/Dashboard.jsx`): every widget's data (follow-ups, hot, stale, projects, team attendance, integrations, WhatsApp status) is fetched by the page and it shows one skeleton until all arrive, so cards no longer pop in one by one.
