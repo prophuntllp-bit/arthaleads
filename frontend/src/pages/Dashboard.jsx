@@ -35,7 +35,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { PageLoader, PhoneActions } from "../components/UI";
+import { PhoneActions } from "../components/UI";
 import api from "../services/api";
 import { fmtDate } from "../utils/constants";
 import DateRangePicker from "../components/DateRangePicker";
@@ -495,6 +495,12 @@ export default function Dashboard() {
   // Pre-fetched in parallel with analytics so Action Required renders immediately
   const [prefetchedFollowups, setPrefetchedFollowups] = useState(null);
   const [prefetchedHot, setPrefetchedHot] = useState(null);
+  // Admin widgets are fetched here too, so the whole page appears at once
+  // instead of cards popping in one by one as their own requests finish.
+  const [prefetchedStale, setPrefetchedStale] = useState(null);
+  const [prefetchedProjects, setPrefetchedProjects] = useState(null);
+  const [prefetchedTeam, setPrefetchedTeam] = useState(null);
+  const [waLoaded, setWaLoaded] = useState(false);
 
   const fetchAnalytics = (retryCount = 0) => {
     if (retryCount === 0) setLoading(true);
@@ -526,10 +532,19 @@ export default function Dashboard() {
         .then((r) => setPrefetchedFollowups(r.data.data || []))
         .catch(() => setPrefetchedFollowups([]));
     }
+    else setPrefetchedFollowups([]);
     api.get("/leads/hot", { params: { limit: 4 } })
       .then((r) => setPrefetchedHot(r.data.data || []))
       .catch(() => setPrefetchedHot([]));
   }, [dateRange, refreshKey]);
+
+  useEffect(() => {
+    const T = { timeout: 12000 };
+    if (sessionStorage.getItem("stale_panel_dismissed") === "1") setPrefetchedStale([]);
+    else api.get("/leads/stale", T).then((r) => setPrefetchedStale(r.data.data || [])).catch(() => setPrefetchedStale([]));
+    api.get("/projects/stats", T).then((r) => setPrefetchedProjects(r.data.data || [])).catch(() => setPrefetchedProjects([]));
+    api.get("/attendance/team-today", T).then((r) => setPrefetchedTeam(r.data.data || [])).catch(() => setPrefetchedTeam([]));
+  }, []);
 
   useEffect(() => {
     api.get("/auth/agents").then((r) => setAgents(r.data.agents || [])).catch(() => {});
@@ -539,7 +554,7 @@ export default function Dashboard() {
   // showed up in the connected-sources list. Ask for its status separately.
   const [waConnected, setWaConnected] = useState(false);
   useEffect(() => {
-    api.get("/whatsapp/status").then((r) => setWaConnected(!!r.data?.connected)).catch(() => {});
+    api.get("/whatsapp/status").then((r) => setWaConnected(!!r.data?.connected)).catch(() => {}).finally(() => setWaLoaded(true));
   }, []);
 
   // Fetch connected automations to drive dynamic source cards
@@ -560,7 +575,10 @@ export default function Dashboard() {
       .catch(() => setConnectedPlatforms([])); // agents/errors → fall back to bySource
   }, []);
 
-  if (loading || retrying) return <PageLoader />;
+  const ready = !loading && !retrying && prefetchedFollowups !== null && prefetchedHot !== null
+    && prefetchedStale !== null && prefetchedProjects !== null && prefetchedTeam !== null
+    && connectedPlatforms !== null && waLoaded;
+  if (!ready) return <DashboardSkeleton />;
 
   // Which source pills to show: every source that is connected OR has leads in
   // this period, in a fixed order. Anything that is not one of the named
@@ -679,7 +697,7 @@ export default function Dashboard() {
       <AdminOnly role={user?.role}>
         <div className="space-y-3">
           <ZoneHeader label="Admin Intelligence" color="indigo" />
-          <StaleLeadsWidget navigate={navigate} />
+          <StaleLeadsWidget navigate={navigate} prefetchedLeads={prefetchedStale} />
           {/* The forecast projects from closed deals. With none yet it could
               only show dashes and zeros, so it waits until there is one. */}
           {data?.allTimeClosedWon > 0 ? (
@@ -691,12 +709,12 @@ export default function Dashboard() {
             <LeadsTrendWidget data={data} scope={describeRange(dateRange)} />
           )}
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <LiveAgentStatusWidget navigate={navigate} />
+            <LiveAgentStatusWidget navigate={navigate} prefetchedTeam={prefetchedTeam} />
             <AutomationHealth automations={allAutomations} Logo={PlatformLogo} onOpen={() => navigate("/integrations")} />
           </div>
           {/* Project breakdown + Monthly goal — side by side */}
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-start">
-            <ProjectBreakdownWidget navigate={navigate} />
+            <ProjectBreakdownWidget navigate={navigate} prefetchedProjects={prefetchedProjects} />
             <GoalMetricsRow
               goal={monthlyGoal}
               current={data?.thisMonthClosedWon || 0}
@@ -767,6 +785,26 @@ export default function Dashboard() {
       </div>
       </div>{/* end Zone 6 */}
 
+    </div>
+  );
+}
+
+// Shown until every widget's data has arrived, so the page appears in one go.
+function DashboardSkeleton() {
+  const block = "rounded-2xl animate-pulse";
+  const fill = { background: "var(--app-surface)", border: "1px solid var(--app-border)" };
+  return (
+    <div className="stitch-page space-y-6" aria-busy="true" aria-label="Loading dashboard">
+      <div className={`${block} h-44`} style={fill} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className={`${block} h-20`} style={fill} />)}
+      </div>
+      <div className={`${block} h-24`} style={fill} />
+      <div className={`${block} h-64`} style={fill} />
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <div className={`${block} h-56`} style={fill} />
+        <div className={`${block} h-56`} style={fill} />
+      </div>
     </div>
   );
 }
@@ -1490,8 +1528,8 @@ function RevenueForecastWidget({ data }) {
 }
 
 // ── 2. Stale Leads Alert Widget ───────────────────────────────────────────────
-function StaleLeadsWidget({ navigate }) {
-  const [leads, setLeads] = useState(null);
+function StaleLeadsWidget({ navigate, prefetchedLeads }) {
+  const [leads, setLeads] = useState(prefetchedLeads ?? null);
   const [dismissed, setDismissed] = useState(
     () => sessionStorage.getItem("stale_panel_dismissed") === "1"
   );
@@ -1500,7 +1538,7 @@ function StaleLeadsWidget({ navigate }) {
   const [collapsed, setCollapsed] = useState(true);
 
   useEffect(() => {
-    if (dismissed) return;
+    if (dismissed || prefetchedLeads != null) return;
     api.get("/leads/stale").then((r) => setLeads(r.data.data || [])).catch(() => setLeads([]));
   }, [dismissed]);
 
@@ -1589,13 +1627,14 @@ function StaleLeadsWidget({ navigate }) {
 }
 
 // ── 3. Project Breakdown Widget ───────────────────────────────────────────────
-function ProjectBreakdownWidget({ navigate }) {
-  const [projects, setProjects] = useState(null);
+function ProjectBreakdownWidget({ navigate, prefetchedProjects }) {
+  const [projects, setProjects] = useState(prefetchedProjects ?? null);
   // Every collapsible dashboard panel starts closed on each load; the
   // chevron opens it for this visit only (nothing is remembered).
   const [collapsed, setCollapsed] = useState(true);
 
   useEffect(() => {
+    if (prefetchedProjects != null) return;
     api.get("/projects/stats").then((r) => setProjects(r.data.data || [])).catch(() => setProjects([]));
   }, []);
 
@@ -1662,10 +1701,11 @@ function ProjectBreakdownWidget({ navigate }) {
 }
 
 // ── 4. Live Agent Status Widget ───────────────────────────────────────────────
-function LiveAgentStatusWidget({ navigate }) {
-  const [team, setTeam] = useState(null);
+function LiveAgentStatusWidget({ navigate, prefetchedTeam }) {
+  const [team, setTeam] = useState(prefetchedTeam ?? null);
 
   useEffect(() => {
+    if (prefetchedTeam != null) return;
     api.get("/attendance/team-today").then((r) => setTeam(r.data.data || [])).catch(() => setTeam([]));
   }, []);
 

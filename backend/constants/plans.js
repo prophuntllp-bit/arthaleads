@@ -16,7 +16,8 @@ const PLAN_STORAGE = {
 };
 
 // Extra space is sold in blocks.
-const STORAGE_ADDON = { gb: 10, pricePerMonth: 99 };
+// Priced per block per month, ex-GST. `months` are the terms a customer can pick.
+const STORAGE_ADDON = { gb: 10, pricePerMonth: 99, months: [1, 3, 12], maxPacks: 50 };
 
 // Warn the customer from this share of their limit. New uploads are blocked
 // only at 100%, and nothing already stored is ever deleted because of size.
@@ -24,6 +25,12 @@ const STORAGE_WARN_AT = 0.8;
 
 // Projects a Starter org may keep. Growth and above are unlimited.
 const STARTER_PROJECT_CAP = 2;
+
+/** Space from bought packs that have not run out yet. */
+function activePackBytes(org, now = Date.now()) {
+  return (org?.storage?.packs || []).reduce(
+    (n, p) => (p.expiresAt && new Date(p.expiresAt).getTime() > now ? n + (p.bytes || 0) : n), 0);
+}
 
 function storageFor(plan) {
   return PLAN_STORAGE[plan] || PLAN_STORAGE.starter;
@@ -35,7 +42,7 @@ function storageFor(plan) {
  */
 function storageLimitBytes(org) {
   const base = org?.storage?.limitBytes ?? storageFor(org?.plan).bytes;
-  return base + (org?.storage?.extraBytes || 0);
+  return base + (org?.storage?.extraBytes || 0) + activePackBytes(org);
 }
 
-module.exports = { GB, PLAN_STORAGE, STORAGE_ADDON, STORAGE_WARN_AT, STARTER_PROJECT_CAP, storageFor, storageLimitBytes };
+module.exports = { GB, PLAN_STORAGE, STORAGE_ADDON, STORAGE_WARN_AT, STARTER_PROJECT_CAP, storageFor, storageLimitBytes, activePackBytes };

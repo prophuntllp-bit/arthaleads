@@ -57,13 +57,17 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
-- [Claude Code] 2026-10-08 IST: Dashboard single-load skeleton (`frontend/src/pages/Dashboard.jsx`); storage packs purchase + free-up-space tools (`backend/constants/plans.js`, new `StorageOrder` model, `services/storageOrderService.js`, `services/storageCleanup.js`, `routes/storageRoutes.js`, `billingWebhookRoutes.js`, `Organization.storage.packs`, `StorageCard.jsx`, new `StorageManageModal.jsx`).
 
 
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
+
+### Claude Code, 2026-10-08 (IST)
+
+- Dashboard (`frontend/src/pages/Dashboard.jsx`): every widget's data (follow-ups, hot, stale, projects, team attendance, integrations, WhatsApp status) is fetched by the page and it shows one skeleton until all arrive, so cards no longer pop in one by one.
+- **Storage packs and free-up.** Customers buy extra space in 10 GB blocks (price and terms in `STORAGE_ADDON`, `backend/constants/plans.js`): `StorageOrder` model, `services/storageOrderService.js`, `routes/storageRoutes.js` mounted at `/api/storage`, Razorpay webhook dispatch in `billingWebhookRoutes.js`. Bought blocks live in `Organization.storage.packs` with an expiry; `storageLimitBytes` counts only unexpired ones. Admins can delete old recordings and attendance photos (`services/storageCleanup.js`). UI: `StorageManageModal.jsx`, opened from the sidebar `StorageCard`, the 80% popup and the Plans page.
 
 ### Claude Code, 2026-10-07 (IST), evening
 

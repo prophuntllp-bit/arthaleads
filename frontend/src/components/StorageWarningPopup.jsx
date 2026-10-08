@@ -2,12 +2,12 @@
 // at 80% or full. The sidebar card is the quiet reminder; this is the one that
 // makes sure somebody who can act on it has seen it.
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { HardDrive } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { Modal } from "./UI";
-import { formatBytes, upgradeTarget } from "../utils/plan";
+import { formatBytes } from "../utils/plan";
+import StorageManageModal from "./StorageManageModal";
 
 const KEY = "storage_popup_seen";
 
@@ -25,9 +25,10 @@ function markSeen(level) {
 }
 
 export default function StorageWarningPopup() {
-  const { user, org } = useAuth();
+  const { user } = useAuth();
   const [s, setS] = useState(null);
   const [open, setOpen] = useState(false);
+  const [manage, setManage] = useState(false);
 
   useEffect(() => {
     if (user?.role !== "admin") return undefined;
@@ -47,9 +48,10 @@ export default function StorageWarningPopup() {
   if (!s) return null;
   const close = () => { markSeen(s.full ? 100 : 80); setOpen(false); };
   const pct = Math.min(100, Math.round(s.percent));
-  const next = upgradeTarget(org?.plan);
 
   return (
+    <>
+    <StorageManageModal open={manage} onClose={() => setManage(false)} />
     <Modal open={open} onClose={close} title={s.full ? "Your file space is full" : "Your file space is almost full"} size="sm">
       <div className="space-y-4">
         <div className="flex items-start gap-3">
@@ -75,13 +77,10 @@ export default function StorageWarningPopup() {
         <p className="text-xs text-app-soft">Removing unused project videos and old photos frees the most space.</p>
         <div className="flex items-center justify-end gap-2 pt-1">
           <button type="button" className="btn-secondary rounded-xl cursor-pointer" onClick={close}>Remind me tomorrow</button>
-          {next ? (
-            <Link to="/plans" onClick={close} className="btn-primary rounded-xl">Upgrade plan</Link>
-          ) : (
-            <a href="mailto:contact@arthaleads.com?subject=More%20file%20space" onClick={close} className="btn-primary rounded-xl">Get more space</a>
-          )}
+          <button type="button" className="btn-primary rounded-xl cursor-pointer" onClick={() => { close(); setManage(true); }}>Free up or add space</button>
         </div>
       </div>
     </Modal>
+    </>
   );
 }

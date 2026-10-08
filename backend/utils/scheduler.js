@@ -309,6 +309,8 @@ cron.schedule("0 4 * * *", () => {
 cron.schedule("30 21 * * *", () => {
   require("../services/recordingRetention").purgeExpiredRecordings()
     .catch((err) => logger.error(`[storage] recording retention failed: ${err.message}`));
+  require("../services/storageOrderService").pruneExpiredPacks()
+    .catch((err) => logger.error(`[storage] pack cleanup failed: ${err.message}`));
 });
 
 module.exports = { runDailyReminder, runUpcomingReminder, runTaskReminder, runBackup, refreshFacebookTokens };

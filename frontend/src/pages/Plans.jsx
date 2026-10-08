@@ -7,6 +7,7 @@ import { waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { useAuth } from "../context/AuthContext";
 import { canAccess, planLabel, upgradeTarget, PLAN_PRICING, formatINR, formatBytes } from "../utils/plan";
 import CheckoutModal from "../components/CheckoutModal";
+import StorageManageModal from "../components/StorageManageModal";
 
 const PLANS = [
   {
@@ -129,7 +130,7 @@ const PLANS = [
 
 export default function Plans() {
   useEffect(() => { document.title = "Plans & Upgrade - Arthaleads CRM"; }, []);
-  const { org, refreshUser } = useAuth();
+  const { org, user, refreshUser } = useAuth();
   const [hoveredPlan, setHoveredPlan] = useState(null);
   // Which plan the checkout sheet is buying, or null when it is closed.
   const [checkoutPlan, setCheckoutPlan] = useState(null);
@@ -137,6 +138,7 @@ export default function Plans() {
   const [sub, setSub] = useState(null);
   const [subBusy, setSubBusy] = useState(false);
   const [storage, setStorage] = useState(null);
+  const [manageStorage, setManageStorage] = useState(false);
   useEffect(() => { api.get("/org/storage").then((r) => setStorage(r.data.storage)).catch(() => {}); }, []);
 
   const loadSubscription = () =>
@@ -306,7 +308,8 @@ export default function Plans() {
               <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--app-border)" }}>
                 <div className="h-full rounded-full" style={{ width: `${Math.min(100, storage.percent)}%`, background: storage.full ? "#dc2626" : "var(--app-primary)" }} />
               </div>
-              <p className="mt-1.5 text-[11px] text-app-soft">Photos, brochures, videos and call recordings. Need more? Write to contact@arthaleads.com.</p>
+              <p className="mt-1.5 text-[11px] text-app-soft">Photos, brochures, videos and call recordings.{user?.role === "admin" && <> <button type="button" onClick={() => setManageStorage(true)} className="font-semibold cursor-pointer" style={{ color: "var(--app-primary)" }}>Free up or add space</button></>}</p>
+              <StorageManageModal open={manageStorage} onClose={() => setManageStorage(false)} />
             </div>
           )}
         </div>

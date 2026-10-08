@@ -15,6 +15,7 @@ const logger = require("../config/logger");
 const rzp = require("../services/razorpayService");
 const { applyPayment, markFailed } = require("../services/billingService");
 const creditTopUp = require("../services/creditTopUpService");
+const storageOrders = require("../services/storageOrderService");
 
 // Capture the untouched bytes for signature verification. express.json's verify
 // hook runs before parsing, so req.rawBody is the exact payload Razorpay signed.
@@ -52,6 +53,17 @@ router.post("/", async (req, res) => {
     // WhatsApp credit top-ups alike, so dispatch on which table owns the order.
     // Credits are checked first because that lookup is a cheap indexed exists().
     const isCredit = await creditTopUp.isCreditOrder(orderId);
+
+    // Extra-storage purchases are a third kind of order on the same account.
+    if (!isCredit && await storageOrders.isStorageOrder(orderId)) {
+      if (event === "payment.captured") {
+        const result = await storageOrders.applyOrder(orderId, paymentId);
+        logger.info(`[billing webhook] payment.captured ${paymentId} for storage order ${orderId} - ${result.applied ? "space granted" : "already applied"}`);
+      } else if (event === "payment.failed") {
+        await storageOrders.markFailed(orderId, entity.error_description || entity.error_reason);
+      }
+      return res.json({ success: true });
+    }
 
     if (event === "payment.captured" && isCredit) {
       const result = await creditTopUp.applyTopUp(orderId, paymentId);

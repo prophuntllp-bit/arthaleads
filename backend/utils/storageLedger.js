@@ -8,7 +8,7 @@ const mongoose = require("mongoose");
 const StorageObject = require("../models/StorageObject");
 const Organization = require("../models/Organization");
 const { AppError } = require("../middlewares/errorHandler");
-const { storageLimitBytes, STORAGE_WARN_AT } = require("../constants/plans");
+const { storageLimitBytes, activePackBytes, STORAGE_WARN_AT } = require("../constants/plans");
 const logger = require("../config/logger");
 
 function categoryOf(key) {
@@ -66,6 +66,7 @@ async function summaryFor(org) {
     usedBytes: used,
     limitBytes: limit,
     extraBytes: org.storage?.extraBytes || 0,
+    packBytes: activePackBytes(org),
     files,
     byCategory,
     percent: Math.round(pct * 1000) / 10,

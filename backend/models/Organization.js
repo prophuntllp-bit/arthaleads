@@ -51,6 +51,13 @@ const orgSchema = new mongoose.Schema(
     storage: {
       extraBytes: { type: Number, default: 0, min: 0 },
       limitBytes: { type: Number, min: 0 },
+      // Extra space the customer bought online. Each pack counts until expiresAt.
+      packs: [{
+        _id: false,
+        orderId:   { type: mongoose.Schema.Types.ObjectId, ref: "StorageOrder" },
+        bytes:     { type: Number, min: 0 },
+        expiresAt: { type: Date },
+      }],
       // Overrides how long call recordings are kept (days) for a negotiated deal.
       recordingDays: { type: Number, min: 1 },
       note:       { type: String, trim: true, default: "" },

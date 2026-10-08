@@ -4,11 +4,11 @@
 // videos, recordings), then it says how much is left and where to get more.
 // Real figures from GET /org/storage, which sums the files we actually hold.
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { X } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import { formatBytes, upgradeTarget } from "../utils/plan";
+import { formatBytes } from "../utils/plan";
+import StorageManageModal from "./StorageManageModal";
 
 const DISMISS_KEY = "storage_card_dismissed";
 const DISMISS_MS = 24 * 60 * 60 * 1000;   // comes back tomorrow if still over 80%
@@ -19,9 +19,10 @@ function dismissedRecently() {
 }
 
 export default function StorageCard() {
-  const { user, org } = useAuth();
+  const { user } = useAuth();
   const [s, setS] = useState(null);
   const [hidden, setHidden] = useState(dismissedRecently);
+  const [manage, setManage] = useState(false);
 
   const load = useCallback(() => {
     api.get("/org/storage").then((r) => setS(r.data.storage)).catch(() => {});
@@ -38,20 +39,22 @@ export default function StorageCard() {
 
   const pct = Math.min(100, Math.round(s.percent));
   const isAdmin = user?.role === "admin";
-  const next = upgradeTarget(org?.plan);
 
   // Under 80%: a quiet one-line meter, always there, so people can see how much
   // space they use. From 80% it becomes the full card below.
+  const modal = <StorageManageModal open={manage} onClose={() => { setManage(false); load(); }} />;
   if (!s.warn) {
     return (
+      <>
+      {modal}
       <div className="mx-2 mb-2 rounded-xl px-3 py-2.5 flex-shrink-0"
         style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs font-semibold text-app">Storage</p>
           {isAdmin && (
-            <Link to="/plans" className="text-[11px] font-semibold" style={{ color: "var(--app-primary)" }}>
-              {next ? "Upgrade" : "Get more"}
-            </Link>
+            <button type="button" onClick={() => setManage(true)} className="text-[11px] font-semibold cursor-pointer" style={{ color: "var(--app-primary)" }}>
+              Get more
+            </button>
           )}
         </div>
         <div className="mt-1.5 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--app-border)" }}>
@@ -59,6 +62,7 @@ export default function StorageCard() {
         </div>
         <p className="mt-1 text-[11px] text-app-soft tabular-nums">{formatBytes(s.usedBytes)} of {formatBytes(s.limitBytes)} used</p>
       </div>
+      </>
     );
   }
   // A full allowance is not something to hide for a day: uploads are blocked.
@@ -70,6 +74,8 @@ export default function StorageCard() {
   const barColor = s.full ? "#dc2626" : "var(--app-primary)";
 
   return (
+    <>
+    {modal}
     <div className="mx-2 mb-2 rounded-xl p-3 flex-shrink-0"
       style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
       <div className="flex items-start justify-between gap-2">
@@ -99,15 +105,14 @@ export default function StorageCard() {
           </button>
         )}
         {isAdmin ? (
-          next ? (
-            <Link to="/plans" className="text-xs font-semibold" style={{ color: "var(--app-primary)" }}>Upgrade plan</Link>
-          ) : (
-            <a href="mailto:contact@arthaleads.com?subject=More%20file%20space" className="text-xs font-semibold" style={{ color: "var(--app-primary)" }}>Get more space</a>
-          )
+          <button type="button" onClick={() => setManage(true)} className="text-xs font-semibold cursor-pointer" style={{ color: "var(--app-primary)" }}>
+            Free up or add space
+          </button>
         ) : (
           <span className="text-xs text-app-soft">Ask your admin for more space</span>
         )}
       </div>
     </div>
+    </>
   );
 }
