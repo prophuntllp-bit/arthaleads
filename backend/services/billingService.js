@@ -12,6 +12,32 @@ const { termEnd } = require("../constants/planPricing");
 const { istDateKey } = require("../utils/datetime");
 
 /**
+ * What buying `plan` x `seats` does to the term the org already has paid for.
+ *
+ * Buying the same plan and seats again is a renewal: the new term is added after
+ * the current one. Changing plan or seats while time remains is a change of
+ * plan: the new term starts today, and the unused value of the old term (what
+ * was paid for it, pro rata) comes off the price, so the customer neither loses
+ * time they paid for nor gets a higher plan for the old term's price.
+ */
+async function termPlanFor(orgId, plan, seats) {
+  const org = await Organization.findById(orgId).select("plan seats paidUntil").lean();
+  const now = Date.now();
+  const hasTerm = org?.paidUntil && new Date(org.paidUntil).getTime() > now;
+  if (!hasTerm || (org.plan === plan && Number(org.seats) === Number(seats))) {
+    return { restartTerm: false, creditRupees: 0 };
+  }
+  const last = await Payment.findOne({ orgId, status: "paid", appliedAt: { $ne: null } }).sort({ appliedAt: -1 }).lean();
+  let creditRupees = 0;
+  if (last && last.plan === org.plan) {
+    const termDays = last.cycle === "annual" ? 365 : 30;
+    const remaining = Math.min(termDays, Math.max(0, (new Date(org.paidUntil).getTime() - now) / 86400000));
+    creditRupees = Math.floor(((last.rate || 0) * (last.seats || 0) * remaining) / termDays);
+  }
+  return { restartTerm: true, creditRupees };
+}
+
+/**
  * Grant the purchased term to the organisation.
  *
  * Idempotent by construction: the update that stamps appliedAt is conditional
@@ -42,7 +68,7 @@ async function applyPayment(razorpayOrderId, razorpayPaymentId) {
   // Extend from whichever is later: today, or an existing paid-through date.
   // Renewing early should add to the term, not truncate it.
   const org = await Organization.findById(claimed.orgId).select("paidUntil").lean();
-  const startFrom = org?.paidUntil && new Date(org.paidUntil) > new Date()
+  const startFrom = !claimed.restartTerm && org?.paidUntil && new Date(org.paidUntil) > new Date()
     ? new Date(org.paidUntil)
     : new Date();
   const paidUntil = termEnd(claimed.cycle, startFrom);
@@ -87,4 +113,4 @@ async function markFailed(razorpayOrderId, reason) {
   );
 }
 
-module.exports = { applyPayment, markFailed };
+module.exports = { applyPayment, markFailed, termPlanFor };

@@ -62,6 +62,19 @@ function quote(planId, seats, cycle) {
   };
 }
 
+/**
+ * Take a credit (whole rupees, for unused time on the current term) off a quote.
+ * GST is worked out on what is left, so the customer is taxed on what they pay.
+ */
+function withCredit(q, creditRupees) {
+  const credit = Math.max(0, Math.min(Math.floor(creditRupees || 0), q.subtotal));
+  if (!credit) return { ...q, credit: 0 };
+  const subtotal = q.subtotal - credit;
+  const gst = Math.round(subtotal * q.gstRate);
+  const total = subtotal + gst;
+  return { ...q, credit, subtotal, gst, total, amountPaise: total * 100 };
+}
+
 /** How long a paid term runs, used to set paidUntil on success. */
 function termEnd(cycle, from = new Date()) {
   const d = new Date(from);
@@ -150,7 +163,7 @@ function subscriptionState(org, now = new Date()) {
 }
 
 module.exports = {
-  PLAN_PRICING, GST_RATE, BILLABLE_PLANS, CYCLES, quote, termEnd,
+  PLAN_PRICING, GST_RATE, BILLABLE_PLANS, CYCLES, quote, withCredit, termEnd,
   PLAN_SEAT_CAP, seatLimitFor,
   GRACE_DAYS, LAPSED_PLAN, subscriptionState,
 };

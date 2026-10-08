@@ -9,9 +9,9 @@ const logger = require("../config/logger");
 const Payment = require("../models/Payment");
 const Organization = require("../models/Organization");
 const rzp = require("../services/razorpayService");
-const { applyPayment } = require("../services/billingService");
+const { applyPayment, termPlanFor } = require("../services/billingService");
 const {
-  quote, PLAN_PRICING, BILLABLE_PLANS,
+  quote, withCredit, PLAN_PRICING, BILLABLE_PLANS,
   subscriptionState, GRACE_DAYS, LAPSED_PLAN,
 } = require("../constants/planPricing");
 const { formatISTDate, istDateKey } = require("../utils/datetime");
@@ -97,6 +97,20 @@ router.post("/resume", authorize("admin"), async (req, res, next) => {
 // The amount is computed here from the plan and seat count and never read from
 // the request. A client may say what it wants to buy; it does not get to say
 // what that costs.
+// GET /api/billing/preview?plan=&seats=&cycle= — exactly what an order for this
+// would cost right now, including any credit for unused time on the current
+// plan. The checkout screen shows this, so the price on screen is the price charged.
+router.get("/preview", authorize("admin"), async (req, res) => {
+  try {
+    let q = quote(req.query.plan, Number(req.query.seats), req.query.cycle);
+    const change = await termPlanFor(req.orgId, q.planId, q.seats);
+    q = withCredit(q, change.creditRupees);
+    res.json({ success: true, quote: q, restartTerm: change.restartTerm });
+  } catch (e) {
+    res.status(400).json({ success: false, message: e.message });
+  }
+});
+
 router.post("/order", authorize("admin"), async (req, res, next) => {
   try {
     if (!rzp.isConfigured()) {
@@ -104,11 +118,16 @@ router.post("/order", authorize("admin"), async (req, res, next) => {
     }
 
     const { plan, seats, cycle } = req.body || {};
-    let q;
+    let q, change;
     try {
       q = quote(plan, seats, cycle);
+      change = await termPlanFor(req.orgId, q.planId, q.seats);
+      q = withCredit(q, change.creditRupees);
     } catch (e) {
       return res.status(400).json({ success: false, message: e.message });
+    }
+    if (q.amountPaise < 100) {
+      return res.status(400).json({ success: false, message: "The unused time on your current plan already covers this. Please contact support to switch." });
     }
 
     const org = await Organization.findById(req.orgId).select("name").lean();
@@ -137,6 +156,8 @@ router.post("/order", authorize("admin"), async (req, res, next) => {
       cycle: q.cycle,
       rate: q.rate,
       gstRate: q.gstRate,
+      creditRupees: q.credit || 0,
+      restartTerm: change.restartTerm,
       amountPaise: q.amountPaise,
       currency: q.currency,
       razorpayOrderId: order.id,

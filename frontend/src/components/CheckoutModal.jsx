@@ -44,6 +44,21 @@ export default function CheckoutModal({ open, planId, onClose, onSuccess, org })
     return { rate, total: rate * seats };
   }, [plan, cycle, seats]);
 
+  // What the server will actually charge, including credit for unused time when
+  // this changes plan or seats mid-term. Falls back to the local estimate while loading.
+  const [preview, setPreview] = useState(null);
+  useEffect(() => {
+    if (!open || !plan) return undefined;
+    let cancelled = false;
+    const t = setTimeout(() => {
+      api.get("/billing/preview", { params: { plan: planId, seats, cycle } })
+        .then((r) => { if (!cancelled) setPreview(r.data.quote); })
+        .catch(() => { if (!cancelled) setPreview(null); });
+    }, 250);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [open, plan, planId, seats, cycle]);
+  const shown = preview ? preview.subtotal : estimate?.total;
+
   const clampSeats = useCallback(
     (n) => {
       if (!plan) return n;
@@ -221,8 +236,13 @@ export default function CheckoutModal({ open, planId, onClose, onSuccess, org })
                 <span className="text-sm text-app-soft">
                   {formatINR(estimate.rate)} × {seats} {seats === 1 ? "member" : "members"}
                 </span>
-                <span className="text-2xl font-black text-app">{formatINR(estimate.total)}</span>
+                <span className="text-2xl font-black text-app">{formatINR(shown)}</span>
               </div>
+              {preview?.credit > 0 && (
+                <p className="text-[11px] mt-1" style={{ color: "#15803d" }}>
+                  Includes {formatINR(preview.credit)} credit for the unused time on your current plan. Your new term starts today.
+                </p>
+              )}
               <p className="text-[11px] text-app-soft mt-1">
                 Billed {cycle === "annual" ? "yearly" : "monthly"}. Taxes extra where applicable.
               </p>
@@ -232,7 +252,7 @@ export default function CheckoutModal({ open, planId, onClose, onSuccess, org })
               className="w-full py-3.5 rounded-2xl font-bold text-white text-sm flex items-center justify-center gap-2 disabled:opacity-60"
               style={{ background: "#ff6b00", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }}>
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {busy ? "Opening checkout…" : `Pay ${formatINR(estimate.total)}`}
+              {busy ? "Opening checkout…" : `Pay ${formatINR(shown)}`}
             </button>
 
             <p className="flex items-center justify-center gap-1.5 text-[11px] text-app-soft">

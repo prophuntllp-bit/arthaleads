@@ -19,6 +19,10 @@ const paymentSchema = new mongoose.Schema(
     cycle:  { type: String, enum: ["monthly", "annual"], required: true },
     rate:   { type: Number, required: true },  // rupees per seat per period
     gstRate:{ type: Number, default: 0 },
+    // Unused time on the previous plan, taken off the price (whole rupees), and
+    // whether this purchase starts a fresh term today rather than extending the old one.
+    creditRupees: { type: Number, default: 0 },
+    restartTerm:  { type: Boolean, default: false },
 
     // Money, in paise, exactly as sent to Razorpay.
     amountPaise: { type: Number, required: true },
