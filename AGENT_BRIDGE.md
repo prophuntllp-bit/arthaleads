@@ -66,6 +66,10 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-08 (IST), mobile 1.0.12
+
+- Arthaleads Mobile **1.0.12 (build 38)** published to the whole fleet (`android.build` 38, GitHub Release `mobile-v1.0.12-38`): the WhatsApp Chat tab on project leads (see the entry below). Signed with the real key, universal APK, minBuild unchanged at 19.
+
 ### Claude Code, 2026-10-08 (IST), WhatsApp chat for transferred leads
 
 - A lead moved into a project keeps its WhatsApp conversation on the archived original (`WaConversation.leadId`); the project lead only remembers `fromLeadId`. The Chat tab was hidden for every project lead. New `GET /api/projects/:id/leads/:leadId/whatsapp-messages` (in `backend/routes/projectRoutes.js`, not `leadService.js`) looks the chat up through `fromLeadId`; access is the project's (agents must be assigned to it). `frontend/src/components/LeadDetail.jsx` and the app's lead detail show the Chat tab for WhatsApp project leads that have a `fromLeadId`. **Correction, same day:** a routing rule's project copy has no `fromLeadId` by design (it is an "open copy" tied to the lead in Leads by phone, see `utils/projectCopies.js`), so following `fromLeadId` alone missed exactly those leads. The endpoint now finds the conversation by `fromLeadId` when there is one, otherwise by the lead's WhatsApp number (last ten digits), latest thread first, and the tab shows for every WhatsApp project lead. A lead with no chat shows "No WhatsApp conversation". The app needs the next release to get the tab.

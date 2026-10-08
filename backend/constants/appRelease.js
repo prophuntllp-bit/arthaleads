@@ -82,9 +82,14 @@ module.exports = {
     // and layouts that fit every screen size and font size. Not marked
     // mandatory (minBuild unchanged). Verified on two real phones; the install
     // over 36 kept the login (same signing key, versionCode 2037 over 2036).
-    build: 37,
+    //
+    // 8 Oct 2026: 38 adds the WhatsApp Chat tab to leads inside a project (the
+    // chat is found through fromLeadId or the phone number, see
+    // routes/projectRoutes.js). Not marked mandatory (minBuild unchanged).
+    // Same signing key, versionCode 2038 over 2037.
+    build: 38,
     // Human-readable, shown in the update prompt.
-    version: "1.0.11",
+    version: "1.0.12",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
     //
@@ -103,9 +108,9 @@ module.exports = {
     // we cannot see who is on a 32-bit device; the download block's own
     // comment already documents why an ABI split is the wrong call for an
     // audience we don't control. Bigger file, installs everywhere.
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.11-37/arthaleads-1.0.11-37.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.12-38/arthaleads-1.0.12-38.apk",
     // Optional short "what's new" line, shown in that prompt.
-    notes: "Copy a lead's name and number, a Dump Leads panel in every project, a WhatsApp chat tab in Lead Details, and filters for a single WhatsApp ad or Facebook form. Storage meter and plan locks like the web, editable routing rules, and a cleaner Dashboard. Cards now fit every phone size.",
+    notes: "The WhatsApp chat now shows on leads inside a project, including ones a routing rule filed in. Includes copy name and number, Dump Leads in every project, WhatsApp ad and Facebook form filters, storage meter and plan locks, editable routing rules, a cleaner Dashboard, and layouts that fit every phone size.",
 
     // ── The public download page (new installs) ──────────────────────────────
     // Ahead of the block above by design. Anyone arriving at /download-app has
@@ -117,18 +122,19 @@ module.exports = {
     // than one leading the other.
     // 5 Oct 2026: same again for 36, in step with the fleet block above.
     // 8 Oct 2026: same again for 37, in step with the fleet block above.
+    // 8 Oct 2026: same again for 38.
     download: {
-      version: "1.0.11",
+      version: "1.0.12",
       // The plain build number, not Android's versionCode — the APK is stamped
       // 2035 and the app reports it back as 35 (% 1000). mobile/pubspec.yaml
       // explains why the two differ; the short version is that every install
       // in the field is on versionCode 2024 and cannot be given a lower one.
-      build: 37,
+      build: 38,
       // Universal APK, not the arm64 split: this link is public, we cannot see
       // whose phone is on the other end, and a 32-bit device meeting an arm64
       // APK fails with a bare "App not installed" that the user cannot fix.
       // Bigger file, but it installs everywhere the page claims it will.
-      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.11-37/arthaleads-1.0.11-37.apk",
+      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.12-38/arthaleads-1.0.12-38.apk",
       // Bytes, so the page can format it. 0 hides the figure rather than
       // showing a wrong one.
       sizeBytes: 82630891,
@@ -136,7 +142,7 @@ module.exports = {
       // is the human-readable form of minSdk in mobile/android/app/build.gradle.kts
       // — keep the two in step.
       minAndroid: "7.0",
-      notes: "Copy a lead's name and number, a Dump Leads panel in every project, a WhatsApp chat tab in Lead Details, and filters for a single WhatsApp ad or Facebook form. Storage meter and plan locks like the web, editable routing rules, and a cleaner Dashboard. Cards now fit every phone size.",
+      notes: "The WhatsApp chat now shows on leads inside a project, including ones a routing rule filed in. Includes copy name and number, Dump Leads in every project, WhatsApp ad and Facebook form filters, storage meter and plan locks, editable routing rules, a cleaner Dashboard, and layouts that fit every phone size.",
     },
   },
 };
