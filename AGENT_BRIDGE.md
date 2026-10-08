@@ -57,7 +57,7 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
-_(none)_
+- [Claude Code] 2026-10-08 IST: Dashboard single-load skeleton (`frontend/src/pages/Dashboard.jsx`); storage packs purchase + free-up-space tools (`backend/constants/plans.js`, new `StorageOrder` model, `services/storageOrderService.js`, `services/storageCleanup.js`, `routes/storageRoutes.js`, `billingWebhookRoutes.js`, `Organization.storage.packs`, `StorageCard.jsx`, new `StorageManageModal.jsx`).
 
 
 
