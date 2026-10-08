@@ -62,6 +62,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 
 
+- [Claude Code] 2026-10-08 night IST: launch-audit security fixes, one at a time (org serializer O01, payment grant recovery F01/F02/plan, ownership checks C01/C02/O03/I01/O02, WhatsApp webhook signature I02, sessions P02, trial/deletion P01, upgrade pricing P03, lossless transfer C03). Files: `backend/routes/orgRoutes.js`, `services/*Order*Service.js`, `billingService.js`, `leadRoutes.js`, `projectService.js`, `taskService/Controller`, `enablexRoutes.js`, `whatsappRoutes.js`, `middlewares/auth.js`. Codex: please avoid these until the change log shows them done.
+
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
