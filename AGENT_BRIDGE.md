@@ -61,6 +61,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 
 
+- [Claude Code] 2026-10-08 evening IST: dashboard card consistency (order, centred KPI text, equal widths/heights): `frontend/src/pages/Dashboard.jsx` and, with the owner's OK, `mobile/lib/screens/dashboard/dashboard_screen.dart`.
+
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
