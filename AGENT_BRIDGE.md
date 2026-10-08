@@ -64,6 +64,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 
 
+- [Claude Code] 2026-10-08 evening IST: remaining launch-audit P2/P3 fixes in batches: (A) core CRM leads/projects/follow-ups/export, (B) attendance/bookings/invoices/tasks/performance/referrals, (C) team/seats/auth/deletion, (D) messaging/campaigns/credits/Google/CAPI, (E) public copy. Broad backend + frontend edits; Codex please stay read-only until the change log shows each batch done.
+
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
