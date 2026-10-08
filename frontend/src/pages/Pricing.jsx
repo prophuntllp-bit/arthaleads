@@ -111,7 +111,7 @@ const PLANS = [
 ];
 
 const FAQS = [
-  ["Is there a free trial?", "Yes. The Growth plan comes with a 14-day free trial that includes every Growth feature. No credit card is required, and you can upgrade or cancel anytime."],
+  ["Is there a free trial?", "Yes. The Growth plan comes with a 14-day free trial that includes every Growth feature, with 1 GB of file storage during the trial (15 GB once you subscribe to Growth). No credit card is required, and you can upgrade or cancel anytime."],
   ["How is pricing calculated?", "Pricing is per team member, per month, with a five-seat minimum on every plan. Starter is ₹599 and Growth is ₹999 per user per month, plus 18% GST. There is no setup fee. Enterprise is custom-quoted for large or multi-branch organisations."],
   ["Is there a setup or onboarding fee?", "No. There is no setup fee on any plan. You can start on a 14-day free trial and only pay the per-seat price once you subscribe."],
   ["Can I change plans later?", "Absolutely. You can upgrade or downgrade at any time. When you upgrade, you get instant access to the new features; when you downgrade, the change applies from your next billing cycle."],

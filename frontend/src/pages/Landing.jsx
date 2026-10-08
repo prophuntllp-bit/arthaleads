@@ -444,8 +444,8 @@ const HOW_STEPS = [
     label: "Track & Convert",
     color: "#a855f7",
     title: "Track & Convert",
-    desc: "Move hot leads from Site Visit Booked to Booked. Analytics show your conversion rate, top sources, and team performance over any time period.",
-    highlight: "3× conversion improvement reported",
+    desc: "Move hot leads through Site Visit and Negotiation to Closed Won. Analytics show your conversion rate, top sources, and team performance over any time period.",
+    highlight: "Pipeline and analytics in one place",
   },
 ];
 

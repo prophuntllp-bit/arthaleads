@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 import { Cookie } from "lucide-react";
 
 const STORAGE_KEY = "artha_cookie_consent";
+// The Cookie Policy page keeps the detailed choices under this key. The banner writes the
+// same choices there, so "Essential only" there and here always mean the same thing.
+const PREFS_KEY = "cookie_prefs";
 
 // Consent card, bottom-left so it never sits on top of the Artha assistant
 // (bottom-right). "Essential only" rather than "Decline": the login cookie is
@@ -17,7 +20,10 @@ export default function CookieBanner() {
   if (!visible) return null;
 
   const choose = (value) => {
-    try { localStorage.setItem(STORAGE_KEY, value); } catch { /* storage blocked */ }
+    try {
+      localStorage.setItem(STORAGE_KEY, value);
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ necessary: true, analytics: value === "accepted", marketing: false }));
+    } catch { /* storage blocked */ }
     setVisible(false);
   };
 

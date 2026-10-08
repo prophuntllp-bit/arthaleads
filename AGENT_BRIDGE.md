@@ -64,7 +64,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 
 
-- [Claude Code] 2026-10-08 evening IST: remaining launch-audit P2/P3 fixes in batches: (A) core CRM leads/projects/follow-ups/export, (B) attendance/bookings/invoices/tasks/performance/referrals, (C) team/seats/auth/deletion, (D) messaging/campaigns/credits/Google/CAPI, (E) public copy. Broad backend + frontend edits; Codex please stay read-only until the change log shows each batch done.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
@@ -89,6 +88,16 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 - Layout: shared `AdaptiveGrid` replaces fixed-ratio grids; text scale capped at 1.3x; lead/dump/follow-up/booking/invoice cards rebuilt like the Leads card. Tests in `mobile/test/` (not run by CI).
 - Not in the app yet: the web's "Manage storage" modal (buy extra space, free up files, `/api/storage/*`) and the Meta Conversions card. Plan & Billing "Get more" opens Plan & Billing, not a purchase flow.
 
+
+### Claude Code, 2026-10-08 (IST), remaining launch-audit fixes (batches A to E)
+
+Each batch was tested against the real handlers with in-memory Mongo (scratch scripts, not in the repo); `npm test` (account-deletion suites) now passes fully. Commits: `8566a49` A, `3e7e789` B, `b0f7034` C, `9b19f87` D, then E (copy).
+- **A, core CRM (F04, C04-C10):** lead list ignores a stale poll when the filter changed; project-lead edit form saves to the project and keeps budget/priority/follow-up/assignee (`projectService.updateLeadFields`); exports fetch exactly the selected rows and up to 5,000 (`getAllUnified(query, user, opts)`); `Lead.remarkNote` added for the Follow Ups note; future follow-ups honour From; dashboard counts moved project leads' follow-ups; restore is claimed atomically (second press gets 409).
+- **B, operations (O05-O15):** clock-out with selfies off now clocks out; photo required server-side unless the client declares `proofUnavailable`; a photo that cannot be saved is an error; early-leave/overtime compare full date-times (night shifts); managers do not see attendance Save; booking edits recalculate unless the brokerage was typed (`Booking.brokerageManual`); developer can change (not when an invoice exists); bookings and invoices page 50 at a time with whole-set summaries; developers may have 0% brokerage; ticket replies hide admin notes; Performance tiles use distinct team totals (`getPerformanceTotals`); referrals show "Reward Processing" until a super admin marks it given (`Organization.referralRewardGrantedAt`, `PATCH /super-admin/orgs/:id/referral-reward`); first payment from a referred trial org schedules the reward.
+- **C, team and auth (P04-P06, P08, P09, F03):** an org always keeps one active admin; reactivating someone checks seats (shared `assertSeatAvailable`); account switch also swaps the stored bearer token; reset password needs 8 characters; Plans page has "Renew or change seats"; account deletion covers every user reference and removes a person from a project's assignee list instead of nulling it.
+- **D, messaging and integrations (I03-I13, I18):** routing rules cannot match another source; free-reply allowance claimed with compare-and-swap; a campaign is claimed once, the reviewed settings are what gets sent, and a campaign that cannot start returns to draft; campaign website filter uses `sourceDomain` (deleted/archived leads stay IN campaign audiences on purpose, owner's decision); inbound Meta webhooks keep every message in a batch and store photos, voice notes and documents as "[Image]" style entries (the bot answers only text and taps); one-to-one marketing templates refuse an opted-out lead; Google Ads webhook and sync need Enterprise, the sync files routed leads into projects and holds its cursor back on a failed save; manual button-flow start and nudges need Enterprise, an active assistant and a connected, bot-enabled WhatsApp; managers no longer see template Delete.
+- **E, copy (M01-M10):** signup approval wording, API docs use `token` and describe the Bearer login token, backup wording, AI scoring wording, trial storage, product updates (Oct 2026 entries, blog claim fixed), site visit stage names, cookie banner and Cookie Policy share one preference.
+- Still open (needs the owner, or a decision): AiSensy/Wati/Interakt per-org WhatsApp URLs are unauthenticated; archived-project leads and former project members' follow-ups; invoice amendment policy; marketing coverage gaps (15 features with no public explanation, screenshots).
 
 ### Claude Code, 2026-10-08 (IST), launch-audit fixes
 

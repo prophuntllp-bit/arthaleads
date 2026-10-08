@@ -7,7 +7,7 @@ import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
 
 const steps = [
-  { num: "01", title: "Create your account",  desc: "Sign up at arthaleads.com/signup. Your account and organisation are set up instantly - no waiting, no approval process." },
+  { num: "01", title: "Create your account",  desc: "Request your workspace at arthaleads.com/signup. New workspaces are approved by our team; once yours is approved you can sign in and finish a short setup." },
   { num: "02", title: "Add your team",         desc: "Go to Team settings and invite your telecallers, managers, and admins. Each member gets their own login with role-based access." },
   { num: "03", title: "Connect your forms",    desc: "In Integrations, connect Facebook Leads, or install the Arthaleads WordPress plugin to capture website form submissions automatically." },
   { num: "04", title: "Import existing leads", desc: "Upload a CSV or paste a lead list directly into a project. The system detects duplicates and normalises phone numbers automatically." },
@@ -37,7 +37,7 @@ const faqs = [
   },
   {
     q: "Can I track which leads visited the property site?",
-    a: "Yes. Use the Site Visit status in your lead pipeline. Mark a lead as 'Site Visit Booked' when a visit is scheduled, and update it to 'Site Visited' when they've attended. Your pipeline and analytics reflect this automatically.",
+    a: "Yes. Move a lead to the 'Site Visit' stage in your pipeline when a visit is scheduled or done. Inside a project, set the lead's outcome to 'Site Visit Booked' and then 'Site Visit Done'. Your pipeline and analytics reflect both.",
   },
   {
     q: "How do I follow up with leads?",
@@ -45,7 +45,7 @@ const faqs = [
   },
   {
     q: "Is there a mobile app?",
-    a: "Arthaleads is a Progressive Web App (PWA). Open arthaleads.com in Chrome or Safari on any phone, log in, and tap 'Add to Home Screen' when prompted. It works like a native app - offline-capable, with push notifications.",
+    a: "Yes. You can install Arthaleads on a phone two ways. On Android there is a native app (see the Download page). On any phone you can also open app.arthaleads.com in Chrome or Safari, sign in, and choose 'Add to Home Screen' to install the web app. Both give you push notifications; features that use the camera, location or calling need those permissions allowed on your phone.",
   },
 ];
 

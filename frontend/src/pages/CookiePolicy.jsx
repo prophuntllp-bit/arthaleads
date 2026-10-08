@@ -15,6 +15,8 @@ function CookiePreferences() {
     try {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       if (stored) setPrefs({ ...stored, necessary: true });
+      // No detailed choice saved yet: follow what the banner recorded, if anything.
+      else if (localStorage.getItem("artha_cookie_consent") === "declined") setPrefs({ necessary: true, analytics: false, marketing: false });
     } catch { /* ignore */ }
   }, []);
 
@@ -39,6 +41,7 @@ function CookiePreferences() {
 
   const save = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    localStorage.setItem("artha_cookie_consent", prefs.analytics ? "accepted" : "declined");   // keeps the banner in step
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };

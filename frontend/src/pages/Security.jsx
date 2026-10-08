@@ -18,7 +18,7 @@ const PILLARS = [
       ["Encryption in transit", "All traffic is served over HTTPS/TLS. Data moving between your browser and our servers is always encrypted."],
       ["Encryption at rest", "Your data is stored on MongoDB Atlas with encryption at rest on AWS infrastructure."],
       ["Tenant isolation", "Every organisation's data is strictly scoped by a unique org ID. One customer can never see another's leads."],
-      ["Daily backups", "Automated daily database backups so your lead data is never lost."],
+      ["Backups", "Automated daily backups of core records such as leads, projects, bookings and team data. Uploaded files (photos, brochures, recordings) are stored separately in our file storage."],
     ],
   },
   {

@@ -7,6 +7,24 @@ import { useSEO } from "../utils/useSEO";
 
 const updates = [
   {
+    date: "October 2026",
+    title: "Storage packs and a Manage storage screen",
+    desc: "Add 10 GB blocks of file space for 1, 3 or 12 months, see what is using your space, and delete old call recordings, attendance photos and project files from one screen.",
+    tags: ["Storage", "New Feature"],
+  },
+  {
+    date: "October 2026",
+    title: "Edit routing rules and send conversions to Meta",
+    desc: "Change the name, agent or project of a lead routing rule after you save it. Growth plans can also send lead stages (site visit, closed deal) back to Meta so your ads learn which leads become buyers. It is off until you switch it on.",
+    tags: ["Integrations", "New Feature"],
+  },
+  {
+    date: "October 2026",
+    title: "WhatsApp chat on project leads",
+    desc: "A lead moved into a project keeps its WhatsApp conversation, so the team can read the full chat from the project.",
+    tags: ["WhatsApp", "Projects"],
+  },
+  {
     date: "August 2026",
     title: "Arthaleads is Now a Native Android App",
     desc: "Get the full CRM — leads, pipeline, calls, attendance, and AI copilot — in a fast, native Android app built for the field. Push notifications the moment a lead is assigned to you, and the same real-time data as the web app, wherever you are. Ask your admin for the install link.",
@@ -92,8 +110,8 @@ const updates = [
   },
   {
     date: "April 2026",
-    title: "Blog Module for Real Estate Teams",
-    desc: "Publish property listings, market insights, and project updates directly from your Arthaleads dashboard. Full rich-text editor with image uploads, category management, and SEO-friendly slugs. Content appears on your public blog at arthaleads.com/blog.",
+    title: "Arthaleads Blog",
+    desc: "Guides, market insights and product news now live on the Arthaleads blog at arthaleads.com/blog, written with a rich-text editor, image support and SEO-friendly addresses.",
     tags: ["Content", "New Feature"],
   },
   {

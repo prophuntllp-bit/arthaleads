@@ -134,12 +134,12 @@ data = res.json()["data"]`,
     method: "POST",
     path: "/webhook/website",
     title: "Website form webhook",
-    desc: "Connect any website form (WordPress, custom HTML, landing pages) to capture submissions automatically. Include your verify token to authenticate.",
+    desc: "Connect any website form (WordPress, custom HTML, landing pages) to capture submissions automatically. Include the connection's token (the `token` field) to authenticate.",
     samples: {
       cURL: `curl -X POST https://api.arthaleads.com/webhook/website \\
   -H "Content-Type: application/json" \\
   -d '{
-    "verifyToken": "YOUR_WEBHOOK_TOKEN",
+    "token": "YOUR_WEBHOOK_TOKEN",
     "name": "Priya Patel",
     "phone": "9123456780",
     "email": "priya@example.com",
@@ -149,7 +149,7 @@ data = res.json()["data"]`,
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-    verifyToken: "YOUR_WEBHOOK_TOKEN",
+    token: "YOUR_WEBHOOK_TOKEN",
     name: "Priya Patel",
     phone: "9123456780",
     email: "priya@example.com",
@@ -161,7 +161,7 @@ data = res.json()["data"]`,
 requests.post(
     "https://api.arthaleads.com/webhook/website",
     json={
-        "verifyToken": "YOUR_WEBHOOK_TOKEN",
+        "token": "YOUR_WEBHOOK_TOKEN",
         "name": "Priya Patel",
         "phone": "9123456780",
         "email": "priya@example.com",
@@ -226,9 +226,8 @@ export default function ApiDocs() {
             <div>
               <h3 className="font-semibold text-sm mb-1" style={{ color: textColor }}>Authentication</h3>
               <p className="text-sm leading-relaxed" style={{ color: softText }}>
-                All API requests are authenticated with a Bearer token. Find your API token in{" "}
-                <strong style={{ color: textColor }}>Settings → Integrations</strong> inside your CRM. Pass it in the{" "}
-                <code className="px-1.5 py-0.5 rounded text-xs" style={{ background: isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6", color: "#ff6b00" }}>Authorization</code> header.
+                Lead capture endpoints (website form, Google, custom source) use the token of the connection you created. Find it under{" "}
+                <strong style={{ color: textColor }}>Integrations</strong> in your CRM, on that connection's card, and send it in the request body as <code className="px-1.5 py-0.5 rounded text-xs" style={{ background: isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6", color: "#ff6b00" }}>token</code>. The CRM endpoints below (leads and so on) take a Bearer token: sign in with POST /api/auth/login and use the token it returns as YOUR_API_TOKEN. It acts as that user, with that user's role and access.
                 Base URL: <code className="px-1.5 py-0.5 rounded text-xs" style={{ background: isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6", color: "#ff6b00" }}>https://api.arthaleads.com</code>
               </p>
             </div>
