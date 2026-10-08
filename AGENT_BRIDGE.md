@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 
 
+- [Claude Code] 2026-10-08 IST: Meta Conversions API (CRM events back to Meta): new `models/MetaEvent.js`, `services/metaConversions.js`, `routes/metaConversionRoutes.js`, `Organization.metaCapi`, `Lead.metaLeadId`; hooks in `leadService.update/bulkUpdateStatus`, `utils/projectCopies.js`, `ctwaFlowService.js`, `webhookRoutes.js` (store leadgen id), scheduler sweep; UI card in Integrations (`Automation.jsx`).
+
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
