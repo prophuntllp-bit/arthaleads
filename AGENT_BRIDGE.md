@@ -57,7 +57,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
-- [Codex] 2026-10-08 16:23 IST: Read-only prelaunch dashboard/marketing audit with five parallel agents; publish findings only in docs/audits/2026-10-08-launch-audit.md and log this task in AGENT_BRIDGE.md. No application code or mobile/ changes.
 
 
 
@@ -65,6 +64,11 @@ only be verified live so Claude Code or the owner can check it on production.
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
+
+### Codex, 2026-10-08 (IST), prelaunch audit
+
+- `c27172b` Five-agent dashboard/marketing audit in `docs/audits/2026-10-08-launch-audit.md`: 61 customer capabilities, 57 engineering findings (12 P1), 15 missing and 21 partial marketing explanations. Documentation only; no application or mobile edits. Frontend build passed; 27 dashboard/20 public pages rendered with API fixtures, three browser defects reproduced, payment retry failures reproduced, deletion coverage now has eight failed assertions.
+- Mongo sandbox is blocked by proxy HTTP 403; saved an onboarding draft adding `fastdl.mongodb.org` and sandbox startup instructions, which still requires environment review/save/publish. Database CRUD/role regression and real Meta/WhatsApp, Google, telephony, Razorpay, storage and email delivery still need sign-off; no production secrets or writes used. Final pull preserved Claude's mobile 1.0.12 release.
 
 ### Claude Code, 2026-10-08 (IST), mobile 1.0.12
 
