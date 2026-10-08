@@ -63,7 +63,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 
 
-- [Claude Code] 2026-10-08 night IST: launch-audit security fixes, one at a time (org serializer O01, payment grant recovery F01/F02/plan, ownership checks C01/C02/O03/I01/O02, WhatsApp webhook signature I02, sessions P02, trial/deletion P01, upgrade pricing P03, lossless transfer C03). Files: `backend/routes/orgRoutes.js`, `services/*Order*Service.js`, `billingService.js`, `leadRoutes.js`, `projectService.js`, `taskService/Controller`, `enablexRoutes.js`, `whatsappRoutes.js`, `middlewares/auth.js`. Codex: please avoid these until the change log shows them done.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
@@ -88,6 +87,19 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 - Layout: shared `AdaptiveGrid` replaces fixed-ratio grids; text scale capped at 1.3x; lead/dump/follow-up/booking/invoice cards rebuilt like the Leads card. Tests in `mobile/test/` (not run by CI).
 - Not in the app yet: the web's "Manage storage" modal (buy extra space, free up files, `/api/storage/*`) and the Meta Conversions card. Plan & Billing "Get more" opens Plan & Billing, not a purchase flow.
 
+
+### Claude Code, 2026-10-08 (IST), launch-audit fixes
+
+Re-verified each P1 with a test against the real handlers (two orgs, in-memory Mongo) before and after. Commits: `2a72c8e` O01, `b8d6767` F01/F02/plan payments, `c0cfc51` C01/C02/O02/O03/O04/I01, `f1f6954` I02, `1009672` P02/P01, `fb97980` P03, `b609cfe` C03, then the commit with P07/P10/I15-I17/M04.
+- O01: `utils/publicOrg.js` strips integration keys from every `/org` response (replaced by `...Set` booleans). Nothing in the apps called `GET /org/me`.
+- F01/F02/plan: a failed grant releases the claim so the retry grants it (`billingService`, `storageOrderService`, `creditTopUpService`); `creditService.topUp` no longer throws after the balance moved.
+- Ownership: agents are limited to their own leads on `PATCH /leads/:id`, to assigned projects on project transfer, to their own tasks on complete/reopen, and to their own leads' calls (`findLeadOrProjectLead` takes `user`). Tasks only accept assignee/lead/project from the caller's org; empty lead/project become null.
+- I02: Meta signature check on `/whatsapp/meta-webhook` and per-org `meta` webhooks. **Logged only until `WA_WEBHOOK_ENFORCE=true` is set** (secret: `WA_APP_SECRET` else `FB_APP_SECRET`). AiSensy/Wati/Interakt per-org URLs are still unauthenticated: they need a per-org secret in the URL, which means changing the URL at the provider (owner decision).
+- P02: `User.passwordChangedAt`; older tokens get 401 (`middlewares/auth.js`). Own password change returns a fresh cookie and `token` so the web session continues; the mobile app should store the returned token (otherwise it signs the person out after a change).
+- P01: trial-expiry check no longer blocks `/api/auth/account/deletion`.
+- P03: changing plan or seats mid-term credits the unused time (`billingService.termPlanFor`, `planPricing.withCredit`) and starts a fresh term; same plan and seats still stacks. `GET /api/billing/preview` feeds `CheckoutModal`.
+- C03: project to main transfer reuses `leadFromProjectLead` (notes, activities, status, budget, assignee).
+- Mine: P07 (`storage.removeStrict`, nothing counted unless the file is deleted), P10 (logo checks quota; `STORAGE_FULL` no longer falls back to base64), I15 to I17 (arrival event for leads that moved on, stale pending recovery, test event needs a test code), M04 (privacy text).
 
 ### Claude Code, 2026-10-08 (IST), night
 

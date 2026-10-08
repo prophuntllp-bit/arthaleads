@@ -67,7 +67,7 @@ export default function MetaConversionsSection() {
     try {
       if (!(await save())) return;
       const { data } = await api.post("/meta-conversions/test");
-      setTestNote({ ok: true, text: data.usedTestCode ? "Meta received the test event. Check the Test Events tab in Events Manager." : "Meta accepted the event. Add a test event code to see it in Events Manager's Test Events tab." });
+      setTestNote({ ok: true, text: "Meta received the test event. Check the Test Events tab in Events Manager." });
     } catch (e) {
       setTestNote({ ok: false, text: e?.response?.data?.message || "The test did not go through." });
     } finally { setTesting(false); }
@@ -114,7 +114,7 @@ export default function MetaConversionsSection() {
             value={form.accessToken} onChange={(e) => setForm((f) => ({ ...f, accessToken: e.target.value }))} />
         </div>
         <div>
-          <label className="text-xs font-semibold text-app-soft mb-1.5 block">Test event code (optional)</label>
+          <label className="text-xs font-semibold text-app-soft mb-1.5 block">Test event code (needed for "Send a test event")</label>
           <input className="input w-full" name="meta-test-code" autoComplete="off" placeholder="e.g. TEST12345" value={form.testEventCode}
             onChange={(e) => setForm((f) => ({ ...f, testEventCode: e.target.value }))} />
         </div>
@@ -153,7 +153,8 @@ export default function MetaConversionsSection() {
         <button type="button" onClick={() => save()} disabled={saving} className="btn-primary rounded-full px-5 py-2.5 text-sm font-bold flex items-center gap-2 disabled:opacity-50">
           {saving && <Loader2 className="w-4 h-4 animate-spin" />} Save settings
         </button>
-        <button type="button" onClick={test} disabled={testing || saving || !form.datasetId || !(d.tokenSet || form.accessToken)}
+        <button type="button" onClick={test} disabled={testing || saving || !form.datasetId || !form.testEventCode.trim() || !(d.tokenSet || form.accessToken)}
+          title={form.testEventCode.trim() ? "" : "Add a test event code first, so the test is not counted as a real lead"}
           className="btn-secondary rounded-full px-5 py-2.5 text-sm font-semibold flex items-center gap-2 disabled:opacity-50">
           {testing && <Loader2 className="w-4 h-4 animate-spin" />} Send a test event
         </button>

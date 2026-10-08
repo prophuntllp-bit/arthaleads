@@ -127,7 +127,8 @@ export default function Privacy() {
           <li>We request access to your Facebook Pages, Lead Ad Forms, and lead submissions.</li>
           <li>We store Page Access Tokens securely to enable ongoing lead retrieval via webhooks.</li>
           <li>Lead data received from Facebook or Google (name, phone, email) is stored in your CRM account and used solely for sales follow-up purposes.</li>
-          <li>We do not sell, share, or use this data for advertising or any purpose beyond operating the CRM for you.</li>
+          <li>If you turn on Conversion tracking in Integrations, we send Meta the stage a lead reaches (for example a site visit or a closed deal), together with a hashed phone number and email address or Meta's own lead or ad-click ID, so Meta can improve your ads. It is off by default, only your organisation's admins can switch it on, and you can switch it off at any time.</li>
+          <li>Apart from that optional step, we do not sell, share, or use this data for advertising or any purpose beyond operating the CRM for you.</li>
           <li>You can disconnect your Facebook or Google account at any time from the Connections page inside the CRM. Disconnecting removes your stored access tokens.</li>
         </ul>
       </Section>

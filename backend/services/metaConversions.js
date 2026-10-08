@@ -100,8 +100,8 @@ async function post(org, events, { testCode } = {}) {
 }
 
 async function sendDoc(org, doc) {
-  const lead = await Lead.findById(doc.leadId).select("phone email metaLeadId campaignRef").lean();
   try {
+    const lead = await Lead.findById(doc.leadId).select("phone email metaLeadId campaignRef").lean();
     if (!lead || channelOf(lead) !== doc.channel) throw Object.assign(new Error("Lead has no Meta match."), { skip: true });
     if (Date.now() - new Date(doc.eventTime).getTime() > SEVEN_DAYS) throw Object.assign(new Error("Older than 7 days, Meta no longer accepts it."), { skip: true });
     const out = await post(org, [buildEvent(lead, org, doc)]);
@@ -156,7 +156,11 @@ async function sweep() {
   let sent = 0;
   for (const org of orgs) {
     if (!isReady(org)) continue;
-    const retry = await MetaEvent.find({ orgId: org._id, status: "failed", attempts: { $lt: MAX_ATTEMPTS }, updatedAt: { $lt: new Date(Date.now() - 4 * 60000) } }).limit(100).lean();
+    // "failed" ones, and any left "pending" for 10+ minutes (the process stopped between queueing and sending).
+    const retry = await MetaEvent.find({ orgId: org._id, attempts: { $lt: MAX_ATTEMPTS }, $or: [
+      { status: "failed", updatedAt: { $lt: new Date(Date.now() - 4 * 60000) } },
+      { status: "pending", updatedAt: { $lt: new Date(Date.now() - 10 * 60000) } },
+    ] }).limit(100).lean();
     for (const doc of retry) if (await sendDoc(org, doc)) sent++;
 
     const stages = eventsFor(org).filter((e) => e.enabled).map((e) => e.stage);
@@ -165,6 +169,14 @@ async function sweep() {
     const leads = await Lead.find({ orgId: org._id, status: { $in: stages }, updatedAt: { $gte: since }, $or: [{ metaLeadId: { $nin: ["", null] } }, { "campaignRef.ctwaClid": { $nin: ["", null] } }] })
       .select("orgId status phone email metaLeadId campaignRef updatedAt createdAt").limit(300).lean();
     for (const l of leads) await track(l, l.status, l.status === "New" ? l.createdAt : l.updatedAt);
+
+    // The arrival ("New") event for recent leads that have already moved on, so a
+    // lead that jumped straight to Site Visit still reports that it arrived.
+    if (stages.includes("New")) {
+      const arrived = await Lead.find({ orgId: org._id, createdAt: { $gte: since }, status: { $ne: "New" }, $or: [{ metaLeadId: { $nin: ["", null] } }, { "campaignRef.ctwaClid": { $nin: ["", null] } }] })
+        .select("orgId phone email metaLeadId campaignRef createdAt").limit(300).lean();
+      for (const l of arrived) await track(l, "New", l.createdAt);
+    }
   }
   return sent;
 }
@@ -172,14 +184,16 @@ async function sweep() {
 /** Check the credentials by sending a clearly-fake event to Meta's Test Events. */
 async function sendTest(org) {
   const test = org.metaCapi.testEventCode;
+  // Without a test code Meta would record this as a real event in the live dataset.
+  if (!test) throw new Error("Add a test event code first (Events Manager, Test events tab) so this is not counted as a real lead.");
   const out = await post(org, [{
     event_name: "Lead", event_time: Math.floor(Date.now() / 1000), event_id: `test_${Date.now()}`,
     action_source: "system_generated",
     user_data: { em: [sha("test@arthaleads.com")] },
     custom_data: { event_source: "crm", lead_event_source: "ArthaLeads" },
     partner_agent: PARTNER_AGENT,
-  }], { testCode: test || undefined });
-  return { received: out.events_received ?? 0, usedTestCode: Boolean(test) };
+  }], { testCode: test });
+  return { received: out.events_received ?? 0, usedTestCode: true };
 }
 
 module.exports = { DEFAULT_EVENTS, eventsFor, isReady, channelOf, track, sweep, sendTest, encryptField, decryptField };

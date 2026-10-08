@@ -148,6 +148,12 @@ async function remove(key) {
   }
 }
 
+/** Like remove(), but throws when the object could not be deleted. For callers that report the result. */
+async function removeStrict(key) {
+  await client().send(new DeleteObjectCommand({ Bucket: process.env.B2_BUCKET, Key: key }));
+  await require("./storageLedger").forget(key);
+}
+
 /** True when the env is complete enough to upload. Callers use this to fail
  *  with a clear message instead of an SDK error from three layers down. */
 function isConfigured() {
@@ -158,6 +164,7 @@ module.exports = {
   put,
   putDataUri,
   remove,
+  removeStrict,
   getObject,
   publicUrl,
   decodeDataUri,

@@ -53,25 +53,35 @@ async function freeUp(orgId, category, olderThanDays) {
   if (!storage.isConfigured()) throw Object.assign(new Error("File storage is not available right now."), { status: 503 });
   const cutoff = new Date(Date.now() - olderThanDays * 86400000);
   let files = 0, bytes = 0;
+  const failed = [];   // keys that would not delete: skipped, never counted, not retried this run
   // Bounded so one request cannot run forever on a very large org.
   for (let round = 0; round < 10; round++) {
-    const batch = await StorageObject.find({ orgId, category, createdAt: { $lt: cutoff } }).select("key bytes").limit(BATCH).lean();
+    const batch = await StorageObject.find({ orgId, category, createdAt: { $lt: cutoff }, key: { $nin: failed } }).select("key bytes").limit(BATCH).lean();
     if (!batch.length) break;
-    let removedThisRound = 0;
     for (const obj of batch) {
+      // Delete the file first. Only a file that is really gone is counted as freed,
+      // and the records are marked afterwards, so a failed delete never leaves a
+      // lead pointing at a recording that still exists but is flagged as removed.
+      try {
+        await storage.removeStrict(obj.key);
+      } catch (err) {
+        failed.push(obj.key);
+        logger.warn(`[storage] could not remove ${obj.key}: ${err.message}`);
+        continue;
+      }
+      files++; bytes += obj.bytes;
       try {
         if (category === "recordings") await clearRecording(orgId, obj.key);
         else await clearSelfie(orgId, obj.key);
-        await storage.remove(obj.key);
-        files++; bytes += obj.bytes; removedThisRound++;
       } catch (err) {
-        logger.warn(`[storage] could not remove ${obj.key}: ${err.message}`);
+        logger.warn(`[storage] removed ${obj.key} but could not mark its record: ${err.message}`);
       }
     }
-    if (batch.length < BATCH || removedThisRound === 0) break;
+    if (batch.length < BATCH) break;
   }
+  if (failed.length) logger.warn(`[storage] org ${orgId}: ${failed.length} ${category} file(s) could not be removed`);
   logger.info(`[storage] org ${orgId} freed ${files} ${category} file(s), ${(bytes / 1048576).toFixed(1)} MB`);
-  return { files, bytes };
+  return { files, bytes, failed: failed.length };
 }
 
 module.exports = { CATEGORIES, preview, freeUp };

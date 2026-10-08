@@ -201,8 +201,9 @@ router.patch("/me/logo", authorize("admin"), async (req, res, next) => {
       if (isBase64) {
         try {
           logoUrl = await uploadOrgLogo(logo, req.orgId.toString());
-        } catch {
-          logoUrl = logo; // Cloudinary not configured — store base64 directly
+        } catch (e) {
+          if (e?.code === "STORAGE_FULL") throw e;   // say so, rather than quietly filing it in the database
+          logoUrl = logo; // file storage not configured — store base64 directly
         }
       } else {
         logoUrl = logo;

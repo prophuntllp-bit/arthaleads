@@ -100,7 +100,7 @@ router.post("/test", async (req, res) => {
     if (!org?.metaCapi?.datasetId || !org.metaCapi.accessToken) return res.status(400).json({ message: "Save the dataset ID and access token first." });
     res.json(await capi.sendTest(org));
   } catch (err) {
-    res.status(400).json({ message: `Meta said: ${err.message}` });
+    res.status(400).json({ message: /^Add a test event code/.test(err.message) ? err.message : `Meta said: ${err.message}` });
   }
 });
 

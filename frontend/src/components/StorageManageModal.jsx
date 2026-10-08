@@ -131,7 +131,8 @@ export default function StorageManageModal({ open, onClose }) {
     setClean((c) => ({ ...c, working: true }));
     try {
       const { data } = await api.post("/storage/free-up", { category: clean.category, olderThanDays: clean.days });
-      toast.success(`Freed ${formatBytes(data.bytes)} (${data.files} file${data.files === 1 ? "" : "s"}).`);
+      if (data.failed) toast.error(`${data.failed} file${data.failed === 1 ? "" : "s"} could not be deleted. Try again in a moment.`);
+      if (data.files || !data.failed) toast.success(`Freed ${formatBytes(data.bytes)} (${data.files} file${data.files === 1 ? "" : "s"}).`);
       setClean(null);
       load();
     } catch (e) {

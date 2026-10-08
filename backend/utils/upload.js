@@ -64,6 +64,8 @@ const selfieKey = (userId, date, leg) =>
  */
 async function uploadOrgLogo(dataUri, orgId) {
   const { contentType, buffer } = storage.decodeDataUri(dataUri);
+  // Replacing the logo only counts the difference, so a full workspace can still swap its logo for a smaller one.
+  await ledger.assertCanStore(orgId, buffer.length, orgLogoKey(orgId));
   const url = await storage.put(orgLogoKey(orgId), buffer, contentType, { orgId });
   return versioned(url);
 }
