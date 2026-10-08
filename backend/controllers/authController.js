@@ -319,6 +319,13 @@ const authController = {
   async updateProfile(req, res, next) {
     try {
       const user = await authService.updateProfile(req.user._id, req.body, req.user);
+      // Changing the password ends this session too (see passwordChangedAt), so
+      // hand the browser a fresh one and the person is not signed out of their own change.
+      if (req.body?.newPassword) {
+        const token = authService.signToken(req.user._id);
+        res.cookie("crm_token", token, cookieOptions());
+        return res.json({ success: true, user, token });
+      }
       res.json({ success: true, user });
     } catch (err) {
       next(err);

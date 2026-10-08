@@ -50,6 +50,10 @@ const userSchema = new mongoose.Schema(
     // again, on another browser or on another device.
     checklistDismissedAt: { type: Date, default: null },
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: false, default: null, index: true },
+    // Set whenever the password changes. Sessions signed in before this moment
+    // are no longer accepted (middlewares/auth.js), so a reset or change really
+    // does sign out whoever else was holding the old password or a stolen session.
+    passwordChangedAt:    { type: Date, default: null },
     passwordResetToken:   { type: String, select: false },
     passwordResetExpires: { type: Date,   select: false },
     // Phone OTP (sent via email)
@@ -65,6 +69,7 @@ userSchema.pre("save", async function (next) {
   if (!this.isModified("password") || !this.password) return next();
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
+  if (!this.isNew) this.passwordChangedAt = new Date();
   next();
 });
 

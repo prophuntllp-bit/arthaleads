@@ -87,6 +87,10 @@ const protect = async (req, res, next) => {
     const user = await User.findById(decoded.id).select("-password");
     if (!user) return next(new AppError("User no longer exists.", 401));
     if (!user.isActive) return next(new AppError("Your account has been deactivated.", 403));
+    // A password change or reset ends every session that started before it.
+    if (user.passwordChangedAt && decoded.iat && decoded.iat < Math.floor(user.passwordChangedAt.getTime() / 1000)) {
+      return next(new AppError("Your password was changed. Please sign in again.", 401));
+    }
 
     req.user  = user;
     req.orgId = user.orgId;
@@ -133,7 +137,10 @@ const protect = async (req, res, next) => {
         return next(new AppError("SIGNUP_REJECTED", 403));
       }
       // Trial expiry check - only for orgs still on the trial plan
-      if (org.plan === "trial" && org.trialEndsAt && new Date() > new Date(org.trialEndsAt)) {
+      // The deletion screens stay open: someone with a deletion scheduled must
+      // be able to cancel it even if the trial ran out during the 30-day window.
+      if (org.plan === "trial" && org.trialEndsAt && new Date() > new Date(org.trialEndsAt)
+          && !DELETION_ROUTES.test(req.originalUrl || "")) {
         return next(new AppError("TRIAL_EXPIRED", 403));
       }
       req.org = org;

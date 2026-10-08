@@ -754,4 +754,5 @@ authService.getPerformanceLeads = async function (actor, { userId, pipeline, met
   return { leads: rows, total, page: pageInt, pages: Math.ceil(total / limitInt) };
 };
 
+authService.signToken = signToken;
 module.exports = authService;
