@@ -10,18 +10,22 @@ class UpgradeWall extends StatelessWidget {
   final Map<String, dynamic>? org;
   final String feature;
   final String? description;
+  // The plan the feature actually starts at, which can be further up than the
+  // next step (an Enterprise feature on a Starter plan).
+  final String? needs;
 
   const UpgradeWall({
     super.key,
     required this.org,
     required this.feature,
     this.description,
+    this.needs,
   });
 
   @override
   Widget build(BuildContext context) {
     final current = planLabel(org?['plan'] as String?);
-    final next = upgradeTarget(org?['plan'] as String?);
+    final next = needs != null ? planLabel(needs) : upgradeTarget(org?['plan'] as String?);
 
     return Center(
       child: Padding(

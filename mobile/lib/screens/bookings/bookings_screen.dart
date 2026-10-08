@@ -6,6 +6,8 @@ import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
+import '../../widgets/adaptive_grid.dart';
+import '../../widgets/glass.dart';
 
 const _unitTypes = ['Flat', 'Plot', 'Villa', 'Shop', 'Office', 'Other'];
 
@@ -721,14 +723,10 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
                 children: [
                   // ── Stats ──
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 2.1,
-                    children: [
+                  AdaptiveGrid(
+ columns: 2,
+ spacing: 10,
+ children: [
                       _statCard(
                         'Total Bookings',
                         '${_bookings.length}',
@@ -796,25 +794,28 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
   }
 
-  Widget _statCard(String label, String value, Color color) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-    decoration: BoxDecoration(
-      color: Theme.of(context).cardColor,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: Theme.of(context).dividerColor),
-    ),
+  // Same look as the Dashboard's cards: soft surface, small caps label, big
+  // coloured figure.
+  Widget _statCard(String label, String value, Color color) => SoftSurface(
+    radius: 18,
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(label, style: const TextStyle(fontSize: 10.5, color: Colors.grey)),
-        const SizedBox(height: 3),
         Text(
-          value,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: color,
+          label.toUpperCase(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppText.kicker(context).copyWith(letterSpacing: 1),
+        ),
+        const SizedBox(height: 4),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color),
           ),
         ),
       ],
@@ -835,93 +836,93 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
-      child: ListTile(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
         onTap: () => _openForm(booking: b),
-        title: Text(
-          b['customerName'] as String? ?? '—',
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if ((b['jointBuyerName'] as String? ?? '').isNotEmpty)
-              Text(
-                b['jointBuyerName'] as String,
-                style: const TextStyle(fontSize: 11, color: Colors.grey),
-              ),
-            Text('${b['projectName'] ?? ''} · $unitBits'),
-            if (dev != null)
-              Text(
-                dev,
-                style: const TextStyle(fontSize: 11, color: Colors.grey),
-              ),
-            Text(
-              _fmtDate(b['bookingDate']),
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: color.withValues(alpha: 0.35)),
-                  ),
-                  child: Text(
-                    _statusLabels[b['status']] ?? b['status'] as String? ?? '',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: color,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 2, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      b['customerName'] as String? ?? '—',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Column(
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: color.withValues(alpha: 0.35)),
+                    ),
+                    child: Text(
+                      _statusLabels[b['status']] ?? b['status'] as String? ?? '',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    onSelected: (v) {
+                      if (v == 'invoice') _generateInvoice(b);
+                      if (v == 'view_invoice') widget.onNavigate?.call('Invoices');
+                      if (v == 'delete') _delete(b);
+                    },
+                    itemBuilder: (ctx) => [
+                      if (b['status'] == 'new')
+                        const PopupMenuItem(value: 'invoice', child: Text('Generate Invoice')),
+                      if (b['invoiceId'] != null)
+                        const PopupMenuItem(value: 'view_invoice', child: Text('View Invoice')),
+                      const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                    ],
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _fmtMoney(b['totalBill']),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
+                    if ((b['jointBuyerName'] as String? ?? '').isNotEmpty)
+                      Text(b['jointBuyerName'] as String, style: Theme.of(context).textTheme.bodySmall),
+                    const SizedBox(height: 2),
+                    Text('${b['projectName'] ?? ''} · $unitBits', style: const TextStyle(fontSize: 13)),
+                    if (dev != null || _fmtDate(b['bookingDate']).isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          [?dev, _fmtDate(b['bookingDate'])].where((e) => e.isNotEmpty).join(' · '),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                       ),
-                    ),
-                    Text(
-                      'Brok: ${_fmtMoney(b['totalBrokerage'])}',
-                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    const SizedBox(height: 8),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(_fmtMoney(b['totalBill']), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            'Brokerage ${_fmtMoney(b['totalBrokerage'])}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ],
-        ),
-        isThreeLine: true,
-        trailing: PopupMenuButton<String>(
-          onSelected: (v) {
-            if (v == 'invoice') _generateInvoice(b);
-            if (v == 'view_invoice') widget.onNavigate?.call('Invoices');
-            if (v == 'delete') _delete(b);
-          },
-          itemBuilder: (ctx) => [
-            if (b['status'] == 'new')
-              const PopupMenuItem(
-                value: 'invoice',
-                child: Text('Generate Invoice'),
               ),
-            if (b['invoiceId'] != null)
-              const PopupMenuItem(
-                value: 'view_invoice',
-                child: Text('View Invoice'),
-              ),
-            const PopupMenuItem(value: 'delete', child: Text('Delete')),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -89,7 +89,7 @@ Color sourceColor(BuildContext context, String name) {
 /// Card title block. The date range sits on its own line under the title (a
 /// phone is too narrow to fit it in the pill without cutting it off); the pill
 /// is kept for a short figure such as "53 leads".
-Widget _cardHeader(BuildContext context, String kicker, String title, {String? pill, String? scope, String? tip}) {
+Widget dashCardHeader(BuildContext context, String kicker, String title, {String? pill, String? scope, String? tip}) {
   final t = AppTheme.of(context);
   return Row(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,7 +156,7 @@ class DashStatusBreakdown extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _cardHeader(context, 'Pipeline', 'Leads by Status', pill: '$total leads', scope: scope,
+          dashCardHeader(context, 'Pipeline', 'Leads by Status', pill: '$total leads', scope: scope,
               tip: 'Where the leads from these dates are in your pipeline right now. Tap a stage to see those leads.'),
           const SizedBox(height: 10),
           if (total == 0)
@@ -282,7 +282,7 @@ class _DashSourceDonutState extends State<DashSourceDonut> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _cardHeader(context, 'Acquisition mix', 'Leads by Source', scope: widget.scope,
+          dashCardHeader(context, 'Acquisition mix', 'Leads by Source', scope: widget.scope,
               tip: 'Where the leads from these dates came from. Tap a source to see its leads.'),
           const SizedBox(height: 12),
           if (total == 0)
@@ -483,16 +483,26 @@ class DashSourcePerformance extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _cardHeader(context, 'Source quality', 'Sources this period', scope: scope,
+          dashCardHeader(context, 'Source quality', 'Sources this period', scope: scope,
               tip: 'Which source brings leads that go somewhere, not just the most leads. Tap a source to see its leads.'),
           const SizedBox(height: 10),
           Row(
             children: [
               Expanded(flex: 5, child: Text('SOURCE', style: head)),
-              Expanded(flex: 2, child: Text('LEADS', textAlign: TextAlign.right, style: head)),
-              Expanded(flex: 3, child: Text('CONTACTED', textAlign: TextAlign.right, style: head)),
-              Expanded(flex: 2, child: Text('VISITS', textAlign: TextAlign.right, style: head)),
-              Expanded(flex: 2, child: Text('WON', textAlign: TextAlign.right, style: head)),
+              // Short labels that always fit their column (the full word still
+              // reads in the note under the table).
+              for (final (flex, label) in const [(2, 'LEADS'), (3, 'CONTACT'), (2, 'VISITS'), (2, 'WON')])
+                Expanded(
+                  flex: flex,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(label, maxLines: 1, style: head),
+                    ),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 4),
@@ -501,7 +511,7 @@ class DashSourcePerformance extends StatelessWidget {
                 onTap: onSelect == null ? null : () => onSelect!('${r['source']}')),
           row('All sources', tot['leads']!, tot['contacted']!, tot['visits']!, tot['won']!, bold: true),
           const SizedBox(height: 6),
-          Text('Contacted: moved past New. Visits: reached Site Visit or later, or has a visit date.',
+          Text('Contact: moved past New. Visits: reached Site Visit or later, or has a visit date.',
               style: TextStyle(fontSize: 10.5, color: t.textSoft)),
         ],
       ),

@@ -69,6 +69,14 @@ class _LeadRoutingSectionState extends State<LeadRoutingSection> {
   String _project = '';
   final Set<String> _ticked = {};
 
+  // Editing an existing rule: only its name, agent and project can change.
+  // What it matches on is its identity; to match something else, add a rule.
+  String? _editingId;
+  final _editLabel = TextEditingController();
+  String _editAssign = '';
+  String _editProject = '';
+  bool _savingEdit = false;
+
   @override
   void initState() {
     super.initState();
@@ -79,6 +87,7 @@ class _LeadRoutingSectionState extends State<LeadRoutingSection> {
   void dispose() {
     _label.dispose();
     _value.dispose();
+    _editLabel.dispose();
     super.dispose();
   }
 
@@ -231,6 +240,119 @@ class _LeadRoutingSectionState extends State<LeadRoutingSection> {
     } catch (e) {
       _toast(ApiClient.errorMessage(e, 'Failed to update rule'), error: true);
     }
+  }
+
+  void _startEdit(Map<String, dynamic> rule) {
+    setState(() {
+      _editingId = '${rule['_id']}';
+      _editLabel.text = '${rule['label'] ?? ''}';
+      final who = '${rule['assignTo'] ?? ''}';
+      _editAssign = _agents.any((a) => '${a['_id']}' == who) ? who : '';
+      final proj = '${rule['assignToProject'] ?? ''}';
+      _editProject = _projects.any((p) => '${p['_id']}' == proj) ? proj : '';
+    });
+  }
+
+  Future<void> _saveEdit(Map<String, dynamic> rule) async {
+    if (_editLabel.text.trim().isEmpty) return _toast('Give the rule a name', error: true);
+    if (_editAssign.isEmpty) return _toast('Pick who it should be assigned to', error: true);
+    setState(() => _savingEdit = true);
+    try {
+      final res = await _api.dio.patch('/routing-rules/${rule['_id']}', data: {
+        'label': _editLabel.text.trim(),
+        'assignTo': _editAssign,
+        'assignToProject': _editProject.isEmpty ? null : _editProject,
+      });
+      final i = _rules.indexWhere((r) => r['_id'] == rule['_id']);
+      if (i != -1) _rules[i] = (res.data['rule'] as Map).cast<String, dynamic>();
+      _editingId = null;
+      _toast('Rule updated. New leads will follow it.');
+    } catch (e) {
+      _toast(ApiClient.errorMessage(e, 'Could not update the rule'), error: true);
+    } finally {
+      if (mounted) setState(() => _savingEdit = false);
+    }
+  }
+
+  Widget _editCard(AppTheme t, Map<String, dynamic> r) {
+    final source = _sourceLabels['${r['source'] ?? 'facebook'}'] ?? '${r['source'] ?? ''}';
+    final field = _matchFieldLabels['${r['matchField']}'] ?? '${r['matchField'] ?? ''}';
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              style: TextStyle(fontSize: 12, color: t.textSoft),
+              children: [
+                TextSpan(text: '$source · $field '),
+                TextSpan(
+                  text: '${r['matchValue'] ?? ''}',
+                  style: const TextStyle(fontFamily: 'monospace', color: AppColors.primary),
+                ),
+                const TextSpan(text: " (what it matches can't be changed here; add a new rule to match something else)"),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          LabeledField(
+            label: 'Rule name',
+            child: TextField(controller: _editLabel, textCapitalization: TextCapitalization.sentences),
+          ),
+          const SizedBox(height: 10),
+          AppSelect<String>(
+            label: 'Assign to',
+            dense: true,
+            value: _editAssign,
+            options: {for (final a in _agents) '${a['_id']}': '${a['name'] ?? ''}'},
+            onChanged: (v) => setState(() => _editAssign = v ?? ''),
+          ),
+          const SizedBox(height: 10),
+          AppSelect<String>(
+            label: 'Also file into project',
+            dense: true,
+            value: _editProject,
+            options: {
+              '': "Don't file into a project",
+              for (final p in _projects) '${p['_id']}': '${p['name'] ?? ''}',
+            },
+            onChanged: (v) => setState(() => _editProject = v ?? ''),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Applies to leads that arrive from now on. Leads already routed keep the agent they were given.',
+            style: TextStyle(fontSize: 11.5, color: t.textSoft),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _savingEdit ? null : () => setState(() => _editingId = null),
+                  child: const Text('Cancel'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: GradientButton(
+                  fullWidth: true,
+                  loading: _savingEdit,
+                  onPressed: _savingEdit ? null : () => _saveEdit(r),
+                  child: const Text('Save changes'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _delete(Map<String, dynamic> rule) async {
@@ -445,6 +567,7 @@ class _LeadRoutingSectionState extends State<LeadRoutingSection> {
   }
 
   Widget _ruleRow(AppTheme t, Map<String, dynamic> r) {
+    if (_editingId == '${r['_id']}') return _editCard(t, r);
     final on = r['isActive'] != false;
     final source = _sourceLabels['${r['source'] ?? 'facebook'}'] ?? '${r['source'] ?? ''}';
     final field = _matchFieldLabels['${r['matchField']}'] ?? '${r['matchField'] ?? ''}';
@@ -456,64 +579,85 @@ class _LeadRoutingSectionState extends State<LeadRoutingSection> {
       child: Container(
         width: double.infinity,
         margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.fromLTRB(8, 8, 4, 8),
+        padding: const EdgeInsets.fromLTRB(8, 8, 2, 10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: t.border),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Switch(
-              value: on,
-              activeThumbColor: Colors.white,
-              activeTrackColor: green,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              onChanged: (_) => _toggle(r),
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${r['label'] ?? 'Routing rule'}',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                  ),
-                  Text(source.toUpperCase(),
-                      style: TextStyle(fontSize: 9.5, letterSpacing: 0.6, fontWeight: FontWeight.w700, color: t.textSoft)),
-                  const SizedBox(height: 3),
-                  Text.rich(
-                    TextSpan(
-                      style: TextStyle(fontSize: 12, color: t.textSoft),
-                      children: [
-                        TextSpan(text: '$field '),
-                        TextSpan(
-                          text: '${r['matchValue'] ?? ''}',
-                          style: const TextStyle(fontFamily: 'monospace', color: AppColors.primary),
-                        ),
-                        const TextSpan(text: '  ->  '),
-                        TextSpan(
-                          text: who.isNotEmpty ? who : 'team member',
-                          style: const TextStyle(fontWeight: FontWeight.w700, color: green),
-                        ),
-                        if (project.isNotEmpty) ...[
-                          const TextSpan(text: '  + filed into '),
-                          TextSpan(text: project, style: const TextStyle(fontWeight: FontWeight.w700, color: green)),
-                        ],
-                      ],
+            // Name and actions on one row, details full width underneath, so the
+            // text is not squeezed into a narrow column beside the switch.
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 46,
+                  height: 32,
+                  child: FittedBox(
+                    child: Switch(
+                      value: on,
+                      activeThumbColor: Colors.white,
+                      activeTrackColor: green,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      onChanged: (_) => _toggle(r),
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${r['label'] ?? 'Routing rule'}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                      ),
+                      Text(source.toUpperCase(),
+                          style: TextStyle(fontSize: 9.5, letterSpacing: 0.6, fontWeight: FontWeight.w700, color: t.textSoft)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Edit rule',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _startEdit(r),
+                  icon: Icon(Icons.edit_outlined, size: 19, color: t.textSoft),
+                ),
+                IconButton(
+                  tooltip: 'Delete rule',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _delete(r),
+                  icon: Icon(Icons.delete_outline_rounded, size: 19, color: t.textSoft),
+                ),
+              ],
             ),
-            IconButton(
-              tooltip: 'Delete rule',
-              visualDensity: VisualDensity.compact,
-              onPressed: () => _delete(r),
-              icon: Icon(Icons.delete_outline_rounded, size: 19, color: t.textSoft),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 2, 8, 0),
+              child: Text.rich(
+                TextSpan(
+                  style: TextStyle(fontSize: 12, height: 1.35, color: t.textSoft),
+                  children: [
+                    TextSpan(text: '$field '),
+                    TextSpan(
+                      text: '${r['matchValue'] ?? ''}',
+                      style: const TextStyle(fontFamily: 'monospace', color: AppColors.primary),
+                    ),
+                    const TextSpan(text: '  ->  '),
+                    TextSpan(
+                      text: who.isNotEmpty ? who : 'team member',
+                      style: const TextStyle(fontWeight: FontWeight.w700, color: green),
+                    ),
+                    if (project.isNotEmpty) ...[
+                      const TextSpan(text: '  + filed into '),
+                      TextSpan(text: project, style: const TextStyle(fontWeight: FontWeight.w700, color: green)),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ],
         ),

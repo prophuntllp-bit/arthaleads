@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'lead_chat_panel.dart';
 import 'lead_origin.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
@@ -13,6 +14,7 @@ import '../../core/theme.dart';
 import '../../widgets/badges.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/chips.dart';
+import '../../widgets/copy_button.dart';
 import '../../widgets/whatsapp_send_sheet.dart';
 import '../calls/call_history_screen.dart';
 
@@ -58,6 +60,18 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     _noteCtrl.dispose();
     super.dispose();
   }
+
+  /// Projects this lead was also filed into by a routing rule or a transfer
+  /// (the original stays in Leads). Empty for project leads themselves.
+  List<String> get _alsoIn => ((lead['inProjects'] as List?) ?? const [])
+      .map((p) => p is Map ? '${p['projectName'] ?? ''}' : '')
+      .where((n) => n.isNotEmpty)
+      .toList();
+
+  Set<String> get _alsoInIds => ((lead['inProjects'] as List?) ?? const [])
+      .map((p) => p is Map ? '${p['projectId'] ?? ''}' : '')
+      .where((id) => id.isNotEmpty)
+      .toSet();
 
   bool get _isProject =>
       lead['_type'] == 'project' && lead['projectId'] != null;
@@ -240,6 +254,11 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                     .map(
                       (p) => ListTile(
                         title: Text(p['name'] as String? ?? ''),
+                        subtitle: _alsoInIds.contains('${p['_id']}')
+                            ? const Text(
+                                'Already here. Transferring merges into the existing entry.',
+                              )
+                            : null,
                         onTap: () => Navigator.pop(ctx, p['_id'] as String),
                       ),
                     )
@@ -757,13 +776,29 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                 ],
               ),
               const SizedBox(height: 4),
-              Text(
-                [
-                  lead['phone'] as String? ?? '',
-                  if ((lead['email'] as String? ?? '').isNotEmpty)
-                    lead['email'] as String,
-                ].join('  ·  '),
-                style: Theme.of(context).textTheme.bodySmall,
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      [
+                        lead['phone'] as String? ?? '',
+                        if ((lead['email'] as String? ?? '').isNotEmpty)
+                          lead['email'] as String,
+                      ].join('  ·  '),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  // Name and number on two lines, ready to paste into a
+                  // message, same as the web's Lead Details.
+                  CopyButton(
+                    value: [
+                      lead['name'] as String? ?? '',
+                      lead['phone'] as String? ?? '',
+                    ].where((v) => v.trim().isNotEmpty).join('\n'),
+                    label: 'Copy name and number',
+                    done: 'Name and number copied',
+                  ),
+                ],
               ),
               if ((lead['projectName'] as String? ?? '').isNotEmpty)
                 Padding(
@@ -772,6 +807,18 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                     'Project: ${lead['projectName']}',
                     style: const TextStyle(
                       color: AppColors.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              if (_alsoIn.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Also in project: ${_alsoIn.join(', ')}',
+                    style: const TextStyle(
+                      color: Color(0xFF7C3AED),
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -855,6 +902,12 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                       ),
                     ),
                   ),
+                  if (!_isProject && lead['source'] == 'WhatsApp')
+                    ChoiceChip(
+                      label: const Text('Chat', style: TextStyle(fontSize: 12)),
+                      selected: _tab == 'chat',
+                      onSelected: (_) => setState(() => _tab = 'chat'),
+                    ),
                   if (_hasVoice)
                     ChoiceChip(
                       label: const Text(
@@ -870,6 +923,8 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
 
               if (_tab == 'notes') ..._notesTab(),
               if (_tab == 'activity') ..._activityTab(),
+              if (_tab == 'chat' && !_isProject)
+                LeadChatPanel(leadId: lead['_id'] as String),
               if (_tab == 'transcript' && _hasVoice) ..._transcriptTab(),
 
               if (_tab == 'info') ...[

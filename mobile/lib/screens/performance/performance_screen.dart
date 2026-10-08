@@ -16,6 +16,7 @@ import '../../widgets/initials_avatar.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/upgrade_wall.dart';
 import 'performance_leads_sheet.dart';
+import '../../widgets/adaptive_grid.dart';
 
 /// Performance — GET /auth/performance (admin/manager). Leaderboard of
 /// team members with dual Main Pipeline / Project Pipeline breakdown.
@@ -823,10 +824,13 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
           ),
           const SizedBox(height: 12),
 
-          Row(
+          IntrinsicHeight(
+            child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
                 child: StatCard(
+                  compact: true,
                   label: 'Total Leads',
                   value: '${_screenTotal('totalAssigned')}',
                   icon: Icons.people_alt_rounded,
@@ -837,6 +841,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: StatCard(
+                  compact: true,
                   label: 'Site Visits',
                   value: '${_screenTotal('siteVisits')}',
                   icon: Icons.track_changes_rounded,
@@ -847,6 +852,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: StatCard(
+                  compact: true,
                   label: 'Closed / Booked',
                   value: '${_screenTotal('closedWon')}',
                   icon: Icons.emoji_events_rounded,
@@ -855,6 +861,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                 ),
               ),
             ],
+            ),
           ),
           const SizedBox(height: 12),
 
@@ -1152,14 +1159,10 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                   ),
                   Padding(
                     padding: const EdgeInsets.all(8),
-                    child: GridView.count(
-                      crossAxisCount: 3,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 6,
-                      crossAxisSpacing: 6,
-                      childAspectRatio: 1.7,
-                      children: [
+                    child: AdaptiveGrid(
+ columns: 3,
+ spacing: 6,
+ children: [
                         _smallTile('Assigned', pipeline['totalAssigned'] ?? 0,
                             onTap: () => _drill('${m['name']} · Main Pipeline · Assigned', 'assigned', userId: '${m['_id']}', pipeline: 'main')),
                         _smallTile('New', pipeline['newLeads'] ?? 0,
@@ -1237,14 +1240,10 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                     padding: const EdgeInsets.all(8),
                     child: Column(
                       children: [
-                        GridView.count(
-                          crossAxisCount: 4,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          mainAxisSpacing: 6,
-                          crossAxisSpacing: 6,
-                          childAspectRatio: 1.1,
-                          children: [
+                        AdaptiveGrid(
+ columns: 4,
+ spacing: 6,
+ children: [
                             _smallTile(
                               'Assigned',
                               project['totalAssigned'] ?? 0,
@@ -1273,14 +1272,10 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        GridView.count(
-                          crossAxisCount: 3,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          mainAxisSpacing: 6,
-                          crossAxisSpacing: 6,
-                          childAspectRatio: 1.7,
-                          children: [
+                        AdaptiveGrid(
+ columns: 3,
+ spacing: 6,
+ children: [
                             _smallTile('Call Back', project['callBack'] ?? 0,
                               onTap: () => _drill('${m['name']} · Project Pipeline · Call Back', 'callBack', userId: '${m['_id']}', pipeline: 'project')),
                             _smallTile(

@@ -186,3 +186,67 @@ class _AppSelectSheet<T> extends StatelessWidget {
     );
   }
 }
+
+/// The same labelled, tappable field box as [AppSelect], for pickers that open
+/// something other than a plain option list (a tree, a date picker). Sharing
+/// the look keeps every field in a form lined up, label and text alike.
+class AppSelectBox extends StatelessWidget {
+  final String label;
+  final String text;
+  final bool placeholder;
+  final VoidCallback onTap;
+  final Widget? trailing;
+  final bool dense;
+  const AppSelectBox({
+    super.key,
+    required this.label,
+    required this.text,
+    required this.onTap,
+    this.placeholder = false,
+    this.trailing,
+    this.dense = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(label, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: t.textSoft)),
+          ),
+          InkWell(
+            borderRadius: BorderRadius.circular(AppRadii.input),
+            onTap: onTap,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: dense ? 12 : 15),
+              decoration: BoxDecoration(
+                color: t.surfaceSolid,
+                borderRadius: BorderRadius.circular(AppRadii.input),
+                border: Border.all(color: t.border),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      text,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 14, color: placeholder ? t.textSoft : t.text),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  trailing ?? Icon(Icons.keyboard_arrow_down_rounded, color: t.textSoft),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -5,7 +5,6 @@ import '../../core/constants.dart';
 import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/date_range_picker.dart' show dateRangeLabel;
-import '../../widgets/labeled_field.dart';
 import 'source_tree_select.dart';
 
 /// Filter model for GET /leads/unified — field names match the query params.
@@ -114,6 +113,8 @@ class LeadFiltersSheet extends StatefulWidget {
   final List<Map<String, dynamic>> agents;
   final List<String> domains;
   final List<Map<String, dynamic>> sitePages;
+  final List<Map<String, dynamic>> adOptions;
+  final List<Map<String, dynamic>> formOptions;
   final bool isAdmin;
 
   const LeadFiltersSheet({
@@ -123,6 +124,8 @@ class LeadFiltersSheet extends StatefulWidget {
     required this.agents,
     this.domains = const [],
     this.sitePages = const [],
+    this.adOptions = const [],
+    this.formOptions = const [],
     required this.isAdmin,
   });
 
@@ -237,16 +240,26 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
         if (f.siteFilter.isNotEmpty) 'dom:${f.siteFilter}',
       ];
 
+  String _tokLabel(String t) => selLabel(
+        t,
+        widget.sitePages,
+        ads: widget.adOptions,
+        forms: widget.formOptions,
+      );
+
   Widget _sourceTile() {
     final ticked = _ticked;
     final label = ticked.isEmpty
         ? 'All'
         : ticked.length == 1
-            ? selLabel(ticked.first, widget.sitePages)
-            : '${selLabel(ticked.first, widget.sitePages)} +${ticked.length - 1}';
+            ? _tokLabel(ticked.first)
+            : '${_tokLabel(ticked.first)} +${ticked.length - 1}';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: InkWell(
+      child: AppSelectBox(
+        label: 'Source',
+        text: label,
+        placeholder: false,
         onTap: () async {
           final r = await showModalBottomSheet<List<String>>(
             context: context,
@@ -257,22 +270,14 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
               options: sourceOptions,
               domains: widget.domains,
               pages: widget.sitePages,
+              ads: widget.adOptions,
+              forms: widget.formOptions,
             ),
           );
           if (r != null) {
             setState(() => f = f.copyWith(source: '', siteFilter: '', sourceSel: encodeSel(r)));
           }
         },
-        child: LabeledField(
-          label: 'Source',
-          child: InputDecorator(
-            decoration: const InputDecoration(
-              isDense: true,
-              suffixIcon: Icon(Icons.keyboard_arrow_down_rounded),
-            ),
-            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
-          ),
-        ),
       ),
     );
   }
@@ -280,7 +285,13 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
   Widget _dateField(String label, DateTime? value, ValueChanged<DateTime?> onChanged) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: InkWell(
+      child: AppSelectBox(
+        label: label,
+        text: value == null ? 'Any' : DateFormat('dd MMM yyyy').format(value),
+        placeholder: value == null,
+        trailing: value != null
+            ? InkWell(onTap: () => onChanged(null), child: const Icon(Icons.clear, size: 18))
+            : const Icon(Icons.calendar_today_outlined, size: 16),
         onTap: () async {
           final now = DateTime.now();
           final picked = await showDatePicker(
@@ -291,18 +302,6 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
           );
           if (picked != null) onChanged(picked);
         },
-        child: LabeledField(
-          label: label,
-          child: InputDecorator(
-            decoration: InputDecoration(
-              isDense: true,
-              suffixIcon: value != null
-                  ? IconButton(icon: const Icon(Icons.clear, size: 16), onPressed: () => onChanged(null))
-                  : null,
-            ),
-            child: Text(value == null ? 'Any' : DateFormat('dd MMM yyyy').format(value)),
-          ),
-        ),
       ),
     );
   }

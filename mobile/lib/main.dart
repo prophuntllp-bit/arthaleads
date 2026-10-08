@@ -46,6 +46,15 @@ class ArthaleadsApp extends StatelessWidget {
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
       themeMode: theme.mode,
+      // The phone's font-size setting is honoured, but only up to 1.3x: past
+      // that the fixed-size parts of the layout (app bar, chips, buttons)
+      // stop fitting and text spills out of them, which is worse for the
+      // reader than slightly smaller type.
+      builder: (context, child) => MediaQuery.withClampedTextScaling(
+        minScaleFactor: 0.9,
+        maxScaleFactor: 1.3,
+        child: child ?? const SizedBox.shrink(),
+      ),
       // Wraps the whole app (not just the logged-in shell) so a mandatory
       // update applies even to someone sitting on the login screen.
       home: const UpdateGate(child: _AuthGate()),

@@ -19,6 +19,8 @@ import '../../widgets/chips.dart';
 import '../../widgets/import_result_dialog.dart';
 import '../../widgets/motion.dart';
 import '../leads/lead_detail_sheet.dart';
+import '../leads/lead_origin.dart';
+import 'project_dump_screen.dart';
 import 'project_form.dart';
 import 'project_lead_import.dart';
 
@@ -38,11 +40,41 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late Map<String, dynamic> _project = widget.project;
+  // Leads dumped from this project (the Dump Leads button's count) and a key
+  // bump that reloads the lead tabs after something is restored.
+  int? _dumpCount;
+  int _refresh = 0;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadDumpCount();
+  }
+
+  Future<void> _loadDumpCount() async {
+    try {
+      final res = await ApiClient.instance.dio.get(
+        '/projects/${widget.project['_id']}/dumped-leads',
+        queryParameters: {'limit': 1},
+      );
+      if (mounted) setState(() => _dumpCount = (res.data['total'] as num?)?.toInt() ?? 0);
+    } catch (_) {
+      if (mounted) setState(() => _dumpCount = null);
+    }
+  }
+
+  Future<void> _openDump() async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ProjectDumpScreen(
+          projectId: _projectId,
+          projectName: _project['name'] as String? ?? 'Project',
+        ),
+      ),
+    );
+    _loadDumpCount();
+    if (changed == true && mounted) setState(() => _refresh++);
   }
 
   @override
@@ -124,6 +156,17 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
       appBar: AppBar(
         title: Text(_project['name'] as String? ?? 'Project'),
         actions: [
+          // Every role can open it: agents see the leads they dumped, admins
+          // and managers see all of them.
+          IconButton(
+            tooltip: 'Dump Leads',
+            onPressed: _openDump,
+            icon: Badge(
+              isLabelVisible: (_dumpCount ?? 0) > 0,
+              label: Text('$_dumpCount'),
+              child: const Icon(Icons.archive_outlined),
+            ),
+          ),
           if (canManage)
             PopupMenuButton<String>(
               onSelected: (v) =>
@@ -147,8 +190,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
         controller: _tabController,
         children: [
           _InfoTab(project: _project),
-          _LeadsTab(project: _project, isProspective: false),
-          _LeadsTab(project: _project, isProspective: true),
+          _LeadsTab(key: ValueKey('leads$_refresh'), project: _project, isProspective: false),
+          _LeadsTab(key: ValueKey('prosp$_refresh'), project: _project, isProspective: true),
         ],
       ),
     );
@@ -293,7 +336,7 @@ class _InfoTab extends StatelessWidget {
 class _LeadsTab extends StatefulWidget {
   final Map<String, dynamic> project;
   final bool isProspective;
-  const _LeadsTab({required this.project, required this.isProspective});
+  const _LeadsTab({super.key, required this.project, required this.isProspective});
 
   @override
   State<_LeadsTab> createState() => _LeadsTabState();
@@ -726,6 +769,147 @@ class _LeadsTabState extends State<_LeadsTab> {
     }
   }
 
+  static String _fmtDay(String? iso) {
+    final d = DateTime.tryParse(iso ?? '');
+    if (d == null) return '';
+    final ist = d.toUtc().add(const Duration(hours: 5, minutes: 30));
+    const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${ist.day.toString().padLeft(2, '0')} ${m[ist.month - 1]}';
+  }
+
+  /// A project lead, laid out like a card on the main Leads screen (same text
+  /// sizes, same chips, same call and WhatsApp buttons) so the two lists read
+  /// as one app. Long names ellipsise on one line; the rest wraps or drops to
+  /// the next line instead of squeezing the name.
+  Widget _leadCard(int i, Map<String, dynamic> lead) {
+    final id = lead['_id'] as String;
+    final selected = _selected.contains(id);
+    final soft = Theme.of(context).textTheme.bodySmall;
+    final followUp = (lead['followUp'] as String?) ?? '';
+    final assignee = (lead['assignedToName'] as String?) ?? '';
+    final hasBooking = ((lead['booking'] as String?) ?? '').isNotEmpty;
+    final created = _fmtDay(lead['createdAt'] as String?);
+    void toggle() => setState(() => selected ? _selected.remove(id) : _selected.add(id));
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: _selectMode ? toggle : () => _openDetail(lead),
+        onLongPress: toggle,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  if (_selectMode) ...[
+                    Icon(
+                      selected ? Icons.check_circle : Icons.radio_button_unchecked,
+                      color: selected ? AppColors.primary : Theme.of(context).disabledColor,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(children: [
+                        TextSpan(
+                          text: '${i + 1}. ',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).disabledColor,
+                          ),
+                        ),
+                        TextSpan(text: lead['name'] as String? ?? '—'),
+                      ]),
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (hasBooking) ...[
+                    const SizedBox(width: 6),
+                    BookingChip(lead['booking'] as String?),
+                  ],
+                  if (((lead['priority'] as String?) ?? '').isNotEmpty) ...[
+                    const SizedBox(width: 4),
+                    PriorityChip(lead['priority'] as String?),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(Icons.phone, size: 13, color: soft?.color),
+                  const SizedBox(width: 4),
+                  Flexible(child: Text(lead['phone'] as String? ?? '', style: soft, overflow: TextOverflow.ellipsis)),
+                  const SizedBox(width: 10),
+                  SourceChip(lead['source'] as String?),
+                ],
+              ),
+              LeadOriginLine(lead),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  // Takes every free pixel so the call and WhatsApp buttons
+                  // always end at the same right edge, whatever the row holds.
+                  Expanded(
+                    child: Wrap(
+                      spacing: 10,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        if (assignee.isNotEmpty)
+                          Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.person, size: 13, color: soft?.color),
+                            const SizedBox(width: 2),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 130),
+                              child: Text(assignee, style: soft, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            ),
+                          ]),
+                        if (followUp.length >= 10)
+                          Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.alarm, size: 13, color: soft?.color),
+                            const SizedBox(width: 2),
+                            Text(followUp.substring(0, 10), style: soft),
+                          ]),
+                        if (created.isNotEmpty && assignee.isEmpty && followUp.length < 10)
+                          Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.schedule, size: 13, color: soft?.color),
+                            const SizedBox(width: 2),
+                            Text('Added $created', style: soft),
+                          ]),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(FontAwesomeIcons.phone.data, size: 19, color: AppColors.primary),
+                    onPressed: () => _call(lead),
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(FontAwesomeIcons.whatsapp.data, size: 19, color: AppColors.whatsapp),
+                    onPressed: () => showWhatsAppSendSheet(
+                      context,
+                      phone: lead['phone'] as String?,
+                      name: lead['name'] as String?,
+                      leadId: lead['_id'] as String?,
+                      projectId: _projectId,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -861,97 +1045,7 @@ class _LeadsTabState extends State<_LeadsTab> {
                       controller: _scroll,
                       padding: EdgeInsets.only(bottom: _selectMode ? 80 : 8),
                       itemCount: _leads.length,
-                      itemBuilder: (context, i) {
-                        final lead = _leads[i];
-                        final id = lead['_id'] as String;
-                        final selected = _selected.contains(id);
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          child: ListTile(
-                            leading: Icon(
-                              selected
-                                  ? Icons.check_circle
-                                  : Icons.radio_button_unchecked,
-                              color: selected
-                                  ? AppColors.primary
-                                  : Theme.of(context).disabledColor,
-                            ),
-                            title: Text.rich(
-                              TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: '${i + 1}. ',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: Theme.of(context).disabledColor,
-                                    ),
-                                  ),
-                                  TextSpan(text: lead['name'] as String? ?? '—'),
-                                ],
-                              ),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(lead['phone'] as String? ?? ''),
-                                if ((lead['booking'] as String? ?? '')
-                                    .isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: BookingChip(
-                                      lead['booking'] as String?,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: Icon(
-                                    FontAwesomeIcons.phone.data,
-                                    size: 18,
-                                    color: AppColors.primary,
-                                  ),
-                                  onPressed: () => _call(lead),
-                                ),
-                                IconButton(
-                                  icon: Icon(
-                                    FontAwesomeIcons.whatsapp.data,
-                                    size: 19,
-                                    color: AppColors.whatsapp,
-                                  ),
-                                  onPressed: () => showWhatsAppSendSheet(
-                                    context,
-                                    phone: lead['phone'] as String?,
-                                    name: lead['name'] as String?,
-                                    leadId: lead['_id'] as String?,
-                                    projectId: _projectId,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            onTap: _selectMode
-                                ? () => setState(
-                                    () => selected
-                                        ? _selected.remove(id)
-                                        : _selected.add(id),
-                                  )
-                                : () => _openDetail(lead),
-                            onLongPress: () => setState(
-                              () => selected
-                                  ? _selected.remove(id)
-                                  : _selected.add(id),
-                            ),
-                          ),
-                        );
-                      },
+                      itemBuilder: (context, i) => _leadCard(i, _leads[i]),
                     ),
                   ),
           ),

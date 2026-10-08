@@ -13,6 +13,8 @@ import 'inbox_screen.dart';
 import 'agents_page.dart';
 import 'templates_page.dart';
 import 'wa_settings_page.dart';
+import '../../core/plan.dart';
+import '../../widgets/plan_only.dart';
 
 /// Tab shell for everything under Inbox — mirrors
 /// frontend/src/pages/conversations/ConversationsLayout.jsx's tab strip
@@ -40,13 +42,18 @@ class _ConversationsShellState extends State<ConversationsShell>
   bool _creditsEmpty = false;
   Timer? _unreadTimer;
 
+  bool _planOk(String min) {
+    final a = context.read<AuthState>();
+    return a.role == 'super_admin' || canAccess(a.org, min);
+  }
+
   List<_Tab> _tabs(bool isAdmin) => [
     _Tab('Inbox', Icons.chat_rounded, const InboxScreen(), badge: _unread > 0 ? (_unread > 99 ? '99+' : '$_unread') : null),
-    const _Tab('Templates', Icons.description_rounded, TemplatesPage()),
-    const _Tab('Campaigns', Icons.campaign_rounded, CampaignsPage()),
+    const _Tab('Templates', Icons.description_rounded, TemplatesPage(), minPlan: 'growth', feature: 'WhatsApp templates'),
+    const _Tab('Campaigns', Icons.campaign_rounded, CampaignsPage(), minPlan: 'growth', feature: 'WhatsApp campaigns'),
     _Tab('Credits', Icons.account_balance_wallet_rounded, const CreditsPage(), dot: _creditsEmpty),
     if (isAdmin)
-      const _Tab('AI Agents', Icons.auto_awesome_rounded, AgentsPage()),
+      const _Tab('AI Agents', Icons.auto_awesome_rounded, AgentsPage(), minPlan: 'growth', feature: 'The WhatsApp AI agent'),
     if (isAdmin)
       const _Tab('Settings', Icons.settings_rounded, WaSettingsPage()),
   ];
@@ -120,7 +127,7 @@ class _ConversationsShellState extends State<ConversationsShell>
                     isScrollable: true,
                     tabAlignment: TabAlignment.start,
                     dividerColor: Colors.transparent,
-                    labelPadding: const EdgeInsets.symmetric(horizontal: 14),
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 9),
                     tabs: tabs.map((t) {
                       return Tab(
                         height: 62,
@@ -148,6 +155,10 @@ class _ConversationsShellState extends State<ConversationsShell>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(t.label, style: const TextStyle(fontSize: 13)),
+                                if (t.minPlan != null && !_planOk(t.minPlan!)) ...[
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.lock_rounded, size: 12),
+                                ],
                                 if (t.badge != null) ...[
                                   const SizedBox(width: 5),
                                   Container(
@@ -195,7 +206,11 @@ class _ConversationsShellState extends State<ConversationsShell>
             removeTop: true,
             child: TabBarView(
               controller: _tabController,
-              children: tabs.map((t) => t.child).toList(),
+              children: tabs
+                  .map((t) => t.minPlan == null
+                      ? t.child
+                      : PlanOnly(min: t.minPlan!, feature: t.feature ?? t.label, child: t.child))
+                  .toList(),
             ),
           ),
         ),
@@ -210,5 +225,8 @@ class _Tab {
   final Widget child;
   final String? badge;
   final bool dot;
-  const _Tab(this.label, this.icon, this.child, {this.badge, this.dot = false});
+  // Growth-and-up features: a lock on the tab and an upgrade wall inside.
+  final String? minPlan;
+  final String? feature;
+  const _Tab(this.label, this.icon, this.child, {this.badge, this.dot = false, this.minPlan, this.feature});
 }

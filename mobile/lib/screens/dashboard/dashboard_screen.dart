@@ -24,6 +24,7 @@ import '../leads/lead_filters.dart';
 import '../leads/lead_form.dart';
 import 'dashboard_widgets.dart';
 import '../projects/project_detail_screen.dart';
+import '../../widgets/adaptive_grid.dart';
 
 /// Dashboard — GET /leads/analytics + /leads/hot + /leads/followups-due.
 /// Mobile-first condensation of the web dashboard's zoned layout.
@@ -77,6 +78,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>> _projects = [];
   List<Map<String, dynamic>> _team = [];
   List<Map<String, dynamic>> _automations = [];
+  // WhatsApp is the org's own connection, not an automation, so its status is
+  // asked for separately (same as the web dashboard).
+  bool _waConnected = false;
   Map<String, dynamic>? _attendance;
   bool _requireSelfie = true;
   bool _loading = true;
@@ -148,6 +152,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _tryGet('/attendance/team-today'),
       _tryGet('/automations'),
       _tryGet('/attendance/status'),
+      _tryGet('/whatsapp/status'),
     ]);
     if (!mounted) return;
     final analytics = (results[0]?.data['data'] as Map?)
@@ -174,6 +179,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _attendance = (results[7]?.data['data'] as Map?)?.cast<String, dynamic>();
       _requireSelfie =
           results[7]?.data['requireSelfie'] as bool? ?? _requireSelfie;
+      _waConnected = results[8]?.data['connected'] == true;
       _goalOverride = null;
       _loading = false;
       _refreshing = false;
@@ -479,42 +485,32 @@ class _DashboardScreenState extends State<DashboardScreen>
     Map<String, dynamic>? analytics,
   ) {
     final bySource = (analytics?['bySource'] as Map?) ?? {};
-    final sources = <({String label, int count, Color color, IconData icon})>[
-      (
-        label: 'Facebook',
-        count: (bySource['Facebook'] as num?)?.toInt() ?? 0,
-        color: const Color(0xFF1877F2),
-        icon: FontAwesomeIcons.facebookF.data,
-      ),
-      (
-        label: 'Google',
-        count: (bySource['Google'] as num?)?.toInt() ?? 0,
-        color: const Color(0xFFEA4335),
-        icon: FontAwesomeIcons.google.data,
-      ),
-      (
-        label: 'WhatsApp',
-        count: (bySource['WhatsApp'] as num?)?.toInt() ?? 0,
-        color: AppColors.whatsapp,
-        icon: FontAwesomeIcons.whatsapp.data,
-      ),
-      (
-        label: 'Website',
-        count:
-            ((bySource['Website'] ?? bySource['Website Form']) as num?)
-                ?.toInt() ??
-            0,
-        color: AppColors.purple,
-        icon: FontAwesomeIcons.globe.data,
-      ),
-      (
-        label: 'Other',
-        count:
-            ((bySource['Other'] ?? bySource['Custom']) as num?)?.toInt() ?? 0,
-        color: AppColors.warning,
-        icon: FontAwesomeIcons.bolt.data,
-      ),
-    ].where((source) => source.count > 0).toList();
+    // A pill for every source that is connected or has leads in this period, in
+    // a fixed order. Anything that is not one of the named sources (Manual,
+    // Referral, Walk-in, the property portals...) is counted together as Other,
+    // so the pills add up to the Total Leads card. Same rule as the web.
+    final connected = <String>{
+      for (final a in _automations)
+        if (a['status'] == 'connected' && a['isActive'] != false) '${a['platform']}',
+      if (_waConnected) 'WhatsApp',
+    };
+    const named = {'Facebook', 'Google', 'WhatsApp', 'Website', 'Vistrow Voice'};
+    int n(String key) => (bySource[key] as num?)?.toInt() ?? 0;
+    final otherCount = bySource.entries
+        .where((e) => !named.contains('${e.key}'))
+        .fold<int>(0, (sum, e) => sum + ((e.value as num?)?.toInt() ?? 0));
+    final specs = <({String platform, String label, int count, Color color, IconData icon})>[
+      (platform: 'Facebook', label: 'Facebook', count: n('Facebook'), color: const Color(0xFF1877F2), icon: FontAwesomeIcons.facebookF.data),
+      (platform: 'Google', label: 'Google', count: n('Google'), color: const Color(0xFFEA4335), icon: FontAwesomeIcons.google.data),
+      (platform: 'WhatsApp', label: 'WhatsApp', count: n('WhatsApp'), color: AppColors.whatsapp, icon: FontAwesomeIcons.whatsapp.data),
+      (platform: 'Website Form', label: 'Website', count: n('Website'), color: AppColors.purple, icon: FontAwesomeIcons.globe.data),
+      (platform: 'Vistrow Voice', label: 'Vistrow Voice', count: n('Vistrow Voice'), color: const Color(0xFF8B5CF6), icon: Icons.mic_rounded),
+      (platform: 'Custom', label: 'Other', count: otherCount, color: AppColors.warning, icon: FontAwesomeIcons.bolt.data),
+    ];
+    final sources = [
+      for (final sp in specs)
+        if (connected.contains(sp.platform) || sp.count > 0) sp,
+    ];
 
     return SoftSurface(
       radius: 28,
@@ -524,22 +520,20 @@ class _DashboardScreenState extends State<DashboardScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (sources.isNotEmpty) ...[
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final source in sources)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 7),
-                      child: _SourcePill(
-                        count: source.count,
-                        color: source.color,
-                        icon: source.icon,
-                        tooltip: source.label,
-                      ),
-                    ),
-                ],
-              ),
+            // Wraps onto a second line rather than scrolling sideways, so no
+            // source is ever cut off at the edge on a narrow screen.
+            Wrap(
+              spacing: 7,
+              runSpacing: 7,
+              children: [
+                for (final source in sources)
+                  _SourcePill(
+                    count: source.count,
+                    color: source.color,
+                    icon: source.icon,
+                    tooltip: source.label,
+                  ),
+              ],
             ),
             const SizedBox(height: 14),
           ],
@@ -1226,29 +1220,50 @@ class _DashboardScreenState extends State<DashboardScreen>
       padding: EdgeInsets.zero,
       child: Column(
         children: [
-          ListTile(
+          InkWell(
+            borderRadius: BorderRadius.circular(18),
             onTap: () => setState(() => _staleExpanded = !_staleExpanded),
-            leading: const Icon(
-              Icons.history_rounded,
-              color: AppColors.warning,
-            ),
-            title: Text(
-              '${_stale.length} stale lead${_stale.length == 1 ? '' : 's'} need attention',
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-            subtitle: const Text('No activity in 7+ days'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextButton(
-                  onPressed: () => widget.onNavigate?.call('Leads'),
-                  child: const Text('View all'),
-                ),
-                Icon(
-                  _staleExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                  size: 18,
-                ),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: Icon(Icons.history_rounded, color: AppColors.warning),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${_stale.length} stale lead${_stale.length == 1 ? '' : 's'} need attention',
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                        ),
+                        const SizedBox(height: 2),
+                        Text('No activity in 7+ days',
+                            style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSoft)),
+                        InkWell(
+                          onTap: () => widget.onNavigate?.call('Leads'),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 6),
+                            child: Text('View all',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Icon(
+                      _staleExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                      size: 22,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           if (_staleExpanded)
@@ -1310,14 +1325,10 @@ class _DashboardScreenState extends State<DashboardScreen>
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
           ),
           const SizedBox(height: 12),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 2.1,
-            children: [
+          AdaptiveGrid(
+ columns: 2,
+ spacing: 8,
+ children: [
               _miniMetric(
                 'Expected Revenue',
                 fmtBudget(pipeline * conversion / 100),
@@ -1505,35 +1516,13 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('LIVE', style: AppText.kicker(context)),
-                    const Text(
-                      'Agent Status Today',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _smallBadge('$clockedIn online', AppColors.success),
-              const SizedBox(width: 6),
-              TextButton(
-                onPressed: () => widget.onNavigate?.call('Attendance'),
-                child: const Text('Attendance →'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Wrap(
+          dashCardHeader(context, 'Live', 'Agent Status Today', pill: '$clockedIn online'),
+          const SizedBox(height: 12),
+          // Two tiles across, each as tall as it needs to be, so the card uses
+          // its full width instead of a single narrow column.
+          AdaptiveGrid(
+            columns: 2,
             spacing: 8,
-            runSpacing: 8,
             children: [
               for (final row in _team)
                 Builder(
@@ -1553,7 +1542,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ).format(DateTime.parse(a!['clockIn'] as String).toLocal())
                         : null;
                     return Container(
-                      width: 158,
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: t.surfaceLow,
@@ -1606,7 +1594,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 Text(
                                   user['name'] as String? ?? '—',
                                   style: const TextStyle(
-                                    fontSize: 11.5,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w700,
                                   ),
                                   maxLines: 1,
@@ -1619,7 +1607,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                       ? 'Done for today'
                                       : 'Not checked in',
                                   style: TextStyle(
-                                    fontSize: 9.5,
+                                    fontSize: 11,
                                     color: t.textSoft,
                                   ),
                                   maxLines: 1,
@@ -1634,6 +1622,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                   },
                 ),
             ],
+          ),
+          // Left-aligned, clear of the floating assistant bubble at the right.
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)),
+              onPressed: () => widget.onNavigate?.call('Attendance'),
+              child: const Text('Open Attendance →'),
+            ),
           ),
         ],
       ),
@@ -1819,15 +1816,10 @@ class _DashboardScreenState extends State<DashboardScreen>
               // boxes on wide screens.
               child: LayoutBuilder(builder: (context, box) {
                 final cols = box.maxWidth >= 1000 ? 6 : box.maxWidth >= 560 ? 3 : 2;
-                final cellW = (box.maxWidth - 10 * (cols - 1)) / cols;
-                return GridView.count(
-                crossAxisCount: cols,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: cellW / 100,
-                children: [
+                return AdaptiveGrid(
+ columns: cols,
+ spacing: 10,
+ children: [
                   // Same six cards as the web, all for the selected range
                   // except Follow-ups (due today is due today).
                   Builder(
@@ -1986,197 +1978,223 @@ class _DashboardScreenState extends State<DashboardScreen>
             const SizedBox(height: 16),
           ],
 
-          // ── Admin Intelligence ──
-          if (isAdmin && a != null) ...[
-            const Divider(),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(
-                  Icons.admin_panel_settings,
-                  size: 15,
-                  color: Color(0xFF6366F1),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'Admin Intelligence',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: const Color(0xFF6366F1),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
+          // ── Team: goal (admins), leaderboard and live feed (every role) ──
+          if (a != null) ...[
+            const _SectionHeader(label: 'Team'),
+            const SizedBox(height: 12),
+            if (isAdmin) ...[
+              _goalCard(context, a),
+              const SizedBox(height: 12),
+            ],
+            if ((a['byAgent'] as List?)?.isNotEmpty ?? false) ...[
+              _topAgentsCard(context, a),
+              const SizedBox(height: 12),
+            ],
+            if ((a['recentActivity'] as List?)?.isNotEmpty ?? false) _teamActivityCard(context, a),
+          ],
+          const SizedBox(height: 80),
+        ],
+      ),
+    );
+  }
 
-            // Monthly goal
-            Builder(
-              builder: (ctx) {
-                final goal =
-                    _goalOverride ??
-                    (a['monthlyClosingGoal'] as num?)?.toInt() ??
-                    0;
-                final current = (a['thisMonthClosedWon'] as num?)?.toInt() ?? 0;
-                final pct = goal > 0
-                    ? (current / goal * 100).clamp(0, 100).round()
-                    : 0;
-                return SoftSurface(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
+  Widget _goalCard(BuildContext context, Map<String, dynamic> a) {
+    final t = AppTheme.of(context);
+    final goal = _goalOverride ?? (a['monthlyClosingGoal'] as num?)?.toInt() ?? 0;
+    final current = (a['thisMonthClosedWon'] as num?)?.toInt() ?? 0;
+    final pct = goal > 0 ? (current / goal * 100).clamp(0, 100).round() : 0;
+    return SoftSurface(
+      padding: const EdgeInsets.fromLTRB(14, 14, 6, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: dashCardHeader(context, 'This month', 'Monthly Goal')),
+              IconButton(
+                tooltip: 'Set goal',
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                onPressed: () => _editGoal(goal),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: goal > 0
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.track_changes,
-                        size: 18,
-                        color: AppColors.primary,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text('$current', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+                          Text(' of $goal closed won', style: TextStyle(fontSize: 13, color: t.textSoft)),
+                          const Spacer(),
+                          Text('$pct%', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: goal > 0
-                            ? Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        'Monthly Goal',
-                                        style: Theme.of(
-                                          ctx,
-                                        ).textTheme.bodySmall,
-                                      ),
-                                      const Spacer(),
-                                      Text(
-                                        '$current / $goal',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: LinearProgressIndicator(
-                                      value: pct / 100,
-                                      minHeight: 7,
-                                      backgroundColor: AppColors.primary
-                                          .withValues(alpha: 0.12),
-                                      color: pct >= 100
-                                          ? AppColors.success
-                                          : AppColors.primary,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Text(
-                                'No monthly goal set',
-                                style: Theme.of(ctx).textTheme.bodySmall,
-                              ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.edit, size: 16),
-                        onPressed: () => _editGoal(goal),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(99),
+                        child: LinearProgressIndicator(
+                          value: pct / 100,
+                          minHeight: 8,
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                          color: pct >= 100 ? AppColors.success : AppColors.primary,
+                        ),
                       ),
                     ],
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-          ],
+                  )
+                : Text('No monthly goal set. Tap the pencil to set one.',
+                    style: TextStyle(fontSize: 13, color: t.textSoft)),
+          ),
+        ],
+      ),
+    );
+  }
 
-          // ── Team — visible to every role, not just admins (matches web) ──
-          if (a != null) ...[
-            // Top agents leaderboard
-            if ((a['byAgent'] as List?)?.isNotEmpty ?? false) ...[
-              Text('Top Agents', style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 6),
-              SoftSurface(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Column(
+  Widget _topAgentsCard(BuildContext context, Map<String, dynamic> a) {
+    final t = AppTheme.of(context);
+    final agents = (a['byAgent'] as List).cast<Map<String, dynamic>>().take(5).toList();
+    return SoftSurface(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          dashCardHeader(context, 'Leaderboard', 'Top Agents', pill: 'by leads'),
+          const SizedBox(height: 6),
+          for (final (i, ag) in agents.indexed)
+            InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => _focusAgent(ag['_id'] as String?),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  border: i == 0 ? null : Border(top: BorderSide(color: t.border)),
+                ),
+                child: Row(
                   children: [
-                    for (final (i, ag)
-                        in ((a['byAgent'] as List)
-                                .cast<Map<String, dynamic>>()
-                                .take(5))
-                            .indexed)
-                      ListTile(
-                        dense: true,
-                        onTap: () => _focusAgent(ag['_id'] as String?),
-                        leading: CircleAvatar(
-                          radius: 14,
-                          backgroundColor: AppColors.primary.withValues(
-                            alpha: 0.12,
-                          ),
-                          child: Text(
-                            '${i + 1}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          ag['name'] as String? ?? '—',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        trailing: Text(
-                          '${ag['count'] ?? 0} leads',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                      child: Text('${i + 1}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(ag['name'] as String? ?? '—',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    ),
+                    Text(
+                      '${ag['count'] ?? 0} ${(ag['count'] as num?)?.toInt() == 1 ? 'lead' : 'leads'}',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-            ],
+            ),
+        ],
+      ),
+    );
+  }
 
-            // Recent activity
-            if ((a['recentActivity'] as List?)?.isNotEmpty ?? false) ...[
-              Text(
-                'Team Activity',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              const SizedBox(height: 6),
-              SoftSurface(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Column(
-                  children: (a['recentActivity'] as List)
-                      .cast<Map<String, dynamic>>()
-                      .take(8)
-                      .map((item) {
-                        return ListTile(
-                          dense: true,
-                          onTap: () => _openLead(item['leadId'] as String?),
-                          leading: const Icon(
-                            Icons.circle,
-                            size: 8,
-                            color: AppColors.primary,
-                          ),
-                          title: Text(
-                            '${item['performedByName'] ?? 'System'} · ${item['description'] ?? ''}',
-                            style: const TextStyle(fontSize: 12),
-                            maxLines: 2,
+  static String _timeAgo(dynamic iso) {
+    final d = DateTime.tryParse('${iso ?? ''}');
+    if (d == null) return '';
+    final s = DateTime.now().difference(d).inSeconds;
+    if (s < 60) return 'just now';
+    if (s < 3600) return '${s ~/ 60}m ago';
+    if (s < 86400) return '${s ~/ 3600}h ago';
+    return '${s ~/ 86400}d ago';
+  }
+
+  static const _activityColors = {
+    'status_changed': Color(0xFFF59E0B),
+    'called': Color(0xFF22C55E),
+    'site_visit': Color(0xFF8B5CF6),
+    'note_added': Color(0xFF06B6D4),
+    'assigned': Color(0xFF3B82F6),
+    'follow_up_set': Color(0xFFF97316),
+    'created': Color(0xFFFF6B00),
+    'emailed': Color(0xFFEC4899),
+  };
+
+  Widget _teamActivityCard(BuildContext context, Map<String, dynamic> a) {
+    final t = AppTheme.of(context);
+    final items = (a['recentActivity'] as List).cast<Map<String, dynamic>>().take(10).toList();
+    return SoftSurface(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          dashCardHeader(context, 'Live feed', 'Team Activity', pill: 'Last 10 actions'),
+          const SizedBox(height: 6),
+          for (final (i, item) in items.indexed)
+            InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => _openLead(item['leadId'] as String?),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  border: i == 0 ? null : Border(top: BorderSide(color: t.border)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 5),
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: _activityColors['${item['type']}'] ?? const Color(0xFF6B7280),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '${item['performedByName'] ?? 'System'}',
+                                  style: const TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                                TextSpan(
+                                  text: ' · ${item['description'] ?? ''}',
+                                  style: TextStyle(color: t.textSoft),
+                                ),
+                              ],
+                            ),
+                            maxLines: 3,
                             overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13, height: 1.35),
                           ),
-                          subtitle: Text(
-                            item['leadName'] as String? ?? '',
-                            style: const TextStyle(fontSize: 11),
+                          const SizedBox(height: 3),
+                          Text(
+                            [
+                              if (((item['leadName'] as String?) ?? '').isNotEmpty) item['leadName'] as String,
+                              _timeAgo(item['createdAt']),
+                            ].where((e) => e.isNotEmpty).join(' · '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 11, color: t.textSoft),
                           ),
-                        );
-                      })
-                      .toList(),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ],
-          const SizedBox(height: 80),
+            ),
         ],
       ),
     );

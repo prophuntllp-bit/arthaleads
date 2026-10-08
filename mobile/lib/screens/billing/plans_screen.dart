@@ -9,6 +9,7 @@ import '../../core/plan.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
+import '../../widgets/storage_card.dart';
 
 const String _whatsappNumber = '918080197945';
 const String _upgradeMessage = "Hi, I'd like to upgrade my Arthaleads plan.";
@@ -86,6 +87,9 @@ const _plans = <_PlanDef>[
         'Facebook Lead Ads auto-import',
         'WhatsApp capture',
         'Website / WordPress plugin',
+        'WhatsApp Inbox with manual replies',
+        '2 projects',
+        '2 GB file storage, call recordings kept 30 days',
       ]),
       _PlanGroup('Team', ['Role-based access (Admin / Manager / Agent)']),
       _PlanGroup('Support', ['Email support']),
@@ -99,7 +103,10 @@ const _plans = <_PlanDef>[
     tagline: 'For active real estate teams that need automation and insights',
     groups: [
       _PlanGroup('Everything in Starter, plus', [
-        'Multiple project pipelines',
+        'Unlimited projects',
+        'WhatsApp AI agent',
+        'WhatsApp templates and campaigns',
+        '15 GB file storage, call recordings kept 90 days',
         'Duplicate lead detection',
         'Auto round-robin lead assignment',
         'Bulk lead export',
@@ -125,6 +132,9 @@ const _plans = <_PlanDef>[
       _PlanGroup('Everything in Growth, plus', [
         'Google Ads integration',
         'Custom webhook & API access',
+        'WhatsApp button flow for click-to-WhatsApp ads',
+        'Vistrow Voice AI calling',
+        '100 GB file storage (more on request), call recordings kept 1 year',
         'Multi-org management',
         'Advanced automation management',
       ]),
@@ -156,7 +166,12 @@ class _PlansScreenState extends State<PlansScreen> {
   void initState() {
     super.initState();
     _loadSubscription();
+    StorageInfo.load(force: true).then((v) {
+      if (mounted) setState(() => _storage = v);
+    });
   }
+
+  StorageInfo? _storage;
 
   Future<void> _loadSubscription() async {
     try {
@@ -353,6 +368,10 @@ class _PlansScreenState extends State<PlansScreen> {
                       ],
                     ),
                   ),
+                  if (_storage != null) ...[
+                    const SizedBox(height: 14),
+                    StorageMeter(_storage!),
+                  ],
                 ],
               ),
             ),

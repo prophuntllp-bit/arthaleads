@@ -12,6 +12,7 @@ import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
+import '../../widgets/adaptive_grid.dart';
 
 /// Tasks — GET /tasks, POST /tasks, PATCH /tasks/:id, PATCH /tasks/:id/complete,
 /// DELETE /tasks/:id. Mirrors frontend/src/pages/Tasks.jsx: clickable summary
@@ -551,11 +552,10 @@ class _TasksScreenState extends State<TasksScreen> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-            child: SizedBox(
-              height: 74,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
+            child: AdaptiveGrid(
+              minTileWidth: 96,
+              spacing: 8,
+              children: [
                   _summaryCard(
                     'all',
                     'All',
@@ -586,8 +586,7 @@ class _TasksScreenState extends State<TasksScreen> {
                     _summary['completed'],
                     const Color(0xFF64748B),
                   ),
-                ],
-              ),
+              ],
             ),
           ),
           Padding(
@@ -891,13 +890,10 @@ class _TasksScreenState extends State<TasksScreen> {
 
   Widget _summaryCard(String key, String label, dynamic count, Color color) {
     final active = _activeCard == key;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: InkWell(
+    return InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () => setState(() => _activeCard = key),
         child: Container(
-          width: 92,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: color,
@@ -934,7 +930,6 @@ class _TasksScreenState extends State<TasksScreen> {
             ],
           ),
         ),
-      ),
     );
   }
 }

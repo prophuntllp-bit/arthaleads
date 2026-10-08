@@ -8,6 +8,7 @@ import '../../widgets/buttons.dart';
 /// a parent shows a dash when only some of what is under it is ticked.
 /// Tokens are what GET /leads/unified?sourceSel= understands:
 ///   src:NAME   dom:DOMAIN   page:DOMAIN/PATH
+///   ad:ADID (one WhatsApp ad)   form:FORMID (one Facebook lead form)
 String encodeSel(Iterable<String> tokens) => tokens.map((t) {
       final i = t.indexOf(':');
       return '${t.substring(0, i)}:${Uri.encodeComponent(t.substring(i + 1))}';
@@ -30,7 +31,12 @@ List<String> decodeSel(String s) => s
     .toList();
 
 /// Short label for one token, shown on chips and the trigger.
-String selLabel(String token, List<Map<String, dynamic>> pages) {
+String selLabel(
+  String token,
+  List<Map<String, dynamic>> pages, {
+  List<Map<String, dynamic>> ads = const [],
+  List<Map<String, dynamic>> forms = const [],
+}) {
   final i = token.indexOf(':');
   final k = token.substring(0, i), v = token.substring(i + 1);
   if (k == 'page') {
@@ -40,6 +46,14 @@ String selLabel(String token, List<Map<String, dynamic>> pages) {
       return '${p['domain']}${path == '/' ? '' : path}';
     }
   }
+  if (k == 'ad') {
+    final a = ads.where((x) => '${x['value']}' == v).firstOrNull;
+    return a != null ? 'WhatsApp ad: ${a['label']}' : 'WhatsApp ad $v';
+  }
+  if (k == 'form') {
+    final f = forms.where((x) => '${x['value']}' == v).firstOrNull;
+    return f != null ? 'Facebook form: ${f['label']}' : 'Facebook form $v';
+  }
   return v;
 }
 
@@ -48,6 +62,10 @@ class SourceTreeSheet extends StatefulWidget {
   final List<String> options;
   final List<String> domains;
   final List<Map<String, dynamic>> pages;
+  // WhatsApp ads and Facebook lead forms that have actually brought leads in
+  // ({value, label, count}). WhatsApp opens into its ads, Facebook into its forms.
+  final List<Map<String, dynamic>> ads;
+  final List<Map<String, dynamic>> forms;
 
   const SourceTreeSheet({
     super.key,
@@ -55,6 +73,8 @@ class SourceTreeSheet extends StatefulWidget {
     required this.options,
     required this.domains,
     required this.pages,
+    this.ads = const [],
+    this.forms = const [],
   });
 
   @override
@@ -67,6 +87,55 @@ class _SourceTreeSheetState extends State<SourceTreeSheet> {
   late Set<String> sel = widget.selected.toSet();
   bool websiteOpen = false;
   final Map<String, bool> openDomains = {};
+  final Map<String, bool> openKids = {};
+
+  // Sources that open into their own items.
+  List<Map<String, dynamic>> _kidsOf(String v) =>
+      v == 'WhatsApp' ? widget.ads : v == 'Facebook' ? widget.forms : const [];
+  String _kidKind(String v) => v == 'WhatsApp' ? 'ad' : 'form';
+  String _kidTok(String v, Map<String, dynamic> it) => '${_kidKind(v)}:${it['value']}';
+  _Tick _kidState(String v, Map<String, dynamic> it) =>
+      (sel.contains('src:$v') || sel.contains(_kidTok(v, it))) ? _Tick.on : _Tick.off;
+  _Tick _srcState(String v) => sel.contains('src:$v')
+      ? _Tick.on
+      : _kidsOf(v).any((it) => sel.contains(_kidTok(v, it)))
+          ? _Tick.some
+          : _Tick.off;
+  String _kidLabel(String v, Map<String, dynamic> it) {
+    final l = '${it['label'] ?? ''}';
+    return l.isNotEmpty && l != '${it['value']}' ? l : '$v ${it['value']}';
+  }
+
+  // Facebook forms often share a name, so the id's tail tells them apart.
+  String _kidShown(String v, Map<String, dynamic> it) {
+    final id = '${it['value']}';
+    return v == 'Facebook'
+        ? '${_kidLabel(v, it)} · …${id.length > 4 ? id.substring(id.length - 4) : id}'
+        : _kidLabel(v, it);
+  }
+
+  void tickKidSource(String v) => setState(() {
+        final toks = _kidsOf(v).map((it) => _kidTok(v, it)).toList();
+        sel.removeAll(toks);
+        if (_srcState(v) != _Tick.off) {
+          sel.remove('src:$v');
+        } else {
+          sel.add('src:$v');
+        }
+      });
+
+  void tickKid(String v, Map<String, dynamic> it) => setState(() {
+        final t = _kidTok(v, it);
+        if (sel.contains('src:$v')) {
+          sel.remove('src:$v');
+          for (final x in _kidsOf(v)) {
+            sel.add(_kidTok(v, x));
+          }
+          sel.remove(t);
+        } else {
+          sel.contains(t) ? sel.remove(t) : sel.add(t);
+        }
+      });
 
   List<Map<String, dynamic>> pagesOf(String d) =>
       widget.pages.where((p) => p['domain'] == d.toLowerCase()).toList();
@@ -94,6 +163,9 @@ class _SourceTreeSheetState extends State<SourceTreeSheet> {
     websiteOpen = websiteState != _Tick.off;
     for (final d in widget.domains) {
       if (domainState(d) == _Tick.some) openDomains[d] = true;
+    }
+    for (final v in const ['WhatsApp', 'Facebook']) {
+      if (_srcState(v) == _Tick.some) openKids[v] = true;
     }
   }
 
@@ -305,6 +377,26 @@ class _SourceTreeSheetState extends State<SourceTreeSheet> {
                               onTick: () => tickPage(d, p),
                             ),
                       ],
+                  ] else if (_kidsOf(o).isNotEmpty) ...[
+                    _row(
+                      label: o,
+                      n: _kidsOf(o).fold(0, (n, it) => n + ((it['count'] as num?)?.toInt() ?? 0)),
+                      state: _srcState(o),
+                      expandable: true,
+                      expanded: openKids[o] == true,
+                      onOpen: () => setState(() => openKids[o] = !(openKids[o] == true)),
+                      onTick: () => tickKidSource(o),
+                    ),
+                    if (openKids[o] == true)
+                      for (final it in _kidsOf(o))
+                        _row(
+                          label: _kidShown(o, it),
+                          icon: o == 'WhatsApp' ? Icons.campaign_outlined : Icons.description_outlined,
+                          n: (it['count'] as num?)?.toInt() ?? 0,
+                          state: _kidState(o, it),
+                          indent: 18,
+                          onTick: () => tickKid(o, it),
+                        ),
                   ] else
                     _row(
                       label: o,

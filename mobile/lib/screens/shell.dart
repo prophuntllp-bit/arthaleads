@@ -12,6 +12,7 @@ import '../core/theme_state.dart';
 import '../widgets/header_actions.dart';
 import '../widgets/initials_avatar.dart';
 import '../widgets/profile_menu.dart';
+import '../widgets/storage_card.dart';
 import 'help/artha_chat_screen.dart';
 import 'attendance/attendance_screen.dart';
 import 'automation/automation_screen.dart';
@@ -284,6 +285,18 @@ class _ShellState extends State<Shell> {
     super.initState();
     PushService.instance.init();
     PushService.instance.pendingRoute.addListener(_onPendingRoute);
+    // Admins get the once-a-day file space warning, a few seconds after the
+    // app settles.
+    Future.delayed(const Duration(seconds: 4), () {
+      if (!mounted) return;
+      final auth = context.read<AuthState>();
+      if (auth.role != 'admin') return;
+      maybeShowStorageWarning(
+        context,
+        plan: auth.org?['plan'] as String?,
+        onUpgrade: () => _navigateToLabel('Plan & Billing'),
+      );
+    });
   }
 
   @override
@@ -602,6 +615,18 @@ class _ShellState extends State<Shell> {
                       },
                     ),
                   ),
+                  if (auth.role != 'super_admin')
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: StorageCard(
+                        isAdmin: auth.role == 'admin',
+                        plan: auth.org?['plan'] as String?,
+                        onUpgrade: () {
+                          Navigator.pop(context);
+                          _navigateToLabel('Plan & Billing');
+                        },
+                      ),
+                    ),
                   const Divider(height: 1),
                   ProfileMenu(
                     onNavigate: _navigateToLabel,

@@ -11,6 +11,7 @@ import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
+import '../../widgets/adaptive_grid.dart';
 
 const _steps = [
   (
@@ -248,14 +249,10 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 1.7,
-            children: [
+          AdaptiveGrid(
+ columns: 2,
+ spacing: 8,
+ children: [
               _statCard(
                 'Total Referred',
                 _summary['total'],
@@ -644,14 +641,10 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
           // ── How it works ──
           Text('How it works', style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 8),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 1.1,
-            children: [
+          AdaptiveGrid(
+ columns: 2,
+ spacing: 8,
+ children: [
               for (var i = 0; i < _steps.length; i++)
                 Container(
                   padding: const EdgeInsets.all(12),

@@ -68,6 +68,8 @@ class LeadsScreenState extends State<LeadsScreen> {
   List<Map<String, dynamic>> _agents = [];
   List<String> _domains = [];
   List<Map<String, dynamic>> _sitePages = [];
+  List<Map<String, dynamic>> _adOptions = [];
+  List<Map<String, dynamic>> _formOptions = [];
   Map<String, int> _statusCounts = {};
 
   // Bumped on every load; a response that comes back after a newer request
@@ -153,6 +155,16 @@ class LeadsScreenState extends State<LeadsScreen> {
       final res = await _api.dio.get('/leads/domains');
       _domains = (res.data['domains'] as List? ?? []).cast<String>();
       _sitePages = (res.data['pages'] as List? ?? []).cast<Map<String, dynamic>>();
+    } catch (_) {}
+    // WhatsApp ads and Facebook lead forms that have brought leads in, so the
+    // Source filter can narrow to one ad or one form.
+    try {
+      final res = await _api.dio.get('/leads/campaign-options');
+      final o = (res.data['options'] as Map?) ?? const {};
+      List<Map<String, dynamic>> pick(String src, String field) =>
+          (((o[src] as Map?)?[field]) as List? ?? const []).cast<Map<String, dynamic>>();
+      _adOptions = pick('whatsapp', 'ad_id');
+      _formOptions = pick('facebook', 'form_id');
     } catch (_) {}
     if (mounted) setState(() {});
   }
@@ -799,7 +811,7 @@ class LeadsScreenState extends State<LeadsScreen> {
                             ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       Text(
-                        '$_total active leads across your property funnel',
+                        '$_total active leads',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall,
@@ -889,6 +901,8 @@ class LeadsScreenState extends State<LeadsScreen> {
                         agents: _agents,
                         domains: _domains,
                         sitePages: _sitePages,
+                        adOptions: _adOptions,
+                        formOptions: _formOptions,
                         isAdmin: auth.isAdmin,
                       ),
                     );
@@ -967,6 +981,37 @@ class LeadsScreenState extends State<LeadsScreen> {
     final dt = DateTime.tryParse(iso ?? '');
     if (dt == null) return '';
     return DateFormat('dd MMM, hh:mm a').format(dt.toLocal());
+  }
+
+  /// "Also in project" for a lead a routing rule or transfer copied into a
+  /// project while the original stayed here, like the web's Project column.
+  Widget _alsoInProject(Map<String, dynamic> lead) {
+    if ((lead['projectName'] as String? ?? '').isNotEmpty) return const SizedBox.shrink();
+    final names = ((lead['inProjects'] as List?) ?? const [])
+        .map((p) => p is Map ? '${p['projectName'] ?? ''}' : '')
+        .where((n) => n.isNotEmpty)
+        .toList();
+    if (names.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          const Icon(Icons.folder_copy_outlined, size: 13, color: Color(0xFF7C3AED)),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              'Also in ${names.first}${names.length > 1 ? ' +${names.length - 1} more' : ''}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF7C3AED),
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _leadCard(Map<String, dynamic> lead) {
@@ -1062,6 +1107,7 @@ class LeadsScreenState extends State<LeadsScreen> {
                   ],
                 ],
               ),
+              _alsoInProject(lead),
               LeadOriginLine(lead),
               const SizedBox(height: 8),
               Row(

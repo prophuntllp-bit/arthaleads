@@ -255,72 +255,107 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  ListTile(
+                                  InkWell(
                                     onTap: () => _changeStatus(inv),
-                                    title: Text(inv['customerName'] as String? ?? '—',
-                                        style: const TextStyle(fontWeight: FontWeight.w600)),
-                                    subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        if ((inv['jointBuyerName'] as String? ?? '').isNotEmpty)
-                                          Text(inv['jointBuyerName'] as String,
-                                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-                                        Text(
-                                          '${inv['projectName'] ?? ''} · ${inv['unitType'] ?? ''} ${inv['unitNo'] ?? ''}'
-                                          '${(inv['tower'] as String? ?? '').isNotEmpty ? ' • ${inv['tower']}' : ''}',
-                                        ),
-                                        if ((inv['developerName'] as String? ?? '').isNotEmpty)
-                                          Text(inv['developerName'] as String,
-                                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-                                      ],
-                                    ),
-                                    isThreeLine: (inv['jointBuyerName'] as String? ?? '').isNotEmpty ||
-                                        (inv['developerName'] as String? ?? '').isNotEmpty,
-                                    trailing: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        Text(_fmtMoney(inv['totalBill']), style: const TextStyle(fontWeight: FontWeight.w700)),
-                                        Text('Brok: ${_fmtMoney(inv['totalBrokerage'])}',
-                                            style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
-                                        const SizedBox(height: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: color.withValues(alpha: 0.12),
-                                            borderRadius: BorderRadius.circular(999),
-                                            border: Border.all(color: color.withValues(alpha: 0.35)),
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  inv['customerName'] as String? ?? '—',
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: color.withValues(alpha: 0.12),
+                                                  borderRadius: BorderRadius.circular(999),
+                                                  border: Border.all(color: color.withValues(alpha: 0.35)),
+                                                ),
+                                                child: Text(_statusLabels[inv['status']] ?? inv['status'] as String? ?? '',
+                                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+                                              ),
+                                            ],
                                           ),
-                                          child: Text(_statusLabels[inv['status']] ?? inv['status'] as String? ?? '',
-                                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color)),
-                                        ),
-                                      ],
+                                          if ((inv['jointBuyerName'] as String? ?? '').isNotEmpty)
+                                            Text(inv['jointBuyerName'] as String, style: Theme.of(context).textTheme.bodySmall),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${inv['projectName'] ?? ''} · ${inv['unitType'] ?? ''} ${inv['unitNo'] ?? ''}'
+                                            '${(inv['tower'] as String? ?? '').isNotEmpty ? ' • ${inv['tower']}' : ''}',
+                                            style: const TextStyle(fontSize: 13),
+                                          ),
+                                          if ((inv['developerName'] as String? ?? '').isNotEmpty)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 2),
+                                              child: Text(inv['developerName'] as String, style: Theme.of(context).textTheme.bodySmall),
+                                            ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                                            textBaseline: TextBaseline.alphabetic,
+                                            children: [
+                                              Text(_fmtMoney(inv['totalBill']), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                                              const SizedBox(width: 10),
+                                              Flexible(
+                                                child: Text(
+                                                  'Brokerage ${_fmtMoney(inv['totalBrokerage'])}',
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: Theme.of(context).textTheme.bodySmall,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.fromLTRB(16, 0, 12, 8),
                                     child: Row(
                                       children: [
-                                        InkWell(
-                                          onTap: () => _editNumber(inv),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
+                                        // Number and date wrap onto a second line
+                                        // instead of pushing the button off a
+                                        // narrow screen.
+                                        Expanded(
+                                          child: Wrap(
+                                            spacing: 8,
+                                            runSpacing: 2,
+                                            crossAxisAlignment: WrapCrossAlignment.center,
                                             children: [
-                                              Text('Invoice #$number',
-                                                  style: Theme.of(context).textTheme.bodySmall),
-                                              const SizedBox(width: 4),
-                                              const Icon(Icons.edit, size: 12),
+                                              InkWell(
+                                                onTap: () => _editNumber(inv),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Flexible(
+                                                      child: Text('Invoice #$number',
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow.ellipsis,
+                                                          style: Theme.of(context).textTheme.bodySmall),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    const Icon(Icons.edit, size: 12),
+                                                  ],
+                                                ),
+                                              ),
+                                              if ((inv['invoiceDate'] ?? inv['createdAt']) != null)
+                                                Text(
+                                                  '· ${_fmtDate(inv['invoiceDate'] ?? inv['createdAt'])}',
+                                                  style: Theme.of(context).textTheme.bodySmall,
+                                                ),
                                             ],
                                           ),
                                         ),
-                                        if ((inv['invoiceDate'] ?? inv['createdAt']) != null) ...[
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            '· ${_fmtDate(inv['invoiceDate'] ?? inv['createdAt'])}',
-                                            style: Theme.of(context).textTheme.bodySmall,
-                                          ),
-                                        ],
-                                        const Spacer(),
                                         TextButton.icon(
                                           onPressed: generating ? null : () => _downloadPdf(inv),
                                           icon: generating

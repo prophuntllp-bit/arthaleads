@@ -3,7 +3,11 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:flutter/services.dart';
 
+import 'package:provider/provider.dart';
+
 import '../../core/api_client.dart';
+import '../../core/auth_state.dart';
+import '../../core/plan.dart';
 import '../../core/theme.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/app_select.dart';
@@ -11,10 +15,10 @@ import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 import 'automation_form.dart';
 import 'connection_card.dart';
-import 'routing_rules_screen.dart';
 import 'routing_section.dart';
 import 'telephony_integration_screen.dart';
 import '../inbox/wa_settings_page.dart';
+import '../../widgets/adaptive_grid.dart';
 
 const _serverBase = 'https://api.arthaleads.com';
 
@@ -38,14 +42,6 @@ class _AutomationScreenState extends State<AutomationScreen> {
   // 3rd-party bot's webhook. Only a live status badge is fetched here; the
   // actual connect/disconnect form is not duplicated on this screen.
   bool? _waConnected;
-
-  static final _platformIcons = {
-    'Facebook': FontAwesomeIcons.facebookF.data,
-    'Google': FontAwesomeIcons.google.data,
-    'WhatsApp': FontAwesomeIcons.whatsapp.data,
-    'Website Form': FontAwesomeIcons.globe.data,
-    'Custom': FontAwesomeIcons.bolt.data,
-  };
 
   @override
   void initState() {
@@ -1306,47 +1302,6 @@ class _AutomationScreenState extends State<AutomationScreen> {
     }
   }
 
-  Widget? _tokenHealthBadge(Map<String, dynamic> a) {
-    final expiresAt = DateTime.tryParse(
-      a['userTokenExpiresAt'] as String? ?? '',
-    );
-    if (expiresAt == null) return null;
-    final daysLeft = expiresAt.difference(DateTime.now()).inDays;
-    final expired = daysLeft < 0;
-    final warn = daysLeft <= 7;
-    if (!expired && !warn) return null;
-    final color = expired ? AppColors.danger : AppColors.warning;
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Row(
-        children: [
-          Icon(Icons.warning_amber_rounded, size: 14, color: color),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              expired
-                  ? 'Facebook token expired'
-                  : 'Token expires in $daysLeft day(s)',
-              style: TextStyle(
-                fontSize: 11,
-                color: color,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () => _refreshToken(a),
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              minimumSize: const Size(0, 0),
-            ),
-            child: const Text('Refresh', style: TextStyle(fontSize: 11)),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _openFacebookWizard() async {
     await showModalBottomSheet<void>(
       context: context,
@@ -1559,15 +1514,26 @@ class _AutomationScreenState extends State<AutomationScreen> {
     );
   }
 
+  // Google Ads, Vistrow Voice and the Custom webhook / API are Enterprise.
+  bool get _enterpriseOk {
+    final a = context.read<AuthState>();
+    return a.role == 'super_admin' || canAccess(a.org, 'enterprise');
+  }
+
   Widget _sourceCard({
     required Widget icon,
     required String title,
     required String description,
     required VoidCallback onTap,
     String? badge,
+    bool locked = false,
   }) {
     return InkWell(
-      onTap: onTap,
+      onTap: locked
+          ? () => ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(content: Text('$title is part of the Enterprise plan.')))
+          : onTap,
       borderRadius: BorderRadius.circular(22),
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -1592,7 +1558,24 @@ class _AutomationScreenState extends State<AutomationScreen> {
                   child: icon,
                 ),
                 const Spacer(),
-                if (badge != null)
+                if (locked)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: .12),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.lock_rounded, size: 10, color: AppColors.primary),
+                        SizedBox(width: 3),
+                        Text('Enterprise',
+                            style: TextStyle(fontSize: 9, color: AppColors.primary, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  )
+                else if (badge != null)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -1750,14 +1733,10 @@ class _AutomationScreenState extends State<AutomationScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 1.9,
-            children: [
+          AdaptiveGrid(
+ columns: 2,
+ spacing: 10,
+ children: [
               _statCard(
                 'Connected',
                 connected,
@@ -1785,14 +1764,10 @@ class _AutomationScreenState extends State<AutomationScreen> {
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 10),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 1.12,
-            children: [
+          AdaptiveGrid(
+ columns: 2,
+ spacing: 10,
+ children: [
               _sourceCard(
                 icon: const FaIcon(
                   FontAwesomeIcons.facebookF,
@@ -1833,6 +1808,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
                 title: 'Google',
                 description:
                     'Google Ads Lead Form — sign in or use a webhook URL and key',
+                locked: !_enterpriseOk,
                 onTap: _openGoogleWizard,
               ),
               _sourceCard(
@@ -1855,6 +1831,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
                 title: 'Custom',
                 description:
                     'Connect any other partner, broker, or vendor lead source',
+                locked: !_enterpriseOk,
                 onTap: () => _openForm(initialPlatform: 'Custom'),
               ),
               _sourceCard(
@@ -1866,6 +1843,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
                 title: 'Vistrow Voice',
                 description:
                     'Qualified leads from the Vistrow Voice AI calling platform',
+                locked: !_enterpriseOk,
                 onTap: () => _openTokenManager('voice'),
               ),
               _sourceCard(
@@ -1937,243 +1915,6 @@ class _AutomationScreenState extends State<AutomationScreen> {
     );
   }
 
-  // Kept temporarily while the parity UI is exercised against the installed
-  // web app; remove after the new screen completes device regression.
-  // ignore: unused_element
-  Widget _legacyBuild(BuildContext context) {
-    return Scaffold(
-      // Bottom-left: the draggable Artha assistant bubble owns the
-      // bottom-right corner (see _DraggableArthaFab in shell.dart).
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-      floatingActionButton: GradientFab(onPressed: () => _openForm()),
-      body: _loading
-          ? const Center(child: AppSpinner(size: 32))
-          : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      TextButton.icon(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const RoutingRulesScreen(),
-                          ),
-                        ),
-                        icon: const Icon(Icons.alt_route, size: 18),
-                        label: const Text('Routing Rules'),
-                      ),
-                      TextButton.icon(
-                        onPressed: () => _openTokenManager('website'),
-                        icon: const Icon(Icons.language, size: 18),
-                        label: const Text('WordPress'),
-                      ),
-                      TextButton.icon(
-                        onPressed: _connectFacebookSystemToken,
-                        icon: const FaIcon(
-                          FontAwesomeIcons.facebookF,
-                          size: 16,
-                        ),
-                        label: const Text('Facebook'),
-                      ),
-                      TextButton.icon(
-                        onPressed: () => _openTokenManager('google'),
-                        icon: const FaIcon(FontAwesomeIcons.google, size: 16),
-                        label: const Text('Google Ads'),
-                      ),
-                      TextButton.icon(
-                        onPressed: () => _openTokenManager('voice'),
-                        icon: const Icon(Icons.mic_none_rounded, size: 18),
-                        label: const Text('Vistrow Voice'),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: _automations.isEmpty
-                      ? const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(24),
-                            child: Text(
-                              'No automations yet — tap + to connect a lead source.',
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        )
-                      : RefreshIndicator(
-                          color: AppColors.primary,
-                          onRefresh: _load,
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 8,
-                              horizontal: 4,
-                            ),
-                            itemCount: _automations.length,
-                            itemBuilder: (context, i) {
-                              final a = _automations[i];
-                              final active = a['isActive'] != false;
-                              final icon =
-                                  _platformIcons[a['platform']] ??
-                                  FontAwesomeIcons.bolt.data;
-                              final endpoint =
-                                  a['platform'] != 'Facebook' &&
-                                      (a['webhookPath'] as String? ?? '')
-                                          .isNotEmpty
-                                  ? '$_serverBase${a['webhookPath']}'
-                                  : null;
-                              return Card(
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                child: Column(
-                                  children: [
-                                    ListTile(
-                                      onTap: () => _openForm(automation: a),
-                                      leading: CircleAvatar(
-                                        backgroundColor: AppColors.primary
-                                            .withValues(alpha: 0.12),
-                                        child: Icon(
-                                          icon,
-                                          color: AppColors.primary,
-                                          size: 20,
-                                        ),
-                                      ),
-                                      title: Text(
-                                        a['name'] as String? ?? '—',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      subtitle: Text(
-                                        '${a['platform'] ?? ''} · ${a['status'] ?? ''}',
-                                      ),
-                                      trailing: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Switch(
-                                            value: active,
-                                            activeThumbColor: AppColors.success,
-                                            onChanged: (_) => _toggleActive(a),
-                                          ),
-                                          PopupMenuButton<String>(
-                                            onSelected: (value) {
-                                              if (value == 'edit') {
-                                                _openForm(automation: a);
-                                              }
-                                              if (value == 'diagnose') {
-                                                _diagnoseFacebook(a);
-                                              }
-                                              if (value == 'resubscribe') {
-                                                _resubscribeFacebook(a);
-                                              }
-                                              if (value == 'sync') {
-                                                _syncGoogle(a);
-                                              }
-                                              if (value == 'delete') _delete(a);
-                                            },
-                                            itemBuilder: (_) => [
-                                              const PopupMenuItem(
-                                                value: 'edit',
-                                                child: Text('Edit'),
-                                              ),
-                                              if (a['platform'] ==
-                                                  'Facebook') ...[
-                                                const PopupMenuItem(
-                                                  value: 'diagnose',
-                                                  child: Text(
-                                                    'Run Diagnostics',
-                                                  ),
-                                                ),
-                                                const PopupMenuItem(
-                                                  value: 'resubscribe',
-                                                  child: Text(
-                                                    'Re-subscribe Page',
-                                                  ),
-                                                ),
-                                              ],
-                                              if (a['platform'] == 'Google' &&
-                                                  a['mode'] == 'oauth')
-                                                const PopupMenuItem(
-                                                  value: 'sync',
-                                                  child: Text('Sync Now'),
-                                                ),
-                                              const PopupMenuItem(
-                                                value: 'delete',
-                                                child: Text('Delete'),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (endpoint != null)
-                                      Padding(
-                                        padding: const EdgeInsets.fromLTRB(
-                                          16,
-                                          0,
-                                          12,
-                                          10,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                endpoint,
-                                                style: const TextStyle(
-                                                  fontSize: 11,
-                                                  color: AppColors.primary,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            IconButton(
-                                              visualDensity:
-                                                  VisualDensity.compact,
-                                              icon: const Icon(
-                                                Icons.copy,
-                                                size: 14,
-                                              ),
-                                              onPressed: () {
-                                                Clipboard.setData(
-                                                  ClipboardData(text: endpoint),
-                                                );
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text('Copied'),
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    if (a['platform'] == 'Facebook' &&
-                                        _tokenHealthBadge(a) != null)
-                                      Padding(
-                                        padding: const EdgeInsets.fromLTRB(
-                                          16,
-                                          0,
-                                          12,
-                                          10,
-                                        ),
-                                        child: _tokenHealthBadge(a),
-                                      ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                ),
-              ],
-            ),
-    );
-  }
 }
 
 /// Facebook's Graph API can't tell us a Lead Form's own name with the

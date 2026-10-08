@@ -339,8 +339,14 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
                   },
                 ),
               ],
-              const Spacer(),
-              SegmentedButton<bool>(
+              // Scales down to fit rather than overflowing beside "My Leads"
+              // on a narrow phone or with a large system font.
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: SegmentedButton<bool>(
                 showSelectedIcon: false,
                 segments: const [
                   ButtonSegment(
@@ -359,6 +365,9 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
                   setState(() => _sortDesc = value.first);
                   _load(reset: true);
                 },
+              ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -443,77 +452,126 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
                           horizontal: 12,
                           vertical: 4,
                         ),
-                        child: ListTile(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
                           onTap: () => _openDetail(lead),
-                          title: Text(
-                            lead['name'] as String? ?? '—',
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(_fmtDate(followUp as String?)),
-                              if ((lead['projectName'] as String? ?? '').isNotEmpty)
-                                Text(
-                                  lead['projectName'] as String,
-                                  style: const TextStyle(fontSize: 11, color: Color(0xFF8B5CF6), fontWeight: FontWeight.w600),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 10, 4, 4),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          lead['name'] as String? ?? '—',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                                        ),
+                                      ),
+                                      if ((lead['booking'] as String? ?? '').isNotEmpty) ...[
+                                        const SizedBox(width: 6),
+                                        BookingChip(lead['booking'] as String?),
+                                      ],
+                                    ],
+                                  ),
                                 ),
-                              if ((lead['assignedToName'] as String? ?? '').isNotEmpty)
-                                Text(
-                                  'Assigned to ${lead['assignedToName']}',
-                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                const SizedBox(height: 4),
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.alarm, size: 14, color: Theme.of(context).textTheme.bodySmall?.color),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          _fmtDate(followUp as String?),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      SourceChip(lead['source'] as String?),
+                                    ],
+                                  ),
                                 ),
-                              if ((lead['remark'] as String? ?? lead['remark1'] as String? ?? '').isNotEmpty)
-                                Text(
-                                  (lead['remark'] ?? lead['remark1']) as String,
-                                  style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey.shade600),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Wrap(
-                                  spacing: 6,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                if ((lead['projectName'] as String? ?? '').isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4, right: 8),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.folder, size: 13, color: Color(0xFF8B5CF6)),
+                                        const SizedBox(width: 4),
+                                        Flexible(
+                                          child: Text(
+                                            lead['projectName'] as String,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(fontSize: 12, color: Color(0xFF8B5CF6), fontWeight: FontWeight.w600),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                if ((lead['remark'] as String? ?? lead['remark1'] as String? ?? '').isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4, right: 8),
+                                    child: Text(
+                                      (lead['remark'] ?? lead['remark1']) as String,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontStyle: FontStyle.italic,
+                                        color: Theme.of(context).textTheme.bodySmall?.color,
+                                      ),
+                                    ),
+                                  ),
+                                Row(
                                   children: [
-                                    SourceChip(lead['source'] as String?),
-                                    if ((lead['booking'] as String? ?? '').isNotEmpty)
-                                      BookingChip(lead['booking'] as String?),
+                                    Expanded(
+                                      child: (lead['assignedToName'] as String? ?? '').isEmpty
+                                          ? const SizedBox.shrink()
+                                          : Row(
+                                              children: [
+                                                Icon(Icons.person, size: 13, color: Theme.of(context).textTheme.bodySmall?.color),
+                                                const SizedBox(width: 2),
+                                                Flexible(
+                                                  child: Text(
+                                                    lead['assignedToName'] as String,
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: Theme.of(context).textTheme.bodySmall,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                    ),
+                                    IconButton(
+                                      visualDensity: VisualDensity.compact,
+                                      icon: Icon(FontAwesomeIcons.phone.data, size: 19, color: AppColors.primary),
+                                      onPressed: () => _call(lead),
+                                    ),
+                                    IconButton(
+                                      visualDensity: VisualDensity.compact,
+                                      tooltip: 'Reschedule',
+                                      icon: const Icon(Icons.edit_calendar, size: 20, color: AppColors.info),
+                                      onPressed: () => _reschedule(lead),
+                                    ),
+                                    IconButton(
+                                      visualDensity: VisualDensity.compact,
+                                      tooltip: 'Mark done',
+                                      icon: const Icon(Icons.check_circle_outline, size: 20, color: AppColors.success),
+                                      onPressed: () => _markDone(lead),
+                                    ),
                                   ],
                                 ),
-                              ),
-                            ],
-                          ),
-                          isThreeLine: true,
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: Icon(
-                                  FontAwesomeIcons.phone.data,
-                                  size: 20,
-                                  color: AppColors.primary,
-                                ),
-                                onPressed: () => _call(lead),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.edit_calendar,
-                                  size: 20,
-                                  color: AppColors.info,
-                                ),
-                                onPressed: () => _reschedule(lead),
-                              ),
-                              IconButton(
-                                tooltip: 'Mark done',
-                                icon: const Icon(
-                                  Icons.check_circle_outline,
-                                  size: 20,
-                                  color: AppColors.success,
-                                ),
-                                onPressed: () => _markDone(lead),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       );

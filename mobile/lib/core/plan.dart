@@ -32,3 +32,13 @@ String? upgradeTarget(String? plan) {
   if (planLevel(plan) == 2) return 'Enterprise';
   return null;
 }
+
+/// Bytes as the customer reads them ("1.4 GB"). Mirrors the web's formatBytes.
+String formatBytes(num n) {
+  final b = n.toDouble();
+  const gb = 1024.0 * 1024 * 1024, mb = 1024.0 * 1024;
+  if (b >= gb) return '${(b / gb).toStringAsFixed(b >= 10 * gb ? 0 : 1)} GB';
+  if (b >= mb) return '${(b / mb).toStringAsFixed(b >= 100 * mb ? 0 : 1)} MB';
+  if (b >= 1024) return '${(b / 1024).round()} KB';
+  return '${b.round()} B';
+}

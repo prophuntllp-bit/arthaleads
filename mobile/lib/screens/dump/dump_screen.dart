@@ -14,6 +14,7 @@ import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/chips.dart';
 import '../../widgets/motion.dart';
+import '../leads/lead_origin.dart';
 
 /// Dump Leads — GET /leads/dump: pipeline leads that were deleted or marked
 /// Closed Lost. Booking status no longer sends anything here; a lead marked
@@ -281,6 +282,169 @@ class _DumpScreenState extends State<DumpScreen> {
     return DateFormat('dd MMM yyyy').format(dt);
   }
 
+  /// A dumped lead laid out like a card on the Leads screen: same text sizes,
+  /// chips and icon sizes, with the name on one line (shortened with "...") so
+  /// it never breaks mid-word, and the restore / delete buttons beside it.
+  Widget _dumpCard(Map<String, dynamic> lead, String uid, bool selected, bool canDelete) {
+    final soft = Theme.of(context).textTheme.bodySmall;
+    final email = (lead['email'] as String?) ?? '';
+    final project = (lead['projectName'] as String?) ?? '';
+    final assignee = (lead['assignedToName'] as String?) ?? '';
+    final remark = ((lead['remark'] ?? lead['remark1']) as String?) ?? '';
+    final deleted = lead['isDeleted'] == true;
+    final badge = deleted ? AppColors.danger : AppColors.warning;
+    final date = _fmtDate(lead['createdAt'] as String?);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      color: selected ? AppColors.primary.withValues(alpha: 0.06) : null,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: canDelete
+            ? () => setState(() => selected ? _selected.remove(uid) : _selected.add(uid))
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  if (canDelete) ...[
+                    Icon(
+                      selected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+                      color: selected ? AppColors.primary : Theme.of(context).disabledColor,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Text(
+                      lead['name'] as String? ?? '—',
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (canDelete) ...[
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.restore_rounded, color: AppColors.success, size: 21),
+                      tooltip: 'Restore',
+                      onPressed: () => _restore(lead),
+                    ),
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.delete_forever_rounded, color: AppColors.danger, size: 21),
+                      tooltip: 'Delete permanently',
+                      onPressed: () => _deleteForever(lead),
+                    ),
+                  ] else
+                    const SizedBox(width: 8),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(Icons.phone, size: 13, color: soft?.color),
+                        const SizedBox(width: 4),
+                        Flexible(child: Text(lead['phone'] as String? ?? '', style: soft, overflow: TextOverflow.ellipsis)),
+                        const SizedBox(width: 10),
+                        SourceChip(lead['source'] as String?),
+                      ],
+                    ),
+                    if (email.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(email, style: soft, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ),
+                    if (project.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.folder, size: 13, color: Color(0xFF8B5CF6)),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                project,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF8B5CF6), fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    LeadOriginLine(lead),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: badge.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            deleted ? 'Deleted' : 'Closed Lost',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: badge),
+                          ),
+                        ),
+                        if (((lead['status'] as String?) ?? '').isNotEmpty) StatusChip(lead['status'] as String?),
+                        if (((lead['booking'] as String?) ?? '').isNotEmpty) BookingChip(lead['booking'] as String?),
+                      ],
+                    ),
+                    if (remark.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          remark,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: soft?.color),
+                        ),
+                      ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        if (assignee.isNotEmpty)
+                          Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.person, size: 13, color: soft?.color),
+                            const SizedBox(width: 2),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 170),
+                              child: Text(assignee, style: soft, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            ),
+                          ]),
+                        Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.schedule, size: 13, color: soft?.color),
+                          const SizedBox(width: 2),
+                          Text(date, style: soft),
+                        ]),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
@@ -352,93 +516,7 @@ class _DumpScreenState extends State<DumpScreen> {
                           final lead = filtered[i];
                           final uid = _uid(lead);
                           final selected = _selected.contains(uid);
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            color: selected ? AppColors.primary.withValues(alpha: 0.06) : null,
-                            child: ListTile(
-                              leading: canDelete
-                                  ? Checkbox(
-                                      value: selected,
-                                      onChanged: (_) => setState(() {
-                                        selected ? _selected.remove(uid) : _selected.add(uid);
-                                      }),
-                                    )
-                                  : null,
-                              title: Text(lead['name'] as String? ?? '—',
-                                  style: const TextStyle(fontWeight: FontWeight.w600)),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(lead['phone'] as String? ?? ''),
-                                  if ((lead['email'] as String? ?? '').isNotEmpty)
-                                    Text(lead['email'] as String,
-                                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-                                  if ((lead['projectName'] as String? ?? '').isNotEmpty)
-                                    Text(lead['projectName'] as String,
-                                        style: const TextStyle(fontSize: 11, color: Color(0xFF8B5CF6), fontWeight: FontWeight.w600)),
-                                  if ((lead['assignedToName'] as String? ?? '').isNotEmpty)
-                                    Text('Assigned to ${lead['assignedToName']}',
-                                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-                                  if ((lead['remark'] as String? ?? lead['remark1'] as String? ?? '').isNotEmpty)
-                                    Text(
-                                      (lead['remark'] ?? lead['remark1']) as String,
-                                      style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey.shade600),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  const SizedBox(height: 4),
-                                  Wrap(
-                                    crossAxisAlignment: WrapCrossAlignment.center,
-                                    spacing: 6,
-                                    runSpacing: 4,
-                                    children: [
-                                      SourceChip(lead['source'] as String?),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: (lead['isDeleted'] == true ? AppColors.danger : AppColors.warning).withValues(alpha: 0.12),
-                                          borderRadius: BorderRadius.circular(999),
-                                        ),
-                                        child: Text(
-                                          lead['isDeleted'] == true ? 'Deleted' : 'Closed Lost',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: lead['isDeleted'] == true ? AppColors.danger : AppColors.warning,
-                                          ),
-                                        ),
-                                      ),
-                                      if ((lead['status'] as String? ?? '').isNotEmpty)
-                                        StatusChip(lead['status'] as String?),
-                                      if ((lead['booking'] as String? ?? '').isNotEmpty)
-                                        BookingChip(lead['booking'] as String?),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(_fmtDate(lead['createdAt'] as String?),
-                                      style: Theme.of(context).textTheme.bodySmall),
-                                ],
-                              ),
-                              isThreeLine: true,
-                              trailing: canDelete
-                                  ? Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.restore_rounded, color: AppColors.success, size: 20),
-                                          tooltip: 'Restore',
-                                          onPressed: () => _restore(lead),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete_forever_rounded, color: AppColors.danger, size: 20),
-                                          tooltip: 'Delete permanently',
-                                          onPressed: () => _deleteForever(lead),
-                                        ),
-                                      ],
-                                    )
-                                  : null,
-                            ),
-                          );
+                          return _dumpCard(lead, uid, selected, canDelete);
                         },
                       ),
                     ),
