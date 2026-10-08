@@ -624,7 +624,11 @@ function RequireAuth() {
           sub-tab — Settings, AI Agents, Credits — with 96px of dead space
           scrolled in below a panel that was already full height. */}
       <main className={`flex-1 min-w-0 pt-16 lg:pt-[52px] overflow-y-auto ${location.pathname.startsWith("/conversations") ? "" : "pb-24"}`}>
-        <Outlet />
+        {/* Loading a page's code suspends here, not at the router root, so the
+            sidebar and top bar stay put instead of the top bar floating alone. */}
+        <Suspense fallback={<PageFallback />}>
+          <Outlet />
+        </Suspense>
       </main>
       {/* Notification permission prompt - only shows if permission not yet granted */}
       <NotificationBanner />

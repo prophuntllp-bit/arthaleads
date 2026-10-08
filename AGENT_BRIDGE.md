@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 
 
-- [Claude Code] 2026-10-08 IST: Meta Conversions API (CRM events back to Meta): new `models/MetaEvent.js`, `services/metaConversions.js`, `routes/metaConversionRoutes.js`, `Organization.metaCapi`, `Lead.metaLeadId`; hooks in `leadService.update/bulkUpdateStatus`, `utils/projectCopies.js`, `ctwaFlowService.js`, `webhookRoutes.js` (store leadgen id), scheduler sweep; UI card in Integrations (`Automation.jsx`).
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
@@ -76,6 +75,11 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 - Layout: shared `AdaptiveGrid` replaces fixed-ratio grids; text scale capped at 1.3x; lead/dump/follow-up/booking/invoice cards rebuilt like the Leads card. Tests in `mobile/test/` (not run by CI).
 - Not in the app yet: the web's "Manage storage" modal (buy extra space, free up files, `/api/storage/*`) and the Meta Conversions card. Plan & Billing "Get more" opens Plan & Billing, not a purchase flow.
 
+
+### Claude Code, 2026-10-08 (IST), later
+
+- **Meta Conversions API (CRM events back to Meta).** Orgs paste a dataset ID and Conversions API token in Integrations > Conversion tracking (`frontend/src/components/MetaConversionsSection.jsx`; settings under `Organization.metaCapi`, token encrypted). `services/metaConversions.js` sends the lead arriving ("Lead"), and the stages the org ticks, for leads with a Meta lead id (`Lead.metaLeadId`, now saved by the Facebook webhook) or a WhatsApp ad click id (`campaignRef.ctwaClid`). `MetaEvent` is the log and dedupe. Hooks: `leadService.update/bulkUpdateStatus`, `utils/projectCopies.js`, Facebook webhook; a 10-minute sweep in `utils/scheduler.js` retries failures and catches other paths. Leads before 2026-10-08 have no `metaLeadId` (backfill from the "Lead ID:" note text needs the owner's yes). Not tested against real Meta; use the Send test event button with a test event code. App Review for ads_management / ads_read / business_management and the MBE allow-list are separate, with the owner.
+- App layout: pages now suspend inside the layout (`App.jsx`), so the sidebar and top bar stay while a page's code loads. Dashboard order is Action Required, Performance, Admin Intelligence, Team (Agent Status and Lead Sources Health now sit at the end of Team). Integrations tiles, metric cards and connection cards have capped widths instead of stretching.
 
 ### Claude Code, 2026-10-08 (IST)
 

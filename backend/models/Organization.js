@@ -125,6 +125,22 @@ const orgSchema = new mongoose.Schema(
     bankName:        { type: String, default: "" },
     bankBranch:      { type: String, default: "" },
 
+    // ── Meta Conversions API (see services/metaConversions.js) ────────────────
+    metaCapi: {
+      enabled:        { type: Boolean, default: false },
+      datasetId:      { type: String, trim: true, default: "" },
+      accessToken:    { type: String, default: "" },        // stored encrypted
+      testEventCode:  { type: String, trim: true, default: "" },
+      events: [{
+        _id: false,
+        stage:     { type: String },
+        eventName: { type: String, trim: true, maxlength: 40 },
+        enabled:   { type: Boolean, default: true },
+      }],
+      lastSentAt: { type: Date },
+      lastError:  { type: String, default: "" },
+    },
+
     // ── WhatsApp Integration ───────────────────────────────────────────────────
     whatsapp: {
       enabled:            { type: Boolean, default: false },

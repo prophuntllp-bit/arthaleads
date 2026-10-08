@@ -330,6 +330,7 @@ app.use("/api/tickets",    require("./routes/ticketRoutes"));
 app.use("/api/whatsapp",   require("./routes/whatsappRoutes"));
 app.use("/api/credits",    require("./routes/creditRoutes"));
 app.use("/api/storage",    require("./routes/storageRoutes"));
+app.use("/api/meta-conversions", require("./routes/metaConversionRoutes"));
 app.use("/api/calls",     require("./routes/enablexRoutes"));
 app.use("/api/blog",        blogLimiter, blogRoutes);
 app.use("/api/help",        require("./routes/helpRoutes"));

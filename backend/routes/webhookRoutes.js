@@ -619,6 +619,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           email: fieldMap.email || "",
           source: "Facebook",
           status: "New",
+          metaLeadId: isTestLead ? "" : String(leadData.leadgen_id || ""),
           requirements: isTestLead ? "" : requirements,
           formResponses: isTestLead ? [] : formResponses,
           ...(isTestLead ? {} : mappedLeadFields),
@@ -665,6 +666,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
         });
 
         if (ruleMatch && !isTestLead) await fileLeadInRoutedProject(ruleMatch, createdLead);
+        if (!isTestLead && createdLead.metaLeadId) require("../services/metaConversions").track(createdLead, "New", createdLead.createdAt);
 
         if (automation) {
           automation.status = "connected";

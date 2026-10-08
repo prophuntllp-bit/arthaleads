@@ -693,39 +693,6 @@ export default function Dashboard() {
         <UpcomingSchedule items={data?.upcomingItems || []} navigate={navigate} />
       </div>
 
-      {/* ── Zone 4: Admin Intelligence ───────────────────────────────── */}
-      <AdminOnly role={user?.role}>
-        <div className="space-y-3">
-          <ZoneHeader label="Admin Intelligence" color="indigo" />
-          <StaleLeadsWidget navigate={navigate} prefetchedLeads={prefetchedStale} />
-          {/* The forecast projects from closed deals. With none yet it could
-              only show dashes and zeros, so it waits until there is one. */}
-          {data?.allTimeClosedWon > 0 ? (
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              <RevenueForecastWidget data={data} />
-              <LeadsTrendWidget data={data} scope={describeRange(dateRange)} />
-            </div>
-          ) : (
-            <LeadsTrendWidget data={data} scope={describeRange(dateRange)} />
-          )}
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <LiveAgentStatusWidget navigate={navigate} prefetchedTeam={prefetchedTeam} />
-            <AutomationHealth automations={allAutomations} Logo={PlatformLogo} onOpen={() => navigate("/integrations")} />
-          </div>
-          {/* Project breakdown + Monthly goal — side by side */}
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-start">
-            <ProjectBreakdownWidget navigate={navigate} prefetchedProjects={prefetchedProjects} />
-            <GoalMetricsRow
-              goal={monthlyGoal}
-              current={data?.thisMonthClosedWon || 0}
-              avgResponseMs={null}
-              role={user?.role}
-              onGoalUpdate={(n) => setGoalOverride(n)}
-            />
-          </div>
-        </div>
-      </AdminOnly>
-
       {/* ── Zone 5: Performance ──────────────────────────────────────── */}
       <div className="space-y-3">
         <ZoneHeader label="Performance" />
@@ -742,6 +709,35 @@ export default function Dashboard() {
         <SourcePerformance rows={data?.sourcePerformance || []} scope={describeRange(dateRange)}
           onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetSource: source } })} />
       </div>
+
+      {/* ── Zone 4: Admin Intelligence ───────────────────────────────── */}
+      <AdminOnly role={user?.role}>
+        <div className="space-y-3">
+          <ZoneHeader label="Admin Intelligence" color="indigo" />
+          <StaleLeadsWidget navigate={navigate} prefetchedLeads={prefetchedStale} />
+          {/* The forecast projects from closed deals. With none yet it could
+              only show dashes and zeros, so it waits until there is one. */}
+          {data?.allTimeClosedWon > 0 ? (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              <RevenueForecastWidget data={data} />
+              <LeadsTrendWidget data={data} scope={describeRange(dateRange)} />
+            </div>
+          ) : (
+            <LeadsTrendWidget data={data} scope={describeRange(dateRange)} />
+          )}
+          {/* Project breakdown + Monthly goal — side by side */}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-start">
+            <ProjectBreakdownWidget navigate={navigate} prefetchedProjects={prefetchedProjects} />
+            <GoalMetricsRow
+              goal={monthlyGoal}
+              current={data?.thisMonthClosedWon || 0}
+              avgResponseMs={null}
+              role={user?.role}
+              onGoalUpdate={(n) => setGoalOverride(n)}
+            />
+          </div>
+        </div>
+      </AdminOnly>
 
       {/* ── Zone 6: Team ─────────────────────────────────────────────── */}
       <div className="space-y-3">
@@ -783,6 +779,12 @@ export default function Dashboard() {
 
         <ActivityFeed items={data?.recentActivity || []} navigate={navigate} />
       </div>
+        <AdminOnly role={user?.role}>
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-start">
+            <LiveAgentStatusWidget navigate={navigate} prefetchedTeam={prefetchedTeam} />
+            <AutomationHealth automations={allAutomations} Logo={PlatformLogo} onOpen={() => navigate("/integrations")} />
+          </div>
+        </AdminOnly>
       </div>{/* end Zone 6 */}
 
     </div>

@@ -157,6 +157,7 @@ async function mirrorProjectEdit(pl, op, user) {
     if (Object.keys($push).length) update.$push = $push;
     if (Object.keys($pull).length) update.$pull = $pull;
     if (Object.keys(update).length) await Lead.updateOne({ _id: lead._id }, update);
+    if ($set.status) require("../services/metaConversions").track(lead._id, $set.status);
   } catch (err) {
     logger.error(`[copy sync] project -> lead failed for ${pl?._id}: ${err.message}`);
   }

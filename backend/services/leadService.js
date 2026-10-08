@@ -605,8 +605,10 @@ const leadService = {
       delete updates.whatsappConsent;
     }
 
+    const statusBefore = lead.status;
     Object.assign(lead, updates);
     await lead.save();
+    if (lead.status !== statusBefore) require("./metaConversions").track(lead, lead.status);
     await mirrorLeadEdit(lead, { fields: Object.keys(updates).filter((f) => ["status", "remark", "remark1", "remark2", "remark3", "remark4", "booking"].includes(f)) }, user);
     // Return a fresh read so the response always reflects what's in the DB
     return Lead.findById(lead._id).populate("assignedTo", "name").lean();
@@ -631,6 +633,7 @@ const leadService = {
     );
     const touched = await Lead.find({ _id: { $in: ids }, orgId: user.orgId }).select("phone orgId status").lean();
     for (const l of touched) await mirrorLeadEdit(l, { fields: ["status"] }, user);
+    for (const l of touched) require("./metaConversions").track(l._id, status);
     return { matched: result.matchedCount, modified: result.modifiedCount };
   },
 

@@ -11,6 +11,7 @@ import { canAccess } from "../utils/plan";
 import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 import WhatsAppIcon from "../components/WhatsAppIcon";
+import MetaConversionsSection from "../components/MetaConversionsSection";
 import ConnectionCard, { ConnectionGroups } from "../components/ConnectionCard";
 
 /* ─── platform presets (non-Facebook) ─────────────────────────────────────── */
@@ -2045,7 +2046,7 @@ export default function Automation() {
       </section>
 
       {/* Stats */}
-      <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(160px,210px))]">
         <MetricCard label="Connected" value={summary.connected} note="Live channels" accent="text-emerald-400" />
         <MetricCard label="Total Sources" value={summary.total} note="All connections" />
         <MetricCard label="Facebook" value={items.filter((i) => i.platform === "Facebook").length} note="Meta Lead Ads" accent="text-blue-400" />
@@ -2055,18 +2056,18 @@ export default function Automation() {
       {/* Quick connect tiles */}
       <section>
         <p className="mb-3 text-sm font-semibold text-app-soft">Quick connect</p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(170px,220px))]">
           {/* Facebook tile - special styling */}
           <button
             type="button"
             data-tour="fb-connect"
-            className="card p-5 text-left transition hover:-translate-y-1 hover:border-blue-500/30 relative overflow-hidden"
+            className="card p-4 text-left transition hover:-translate-y-1 hover:border-blue-500/30 relative overflow-hidden"
             onClick={() => { setFbEditingItem(null); setFbWizardOpen(true); }}
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1877F2]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#1877F2]">
               <FacebookIcon />
             </div>
-            <h3 className="mt-4 text-base font-semibold text-app">Facebook</h3>
+            <h3 className="mt-3 text-sm font-semibold text-app">Facebook</h3>
             <p className="mt-1 text-xs text-app-soft">Lead Ads · One click</p>
             <span className="absolute top-3 right-3 rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-semibold text-blue-400">Popular</span>
           </button>
@@ -2076,13 +2077,13 @@ export default function Automation() {
               Telephony below) rather than navigating out to /conversations. */}
           <button
             type="button"
-            className="card p-5 text-left transition hover:-translate-y-1 hover:border-emerald-500/30 relative overflow-hidden"
+            className="card p-4 text-left transition hover:-translate-y-1 hover:border-emerald-500/30 relative overflow-hidden"
             onClick={() => navigate("/integrations/whatsapp")}
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: "rgba(37,211,102,0.12)" }}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl" style={{ background: "rgba(37,211,102,0.12)" }}>
               <WhatsAppIcon className="h-5 w-5" style={{ color: "#25D366" }} />
             </div>
-            <h3 className="mt-4 text-base font-semibold text-app">WhatsApp Business</h3>
+            <h3 className="mt-3 text-sm font-semibold text-app">WhatsApp Business</h3>
             <p className="mt-1 text-xs text-app-soft">
               {waStatus?.connected ? "Connected · manage provider & profile" : "Connect your number for Inbox, templates & the AI agent"}
             </p>
@@ -2109,7 +2110,7 @@ export default function Automation() {
                 <button
                   key={platform}
                   type="button"
-                  className="card p-5 text-left transition hover:-translate-y-1 hover:border-orange-500/30"
+                  className="card p-4 text-left transition hover:-translate-y-1 hover:border-orange-500/30"
                   onClick={() => {
                     if (locked) {
                       toast(`${preset.label || platform} is part of the Enterprise plan.`, { icon: "🔒" });
@@ -2126,7 +2127,7 @@ export default function Automation() {
                     }
                   }}
                 >
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl overflow-hidden ${isWebsiteForm ? "bg-[#21759b]" : isVistrowVoice ? "" : preset.tone}`}>
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-2xl overflow-hidden ${isWebsiteForm ? "bg-[#21759b]" : isVistrowVoice ? "" : preset.tone}`}>
                     {isWebsiteForm ? <WordPressIcon /> : isVistrowVoice ? <VistrowVoiceIcon size={48} /> : <Icon className="h-5 w-5" />}
                   </div>
                   <h3 className="mt-4 flex items-center gap-2 text-base font-semibold text-app">
@@ -2147,13 +2148,13 @@ export default function Automation() {
               instead of opening one of the wizard modals above. */}
           <button
             type="button"
-            className="card p-5 text-left transition hover:-translate-y-1 hover:border-orange-500/30"
+            className="card p-4 text-left transition hover:-translate-y-1 hover:border-orange-500/30"
             onClick={() => navigate("/automation/telephony")}
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: "rgba(249,115,22,0.12)" }}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl" style={{ background: "rgba(249,115,22,0.12)" }}>
               <Phone className="h-5 w-5 text-orange-500" />
             </div>
-            <h3 className="mt-4 text-base font-semibold text-app">Telephony</h3>
+            <h3 className="mt-3 text-sm font-semibold text-app">Telephony</h3>
             <p className="mt-1 text-xs text-app-soft">EnableX · Click-to-call & recordings</p>
           </button>
         </div>
@@ -2330,6 +2331,9 @@ export default function Automation() {
 
       {/* Campaign Routing Rules */}
       <LeadRoutingSection />
+
+      {/* Meta Conversions API */}
+      <MetaConversionsSection />
     </div>
   );
 }
@@ -2802,10 +2806,10 @@ function LeadRoutingSection() {
 
 function MetricCard({ label, value, note, accent = "text-app" }) {
   return (
-    <div className="card p-5">
-      <p className="stitch-kicker mb-2">{label}</p>
-      <p className={`text-3xl font-black tracking-tight ${accent}`}>{value}</p>
-      <p className="mt-2 text-xs text-app-soft">{note}</p>
+    <div className="card p-4">
+      <p className="stitch-kicker mb-1.5">{label}</p>
+      <p className={`text-2xl font-black tracking-tight ${accent}`}>{value}</p>
+      <p className="mt-1 text-xs text-app-soft">{note}</p>
     </div>
   );
 }

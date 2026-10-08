@@ -313,6 +313,12 @@ cron.schedule("30 21 * * *", () => {
     .catch((err) => logger.error(`[storage] pack cleanup failed: ${err.message}`));
 });
 
+// ── Every 10 minutes: retry failed Meta conversion events and catch missed status changes ──
+cron.schedule("*/10 * * * *", () => {
+  require("../services/metaConversions").sweep()
+    .catch((err) => logger.error(`[meta-capi] sweep failed: ${err.message}`));
+});
+
 module.exports = { runDailyReminder, runUpcomingReminder, runTaskReminder, runBackup, refreshFacebookTokens };
 
 // ── Every 5 minutes: follow-up nudges for people who stopped mid-way through

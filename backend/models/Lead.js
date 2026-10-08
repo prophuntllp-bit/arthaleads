@@ -211,6 +211,9 @@ const leadSchema = new mongoose.Schema(
       },
       default: undefined,
     },
+    // Meta's own id for a Facebook/Instagram lead-form submission (leadgen_id).
+    // What lets Conversions API tie later stages back to the ad that made it.
+    metaLeadId: { type: String, trim: true, default: "" },
     formPlugin:      { type: String, trim: true, default: "" }, // e.g. "metform", "elementor_form", "cf7"
     sourcePage:      { type: String, trim: true, default: "" }, // full page URL where the form was submitted
     sourceDomain:    { type: String, trim: true, default: "" }, // clean hostname auto-extracted from sourcePage (e.g. "shaporjipallonji.com")
