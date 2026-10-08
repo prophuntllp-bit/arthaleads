@@ -585,7 +585,7 @@ function MetricCard({ icon: Icon, label, value, note, onClick }) {
   return (
     <div className={`card p-5 ${clickable ? "cursor-pointer transition hover:border-orange-400/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60" : ""}`}
       {...(clickable ? { role: "button", tabIndex: 0, onClick, onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } } : {})}>
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <p className="stitch-kicker mb-2">{label}</p>
           <p className="text-3xl font-black tracking-tight text-app">{value.toLocaleString("en-IN")}</p>

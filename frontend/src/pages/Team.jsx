@@ -436,7 +436,7 @@ export default function Team() {
 function SummaryCard({ label, value, note, icon: Icon }) {
   return (
     <div className="card p-5">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <p className="stitch-kicker mb-2">{label}</p>
           <p className="text-3xl font-black tracking-tight text-app">{value}</p>

@@ -126,7 +126,7 @@ function UtilizationSection() {
                 ? ["Estimated Meta charge", rupees(t.estMetaPaise), "before GST, on Meta's published rates"]
                 : ["Credits spent", rupees(t.spentPaise), "taken from your wallet, before GST"],
             ].map(([label, value, hint]) => (
-              <div key={label} className="rounded-2xl p-4 stitch-surface-muted">
+              <div key={label} className="rounded-2xl p-4 stitch-surface-muted text-center">
                 <p className="text-xs text-app-soft">{label}</p>
                 <p className="text-2xl font-bold text-app mt-1 tabular-nums">{value}</p>
                 <p className="text-[11px] text-app-soft mt-1">{hint}</p>

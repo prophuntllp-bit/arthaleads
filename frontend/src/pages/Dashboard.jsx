@@ -693,23 +693,6 @@ export default function Dashboard() {
         <UpcomingSchedule items={data?.upcomingItems || []} navigate={navigate} />
       </div>
 
-      {/* ── Zone 5: Performance ──────────────────────────────────────── */}
-      <div className="space-y-3">
-        <ZoneHeader label="Performance" />
-        <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-12">
-          <div className="xl:col-span-7">
-            <StatusBreakdown byStatus={data?.byStatus} scope={describeRange(dateRange)}
-              onSelect={(status) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetStatus: status } })} />
-          </div>
-          <div className="xl:col-span-5">
-            <SourceDonut bySource={data?.bySource} scope={describeRange(dateRange)}
-              onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetSource: source } })} />
-          </div>
-        </div>
-        <SourcePerformance rows={data?.sourcePerformance || []} scope={describeRange(dateRange)}
-          onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetSource: source } })} />
-      </div>
-
       {/* ── Zone 4: Admin Intelligence ───────────────────────────────── */}
       <AdminOnly role={user?.role}>
         <div className="space-y-3">
@@ -726,7 +709,7 @@ export default function Dashboard() {
             <LeadsTrendWidget data={data} scope={describeRange(dateRange)} />
           )}
           {/* Project breakdown + Monthly goal — side by side */}
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-start">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-stretch">
             <ProjectBreakdownWidget navigate={navigate} prefetchedProjects={prefetchedProjects} />
             <GoalMetricsRow
               goal={monthlyGoal}
@@ -739,11 +722,28 @@ export default function Dashboard() {
         </div>
       </AdminOnly>
 
+      {/* ── Zone 5: Performance ──────────────────────────────────────── */}
+      <div className="space-y-3">
+        <ZoneHeader label="Performance" />
+        <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2">
+          <div>
+            <StatusBreakdown byStatus={data?.byStatus} scope={describeRange(dateRange)}
+              onSelect={(status) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetStatus: status } })} />
+          </div>
+          <div>
+            <SourceDonut bySource={data?.bySource} scope={describeRange(dateRange)}
+              onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetSource: source } })} />
+          </div>
+        </div>
+        <SourcePerformance rows={data?.sourcePerformance || []} scope={describeRange(dateRange)}
+          onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetSource: source } })} />
+      </div>
+
       {/* ── Zone 6: Team ─────────────────────────────────────────────── */}
       <div className="space-y-3">
         <ZoneHeader label="Team" />
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-          <section className="card p-6 xl:col-span-5">
+        <div className="grid grid-cols-1 gap-3 items-stretch xl:grid-cols-2">
+          <section className="card p-6">
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="stitch-kicker mb-2">Team Focus</p>
@@ -780,7 +780,7 @@ export default function Dashboard() {
         <ActivityFeed items={data?.recentActivity || []} navigate={navigate} />
       </div>
         <AdminOnly role={user?.role}>
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-start">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-stretch">
             <LiveAgentStatusWidget navigate={navigate} prefetchedTeam={prefetchedTeam} />
             <AutomationHealth automations={allAutomations} Logo={PlatformLogo} onOpen={() => navigate("/integrations")} />
           </div>
@@ -882,21 +882,21 @@ function ZonedKPIRow({ data, navigate, scope = "", range = {} }) {
         {stats.map((s) => {
           const inner = (
             <>
-              <p className="flex items-center gap-1 text-[9px] text-app-soft uppercase tracking-wider font-semibold leading-none">
+              <p className="flex items-center justify-center gap-1 text-[9px] text-app-soft uppercase tracking-wider font-semibold leading-none">
                 <span className="truncate">{s.label}</span>
                 {s.tip && <InfoTip text={s.tip} size={12} />}
               </p>
-              <p className="text-xl sm:text-2xl font-black leading-none truncate mt-1" style={{ color: s.color }}>{s.value}</p>
-              <p className="text-[9px] truncate mt-0.5" style={{ color: s.subColor || "var(--app-text-soft)" }} title={s.sub}>{s.sub}</p>
+              <p className="text-xl sm:text-2xl font-black leading-none truncate mt-1 text-center" style={{ color: s.color }}>{s.value}</p>
+              <p className="text-[9px] truncate mt-0.5 text-center" style={{ color: s.subColor || "var(--app-text-soft)" }} title={s.sub}>{s.sub}</p>
             </>
           );
           return s.onClick ? (
             <button key={s.label} type="button" onClick={s.onClick}
-              className="card p-3 flex flex-col gap-0 text-left hover:-translate-y-0.5 transition hover:border-orange-500/30">
+              className="card p-3 flex flex-col justify-center gap-0 text-center hover:-translate-y-0.5 transition hover:border-orange-500/30">
               {inner}
             </button>
           ) : (
-            <div key={s.label} className="card p-3 flex flex-col gap-0">
+            <div key={s.label} className="card p-3 flex flex-col justify-center gap-0 text-center">
               {inner}
             </div>
           );

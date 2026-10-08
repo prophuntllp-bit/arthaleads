@@ -2061,7 +2061,7 @@ export default function Automation() {
           <button
             type="button"
             data-tour="fb-connect"
-            className="card p-4 text-left transition hover:-translate-y-1 hover:border-blue-500/30 relative overflow-hidden"
+            className="card flex flex-col items-center justify-start p-4 text-center transition hover:-translate-y-1 hover:border-blue-500/30 relative overflow-hidden"
             onClick={() => { setFbEditingItem(null); setFbWizardOpen(true); }}
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#1877F2]">
@@ -2077,7 +2077,7 @@ export default function Automation() {
               Telephony below) rather than navigating out to /conversations. */}
           <button
             type="button"
-            className="card p-4 text-left transition hover:-translate-y-1 hover:border-emerald-500/30 relative overflow-hidden"
+            className="card flex flex-col items-center justify-start p-4 text-center transition hover:-translate-y-1 hover:border-emerald-500/30 relative overflow-hidden"
             onClick={() => navigate("/integrations/whatsapp")}
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl" style={{ background: "rgba(37,211,102,0.12)" }}>
@@ -2110,7 +2110,7 @@ export default function Automation() {
                 <button
                   key={platform}
                   type="button"
-                  className="card p-4 text-left transition hover:-translate-y-1 hover:border-orange-500/30"
+                  className="card flex flex-col items-center justify-start p-4 text-center transition hover:-translate-y-1 hover:border-orange-500/30"
                   onClick={() => {
                     if (locked) {
                       toast(`${preset.label || platform} is part of the Enterprise plan.`, { icon: "🔒" });
@@ -2148,7 +2148,7 @@ export default function Automation() {
               instead of opening one of the wizard modals above. */}
           <button
             type="button"
-            className="card p-4 text-left transition hover:-translate-y-1 hover:border-orange-500/30"
+            className="card flex flex-col items-center justify-start p-4 text-center transition hover:-translate-y-1 hover:border-orange-500/30"
             onClick={() => navigate("/automation/telephony")}
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl" style={{ background: "rgba(249,115,22,0.12)" }}>
@@ -2807,7 +2807,7 @@ function LeadRoutingSection() {
 
 function MetricCard({ label, value, note, accent = "text-app" }) {
   return (
-    <div className="card p-4">
+    <div className="card p-4 text-center">
       <p className="stitch-kicker mb-1.5">{label}</p>
       <p className={`text-2xl font-black tracking-tight ${accent}`}>{value}</p>
       <p className="mt-1 text-xs text-app-soft">{note}</p>

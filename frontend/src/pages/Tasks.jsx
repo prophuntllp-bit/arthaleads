@@ -110,7 +110,7 @@ function SummaryCard({ label, count, color, active, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`flex-1 min-w-[120px] rounded-2xl p-4 text-left transition-all ${active ? "ring-2 ring-orange-500 shadow-md" : "hover:opacity-80"}`}
+      className={`flex-1 min-w-[120px] rounded-2xl p-4 text-center transition-all ${active ? "ring-2 ring-orange-500 shadow-md" : "hover:opacity-80"}`}
       style={{ background: color }}
     >
       <p className="text-2xl font-black text-white">{count}</p>

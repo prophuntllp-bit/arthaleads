@@ -2280,9 +2280,10 @@ class _MetricCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Flexible(
                 child: Text(
@@ -2304,7 +2305,7 @@ class _MetricCard extends StatelessWidget {
           const SizedBox(height: 4),
           FittedBox(
             fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
+            alignment: Alignment.center,
             child: Text(
               value,
               style: TextStyle(
@@ -2323,6 +2324,7 @@ class _MetricCard extends StatelessWidget {
               fontWeight: subColor != null ? FontWeight.w700 : FontWeight.w400,
               color: subColor ?? AppTheme.of(context).textSoft,
             ),
+            textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

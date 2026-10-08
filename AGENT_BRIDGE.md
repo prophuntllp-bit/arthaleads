@@ -61,7 +61,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 
 
-- [Claude Code] 2026-10-08 evening IST: dashboard card consistency (order, centred KPI text, equal widths/heights): `frontend/src/pages/Dashboard.jsx` and, with the owner's OK, `mobile/lib/screens/dashboard/dashboard_screen.dart`.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
@@ -86,6 +85,11 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 - Layout: shared `AdaptiveGrid` replaces fixed-ratio grids; text scale capped at 1.3x; lead/dump/follow-up/booking/invoice cards rebuilt like the Leads card. Tests in `mobile/test/` (not run by CI).
 - Not in the app yet: the web's "Manage storage" modal (buy extra space, free up files, `/api/storage/*`) and the Meta Conversions card. Plan & Billing "Get more" opens Plan & Billing, not a purchase flow.
 
+
+### Claude Code, 2026-10-08 (IST), night
+
+- Dashboard (web): order is now Action Required, Admin Intelligence, Performance, Team (Agent Status and Lead Sources Health last in Team). All two-column rows are equal halves with the same gap and stretch to equal height. Stat cards centre their text (Dashboard KPIs, Integrations counts, Credits tiles, Tasks summary); icon stat cards (Performance, Team, `StatCard` in `UI.jsx`) centre the icon against the text. Integrations quick-connect tiles are centred with icons on one line. Layouts stay single column on phones.
+- Mobile app (`dashboard_screen.dart`): metric cards centre their text. Section order already had Admin Intelligence above Performance. Not built into an APK; needs a release build.
 
 ### Claude Code, 2026-10-08 (IST), evening
 

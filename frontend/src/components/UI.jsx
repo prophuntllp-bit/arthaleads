@@ -179,7 +179,7 @@ export function StatCard({ label, value, sub, delta, color = "text-brand-600", i
       className={`card p-4 sm:p-6 text-left w-full ${onClick ? "hover:-translate-y-1 hover:border-orange-500/30 transition-all cursor-pointer" : ""}`}
       onClick={onClick}
     >
-      <div className="flex items-start justify-between">
+      <div className="flex items-center justify-between">
         <div className="min-w-0 flex-1">
           <p className="stitch-kicker mb-1 sm:mb-2 text-[9px] sm:text-[11px]">{label}</p>
           <p className={`text-2xl sm:text-3xl font-bold ${color}`}>{value}</p>
