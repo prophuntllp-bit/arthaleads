@@ -2046,7 +2046,7 @@ export default function Automation() {
       </section>
 
       {/* Stats */}
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(160px,210px))]">
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <MetricCard label="Connected" value={summary.connected} note="Live channels" accent="text-emerald-400" />
         <MetricCard label="Total Sources" value={summary.total} note="All connections" />
         <MetricCard label="Facebook" value={items.filter((i) => i.platform === "Facebook").length} note="Meta Lead Ads" accent="text-blue-400" />
@@ -2056,7 +2056,7 @@ export default function Automation() {
       {/* Quick connect tiles */}
       <section>
         <p className="mb-3 text-sm font-semibold text-app-soft">Quick connect</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(170px,220px))]">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 min-[1500px]:grid-cols-7">
           {/* Facebook tile - special styling */}
           <button
             type="button"
@@ -2330,10 +2330,11 @@ export default function Automation() {
       />
 
       {/* Campaign Routing Rules */}
-      <LeadRoutingSection />
-
-      {/* Meta Conversions API */}
-      <MetaConversionsSection />
+      <div className="grid grid-cols-1 items-start gap-4 min-[1500px]:grid-cols-2">
+        <LeadRoutingSection />
+        {/* Meta Conversions API */}
+        <MetaConversionsSection />
+      </div>
     </div>
   );
 }

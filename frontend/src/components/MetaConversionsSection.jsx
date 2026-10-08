@@ -104,18 +104,18 @@ export default function MetaConversionsSection() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="text-xs font-semibold text-app-soft mb-1.5 block">Dataset ID</label>
-          <input className="input w-full" inputMode="numeric" placeholder="e.g. 1234567890123456" value={form.datasetId}
+          <input className="input w-full" name="meta-dataset-id" autoComplete="off" data-lpignore="true" data-1p-ignore inputMode="numeric" placeholder="e.g. 1234567890123456" value={form.datasetId}
             onChange={(e) => setForm((f) => ({ ...f, datasetId: e.target.value }))} />
         </div>
         <div>
           <label className="text-xs font-semibold text-app-soft mb-1.5 block">Conversions API access token</label>
-          <input className="input w-full" type="password" autoComplete="off"
+          <input className="input w-full" name="meta-capi-token" type="password" autoComplete="new-password" data-lpignore="true" data-1p-ignore
             placeholder={d.tokenSet ? `Saved, ends in ${d.tokenLast4}. Paste a new one to replace it.` : "Paste the token from Events Manager"}
             value={form.accessToken} onChange={(e) => setForm((f) => ({ ...f, accessToken: e.target.value }))} />
         </div>
         <div>
           <label className="text-xs font-semibold text-app-soft mb-1.5 block">Test event code (optional)</label>
-          <input className="input w-full" placeholder="e.g. TEST12345" value={form.testEventCode}
+          <input className="input w-full" name="meta-test-code" autoComplete="off" placeholder="e.g. TEST12345" value={form.testEventCode}
             onChange={(e) => setForm((f) => ({ ...f, testEventCode: e.target.value }))} />
         </div>
         <p className="text-xs text-app-soft self-end leading-relaxed">

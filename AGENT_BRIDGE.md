@@ -76,6 +76,10 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 - Not in the app yet: the web's "Manage storage" modal (buy extra space, free up files, `/api/storage/*`) and the Meta Conversions card. Plan & Billing "Get more" opens Plan & Billing, not a purchase flow.
 
 
+### Claude Code, 2026-10-08 (IST), evening
+
+- Integrations layout reworked: quick-connect tiles 7 across on wide screens, connection cards 3 across (2 on laptops, aligned heights, footer pinned), Lead Routing and Conversion tracking side by side on wide screens. Conversion tracking inputs opt out of browser autofill (Chrome was filling the saved login into Dataset ID and token).
+
 ### Claude Code, 2026-10-08 (IST), later
 
 - **Meta Conversions API (CRM events back to Meta).** Orgs paste a dataset ID and Conversions API token in Integrations > Conversion tracking (`frontend/src/components/MetaConversionsSection.jsx`; settings under `Organization.metaCapi`, token encrypted). `services/metaConversions.js` sends the lead arriving ("Lead"), and the stages the org ticks, for leads with a Meta lead id (`Lead.metaLeadId`, now saved by the Facebook webhook) or a WhatsApp ad click id (`campaignRef.ctwaClid`). `MetaEvent` is the log and dedupe. Hooks: `leadService.update/bulkUpdateStatus`, `utils/projectCopies.js`, Facebook webhook; a 10-minute sweep in `utils/scheduler.js` retries failures and catches other paths. Leads before 2026-10-08 have no `metaLeadId` (backfill from the "Lead ID:" note text needs the owner's yes). Not tested against real Meta; use the Send test event button with a test event code. App Review for ads_management / ads_read / business_management and the MBE allow-list are separate, with the owner.

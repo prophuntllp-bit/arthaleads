@@ -110,7 +110,7 @@ export default function ConnectionCard({
   const url = `${serverBase}${endpointPath}`;
 
   return (
-    <article className={`card flex w-full max-w-[460px] flex-col p-4 transition-opacity ${paused ? "opacity-80" : ""}`}>
+    <article className={`card flex h-full w-full flex-col p-4 transition-opacity ${paused ? "opacity-80" : ""}`}>
       <header className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[color:var(--app-border)] bg-white">
           {leading}
@@ -125,7 +125,7 @@ export default function ConnectionCard({
         </span>
       </header>
 
-      <dl className="mt-3 flex-1 divide-y divide-[color:var(--app-border)] border-t border-[color:var(--app-border)]">
+      <dl className="mt-3 mb-3 flex-1 divide-y divide-[color:var(--app-border)] border-t border-[color:var(--app-border)]">
         {isFb && (
           <>
             <Row label="Page">{item.pageName || item.pageId || "All pages"}</Row>
@@ -212,7 +212,7 @@ export default function ConnectionCard({
         )}
       </dl>
 
-      <footer className="mt-3 flex items-center gap-2 border-t border-[color:var(--app-border)] pt-3">
+      <footer className="mt-auto flex items-center gap-2 border-t border-[color:var(--app-border)] pt-3">
         <button type="button" className="btn-secondary rounded-xl" onClick={onEdit}><Pencil className="h-4 w-4" /> Edit</button>
         {isFb && <button type="button" className="btn-secondary rounded-xl" onClick={onDiagnose} title="Check why leads may not be arriving"><SearchCheck className="h-4 w-4" /> Diagnose</button>}
         {item.externalSourceUrl && (
@@ -263,7 +263,7 @@ export function ConnectionGroups({ items, renderCard }) {
             <span className="rounded-full border border-[color:var(--app-border)] px-2 py-0.5 text-[11px] font-medium text-app-soft">{g.rows.length}</span>
             {g.hint && <span className="text-xs text-app-soft">{g.hint}</span>}
           </div>
-          <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-[repeat(auto-fill,minmax(340px,460px))]">{g.rows.map(renderCard)}</div>
+          <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2 min-[1500px]:grid-cols-3">{g.rows.map(renderCard)}</div>
         </section>
       ))}
     </div>
