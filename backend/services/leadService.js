@@ -898,7 +898,8 @@ const leadService = {
     return { inserted, duplicates };
   },
 
-  async getAllUnified(query, user) {
+  // opts.fetchCap raises the per-collection ceiling for exports; opts.ids narrows the result to those records (selected rows).
+  async getAllUnified(query, user, opts = {}) {
     const { search, status, source, priority, booking, projectId, page = 1, limit = 50, dateRange, from, to, followUpToday, siteFilter, sitePage, type } = query;
     // `type` opts a caller (the Pipeline board) into explicitly including
     // ProjectLeads across ALL projects, not just a specific `projectId` —
@@ -918,7 +919,7 @@ const leadService = {
     // Cross-collection merge can't push skip/limit down to the DB, so each
     // side fetches its own top-N (sorted the same way) and we merge-sort in
     // memory. Capped so deep pagination can't force an unbounded scan.
-    const fetchCap = Math.min(skip + limitInt, 2000);
+    const fetchCap = Math.min(skip + limitInt, opts.fetchCap || 2000);
 
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
@@ -928,6 +929,7 @@ const leadService = {
 
     // ── Lead filter ────────────────────────────────────────────────────────────
     const leadFilter = { orgId: user.orgId, isArchived: { $ne: true }, isDeleted: { $ne: true } };
+    if (opts.ids?.length) leadFilter._id = { $in: opts.ids };
     const andConditions = [];
 
     if (user.role === "agent" || query.myOnly === "true") {
@@ -992,7 +994,8 @@ const leadService = {
 
     {
       const projFilter = { orgId: user.orgId };
-      if (transferredOnly) projFilter.fromLeadId = { $ne: null };
+      if (transferredOnly && !opts.ids?.length) projFilter.fromLeadId = { $ne: null };
+      if (opts.ids?.length) projFilter._id = { $in: opts.ids };
       if (priority) projFilter.priority = priority;
       if (consent === "unknown") projFilter["whatsappConsent.status"] = { $nin: ["granted", "denied"] };
       else if (consent)          projFilter["whatsappConsent.status"] = consent;
@@ -1189,7 +1192,11 @@ const leadService = {
         { $match: movedMatch },
         // A handful of moved records lost their status in the old transfer;
         // they were never worked on the project, so they count as New.
-        { $set: { status: { $cond: [{ $in: [{ $ifNull: ["$status", ""] }, [""]] }, "New", "$status"] } } },
+        { $set: {
+          status: { $cond: [{ $in: [{ $ifNull: ["$status", ""] }, [""]] }, "New", "$status"] },
+          // A project entry stores its follow-up as "followUp"; the counts below read "followUpDate".
+          followUpDate: { $ifNull: ["$followUpDate", "$followUp"] },
+        } },
       ] } },
       {
         $facet: {
@@ -1516,8 +1523,14 @@ const leadService = {
   // else, or a project that is gone, goes back to the Leads list.
   async restore(id, user) {
     const orgId = user.orgId;
-    const lead = await Lead.findOne({ _id: id, orgId });
-    if (!lead) throw new AppError("Lead not found", 404);
+    // Claim the restore first: only a lead that is still in Dump can be restored, and
+    // only one request wins, so pressing Restore twice (or two people at once) cannot
+    // put the person into the project twice.
+    const lead = await Lead.findOneAndUpdate({ _id: id, orgId, isDeleted: true }, { $set: { isDeleted: false, deletedAt: null } }, { new: true });
+    if (!lead) {
+      if (await Lead.exists({ _id: id, orgId })) throw new AppError("This lead has already been restored", 409);
+      throw new AppError("Lead not found", 404);
+    }
 
     const from = lead.deletedFrom;
     if (from?.kind === "project" && (from.projectId || from.projectName)) {

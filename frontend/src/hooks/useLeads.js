@@ -59,7 +59,8 @@ export function useLeads(mode = "normal", initialFilters = {}) {
       const { endpoint: ep, params } = paramsRef.current;
       try {
         const { data } = await api.get(ep, { params });
-        if (paramsRef.current.endpoint !== ep || paramsRef.current.params.page !== params.page) return;
+        // Drop the answer if the person changed the search, a filter, the page or the page size while it was in flight.
+        if (paramsRef.current.endpoint !== ep || JSON.stringify(paramsRef.current.params) !== JSON.stringify(params)) return;
         setLeads(data.leads || []);
         setTotal(data.total || 0);
         setPages(data.pages || 1);

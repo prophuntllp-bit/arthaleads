@@ -86,7 +86,7 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
       preferredLocation: lead.preferredLocation || "",
       bhk: lead.bhk || "N/A",
       purpose: lead.purpose || "Buy",
-      followUpDate: lead.followUpDate ? new Date(lead.followUpDate).toISOString().slice(0, 10) : "",
+      followUpDate: (lead.followUpDate || lead.followUp) ? new Date(lead.followUpDate || lead.followUp).toISOString().slice(0, 10) : "",
       followUpNote: lead.followUpNote || "",
       budgetMin: lead.budget?.min || "",
       budgetMax: lead.budget?.max || "",

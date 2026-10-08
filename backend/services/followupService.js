@@ -77,7 +77,9 @@ const followupService = {
     } else if (section === "future") {
       const fromDate = from ? new Date(from) : new Date(todayEnd.getTime() + 1000);
       const toDate   = to ? (() => { const d = new Date(to); d.setHours(23, 59, 59, 999); return d; })() : null;
-      const futureFollowUp = { $gt: todayEnd, ...(toDate ? { $lte: toDate } : {}) };
+      // Future means after today, and not before the chosen From date.
+      const earliest = new Date(Math.max(fromDate.getTime(), todayEnd.getTime() + 1000));
+      const futureFollowUp = { $gte: earliest, ...(toDate ? { $lte: toDate } : {}) };
       leadFilter = {
         $and: [
           baseLeadFilter,

@@ -350,9 +350,30 @@ const projectService = {
       throw new AppError("Access denied", 403);
     }
 
+    // The edit form sends the Lead field names; the project entry calls the follow-up date "followUp".
+    if ("followUpDate" in data && !("followUp" in data)) data = { ...data, followUp: data.followUpDate };
+
     // Only update fields that exist in the ProjectLead schema
-    const allowed = ["name", "phone", "email", "source", "remark", "remarkNote", "remark1", "remark2", "remark3", "remark4", "followUp", "followUp2", "booking", "status"];
-    allowed.forEach((f) => { if (f in data) lead[f] = data[f]; });
+    const allowed = ["name", "phone", "email", "source", "remark", "remarkNote", "remark1", "remark2", "remark3", "remark4", "followUp", "followUp2", "followUpNote", "booking", "status",
+      "priority", "propertyType", "bhk", "purpose", "budget", "preferredLocation", "city", "streetAddress"];
+    const ENUM_FIELDS = ["priority", "propertyType", "bhk", "purpose"];
+    allowed.forEach((f) => {
+      if (!(f in data)) return;
+      // An empty choice means "not set", which an enum field stores as absent rather than "".
+      lead[f] = ENUM_FIELDS.includes(f) && data[f] === "" ? undefined : data[f];
+    });
+
+    if ("assignedTo" in data) {
+      if (data.assignedTo) {
+        const assignee = await User.findOne({ _id: data.assignedTo, orgId: user.orgId, isActive: true }).select("name").lean();
+        if (!assignee) throw new AppError("That person is not on your team", 400);
+        lead.assignedTo = assignee._id;
+        lead.assignedToName = assignee.name;
+      } else {
+        lead.assignedTo = undefined;
+        lead.assignedToName = "";
+      }
+    }
 
     // One-way flag: once Interested, Site Visit Booked, or Site Visit Done → always Prospective
     if (["Interested", "Site Visit Booked", "Site Visit Done"].includes(data.booking)) {

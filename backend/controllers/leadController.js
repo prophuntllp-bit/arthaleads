@@ -339,12 +339,13 @@ const leadController = {
       if (ids) {
         // Export specific IDs (selected leads)
         const idList = ids.split(",").filter(Boolean);
-        const { leads } = await leadService.getAllUnified({ limit: EXPORT_LIMIT, page: 1 }, req.user);
-        sourceLeads = leads.filter((l) => idList.includes(String(l._id)));
+        // Fetch exactly the selected records, from both lists, instead of the first page of everything.
+        const { leads } = await leadService.getAllUnified({ limit: EXPORT_LIMIT, page: 1, type: "all" }, req.user, { ids: idList.slice(0, EXPORT_LIMIT), fetchCap: EXPORT_LIMIT });
+        sourceLeads = leads;
       } else {
         const query = { ...req.query, limit: EXPORT_LIMIT + 1, page: 1 };
         delete query.format;
-        const { leads } = await leadService.getAllUnified(query, req.user);
+        const { leads } = await leadService.getAllUnified(query, req.user, { fetchCap: EXPORT_LIMIT + 1 });
         if (leads.length > EXPORT_LIMIT) {
           truncated = true;
           sourceLeads = leads.slice(0, EXPORT_LIMIT);

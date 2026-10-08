@@ -167,6 +167,8 @@ const leadSchema = new mongoose.Schema(
     // ── Follow-up ─────────────────────────────────────────────────────────────
     followUpDate:       { type: Date,   default: null },
     followUpNote:       { type: String, default: "" },
+    // The free note on the Follow Ups page (project leads call it the same thing).
+    remarkNote:         { type: String, default: "" },
     followUpSetBy:      { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     followUpSetByName:  { type: String, default: "" },
 

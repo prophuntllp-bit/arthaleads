@@ -438,6 +438,8 @@ export default function ProjectDetail() {
 
   // Edit lead modal
   const [editingLead, setEditingLead] = useState(null);
+  // Tagged as a project lead so the form saves to the project, not the main lead list (kept stable so the form is not reset on every render).
+  const editingLeadForm = useMemo(() => (editingLead ? { ...editingLead, _type: "project", projectId: editingLead.projectId || id } : null), [editingLead, id]);
 
   // Transfer modal
   const [transferTarget, setTransferTarget] = useState(null); // lead object to transfer
@@ -1749,7 +1751,7 @@ export default function ProjectDetail() {
         open={!!editingLead}
         onClose={() => setEditingLead(null)}
         onSaved={handleEditLeadSaved}
-        lead={editingLead}
+        lead={editingLeadForm}
       />
 
       <TransferModal
