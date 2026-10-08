@@ -10,7 +10,10 @@ import '../inbox/wa_theme.dart';
 /// and the team already said. Replies still happen from the Inbox.
 class LeadChatPanel extends StatefulWidget {
   final String leadId;
-  const LeadChatPanel({super.key, required this.leadId});
+  // Set for a project lead that was moved in from Leads: its chat stays with the
+  // original lead, which the project endpoint looks up.
+  final String? projectId;
+  const LeadChatPanel({super.key, required this.leadId, this.projectId});
 
   @override
   State<LeadChatPanel> createState() => _LeadChatPanelState();
@@ -30,7 +33,10 @@ class _LeadChatPanelState extends State<LeadChatPanel> {
   Future<void> _load() async {
     setState(() => _failed = false);
     try {
-      final res = await ApiClient.instance.dio.get('/leads/${widget.leadId}/whatsapp-messages');
+      final pid = widget.projectId;
+      final res = await ApiClient.instance.dio.get(
+        pid != null ? '/projects/$pid/leads/${widget.leadId}/whatsapp-messages' : '/leads/${widget.leadId}/whatsapp-messages',
+      );
       if (!mounted) return;
       setState(() {
         _hasConversation = res.data['conversation'] != null;

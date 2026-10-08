@@ -73,6 +73,13 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
       .where((id) => id.isNotEmpty)
       .toSet();
 
+  /// WhatsApp leads have a Chat tab. A project lead gets it when it was moved in
+  /// from Leads (the chat stays with the original lead); one imported straight
+  /// into a project has no conversation.
+  bool get _hasChat =>
+      lead['source'] == 'WhatsApp' &&
+      (!_isProject || (lead['fromLeadId'] != null && lead['projectId'] != null));
+
   bool get _isProject =>
       lead['_type'] == 'project' && lead['projectId'] != null;
 
@@ -902,7 +909,7 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                       ),
                     ),
                   ),
-                  if (!_isProject && lead['source'] == 'WhatsApp')
+                  if (_hasChat)
                     ChoiceChip(
                       label: const Text('Chat', style: TextStyle(fontSize: 12)),
                       selected: _tab == 'chat',
@@ -923,8 +930,11 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
 
               if (_tab == 'notes') ..._notesTab(),
               if (_tab == 'activity') ..._activityTab(),
-              if (_tab == 'chat' && !_isProject)
-                LeadChatPanel(leadId: lead['_id'] as String),
+              if (_tab == 'chat' && _hasChat)
+                LeadChatPanel(
+                  leadId: lead['_id'] as String,
+                  projectId: _isProject ? lead['projectId'] as String? : null,
+                ),
               if (_tab == 'transcript' && _hasVoice) ..._transcriptTab(),
 
               if (_tab == 'info') ...[

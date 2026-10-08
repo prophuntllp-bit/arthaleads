@@ -228,6 +228,34 @@ router.post("/:id/dumped-leads/:leadId/restore", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/projects/:id/leads/:leadId/whatsapp-messages — the WhatsApp chat of a
+// lead that was moved into this project. The conversation stays attached to the
+// original Lead, which a transfer archives, and the project lead remembers it
+// as fromLeadId, so that is where the chat is looked up. A lead imported straight
+// into the project (no fromLeadId) has no conversation and answers with none.
+// Access is the project's: an agent must be assigned to the project, and then
+// sees the same leads they already see in it.
+router.get("/:id/leads/:leadId/whatsapp-messages", async (req, res, next) => {
+  try {
+    const project = await require("../services/projectService").getById(req.params.id, req.user);
+    const pl = await ProjectLead.findOne({ _id: req.params.leadId, project: project._id }).select("fromLeadId").lean();
+    if (!pl) return res.status(404).json({ success: false, message: "Lead not found" });
+    if (!pl.fromLeadId) return res.json({ success: true, conversation: null, messages: [] });
+
+    const WaConversation = require("../models/WaConversation");
+    const WaMessage = require("../models/WaMessage");
+    const conversation = await WaConversation.findOne({ orgId: req.user.orgId, leadId: pl.fromLeadId })
+      .select("_id contactPhone status botEnabled assignedToName lastMessageAt")
+      .lean();
+    if (!conversation) return res.json({ success: true, conversation: null, messages: [] });
+    const messages = await WaMessage.find({ conversationId: conversation._id })
+      .sort({ timestamp: 1 })
+      .select("direction sender senderName body mediaType mediaUrl interactiveOptions timestamp isGreeting")
+      .lean();
+    res.json({ success: true, conversation, messages });
+  } catch (err) { next(err); }
+});
+
 // Project leads - specific paths before :leadId
 router.post("/:id/leads/import", authorize("admin", "manager"), projectController.importLeads);
 router.get("/:id/leads",          projectController.getLeads);

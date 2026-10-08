@@ -66,6 +66,10 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-08 (IST), WhatsApp chat for transferred leads
+
+- A lead moved into a project keeps its WhatsApp conversation on the archived original (`WaConversation.leadId`); the project lead only remembers `fromLeadId`. The Chat tab was hidden for every project lead. New `GET /api/projects/:id/leads/:leadId/whatsapp-messages` (in `backend/routes/projectRoutes.js`, not `leadService.js`) looks the chat up through `fromLeadId`; access is the project's (agents must be assigned to it). `frontend/src/components/LeadDetail.jsx` and the app's lead detail show the Chat tab for WhatsApp project leads that have a `fromLeadId`. Leads imported straight into a project have no chat and still show no tab. The app needs the next release to get the tab.
+
 ### Claude Code, 2026-10-08 (IST), mobile app (owner asked for it; `mobile/` only)
 
 - `c7a5369` + release commit: Arthaleads Mobile **1.0.11 (build 37)** published to the whole fleet (`backend/constants/appRelease.js` `android.build` 37, GitHub Release `mobile-v1.0.11-37`, universal APK, signed with the real key). The app now has: copy name and number, per-project Dump Leads (`GET /projects/:id/dumped-leads`), WhatsApp Chat tab (`GET /leads/:id/whatsapp-messages`), `ad:`/`form:` Source filter tokens, "Also in project" (`inProjects`), storage meter and 80% popup (`GET /org/storage`), plan locks, routing-rule editing (`PATCH /routing-rules/:id`), Dashboard source pills that sum to the total.

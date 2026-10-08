@@ -270,22 +270,26 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
       .finally(() => setCallsLoading(false));
   }, [tab, lead?._id]);
 
-  // Chat tab — fetched once per lead, the first time it's opened. Project
-  // leads don't carry a WaConversation link, so this is skipped for them
-  // (checked via lead?._type directly — isProjectLead isn't declared until
+  // Chat tab — fetched once per lead, the first time it's opened. A project
+  // lead has no conversation of its own; one that was moved in from Leads keeps
+  // the original's chat (fromLeadId), which the project endpoint looks up. One
+  // imported straight into a project has none, so it is skipped.
+  // (Checked via lead?._type directly — isProjectLead isn't declared until
   // after the early `if (!lead) return null` below, and hooks can't follow
-  // a conditional return).
+  // a conditional return.)
   useEffect(() => {
-    if (tab !== "chat" || !lead?._id || lead._type === "project" || waMessages !== null) return;
+    const isProj = lead?._type === "project";
+    if (tab !== "chat" || !lead?._id || waMessages !== null) return;
+    if (isProj && !(lead.fromLeadId && lead.projectId)) return;
     setWaLoading(true);
-    api.get(`/leads/${lead._id}/whatsapp-messages`)
+    api.get(isProj ? `/projects/${lead.projectId}/leads/${lead._id}/whatsapp-messages` : `/leads/${lead._id}/whatsapp-messages`)
       .then(({ data }) => {
         setWaMessages(data.messages || []);
         setWaConversation(data.conversation || null);
       })
       .catch(() => toast.error("Failed to load WhatsApp chat"))
       .finally(() => setWaLoading(false));
-  }, [tab, lead?._id, lead?._type, waMessages]);
+  }, [tab, lead?._id, lead?._type, lead?.fromLeadId, lead?.projectId, waMessages]);
 
   const sp = useSoftPhone();   // null outside the authed CRM shell
 
@@ -384,9 +388,9 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     c.transcript?.length || c.sentiment || c.channel || c.durationSeconds || c.agentName || c.recordingUrl);
   // Chat tab: read-only WhatsApp history, for leads that came in (or were
   // reached) over WhatsApp — so an agent about to call can see what the
-  // bot/team already discussed before dialing. Project leads don't carry a
-  // WaConversation link, so they never get this tab.
-  const hasWhatsApp = !isProjectLead && lead.source === "WhatsApp";
+  // bot/team already discussed before dialing. A project lead gets it when it
+  // was moved in from Leads (fromLeadId): the chat stays with the original.
+  const hasWhatsApp = lead.source === "WhatsApp" && (!isProjectLead || (!!lead.fromLeadId && !!lead.projectId));
   const tabList = ["info", "notes", "activity", "calls", ...(hasWhatsApp ? ["chat"] : []), ...(hasVoice ? ["transcript"] : [])];
 
   const refreshLead = async () => {
