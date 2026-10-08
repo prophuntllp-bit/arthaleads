@@ -687,6 +687,19 @@ const superAdminController = {
 
   // PATCH /api/super-admin/orgs/:id/storage — grant extra file space, set a negotiated
   // limit or retention. Body (all optional): extraGb, limitGb (null clears), recordingDays (null clears), note.
+  // PATCH /api/super-admin/orgs/:id/referral-reward — record that the referrer's reward was given.
+  async markReferralRewardGiven(req, res, next) {
+    try {
+      const org = await Organization.findById(req.params.id).select("name referredBy referralRewardAt referralRewardGrantedAt");
+      if (!org) return res.status(404).json({ success: false, message: "Organisation not found" });
+      if (!org.referredBy || !org.referralRewardAt) return res.status(400).json({ success: false, message: "No referral reward is scheduled for this organisation." });
+      org.referralRewardGrantedAt = req.body?.given === false ? null : new Date();
+      await org.save();
+      logAudit("referral_reward", req, { targetOrg: org._id, targetOrgName: org.name, details: { given: !!org.referralRewardGrantedAt } });
+      res.json({ success: true, referralRewardGrantedAt: org.referralRewardGrantedAt });
+    } catch (err) { next(err); }
+  },
+
   async updateStorage(req, res, next) {
     try {
       const { extraGb, limitGb, recordingDays, note } = req.body || {};

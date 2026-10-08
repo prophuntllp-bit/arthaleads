@@ -393,8 +393,11 @@ const authController = {
   async getPerformance(req, res, next) {
     try {
       const { dateFrom, dateTo } = req.query;
-      const performance = await authService.getPerformance(req.user, { dateFrom, dateTo });
-      res.json({ success: true, performance });
+      const [performance, totals] = await Promise.all([
+        authService.getPerformance(req.user, { dateFrom, dateTo }),
+        authService.getPerformanceTotals(req.user, { dateFrom, dateTo }),
+      ]);
+      res.json({ success: true, performance, totals });
     } catch (err) {
       next(err);
     }

@@ -11,6 +11,7 @@ router.get("/orgs/:id",               ctrl.getOrgDetail);
 router.patch("/orgs/:id",             ctrl.updateOrg);
 router.patch("/orgs/:id/logo",        ctrl.updateLogo);
 router.patch("/orgs/:id/storage",     ctrl.updateStorage);
+router.patch("/orgs/:id/referral-reward", ctrl.markReferralRewardGiven);
 router.patch("/orgs/:id/extend-trial", ctrl.extendTrial);
 router.post("/orgs/:id/approve",      ctrl.approveOrg);
 router.post("/orgs/:id/reject",       ctrl.rejectOrg);

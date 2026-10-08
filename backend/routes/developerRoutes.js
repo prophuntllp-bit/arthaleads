@@ -15,6 +15,9 @@ router.get("/", async (req, res, next) => {
 });
 
 // POST /api/developers
+// A number, or the fallback when nothing usable was sent. Zero is a real value (no brokerage).
+const numOr = (v, d) => (v === undefined || v === null || v === "" || Number.isNaN(Number(v))) ? d : Number(v);
+
 router.post("/", async (req, res, next) => {
   try {
     const { name, address, pan, cin, gstNo, logo, reraNumbers,
@@ -30,9 +33,9 @@ router.post("/", async (req, res, next) => {
       gstNo:     gstNo?.trim() || "",
       logo:      typeof logo === "string" ? logo : "",
       reraNumbers: Array.isArray(reraNumbers) ? reraNumbers.filter(Boolean).map(r => String(r).trim()) : [],
-      defaultBrokeragePercent: Number(defaultBrokeragePercent) || 2,
-      defaultFosIncentive:     Number(defaultFosIncentive)     || 0,
-      defaultEoiIncentive:     Number(defaultEoiIncentive)     || 0,
+      defaultBrokeragePercent: numOr(defaultBrokeragePercent, 2),
+      defaultFosIncentive:     numOr(defaultFosIncentive, 0),
+      defaultEoiIncentive:     numOr(defaultEoiIncentive, 0),
       invoiceTemplate: invoiceTemplate || "detailed",
     });
     res.status(201).json({ success: true, data: dev });
@@ -54,9 +57,9 @@ router.put("/:id", async (req, res, next) => {
     if (gstNo     !== undefined) dev.gstNo     = gstNo?.trim()    || "";
     if (logo      !== undefined) dev.logo      = typeof logo === "string" ? logo : "";
     if (Array.isArray(reraNumbers)) dev.reraNumbers = reraNumbers.filter(Boolean).map(r => String(r).trim());
-    if (defaultBrokeragePercent !== undefined) dev.defaultBrokeragePercent = Number(defaultBrokeragePercent) || 2;
-    if (defaultFosIncentive     !== undefined) dev.defaultFosIncentive     = Number(defaultFosIncentive)     || 0;
-    if (defaultEoiIncentive     !== undefined) dev.defaultEoiIncentive     = Number(defaultEoiIncentive)     || 0;
+    if (defaultBrokeragePercent !== undefined) dev.defaultBrokeragePercent = numOr(defaultBrokeragePercent, dev.defaultBrokeragePercent ?? 2);
+    if (defaultFosIncentive     !== undefined) dev.defaultFosIncentive     = numOr(defaultFosIncentive, 0);
+    if (defaultEoiIncentive     !== undefined) dev.defaultEoiIncentive     = numOr(defaultEoiIncentive, 0);
     if (invoiceTemplate) dev.invoiceTemplate = invoiceTemplate;
     await dev.save();
     res.json({ success: true, data: dev });

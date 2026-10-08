@@ -10,7 +10,7 @@ router.get("/mine", protect, async (req, res, next) => {
     const orgId = req.user.orgId;
 
     const referred = await Organization.find({ referredBy: orgId })
-      .select("name slug plan referralRewardAt createdAt")
+      .select("name slug plan referralRewardAt referralRewardGrantedAt createdAt")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -23,8 +23,10 @@ router.get("/mine", protect, async (req, res, next) => {
         status = "subscribed";          // paid, reward not yet scheduled (manual flow)
       } else if (new Date(o.referralRewardAt).getTime() > now) {
         status = "reward_pending";      // reward scheduled, 7-day window not over
+      } else if (!o.referralRewardGrantedAt) {
+        status = "reward_due";          // 7 days elapsed, reward being processed
       } else {
-        status = "rewarded";            // 7 days elapsed — reward credited
+        status = "rewarded";            // reward actually given
       }
       return {
         _id:              o._id,
@@ -41,7 +43,7 @@ router.get("/mine", protect, async (req, res, next) => {
       total:         list.length,
       subscribed:    list.filter(r => r.status !== "signed_up").length,
       rewarded:      list.filter(r => r.status === "rewarded").length,
-      rewardPending: list.filter(r => r.status === "reward_pending" || r.status === "subscribed").length,
+      rewardPending: list.filter(r => ["reward_pending", "reward_due", "subscribed"].includes(r.status)).length,
     };
 
     res.json({ success: true, data: { list, summary } });

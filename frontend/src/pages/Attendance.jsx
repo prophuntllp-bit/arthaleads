@@ -268,12 +268,15 @@ export default function Attendance() {
   useEffect(() => { if (!isAdmin) setTab("records"); }, [isAdmin]);
   useEffect(() => { if (isAdmin) fetchShiftSettings(); }, [isAdmin, fetchShiftSettings]);
 
-  const submitClock = async (captureData) => {
+  // `mode` is passed in because setCaptureMode has not taken effect yet when the
+  // selfie-free path calls this in the same click (it used to always clock in).
+  const submitClock = async (captureData, mode = captureMode) => {
     setClocking(true);
-    const isIn = captureMode === "clockin";
+    const isIn = mode === "clockin";
     try {
       const body = {};
       if (captureData?.selfie) body.selfie = captureData.selfie;
+      else if (requireSelfie) body.proofUnavailable = true;   // no photo (camera unavailable or skipped): the server records that it was declared
       if (captureData?.lat != null) { body.lat = captureData.lat; body.lng = captureData.lng; body.accuracy = captureData.accuracy; }
       const r = await api.post(`/attendance/${isIn ? "clockin" : "clockout"}`, body);
       setStatus(r.data.data);
@@ -286,12 +289,12 @@ export default function Attendance() {
 
   const handleClockIn = () => {
     if (requireSelfie) { setCaptureMode("clockin"); setCaptureOpen(true); }
-    else { setCaptureMode("clockin"); submitClock({}); }
+    else { setCaptureMode("clockin"); submitClock({}, "clockin"); }
   };
 
   const handleClockOut = () => {
     if (requireSelfie) { setCaptureMode("clockout"); setCaptureOpen(true); }
-    else { setCaptureMode("clockout"); submitClock({}); }
+    else { setCaptureMode("clockout"); submitClock({}, "clockout"); }
   };
 
   const handleExport = async () => {
@@ -384,8 +387,8 @@ export default function Attendance() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Shift settings (admin only) */}
-          {isAdmin && (
+          {/* Shift settings: the server allows only admins to save them, so managers do not see the button */}
+          {(user?.role === "admin" || user?.role === "super_admin") && (
             <button onClick={() => setSettingsModal(true)}
               className="p-2 rounded-xl border text-app-soft hover:text-orange-500 hover:border-orange-400 transition cursor-pointer"
               style={{ borderColor: "var(--app-border)" }} title="Shift Settings">

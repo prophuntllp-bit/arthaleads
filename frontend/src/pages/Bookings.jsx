@@ -329,19 +329,30 @@ export default function Bookings() {
   const [filter, setFilter]     = useState("all");
   const [genLoading, setGenLoading] = useState(null);
 
-  const load = useCallback(async () => {
-    try {
-      const [bRes, dRes] = await Promise.all([
-        api.get("/bookings"),
-        api.get("/developers"),
-      ]);
-      setBookings(bRes.data.data);
-      setDevelopers(dRes.data.data);
-    } catch { toast.error("Failed to load bookings."); }
-    finally { setLoading(false); }
-  }, []);
+  const [summary, setSummary] = useState({ count: 0, totalBill: 0, byStatus: {} });
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 50;
 
-  useEffect(() => { load(); }, [load]);
+  // The status tabs filter on the server, so older bookings are reachable and the tiles come from the whole set.
+  const load = useCallback(async (pg = 1, append = false) => {
+    try {
+      if (append) setLoadingMore(true);
+      const [bRes, dRes] = await Promise.all([
+        api.get("/bookings", { params: { page: pg, limit: PAGE_SIZE, ...(filter !== "all" ? { status: filter } : {}) } }),
+        append ? Promise.resolve(null) : api.get("/developers"),
+      ]);
+      setBookings((prev) => (append ? [...prev, ...bRes.data.data] : bRes.data.data));
+      setTotal(bRes.data.total || 0);
+      setSummary(bRes.data.summary || { count: 0, totalBill: 0, byStatus: {} });
+      setPage(pg);
+      if (dRes) setDevelopers(dRes.data.data);
+    } catch { toast.error("Failed to load bookings."); }
+    finally { setLoading(false); setLoadingMore(false); }
+  }, [filter]);
+
+  useEffect(() => { setLoading(true); load(1, false); }, [load]);
 
   const generateInvoice = async (booking) => {
     setGenLoading(booking._id);
@@ -363,16 +374,17 @@ export default function Bookings() {
     try {
       await api.delete(`/bookings/${b._id}`);
       setBookings(x => x.filter(b2 => b2._id !== b._id));
+      load(1, false);
       toast.success("Booking deleted.");
     } catch (e) { toast.error(e.response?.data?.message || "Cannot delete."); }
   };
 
-  const filtered = filter === "all" ? bookings : bookings.filter(b => b.status === filter);
+  const filtered = bookings;
 
-  // Stats
-  const totalBill    = bookings.reduce((s, b) => s + (b.totalBill || 0), 0);
-  const countPending = bookings.filter(b => b.status === "new").length;
-  const countPaid    = bookings.filter(b => b.status === "payment_received").length;
+  // Stats: across every booking, not just the ones loaded
+  const totalBill    = summary.totalBill || 0;
+  const countPending = summary.byStatus?.new?.count || 0;
+  const countPaid    = summary.byStatus?.payment_received?.count || 0;
 
   return (
     <div className="px-4 sm:px-6 py-6 max-w-7xl mx-auto">
@@ -508,6 +520,14 @@ export default function Bookings() {
               </tbody>
             </table>
           </div>
+          {bookings.length < total && (
+            <div className="px-4 py-3 text-center" style={{ borderTop: "1px solid var(--app-border)" }}>
+              <button onClick={() => load(page + 1, true)} disabled={loadingMore}
+                className="btn-secondary rounded-xl px-4 py-2 text-xs cursor-pointer disabled:opacity-50">
+                {loadingMore ? "Loading…" : `Load more (${bookings.length} of ${total})`}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -522,6 +542,7 @@ export default function Bookings() {
               return idx >= 0 ? b.map((x, i) => i === idx ? saved : x) : [saved, ...b];
             });
             setModal(null);
+            load(1, false);   // refresh the totals
           }}
         />
       )}

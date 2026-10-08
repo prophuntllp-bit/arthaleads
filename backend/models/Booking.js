@@ -24,6 +24,8 @@ const bookingSchema = new mongoose.Schema(
     considerationValue:   { type: Number, default: 0, min: 0 },
     brokeragePercent:     { type: Number, default: 2, min: 0 },
     brokerageAmount:      { type: Number, default: 0, min: 0 },
+    // true when the amount was typed in; false when it follows consideration x percent.
+    brokerageManual:      { type: Boolean },
     brokerageAdjustment:  { type: Number, default: 0 },
     fosIncentive:         { type: Number, default: 0, min: 0 },
     eoiIncentive:         { type: Number, default: 0, min: 0 },

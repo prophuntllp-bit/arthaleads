@@ -33,23 +33,32 @@ function calcFinancials({ considerationValue, brokeragePercent, brokerageAmount,
            eoiIncentive: eoi, totalBrokerage: total, gstType: gt, cgst, sgst, igst, totalBill };
 }
 
-// GET /api/bookings
+// GET /api/bookings?status=&developerId=&page=&limit=
+// Returns one page plus `summary`: the counts and brokerage across ALL of the org's
+// bookings (not just this page), so the tiles at the top stay true as you page.
 router.get("/", async (req, res, next) => {
   try {
-    const { status, developerId, page = 1, limit = 20 } = req.query;
+    const { status, developerId } = req.query;
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const page = Math.max(1, Number(req.query.page) || 1);
     const filter = { orgId: req.user.orgId };
     if (status)      filter.status      = status;
     if (developerId) filter.developerId = developerId;
-    const skip = (Math.max(1, Number(page)) - 1) * Math.min(50, Number(limit));
-    const [data, total] = await Promise.all([
+    const [data, total, byStatus] = await Promise.all([
       Booking.find(filter)
         .populate("developerId", "name gstNo")
         .sort({ createdAt: -1 })
-        .skip(skip).limit(Math.min(50, Number(limit)))
+        .skip((page - 1) * limit).limit(limit)
         .lean(),
       Booking.countDocuments(filter),
+      Booking.aggregate([
+        { $match: { orgId: req.user.orgId } },
+        { $group: { _id: "$status", count: { $sum: 1 }, totalBill: { $sum: "$totalBill" } } },
+      ]),
     ]);
-    res.json({ success: true, data, total });
+    const summary = { count: 0, totalBill: 0, byStatus: {} };
+    for (const r of byStatus) { summary.count += r.count; summary.totalBill += r.totalBill || 0; summary.byStatus[r._id] = { count: r.count, totalBill: r.totalBill || 0 }; }
+    res.json({ success: true, data, total, page, limit, summary });
   } catch (e) { next(e); }
 });
 
@@ -84,6 +93,7 @@ router.post("/", async (req, res, next) => {
       considerationValue: Number(considerationValue) || 0,
       brokeragePercent:   Number(brokeragePercent)   || 0,
       notes: notes?.trim() || "",
+      brokerageManual: brokerageAmount !== undefined && brokerageAmount !== null && brokerageAmount !== "",
       ...calc,
     });
     res.status(201).json({ success: true, data: booking });
@@ -106,18 +116,37 @@ router.put("/:id", async (req, res, next) => {
     const booking = await Booking.findOne({ _id: req.params.id, orgId: req.user.orgId });
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found." });
 
+    // Was the brokerage typed in, or worked out from consideration x percent? Older bookings
+    // did not record it, so tell by whether the stored amount matches the formula.
+    const autoOf = (cv, pct) => Math.round((Number(cv) || 0) * (Number(pct) || 0) / 100 * 100) / 100;
+    const wasManual = booking.brokerageManual ?? (Math.abs((booking.brokerageAmount || 0) - autoOf(booking.considerationValue, booking.brokeragePercent)) > 0.01);
+
     ["customerName", "jointBuyerName", "projectName", "phase",
      "unitType", "unitNo", "tower", "notes", "status"].forEach(f => {
       if (req.body[f] !== undefined) booking[f] = req.body[f];
     });
+
+    // Changing the developer: it must be one of this org's, and an invoice already
+    // made carries the old developer's details, so it has to be dealt with first.
+    if (req.body.developerId && String(req.body.developerId) !== String(booking.developerId)) {
+      if (booking.invoiceId) return res.status(409).json({ success: false, message: "This booking already has an invoice for the current developer. Delete that invoice first, then change the developer." });
+      const dev = await Developer.findOne({ _id: req.body.developerId, orgId: req.user.orgId });
+      if (!dev) return res.status(404).json({ success: false, message: "Developer not found." });
+      booking.developerId = dev._id;
+    }
     if (req.body.bookingDate)         booking.bookingDate = new Date(req.body.bookingDate);
     if (req.body.considerationValue  !== undefined) booking.considerationValue  = Number(req.body.considerationValue)  || 0;
     if (req.body.brokeragePercent    !== undefined) booking.brokeragePercent    = Number(req.body.brokeragePercent)    || 0;
 
+    const sentAmount = req.body.brokerageAmount !== undefined && req.body.brokerageAmount !== null && req.body.brokerageAmount !== "";
+    const manual = sentAmount ? true : (req.body.manualBrokerage === false ? false : wasManual);
+    booking.brokerageManual = manual;
+
     const calc = calcFinancials({
       considerationValue:  booking.considerationValue,
       brokeragePercent:    booking.brokeragePercent,
-      brokerageAmount:     req.body.brokerageAmount     !== undefined ? req.body.brokerageAmount     : booking.brokerageAmount,
+      // Automatic mode recalculates from the new value and percent; manual keeps the typed amount.
+      brokerageAmount:     sentAmount ? req.body.brokerageAmount : (manual ? booking.brokerageAmount : undefined),
       brokerageAdjustment: req.body.brokerageAdjustment !== undefined ? req.body.brokerageAdjustment : booking.brokerageAdjustment,
       fosIncentive:        req.body.fosIncentive        !== undefined ? req.body.fosIncentive        : booking.fosIncentive,
       eoiIncentive:        req.body.eoiIncentive        !== undefined ? req.body.eoiIncentive        : booking.eoiIncentive,

@@ -14,6 +14,7 @@ export default function Performance() {
   const { org } = useAuth();
   const location = useLocation();
   const [members,    setMembers]    = useState([]);
+  const [teamTotals, setTeamTotals] = useState(null);   // whole team, each lead once
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dateFrom,        setDateFrom]        = useState("");
@@ -279,6 +280,7 @@ export default function Performance() {
       const params = { ...(dateFrom && { dateFrom }), ...(dateTo && { dateTo }) };
       const r = await api.get("/auth/performance", { params });
       setMembers(r.data.performance || []);
+      setTeamTotals(r.data.totals || null);
     } catch {
       toast.error("Failed to load team performance");
     } finally {
@@ -300,12 +302,12 @@ export default function Performance() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFrom, dateTo]);
 
-  const totals = useMemo(() => displayMembers.reduce((acc, m) => {
+  const totals = useMemo(() => (teamTotals && displayMembers.length === members.length) ? teamTotals : displayMembers.reduce((acc, m) => {
     acc.totalAssigned += m.totalAssigned || 0;
     acc.closedWon     += m.closedWon     || 0;
     acc.siteVisits    += m.siteVisits    || 0;
     return acc;
-  }, { totalAssigned: 0, closedWon: 0, siteVisits: 0 }), [displayMembers]);
+  }, { totalAssigned: 0, closedWon: 0, siteVisits: 0 }), [displayMembers, members, teamTotals]);
 
   if (!canAccess(org, "growth")) {
     return <UpgradeWall org={org} feature="Analytics & Reports" description="View team performance, conversion rates, booking metrics and individual agent tracking." />;

@@ -355,6 +355,7 @@ function DashboardClock() {
     try {
       const body = {};
       if (captureData?.selfie) body.selfie = captureData.selfie;
+      else if (requireSelfie) body.proofUnavailable = true;   // no photo (camera unavailable or skipped): the server records that it was declared
       if (captureData?.lat != null) { body.lat = captureData.lat; body.lng = captureData.lng; body.accuracy = captureData.accuracy; }
       const r = await api.post(`/attendance/${isIn ? "clockin" : "clockout"}`, body);
       setClockStatus(r.data.data);

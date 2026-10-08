@@ -9,18 +9,31 @@ const Developer = require("../models/Developer");
 // Invoicing is the second half of the Growth booking engine.
 router.use(protect, planGate("growth"));
 
-// GET /api/invoices
+// GET /api/invoices?status=&page=&limit=
+// One page plus `summary` across ALL invoices, so the totals do not depend on how many are loaded.
 router.get("/", async (req, res, next) => {
   try {
-    const { status, page = 1, limit = 20 } = req.query;
+    const { status } = req.query;
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const page = Math.max(1, Number(req.query.page) || 1);
     const filter = { orgId: req.user.orgId };
     if (status) filter.status = status;
-    const skip = (Math.max(1, Number(page)) - 1) * Math.min(50, Number(limit));
-    const [data, total] = await Promise.all([
-      Invoice.find(filter).sort({ invoiceNumber: -1 }).skip(skip).limit(Math.min(50, Number(limit))).lean(),
+    const [data, total, byStatus] = await Promise.all([
+      Invoice.find(filter).sort({ invoiceNumber: -1 }).skip((page - 1) * limit).limit(limit).lean(),
       Invoice.countDocuments(filter),
+      Invoice.aggregate([
+        { $match: { orgId: req.user.orgId } },
+        { $group: { _id: "$status", count: { $sum: 1 }, totalBill: { $sum: "$totalBill" } } },
+      ]),
     ]);
-    res.json({ success: true, data, total });
+    const summary = { count: 0, totalBill: 0, received: 0, pending: 0, byStatus: {} };
+    for (const r of byStatus) {
+      const t = r.totalBill || 0;
+      summary.count += r.count; summary.totalBill += t;
+      if (r._id === "payment_received") summary.received += t; else summary.pending += t;
+      summary.byStatus[r._id] = { count: r.count, totalBill: t };
+    }
+    res.json({ success: true, data, total, page, limit, summary });
   } catch (e) { next(e); }
 });
 

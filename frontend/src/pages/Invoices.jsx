@@ -475,15 +475,26 @@ export default function Invoices() {
   const [editNumVal, setEditNumVal]   = useState("");
   const editNumRef = useRef(null);
 
-  const load = useCallback(async () => {
-    try {
-      const { data } = await api.get("/invoices");
-      setInvoices(data.data);
-    } catch { toast.error("Failed to load invoices."); }
-    finally { setLoading(false); }
-  }, []);
+  const [summary, setSummary] = useState({ totalBill: 0, received: 0, pending: 0 });
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 50;
 
-  useEffect(() => { load(); }, [load]);
+  // The status tabs filter on the server and the totals cover every invoice, so nothing past the first page is hidden.
+  const load = useCallback(async (pg = 1, append = false) => {
+    try {
+      if (append) setLoadingMore(true);
+      const { data } = await api.get("/invoices", { params: { page: pg, limit: PAGE_SIZE, ...(statusFilter !== "all" ? { status: statusFilter } : {}) } });
+      setInvoices((prev) => (append ? [...prev, ...data.data] : data.data));
+      setTotal(data.total || 0);
+      setSummary(data.summary || { totalBill: 0, received: 0, pending: 0 });
+      setPage(pg);
+    } catch { toast.error("Failed to load invoices."); }
+    finally { setLoading(false); setLoadingMore(false); }
+  }, [statusFilter]);
+
+  useEffect(() => { setLoading(true); load(1, false); }, [load]);
 
   const updateStatus = async (inv, status) => {
     setUpdating(inv._id);
@@ -491,6 +502,7 @@ export default function Invoices() {
       const { data } = await api.patch(`/invoices/${inv._id}/status`, { status });
       setInvoices(list => list.map(x => x._id === inv._id ? data.data : x));
       toast.success(`Invoice marked as "${STATUS[status]?.label}".`);
+      load(1, false);
     } catch { toast.error("Failed to update status."); }
     finally { setUpdating(null); }
   };
@@ -512,10 +524,10 @@ export default function Invoices() {
     } catch { toast.error("Failed to update invoice number."); }
   };
 
-  const filtered = statusFilter === "all" ? invoices : invoices.filter(i => i.status === statusFilter);
-  const totalBill = invoices.reduce((s, i) => s + (i.totalBill || 0), 0);
-  const totalRecv = invoices.filter(i => i.status === "payment_received").reduce((s, i) => s + (i.totalBill || 0), 0);
-  const totalPend = invoices.filter(i => i.status !== "payment_received").reduce((s, i) => s + (i.totalBill || 0), 0);
+  const filtered = invoices;
+  const totalBill = summary.totalBill || 0;
+  const totalRecv = summary.received || 0;
+  const totalPend = summary.pending || 0;
 
   return (
     <div className="px-4 sm:px-6 py-6 max-w-7xl mx-auto">
@@ -661,6 +673,14 @@ export default function Invoices() {
               </tbody>
             </table>
           </div>
+          {invoices.length < total && (
+            <div className="px-4 py-3 text-center" style={{ borderTop: "1px solid var(--app-border)" }}>
+              <button onClick={() => load(page + 1, true)} disabled={loadingMore}
+                className="btn-secondary rounded-xl px-4 py-2 text-xs cursor-pointer disabled:opacity-50">
+                {loadingMore ? "Loading…" : `Load more (${invoices.length} of ${total})`}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

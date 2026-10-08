@@ -308,6 +308,9 @@ const orgSchema = new mongoose.Schema(
     referralCode:    { type: String, uppercase: true, sparse: true, index: true },
     referredBy:      { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
     referralRewardAt: { type: Date, default: null }, // set 7 days after referred org subscribes
+    // Stamped when the referrer's reward was actually given (by a super admin). Until then the
+    // referral shows as processing, never as rewarded.
+    referralRewardGrantedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

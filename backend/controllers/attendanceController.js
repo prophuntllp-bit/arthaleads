@@ -42,25 +42,27 @@ async function getOrgSettings(orgId) {
   };
 }
 
-// Compute early leave flag from clock-out time vs expected end time
-function computeEarlyLeave(clockOutDate, settings) {
+// When the shift is expected to end, on the attendance date (IST). A shift that
+// ends before it starts (a night shift) ends the next calendar day.
+function shiftEndAt(dateStr, settings) {
+  const end = new Date(`${dateStr}T${settings.shiftEndTime || "19:00"}:00+05:30`);
+  if (parseHHMM(settings.shiftEndTime) <= parseHHMM(settings.shiftStartTime)) end.setUTCDate(end.getUTCDate() + 1);
+  return end;
+}
+
+// Early leave: left before the shift's end, comparing whole date-times so a
+// clock-out after midnight is not mistaken for 1 AM "before" a 7 PM shift end.
+function computeEarlyLeave(clockOutDate, settings, dateStr) {
   if (!clockOutDate) return { isEarlyLeave: false, earlyLeaveByMinutes: null };
-  const clockOutMins = istMins(clockOutDate);
-  const endMins = parseHHMM(settings.shiftEndTime);
-  const isEarlyLeave = clockOutMins < endMins;
-  return {
-    isEarlyLeave,
-    earlyLeaveByMinutes: isEarlyLeave ? endMins - clockOutMins : null,
-  };
+  const diff = Math.round((shiftEndAt(dateStr, settings) - clockOutDate) / 60000);
+  return { isEarlyLeave: diff > 0, earlyLeaveByMinutes: diff > 0 ? diff : null };
 }
 
 // Overtime = any time worked past shift end (Option A: time-after-shift)
-function computeOvertime(clockOutDate, settings) {
+function computeOvertime(clockOutDate, settings, dateStr) {
   if (!clockOutDate) return { overtimeMinutes: null };
-  const clockOutMins = istMins(clockOutDate);
-  const endMins = parseHHMM(settings.shiftEndTime);
-  const overtimeMinutes = clockOutMins > endMins ? clockOutMins - endMins : null;
-  return { overtimeMinutes };
+  const diff = Math.round((clockOutDate - shiftEndAt(dateStr, settings)) / 60000);
+  return { overtimeMinutes: diff > 0 ? diff : null };
 }
 
 // Parse "HH:MM" → total minutes since midnight
@@ -109,11 +111,18 @@ const attendanceController = {
       // Handle selfie upload and geo fields
       let { selfie, lat, lng } = req.body;
       let clockInSelfie = "";
+      // When the workspace requires a photo, one has to come with the request. A
+      // person whose camera is unavailable can say so (proofUnavailable); a photo
+      // that was sent but could not be saved is an error, not a silent gap.
+      if (settings.requireSelfie && !(selfie && selfie.startsWith("data:")) && !req.body.proofUnavailable) {
+        return next(new AppError("A selfie is required to clock in.", 400));
+      }
       if (selfie && selfie.startsWith("data:")) {
         try {
           clockInSelfie = await uploadAttendanceSelfie(selfie, String(req.user._id), date, "in", req.user.orgId);
         } catch (e) {
-          console.error("[attendance] selfie upload failed:", e.message);
+          if (e.code === "STORAGE_FULL") console.warn("[attendance] storage full, clock-in photo not saved");
+          else { console.error("[attendance] selfie upload failed:", e.message); return next(new AppError("Your photo could not be saved. Please try again.", 502)); }
         }
       }
       const clockInLat = lat != null ? Number(lat) : null;
@@ -168,21 +177,25 @@ const attendanceController = {
       record.clockOut = now;
       record.totalMinutes = Math.round((now - record.clockIn) / 60000);
       record.dayType = computeDayType(record.totalMinutes, settings);
-      const { isEarlyLeave, earlyLeaveByMinutes } = computeEarlyLeave(now, settings);
+      const { isEarlyLeave, earlyLeaveByMinutes } = computeEarlyLeave(now, settings, record.date);
       record.isEarlyLeave = isEarlyLeave;
       record.earlyLeaveByMinutes = earlyLeaveByMinutes;
-      const { overtimeMinutes } = computeOvertime(now, settings);
+      const { overtimeMinutes } = computeOvertime(now, settings, record.date);
       record.overtimeMinutes = overtimeMinutes;
       if (req.body.note) record.note = req.body.note;
 
       // Handle selfie upload and geo fields
       let { selfie, lat, lng } = req.body;
       let clockOutSelfie = "";
+      if (settings.requireSelfie && !(selfie && selfie.startsWith("data:")) && !req.body.proofUnavailable) {
+        return next(new AppError("A selfie is required to clock out.", 400));
+      }
       if (selfie && selfie.startsWith("data:")) {
         try {
           clockOutSelfie = await uploadAttendanceSelfie(selfie, String(req.user._id), record.date, "out", req.user.orgId);
         } catch (e) {
-          console.error("[attendance] selfie upload failed:", e.message);
+          if (e.code === "STORAGE_FULL") console.warn("[attendance] storage full, clock-out photo not saved");
+          else { console.error("[attendance] selfie upload failed:", e.message); return next(new AppError("Your photo could not be saved. Please try again.", 502)); }
         }
       }
       record.clockOutSelfie = clockOutSelfie;
@@ -342,8 +355,8 @@ const attendanceController = {
         lateByMinutes = isLate ? clockInMins - lateThreshold : null;
       }
       const dayType = totalMinutes != null ? computeDayType(totalMinutes, settings) : null;
-      const { isEarlyLeave, earlyLeaveByMinutes } = computeEarlyLeave(clockOutDate, settings);
-      const { overtimeMinutes } = computeOvertime(clockOutDate, settings);
+      const { isEarlyLeave, earlyLeaveByMinutes } = computeEarlyLeave(clockOutDate, settings, date);
+      const { overtimeMinutes } = computeOvertime(clockOutDate, settings, date);
 
       const record = await Attendance.findOneAndUpdate(
         { userId, orgId: req.user.orgId, date },

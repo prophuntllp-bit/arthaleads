@@ -117,7 +117,10 @@ const ticketController = {
       if (ticket.status === "resolved") ticket.status = "open";
 
       await ticket.save();
-      res.json({ success: true, ticket });
+      // The conversation only: internal admin notes never go back to the customer.
+      const out = ticket.toObject();
+      delete out.adminNotes;
+      res.json({ success: true, ticket: out });
     } catch (err) {
       next(err);
     }

@@ -665,6 +665,41 @@ const authService = {
 };
 
 
+// Whole-team totals with every lead counted once. A project lead sits in a project
+// that several people can share, so adding up the per-member rows counts it once per
+// person; the tiles at the top of the Performance page use these instead.
+authService.getPerformanceTotals = async function (actor, { dateFrom, dateTo } = {}) {
+  const memberMatch = actor.role === "manager"
+    ? { orgId: actor.orgId, role: { $in: ["manager", "agent"] } }
+    : { orgId: actor.orgId, role: { $in: ["admin", "manager", "agent"] } };
+  const userIds = (await User.find(memberMatch).select("_id").lean()).map((u) => u._id);
+  const dateFilter = {};
+  if (dateFrom) dateFilter.$gte = new Date(dateFrom);
+  if (dateTo)   { const d = new Date(dateTo); d.setHours(23, 59, 59, 999); dateFilter.$lte = d; }
+  const dateMatch = Object.keys(dateFilter).length ? { createdAt: dateFilter } : {};
+
+  const [lead] = await Lead.aggregate([
+    { $match: { orgId: actor.orgId, assignedTo: { $in: userIds }, isArchived: { $ne: true }, ...dateMatch } },
+    { $group: { _id: null, assigned: { $sum: 1 },
+      won: { $sum: { $cond: [{ $eq: ["$status", "Closed Won"] }, 1, 0] } },
+      visits: { $sum: { $cond: [{ $eq: ["$status", "Site Visit"] }, 1, 0] } } } },
+  ]);
+  const [proj] = await ProjectLead.aggregate([
+    { $match: { orgId: actor.orgId, ...dateMatch } },
+    { $lookup: { from: "projects", localField: "project", foreignField: "_id", as: "proj" } },
+    { $unwind: "$proj" },
+    { $match: { "proj.assignedTo": { $in: userIds } } },   // any assigned team member: the lead is counted once
+    { $group: { _id: null, assigned: { $sum: 1 },
+      booked: { $sum: { $cond: [{ $eq: ["$booking", "Booked"] }, 1, 0] } },
+      visits: { $sum: { $cond: [{ $in: ["$booking", ["Site Visit Booked", "Site Visit Done"]] }, 1, 0] } } } },
+  ]);
+  return {
+    totalAssigned: (lead?.assigned || 0) + (proj?.assigned || 0),
+    closedWon:     (lead?.won || 0) + (proj?.booked || 0),
+    siteVisits:    (lead?.visits || 0) + (proj?.visits || 0),
+  };
+};
+
 // ── Performance drill-down ──────────────────────────────────────────────────
 // Must stay in lock-step with getPerformance above: same team scoping, same
 // date rule, same per-tile match. Each tile's number is a count of exactly

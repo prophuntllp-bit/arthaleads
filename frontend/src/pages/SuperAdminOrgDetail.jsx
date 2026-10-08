@@ -420,6 +420,21 @@ export default function SuperAdminOrgDetail() {
         <StorageUsageTab orgId={id} storage={storage} wa={wa} org={org} onSaved={load} />
       )}
 
+      {tab === "billing" && org.referredBy && org.referralRewardAt && (
+        <div className="card p-5 mb-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-bold text-app">Referral reward</p>
+            <p className="text-xs text-app-soft mt-0.5">
+              {org.referralRewardGrantedAt ? `Given on ${new Date(org.referralRewardGrantedAt).toLocaleDateString("en-IN")}.` : `Due from ${new Date(org.referralRewardAt).toLocaleDateString("en-IN")}. Mark it once you have given the referrer their reward.`}
+            </p>
+          </div>
+          <button type="button" className="btn-secondary rounded-xl cursor-pointer"
+            onClick={async () => { try { await api.patch(`/super-admin/orgs/${id}/referral-reward`, { given: !org.referralRewardGrantedAt }); toast.success("Saved"); load(); } catch { toast.error("Could not save"); } }}>
+            {org.referralRewardGrantedAt ? "Undo" : "Mark reward given"}
+          </button>
+        </div>
+      )}
+
       {/* Billing tab */}
       {tab === "billing" && (() => {
         const hasBilling = org.address || org.gstNo || org.pan || org.bankAccountNo;

@@ -13,7 +13,7 @@ const auditLogSchema = new mongoose.Schema(
         "logo_changed", "brand_color_changed", "broadcast_sent",
         "user_created", "user_deactivated", "user_reactivated",
         "user_role_changed", "user_password_reset",
-        "org_approved", "org_rejected", "user_switched", "storage_updated",
+        "org_approved", "org_rejected", "user_switched", "storage_updated", "referral_reward",
       ],
     },
     performedBy:     { type: mongoose.Schema.Types.ObjectId, ref: "User" },

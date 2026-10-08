@@ -67,7 +67,7 @@ async function applyPayment(razorpayOrderId, razorpayPaymentId) {
 
   // Extend from whichever is later: today, or an existing paid-through date.
   // Renewing early should add to the term, not truncate it.
-  const org = await Organization.findById(claimed.orgId).select("paidUntil").lean();
+  const org = await Organization.findById(claimed.orgId).select("paidUntil plan referredBy referralRewardAt").lean();
   const startFrom = !claimed.restartTerm && org?.paidUntil && new Date(org.paidUntil) > new Date()
     ? new Date(org.paidUntil)
     : new Date();
@@ -93,6 +93,12 @@ async function applyPayment(razorpayOrderId, razorpayPaymentId) {
     await Payment.updateOne({ _id: claimed._id }, { $set: { appliedAt: null, status: "created" }, $unset: { razorpayPaymentId: "" } }).catch(() => {});
     logger.error(`[billing] could not grant order ${razorpayOrderId}, released for retry: ${err.message}`);
     throw err;
+  }
+
+  // A referred organisation paying for the first time schedules its referrer's reward,
+  // the same as a super admin moving it off trial does.
+  if (org?.plan === "trial" && org.referredBy && !org.referralRewardAt) {
+    await Organization.updateOne({ _id: claimed.orgId }, { $set: { referralRewardAt: new Date(Date.now() + 7 * 86400000) } }).catch(() => {});
   }
 
   // Bookkeeping only: the term is already granted, so a failure here must not undo it.
