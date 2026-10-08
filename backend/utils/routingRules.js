@@ -19,11 +19,12 @@ async function matchRoutingRule(orgId, source, candidates) {
     ? { $or: [{ source: "facebook" }, { source: { $exists: false } }] }
     : { source };
 
+  // Both conditions must hold. Spreading the source's own $or next to the match $or
+  // would let the second overwrite the first and match another source's rule.
   return RoutingRule.findOne({
     orgId,
     isActive: true,
-    ...sourceClause,
-    $or: clauses,
+    $and: [sourceClause, { $or: clauses }],
   });
 }
 

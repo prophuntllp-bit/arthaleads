@@ -81,6 +81,8 @@ export default function TemplatesPage() {
   const navigate = useNavigate();
   const { isAdmin } = useOutletContext() || {};
   const canEdit = ["admin", "manager", "super_admin"].includes(user?.role);
+  // Deleting a template is admin-only on the server; managers can create and edit but are not shown Delete.
+  const canDelete = ["admin", "super_admin"].includes(user?.role);
 
   const [rows, setRows]    = useState([]);
   const [loading, setLoad] = useState(true);
@@ -354,7 +356,7 @@ export default function TemplatesPage() {
 
                     <div className="flex items-center justify-between gap-2 mt-3 pt-3" style={{ borderTop: "1px solid var(--app-border)" }}>
                       <span className="text-[10px] text-app-soft font-mono truncate">{t.id ? `ID: ${t.id}` : ""}</span>
-                      {canEdit && (
+                      {canDelete && (
                         <button onClick={(e) => { e.stopPropagation(); remove(t.name); }}
                           className="text-[11px] font-semibold text-app-soft hover:text-red-500 transition flex items-center gap-1 shrink-0">
                           <Trash2 className="w-3 h-3" /> Delete

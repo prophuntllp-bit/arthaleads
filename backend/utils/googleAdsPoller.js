@@ -23,7 +23,8 @@ const { getNextAssignee } = require("./assignLead");
 const { sendPushToAll, sendPushToUser } = require("./push");
 const { mapGoogleLeadFields, fromApiFields } = require("./googleLeadFields");
 const { mapCustomFieldsToLead } = require("./formFieldMapper");
-const { matchRoutingRule } = require("./routingRules");
+const { matchRoutingRule, fileLeadInRoutedProject } = require("./routingRules");
+const { levelOf } = require("../middlewares/planGate");
 
 const GOOGLE_ADS_API_VERSION = "v17";
 // First-ever sync for a freshly connected account: look back this far rather
@@ -88,6 +89,13 @@ async function pollOneGoogleAdsConnection(automation) {
     return { created: 0, skipped: 0, error: "No Google Ads account linked to this connection." };
   }
 
+  // Google Ads capture is an Enterprise feature. A connection kept after a downgrade stays
+  // on file but stops pulling leads.
+  const planOrg = await Organization.findById(orgId).select("plan").lean();
+  if (levelOf(planOrg?.plan) < 3) {
+    return { created: 0, skipped: 0, error: "Google Ads capture is part of the Enterprise plan." };
+  }
+
   let accessToken;
   try {
     accessToken = await automationService.refreshGoogleAccessToken(automation.userToken);
@@ -112,21 +120,23 @@ async function pollOneGoogleAdsConnection(automation) {
     return { created: 0, skipped: 0 };
   }
 
-  const org = await Organization.findById(orgId).select("autoAssign").lean();
-  let created = 0, skipped = 0, latestSubmission = since;
+  const org = await Organization.findById(orgId).select("autoAssign plan").lean();
+  let created = 0, skipped = 0, latestSubmission = since, earliestFailure = null;
 
   for (const row of rows) {
     const sub = row.leadFormSubmissionData || {};
     const resourceName = sub.resourceName;
     const submittedAt = sub.submissionDateTime ? new Date(sub.submissionDateTime) : new Date();
-    if (submittedAt > latestSubmission) latestSubmission = submittedAt;
+    // The cursor only moves past a submission once it has been dealt with (saved, a duplicate,
+    // or not usable). One that failed to save holds the cursor back so the next run retries it.
+    const advance = () => { if (submittedAt > latestSubmission) latestSubmission = submittedAt; };
 
-    if (!resourceName) { skipped++; continue; }
+    if (!resourceName) { skipped++; advance(); continue; }
 
     // Dedup: never create the same submission twice, even if the lookback
     // window overlaps a previous run.
     const already = await Lead.findOne({ orgId, externalId: resourceName }).select("_id").lean();
-    if (already) { skipped++; continue; }
+    if (already) { skipped++; advance(); continue; }
 
     const fields = sub.leadFormSubmissionFields || sub.customLeadFormSubmissionFields || [];
     const { fullName, phone, email, formResponses: allFormResponses, requirements, customFields } =
@@ -137,7 +147,7 @@ async function pollOneGoogleAdsConnection(automation) {
     const name = isTestLead ? "Test Lead (Google)" : (fullName || "Google Lead");
 
     if (!isTestLead && (!phone || phone.length < 7)) {
-      skipped++;
+      skipped++; advance();
       continue;
     }
     const cleanPhone = phone || "N/A (test)";
@@ -194,7 +204,9 @@ async function pollOneGoogleAdsConnection(automation) {
           meta: { automationId: automation._id?.toString(), campaignId: sub.campaignId || "", gclid: sub.gclid || "" },
         }],
       });
-      created++;
+      created++; advance();
+      // A rule that names a project files the lead there too, as the other sources do.
+      if (ruleMatch && !isTestLead) await fileLeadInRoutedProject(ruleMatch, lead);
 
       if (assignee?._id) {
         sendPushToUser(assignee._id, {
@@ -214,10 +226,14 @@ async function pollOneGoogleAdsConnection(automation) {
     } catch (err) {
       logger.error(`[google-ads-poll] "${automation.name}": failed to create lead for ${resourceName} — ${err.message}`);
       skipped++;
+      if (!earliestFailure || submittedAt < earliestFailure) earliestFailure = submittedAt;
     }
   }
 
-  automation.lastSyncAt = latestSubmission;
+  // Never move the cursor past a submission that failed: stop just before it so it is fetched again.
+  let cursor = latestSubmission;
+  if (earliestFailure) cursor = new Date(Math.max(since.getTime(), Math.min(cursor.getTime(), earliestFailure.getTime() - 1)));
+  automation.lastSyncAt = cursor;
   automation.status = "connected";
   await automation.save();
 

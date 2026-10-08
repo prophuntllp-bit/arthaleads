@@ -78,7 +78,8 @@ async function resolveAudience(orgId, filter = {}, { requireConsent = true } = {
   if (filter.status)     q.status = filter.status;
   if (filter.source)     q.source = filter.source;
   if (filter.priority)   q.priority = filter.priority;
-  if (filter.siteFilter) q.websiteDomain = filter.siteFilter;
+  // The Leads page filters websites by sourceDomain; there is no websiteDomain field.
+  if (filter.siteFilter) q.sourceDomain = filter.siteFilter;
   if (filter.assignedTo) q.assignedTo = filter.assignedTo;
   if (filter.from || filter.to) {
     q.createdAt = {};
@@ -165,24 +166,42 @@ async function preview(org, { templateName, filter }) {
  * path, so a campaign message is billed exactly like any other. The whole run
  * is reserved first; whatever is not spent is released at the end.
  */
-async function run(org, campaignId, sendProviderMessage) {
-  const campaign = await WaCampaign.findOne({ _id: campaignId, orgId: org._id });
-  if (!campaign) throw badRequest("Campaign not found");
-  if (campaign.status !== "draft") throw badRequest(`This campaign is already ${campaign.status}.`);
+async function run(org, campaignId, sendProviderMessage, reviewed = null) {
+  // Claim the draft first. Only one request can move it to "sending", so two presses of
+  // Send (or two people) cannot both send it.
+  const claim = { status: "sending", startedAt: new Date() };
+  if (reviewed) {
+    // What was on screen when Send was pressed is what gets sent, even if the saved draft is older.
+    if (reviewed.name?.trim())       claim.name = reviewed.name.trim();
+    if (reviewed.templateName)       claim.templateName = reviewed.templateName;
+    if (reviewed.templateLanguage)   claim.templateLanguage = reviewed.templateLanguage;
+    if (reviewed.templateCategory)   claim.templateCategory = reviewed.templateCategory;
+    if (Array.isArray(reviewed.variableMapping)) claim.variableMapping = reviewed.variableMapping;
+    if (reviewed.audienceFilter && typeof reviewed.audienceFilter === "object") claim.audienceFilter = reviewed.audienceFilter;
+  }
+  const campaign = await WaCampaign.findOneAndUpdate({ _id: campaignId, orgId: org._id, status: "draft" }, { $set: claim }, { new: true });
+  if (!campaign) {
+    const existing = await WaCampaign.findOne({ _id: campaignId, orgId: org._id }).select("status").lean();
+    if (!existing) throw badRequest("Campaign not found");
+    throw badRequest(`This campaign is already ${existing.status}.`);
+  }
+  const backToDraft = () => WaCampaign.updateOne({ _id: campaign._id, status: "sending" }, { $set: { status: "draft" }, $unset: { startedAt: "" } }).catch(() => {});
 
-  const p = await preview(org, { templateName: campaign.templateName, filter: campaign.audienceFilter });
-  if (!p.canSend) throw badRequest(p.blockers[0] || "Nothing to send.");
+  let p;
+  try {
+    p = await preview(org, { templateName: campaign.templateName, filter: campaign.audienceFilter });
+    if (!p.canSend) throw badRequest(p.blockers[0] || "Nothing to send.");
+  } catch (err) { await backToDraft(); throw err; }
 
   let held = 0;
   try {
     held = await credits.reserve(org._id, { category: p.creditCategory, count: p.sendableCount });
   } catch (err) {
+    await backToDraft();
     if (err instanceof credits.InsufficientCreditsError) throw badRequest("Not enough credits to start this campaign.");
     throw err;
   }
 
-  campaign.status = "sending";
-  campaign.startedAt = new Date();
   campaign.reservedPaise = held;
   campaign.stats = {
     audience: p.total, skippedNoConsent: p.skippedNoConsent, skippedNoPhone: p.skippedNoPhone,

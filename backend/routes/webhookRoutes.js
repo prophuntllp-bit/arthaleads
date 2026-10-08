@@ -1451,6 +1451,14 @@ router.post("/google", express.json(), googleLeadLimiter, async (req, res) => {
 
     const orgId = automation.orgId;
 
+    // Google Ads capture is an Enterprise feature; after a downgrade the webhook is acknowledged
+    // (so Google does not disable it) but nothing is saved.
+    const planRow = await Organization.findById(orgId).select("plan").lean();
+    if (require("../middlewares/planGate").levelOf(planRow?.plan) < 3) {
+      logger.warn(`[google webhook] org ${orgId} is on ${planRow?.plan}: Google Ads capture needs Enterprise, lead not saved`);
+      return res.status(200).json({ success: true, message: "Google Ads capture is not included in this plan." });
+    }
+
     const { fullName, phone, email, formResponses: allFormResponses, requirements, customFields } =
       mapGoogleLeadFields(fromWebhookColumns(user_column_data));
     // Same treatment as the Facebook webhook — recognized answers land on

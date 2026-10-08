@@ -127,7 +127,12 @@ export default function CampaignBuilder() {
     setSend(true);
     try {
       const cid = campaignId || await saveDraft();
-      const { data } = await api.post(`/whatsapp/campaigns/${cid}/send`);
+      // Send exactly what is on screen now, in case the saved draft is older.
+      const tplNow = templates.find((t) => t.name === templateName);
+      const { data } = await api.post(`/whatsapp/campaigns/${cid}/send`, {
+        name, templateName, templateLanguage: tplNow?.language, templateCategory: tplNow?.category,
+        variableMapping: mapping, audienceFilter: filter,
+      });
       toast.success(`Sent to ${data.campaign.stats.sent} people`);
       navigate("/conversations/campaigns");
     } catch (e) {

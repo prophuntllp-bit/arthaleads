@@ -252,6 +252,41 @@ function parseWebhookPayload(provider, payload, headers) {
   }
 }
 
+
+// Every customer message in a Meta webhook call. Meta can put several messages (and
+// several entries) in one POST, and customers send photos, voice notes, documents and
+// locations as often as text, so all of them are kept for the team to see in the Inbox.
+// Only text and button taps can be answered by the bot; the rest are stored as
+// "[Image]"-style entries (with the caption, if there is one) and left to a person.
+function parseMetaMessages(payload) {
+  const out = [];
+  for (const entry of payload?.entry || []) {
+    for (const change of entry.changes || []) {
+      const value = change.value;
+      for (const msg of value?.messages || []) {
+        const contact = (value.contacts || []).find((c) => c.wa_id === msg.from) || value.contacts?.[0];
+        const base = { phone: msg.from, name: contact?.profile?.name || msg.from, msgId: msg.id };
+        if (["text", "button", "interactive"].includes(msg.type)) {
+          const msgText = msg.text?.body || msg.button?.text
+            || msg.interactive?.button_reply?.title || msg.interactive?.list_reply?.title || "";
+          out.push({ ...base, msgText, msgType: msg.type || "text",
+            interactiveId: msg.interactive?.button_reply?.id || msg.interactive?.list_reply?.id || null,
+            referral: msg.referral || null });
+        } else if (["image", "audio", "video", "document", "sticker"].includes(msg.type)) {
+          const label = { image: "Image", audio: "Voice note", video: "Video", document: "Document", sticker: "Sticker" }[msg.type];
+          const caption = msg[msg.type]?.caption || msg.document?.filename || "";
+          out.push({ ...base, msgText: caption ? `[${label}] ${caption}` : `[${label}]`, msgType: msg.type, referral: msg.referral || null });
+        } else if (msg.type === "location") {
+          out.push({ ...base, msgText: `[Location] ${msg.location?.name || msg.location?.address || ""}`.trim(), msgType: "location" });
+        } else if (msg.type) {
+          out.push({ ...base, msgText: `[${msg.type} message]`, msgType: "unsupported" });
+        }
+      }
+    }
+  }
+  return out;
+}
+
 // ── Provider: parse inbound webhook status updates (delivered/read ticks) ─────
 // Meta batches a message's lifecycle as separate "statuses" webhook calls —
 // sent, then delivered, then read — keyed by the same message id we stored
@@ -738,7 +773,9 @@ async function handleInbound(org, parsed) {
     catch (err) { console.error("[WhatsApp Bot] agent switch check failed:", err.message); }
   }
 
-  if (conv.botEnabled) {
+  // Photos, voice notes and the like are saved above for the team; the bot can only read text and taps.
+  const botCanRead = ["text", "button", "interactive"].includes(msgType);
+  if (conv.botEnabled && botCanRead) {
     // No sinceTimestamp here. That guard reads "has the bot said anything
     // since this message arrived?", which is true for the second of two quick
     // taps (the reply to the FIRST tap goes out after the second arrived), so
@@ -2001,9 +2038,13 @@ async function processWebhookForOrg(org, provider, body, headers, logLabel) {
   const statusUpdates = parseStatusUpdates(provider, body);
   if (statusUpdates.length) await applyStatusUpdates(org, statusUpdates);
 
-  const parsed = parseWebhookPayload(provider, body, headers);
-  if (!parsed) return;
-  await handleInbound(org, parsed);
+  const parsedList = provider === "meta"
+    ? parseMetaMessages(body)
+    : [parseWebhookPayload(provider, body, headers)].filter(Boolean);
+  for (const parsed of parsedList) {
+    try { await handleInbound(org, parsed); }
+    catch (err) { console.error(`[${logLabel}] inbound ${parsed.msgId || ""} failed:`, err.message); }
+  }
 }
 
 
@@ -2996,6 +3037,10 @@ router.post("/conversations/:id/start-flow", async (req, res) => {
     const agent = (await resolveAgentByMessageText(org, conv)) || await resolveAgentForConversation(org, conv);
     if (!agent) return res.status(400).json({ message: "No assistant is assigned to this conversation yet." });
     if (!agent.ctwaFlow?.enabled) return res.status(400).json({ message: `${agent.name} doesn't have a button flow turned on.` });
+    // The button flow is an Enterprise feature and only runs for an active assistant on a live connection.
+    if (levelOf(org.plan) < levelOf("enterprise")) return res.status(403).json({ message: "The button flow is part of the Enterprise plan." });
+    if (agent.status && agent.status !== "active") return res.status(400).json({ message: `${agent.name} is ${agent.status}. Turn it on first.` });
+    if (!org.whatsapp?.enabled || !org.whatsapp?.apiKey) return res.status(400).json({ message: "WhatsApp is not connected." });
 
     if (String(conv.agentId || "") !== String(agent._id)) {
       await WaConversation.findByIdAndUpdate(conv._id, { agentId: agent._id });
@@ -3276,7 +3321,7 @@ router.post("/campaigns/:id/send", authorize("admin", "manager", "super_admin"),
     const org = await Organization.findById(req.orgId).lean();
     // Responds once the run finishes. Fine at the volumes a single number is
     // allowed to send; a tier above TIER_1K wants this on the scheduler.
-    const c = await campaignSvc.run({ ...org, _id: req.orgId }, req.params.id, sendProviderMessage);
+    const c = await campaignSvc.run({ ...org, _id: req.orgId }, req.params.id, sendProviderMessage, req.body && Object.keys(req.body).length ? req.body : null);
     res.json({ campaign: c });
   } catch (err) { res.status(err.status || 500).json({ message: err.message }); }
 });
@@ -3489,6 +3534,14 @@ router.post("/send-template", async (req, res) => {
     if (!tpl) return res.status(400).json({ message: "That template is not approved, or no longer exists." });
 
     const category = campaignSvc.categoryToCredit(tpl.category);
+    // A marketing template is promotion: never to someone who has opted out. (Campaigns go further
+    // and need a recorded opt-in; one-to-one sends only refuse an explicit "no".)
+    if (category === "marketing" && conv.leadId) {
+      const linked = await Lead.findOne({ _id: conv.leadId, orgId: req.orgId }).select("whatsappConsent").lean();
+      if (linked?.whatsappConsent?.status === "denied") {
+        return res.status(403).json({ message: "This person has opted out of WhatsApp marketing messages.", code: "CONSENT_DENIED" });
+      }
+    }
     const expected = templates.countBodyVariables(tpl);
     const vals = Array.from({ length: expected }, (_, i) => String(values[i] ?? "").trim());
     if (vals.some((v) => !v)) return res.status(400).json({ message: "Fill in every value in the template." });

@@ -143,25 +143,28 @@ async function reserve(orgId, { category, count = 1 } = {}) {
     throw new Error(`Unknown credit category: ${category}`);
   }
 
-  const q = await quote(orgId, category, count);
+  const rate = rateFor(await Organization.findById(orgId).select("credits").lean() || {}, category);
 
-  // Consume the free allowance first. Done as its own atomic bump so a
-  // concurrent send cannot claim the same free units.
-  if (q.freeCount > 0) {
+  // Claim free replies atomically. Each attempt is compare-and-swap on the counter,
+  // so two sends at 999 of 1,000 cannot both be given the last free reply.
+  let freeCount = 0;
+  if (category === "service") {
     const yyyymm = currentYyyyMm();
-    await Organization.updateOne(
-      { _id: orgId, "credits.freeService.yyyymm": yyyymm },
-      { $inc: { "credits.freeService.used": q.freeCount } }
-    ).then(async (r) => {
-      if (r.matchedCount === 0) {
-        // First send of a new month — roll the counter over.
-        await Organization.updateOne(
-          { _id: orgId },
-          { $set: { "credits.freeService": { yyyymm, used: q.freeCount } } }
-        );
-      }
-    });
+    for (let attempt = 0; attempt < 6 && freeCount === 0; attempt++) {
+      const cur = (await Organization.findById(orgId).select("credits.freeService").lean())?.credits?.freeService || {};
+      const used = cur.yyyymm === yyyymm ? (cur.used || 0) : 0;
+      const n = Math.max(0, Math.min(count, FREE_SERVICE_PER_MONTH - used));
+      if (n === 0) break;
+      const r = cur.yyyymm === yyyymm
+        ? await Organization.updateOne({ _id: orgId, "credits.freeService.yyyymm": yyyymm, "credits.freeService.used": cur.used || 0 }, { $inc: { "credits.freeService.used": n } })
+        : await Organization.updateOne({ _id: orgId, "credits.freeService.yyyymm": cur.yyyymm ?? null }, { $set: { "credits.freeService": { yyyymm, used: n } } });
+      if (r.matchedCount === 1) freeCount = n;       // else someone else moved the counter: look again
+    }
   }
+  const q = { count, freeCount, billableCount: count - freeCount, ratePaise: rate, totalPaise: (count - freeCount) * rate };
+  const giveBackFree = () => freeCount > 0
+    ? Organization.updateOne({ _id: orgId, "credits.freeService.yyyymm": currentYyyyMm() }, { $inc: { "credits.freeService.used": -freeCount } }).catch(() => {})
+    : null;
 
   if (q.totalPaise <= 0) return 0;
 
@@ -180,6 +183,7 @@ async function reserve(orgId, { category, count = 1 } = {}) {
   );
 
   if (!updated) {
+    await giveBackFree();   // nothing was sent, so the free replies are not used up
     const { availablePaise } = await getBalance(orgId);
     throw new InsufficientCreditsError(q.totalPaise, availablePaise);
   }

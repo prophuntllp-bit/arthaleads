@@ -28,6 +28,7 @@
 // directly — those helpers (sendInteractive, sendQualifiedMedia, ...) are
 // private closures in that file, and reaching into a route file from a
 // service would invert the codebase's normal dependency direction.
+const { levelOf } = require("../middlewares/planGate");
 const { normalizePurpose, parseIndianCurrencyRange, normalizeBhk, normalizePropertyType, normalizeTimeline, fillTemplate: fill } = require("../utils/formFieldMapper");
 
 module.exports = function createCtwaFlowService({
@@ -725,6 +726,12 @@ module.exports = function createCtwaFlowService({
       Organization.findById(conv.orgId),
     ]);
     if (!agent?.ctwaFlow?.enabled || !agent.ctwaFlow.nudgesEnabled || !org) return false;
+    // Nothing is sent once the feature or the assistant has been switched off since the last message:
+    // a downgrade, a paused assistant, the org-wide bot switch, WhatsApp disconnected, or a human taking over.
+    if (levelOf(org.plan) < levelOf("enterprise")) return false;
+    if (agent.status && agent.status !== "active") return false;
+    if (org.whatsapp?.botEnabled === false || !org.whatsapp?.enabled) return false;
+    if (conv.botEnabled === false) return false;
     if (isWithinBusinessHours && !isWithinBusinessHours(org)) return false;
 
     const [last, lastIn] = await Promise.all([
