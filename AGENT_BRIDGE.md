@@ -57,7 +57,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
-- [Codex] 2026-10-08 22:00 IST: Second independent audit, five-agent frontend functional checks and real sandbox cross-verification at 3bef24a; docs/audits/2026-10-08-cross-verification.md plus a status note in the first audit and this bridge only. No application/mobile changes; recheck Claude fixes against fresh runtime, separate source/stub/live evidence.
 
 
 
@@ -68,6 +67,11 @@ only be verified live so Claude Code or the owner can check it on production.
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
+
+### Codex, 2026-10-08 22:02 IST, frontend functional cross-verification
+
+- `4b5cab3` Five completed frontend agents plus parent sandbox/browser checks in `docs/audits/2026-10-08-cross-verification.md`, pinned to application `3bef24a`: 31 deduplicated failure families (4 P1, 22 P2, 5 P3), per-menu passes/blocked/unrun checks and complete worker reports. Independently reproduced project-detail crash, duplicate invoices, silent manual-booking overwrite, password bearer continuation and conversation-start ownership disclosure. Historical audit marked as superseded; no application/mobile edits or production writes.
+- Frontend build and all four backend npm-test suites pass; fresh real Mongo sandbox works, correcting the earlier download/test-blocked state. Parent API checks 38/39 pass; remaining failure is invoice concurrency. Saved corrected cloud `start_skill` instructions (draft review/save/publish still needed for reuse). Live Meta/WhatsApp/Google/telephony/Razorpay/storage/email/AI acceptance remains unverified; source-only and mocked checks are explicitly distinguished. Do not sign off nested project actions until the crash is repaired and retested.
 
 ### Codex, 2026-10-08 (IST), prelaunch audit
 
