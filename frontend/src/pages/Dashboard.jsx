@@ -1050,7 +1050,7 @@ function ActivityFeed({ items, navigate }) {
     created: "#ff6b00", emailed: "#ec4899",
   };
   return (
-    <section className="card p-6 xl:col-span-7">
+    <section className="card p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <p className="stitch-kicker mb-1">Live Feed</p>
