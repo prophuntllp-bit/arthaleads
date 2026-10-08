@@ -302,15 +302,21 @@ async function topUp(orgId, { amountPaise, gstPaise = 0, razorpayPaymentId = nul
   );
   if (!org) throw new Error("Org not found");
 
-  await CreditLedger.create({
-    orgId,
-    type: "topup",
-    amountPaise,
-    balanceAfterPaise: org.credits.balancePaise,
-    gstPaise,
-    razorpayPaymentId,
-    note,
-  });
+  // The balance has already moved, so a failure writing the statement line must
+  // not throw: the caller would treat it as "not credited" and credit it again.
+  try {
+    await CreditLedger.create({
+      orgId,
+      type: "topup",
+      amountPaise,
+      balanceAfterPaise: org.credits.balancePaise,
+      gstPaise,
+      razorpayPaymentId,
+      note,
+    });
+  } catch (err) {
+    logger.error(`[credits] org ${orgId} was credited ${amountPaise}p but the statement line failed: ${err.message}`);
+  }
 
   logger.info(`[credits] org ${orgId} topped up ${amountPaise}p (GST ${gstPaise}p) -> ${org.credits.balancePaise}p`);
   return org.credits.balancePaise;

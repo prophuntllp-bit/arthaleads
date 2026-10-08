@@ -52,9 +52,12 @@ async function createOrder({ orgId, userId, packs, months }) {
 /** Add the pack to the org for a captured payment. Idempotent. */
 async function applyOrder(razorpayOrderId, razorpayPaymentId) {
   const now = new Date();
+  const pending = await StorageOrder.findOne({ razorpayOrderId, appliedAt: null }).lean();
+  const expiresAt = new Date(now.getTime());
+  if (pending) expiresAt.setUTCMonth(expiresAt.getUTCMonth() + pending.months);
   const claimed = await StorageOrder.findOneAndUpdate(
     { razorpayOrderId, appliedAt: null },
-    { $set: { appliedAt: now, razorpayPaymentId, status: "paid" } },
+    { $set: { appliedAt: now, razorpayPaymentId, status: "paid", expiresAt } },
     { new: true }
   );
   if (!claimed) {
@@ -62,15 +65,20 @@ async function applyOrder(razorpayOrderId, razorpayPaymentId) {
     if (!existing) return { applied: false, unknown: true, order: null };
     return { applied: false, order: existing };
   }
-  const expiresAt = new Date(now.getTime());
-  expiresAt.setUTCMonth(expiresAt.getUTCMonth() + claimed.months);
-  await StorageOrder.updateOne({ _id: claimed._id }, { $set: { expiresAt } });
-  await Organization.updateOne(
-    { _id: claimed.orgId },
-    { $push: { "storage.packs": { orderId: claimed._id, bytes: claimed.gb * GB, expiresAt } }, $set: { "storage.alertLevel": 0 } }
-  );
+  // If granting fails, release the claim so the retry can grant it. Without
+  // this, the retry would see "already applied" for space never given.
+  try {
+    await Organization.updateOne(
+      { _id: claimed.orgId },
+      { $push: { "storage.packs": { orderId: claimed._id, bytes: claimed.gb * GB, expiresAt } }, $set: { "storage.alertLevel": 0 } }
+    );
+  } catch (err) {
+    await StorageOrder.updateOne({ _id: claimed._id }, { $set: { appliedAt: null, status: "created" }, $unset: { razorpayPaymentId: "", expiresAt: "" } }).catch(() => {});
+    logger.error(`[storage] could not grant order ${razorpayOrderId}, released for retry: ${err.message}`);
+    throw err;
+  }
   logger.info(`[storage] granted ${claimed.gb} GB to org ${claimed.orgId} until ${expiresAt.toISOString()}`);
-  return { applied: true, order: { ...claimed.toObject(), expiresAt } };
+  return { applied: true, order: claimed.toObject() };
 }
 
 async function markFailed(razorpayOrderId, reason) {

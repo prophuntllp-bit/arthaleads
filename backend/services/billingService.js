@@ -47,19 +47,30 @@ async function applyPayment(razorpayOrderId, razorpayPaymentId) {
     : new Date();
   const paidUntil = termEnd(claimed.cycle, startFrom);
 
-  await Organization.findByIdAndUpdate(claimed.orgId, {
-    $set: {
-      plan: claimed.plan,
-      seats: claimed.seats,
-      billingCycle: claimed.cycle,
-      paidUntil,
-      // A paid org is no longer on a trial clock. Left set, the auth
-      // middleware's trial-expiry check would still be evaluating a stale date.
-      trialEndsAt: null,
-    },
-  });
+  // The claim above means "someone is granting this". If the grant itself
+  // fails, hand the claim back so the webhook retry (or the browser callback)
+  // can try again, instead of reporting "already applied" for a term that was
+  // never given.
+  try {
+    await Organization.findByIdAndUpdate(claimed.orgId, {
+      $set: {
+        plan: claimed.plan,
+        seats: claimed.seats,
+        billingCycle: claimed.cycle,
+        paidUntil,
+        // A paid org is no longer on a trial clock. Left set, the auth
+        // middleware's trial-expiry check would still be evaluating a stale date.
+        trialEndsAt: null,
+      },
+    });
+  } catch (err) {
+    await Payment.updateOne({ _id: claimed._id }, { $set: { appliedAt: null, status: "created" }, $unset: { razorpayPaymentId: "" } }).catch(() => {});
+    logger.error(`[billing] could not grant order ${razorpayOrderId}, released for retry: ${err.message}`);
+    throw err;
+  }
 
-  await Payment.findByIdAndUpdate(claimed._id, { $set: { paidUntil } });
+  // Bookkeeping only: the term is already granted, so a failure here must not undo it.
+  await Payment.findByIdAndUpdate(claimed._id, { $set: { paidUntil } }).catch((e) => logger.warn(`[billing] paidUntil note failed: ${e.message}`));
 
   logger.info(
     `[billing] org ${claimed.orgId} → ${claimed.plan}, ${claimed.seats} seats, ` +

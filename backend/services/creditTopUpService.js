@@ -104,12 +104,21 @@ async function applyTopUp(razorpayOrderId, razorpayPaymentId) {
     return { applied: false, order: existing };
   }
 
-  const newBalance = await credits.topUp(claimed.orgId, {
-    amountPaise: claimed.creditPaise,
-    gstPaise: claimed.gstPaise,
-    razorpayPaymentId,
-    note: `Top-up via Razorpay ${razorpayOrderId}`,
-  });
+  let newBalance;
+  try {
+    newBalance = await credits.topUp(claimed.orgId, {
+      amountPaise: claimed.creditPaise,
+      gstPaise: claimed.gstPaise,
+      razorpayPaymentId,
+      note: `Top-up via Razorpay ${razorpayOrderId}`,
+    });
+  } catch (err) {
+    // Nothing was credited (topUp only throws before the balance moves), so
+    // hand the claim back and let the retry grant it.
+    await CreditOrder.updateOne({ _id: claimed._id }, { $set: { appliedAt: null, status: "created" }, $unset: { razorpayPaymentId: "" } }).catch(() => {});
+    logger.error(`[credits] could not grant order ${razorpayOrderId}, released for retry: ${err.message}`);
+    throw err;
+  }
 
   logger.info(`[credits] granted ${claimed.creditPaise}p to org ${claimed.orgId} — balance now ${newBalance}p`);
   return { applied: true, order: claimed, balancePaise: newBalance };
