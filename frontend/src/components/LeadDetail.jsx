@@ -271,16 +271,16 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   }, [tab, lead?._id]);
 
   // Chat tab — fetched once per lead, the first time it's opened. A project
-  // lead has no conversation of its own; one that was moved in from Leads keeps
-  // the original's chat (fromLeadId), which the project endpoint looks up. One
-  // imported straight into a project has none, so it is skipped.
+  // lead has no conversation of its own: the chat belongs to the lead in Leads
+  // (moved in via fromLeadId, or filed in by a routing rule and tied by phone),
+  // which the project endpoint looks up.
   // (Checked via lead?._type directly — isProjectLead isn't declared until
   // after the early `if (!lead) return null` below, and hooks can't follow
   // a conditional return.)
   useEffect(() => {
     const isProj = lead?._type === "project";
     if (tab !== "chat" || !lead?._id || waMessages !== null) return;
-    if (isProj && !(lead.fromLeadId && lead.projectId)) return;
+    if (isProj && !lead.projectId) return;
     setWaLoading(true);
     api.get(isProj ? `/projects/${lead.projectId}/leads/${lead._id}/whatsapp-messages` : `/leads/${lead._id}/whatsapp-messages`)
       .then(({ data }) => {
@@ -289,7 +289,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
       })
       .catch(() => toast.error("Failed to load WhatsApp chat"))
       .finally(() => setWaLoading(false));
-  }, [tab, lead?._id, lead?._type, lead?.fromLeadId, lead?.projectId, waMessages]);
+  }, [tab, lead?._id, lead?._type, lead?.projectId, waMessages]);
 
   const sp = useSoftPhone();   // null outside the authed CRM shell
 
@@ -388,9 +388,9 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     c.transcript?.length || c.sentiment || c.channel || c.durationSeconds || c.agentName || c.recordingUrl);
   // Chat tab: read-only WhatsApp history, for leads that came in (or were
   // reached) over WhatsApp — so an agent about to call can see what the
-  // bot/team already discussed before dialing. A project lead gets it when it
-  // was moved in from Leads (fromLeadId): the chat stays with the original.
-  const hasWhatsApp = lead.source === "WhatsApp" && (!isProjectLead || (!!lead.fromLeadId && !!lead.projectId));
+  // bot/team already discussed before dialing. A project lead gets it too: its
+  // chat is the one of the lead it was moved or routed from, found by the server.
+  const hasWhatsApp = lead.source === "WhatsApp" && (!isProjectLead || !!lead.projectId);
   const tabList = ["info", "notes", "activity", "calls", ...(hasWhatsApp ? ["chat"] : []), ...(hasVoice ? ["transcript"] : [])];
 
   const refreshLead = async () => {

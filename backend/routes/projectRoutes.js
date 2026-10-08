@@ -229,24 +229,34 @@ router.post("/:id/dumped-leads/:leadId/restore", async (req, res, next) => {
 });
 
 // GET /api/projects/:id/leads/:leadId/whatsapp-messages — the WhatsApp chat of a
-// lead that was moved into this project. The conversation stays attached to the
-// original Lead, which a transfer archives, and the project lead remembers it
-// as fromLeadId, so that is where the chat is looked up. A lead imported straight
-// into the project (no fromLeadId) has no conversation and answers with none.
-// Access is the project's: an agent must be assigned to the project, and then
-// sees the same leads they already see in it.
+// lead in this project. A project lead has no conversation of its own; the chat
+// is attached to the lead in Leads. Two kinds of project lead have one:
+//   - moved in from Leads: the original is archived and remembered as fromLeadId;
+//   - filed in by a routing rule: a copy with no fromLeadId whose original stays
+//     in Leads, tied to it by phone number (see utils/projectCopies.js).
+// So the chat is found through fromLeadId when there is one, otherwise by the
+// WhatsApp number (the last ten digits, as every phone matcher here does), and
+// the most recently active thread wins. A lead with no chat answers with none.
+// Access is the project's: an agent must be assigned to it, and then sees the
+// same leads they already see in it.
 router.get("/:id/leads/:leadId/whatsapp-messages", async (req, res, next) => {
   try {
     const project = await require("../services/projectService").getById(req.params.id, req.user);
-    const pl = await ProjectLead.findOne({ _id: req.params.leadId, project: project._id }).select("fromLeadId").lean();
+    const pl = await ProjectLead.findOne({ _id: req.params.leadId, project: project._id }).select("fromLeadId phone").lean();
     if (!pl) return res.status(404).json({ success: false, message: "Lead not found" });
-    if (!pl.fromLeadId) return res.json({ success: true, conversation: null, messages: [] });
 
     const WaConversation = require("../models/WaConversation");
     const WaMessage = require("../models/WaMessage");
-    const conversation = await WaConversation.findOne({ orgId: req.user.orgId, leadId: pl.fromLeadId })
-      .select("_id contactPhone status botEnabled assignedToName lastMessageAt")
-      .lean();
+    const ten = String(pl.phone || "").replace(/\D/g, "").slice(-10);
+    const or = [];
+    if (pl.fromLeadId) or.push({ leadId: pl.fromLeadId });
+    if (ten.length === 10) or.push({ contactPhone: new RegExp(`${ten}$`) });
+    const conversation = or.length
+      ? await WaConversation.findOne({ orgId: req.user.orgId, $or: or })
+          .sort({ lastMessageAt: -1 })
+          .select("_id contactPhone status botEnabled assignedToName lastMessageAt")
+          .lean()
+      : null;
     if (!conversation) return res.json({ success: true, conversation: null, messages: [] });
     const messages = await WaMessage.find({ conversationId: conversation._id })
       .sort({ timestamp: 1 })

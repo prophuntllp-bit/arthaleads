@@ -73,12 +73,10 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
       .where((id) => id.isNotEmpty)
       .toSet();
 
-  /// WhatsApp leads have a Chat tab. A project lead gets it when it was moved in
-  /// from Leads (the chat stays with the original lead); one imported straight
-  /// into a project has no conversation.
+  /// WhatsApp leads have a Chat tab. A project lead gets it too: its chat is the
+  /// one of the lead it was moved or routed from, which the server finds.
   bool get _hasChat =>
-      lead['source'] == 'WhatsApp' &&
-      (!_isProject || (lead['fromLeadId'] != null && lead['projectId'] != null));
+      lead['source'] == 'WhatsApp' && (!_isProject || lead['projectId'] != null);
 
   bool get _isProject =>
       lead['_type'] == 'project' && lead['projectId'] != null;

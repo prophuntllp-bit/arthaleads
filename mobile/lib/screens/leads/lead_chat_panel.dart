@@ -10,8 +10,8 @@ import '../inbox/wa_theme.dart';
 /// and the team already said. Replies still happen from the Inbox.
 class LeadChatPanel extends StatefulWidget {
   final String leadId;
-  // Set for a project lead that was moved in from Leads: its chat stays with the
-  // original lead, which the project endpoint looks up.
+  // Set for a project lead: its chat belongs to the lead it was moved or routed
+  // from, which the project endpoint looks up.
   final String? projectId;
   const LeadChatPanel({super.key, required this.leadId, this.projectId});
 
