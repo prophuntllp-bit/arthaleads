@@ -57,6 +57,7 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
+- [Codex] 2026-10-08 17:33 IST: Second independent read-only audit and sandbox cross-verification; docs/audits/2026-10-08-cross-verification.md plus a status note in the first audit and this bridge only. No application/mobile changes; preserve Claude's active security-fix scope. Conclusions pinned to b8d6767 and explicitly recheck later fixes.
 
 
 
