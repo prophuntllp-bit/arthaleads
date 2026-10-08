@@ -297,7 +297,11 @@ app.use("/webhook", webhookRoutes);
 app.use("/api/billing/webhook", require("./routes/billingWebhookRoutes"));
 
 // ── Body Parsing + Cookie Parsing ─────────────────────────────────────────────
-app.use(express.json({ limit: "8mb" }));
+// The WhatsApp webhooks keep the raw bytes: Meta signs the exact body it sent.
+app.use(express.json({
+  limit: "8mb",
+  verify: (req, res, buf) => { if (req.originalUrl.startsWith("/api/whatsapp/")) req.rawBody = buf; },
+}));
 app.use(express.urlencoded({ extended: true, limit: "8mb" }));
 
 // ── Global API hardening headers ──────────────────────────────────────────────

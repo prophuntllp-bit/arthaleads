@@ -2006,11 +2006,44 @@ async function processWebhookForOrg(org, provider, body, headers, logLabel) {
   await handleInbound(org, parsed);
 }
 
+
+// ── Webhook signatures ────────────────────────────────────────────────────────
+// Meta signs every Cloud API webhook (X-Hub-Signature-256, HMAC-SHA256 of the
+// raw body with the app secret). Without checking it, anyone who knows an org
+// id could POST made-up "customer messages" that create leads and trigger bot
+// replies that spend the org's credits.
+//
+// Rolled out in two steps so a wrong secret cannot silence real customers:
+// every call is checked and the result logged; calls that fail are dropped only
+// once WA_WEBHOOK_ENFORCE=true is set. Secret: WA_APP_SECRET, else FB_APP_SECRET
+// (the same Meta app that already signs Facebook lead webhooks).
+function checkMetaSignature(req) {
+  const secret = process.env.WA_APP_SECRET || process.env.FB_APP_SECRET;
+  if (!secret) return "unconfigured";
+  const sig = req.headers["x-hub-signature-256"];
+  if (!sig) return "missing";
+  if (!req.rawBody) return "unconfigured";
+  const expected = "sha256=" + require("crypto").createHmac("sha256", secret).update(req.rawBody).digest("hex");
+  const a = Buffer.from(String(sig)), b = Buffer.from(expected);
+  return a.length === b.length && require("crypto").timingSafeEqual(a, b) ? "ok" : "invalid";
+}
+
+/** True when the call may be processed. Logs anything that is not a valid signature. */
+function acceptMetaWebhook(req, label) {
+  const result = checkMetaSignature(req);
+  if (result === "ok") return true;
+  const enforce = process.env.WA_WEBHOOK_ENFORCE === "true";
+  console.warn(`[${label}] webhook signature ${result}${enforce ? " - dropped" : " - allowed (enforcement off)"}`);
+  return !enforce || result === "unconfigured" && process.env.NODE_ENV !== "production";
+}
+
 router.post("/webhook/:orgId", async (req, res) => {
   res.sendStatus(200);
   try {
     const org = await Organization.findById(req.params.orgId).lean();
-    await processWebhookForOrg(org, org?.whatsapp?.provider || "aisensy", req.body, req.headers, "WhatsApp Webhook/:orgId");
+    const provider = org?.whatsapp?.provider || "aisensy";
+    if (provider === "meta" && !acceptMetaWebhook(req, "WhatsApp Webhook/:orgId")) return;
+    await processWebhookForOrg(org, provider, req.body, req.headers, "WhatsApp Webhook/:orgId");
   } catch (err) {
     console.error("[WhatsApp Webhook/:orgId] error:", err.message);
   }
@@ -2053,6 +2086,7 @@ router.get("/meta-webhook", async (req, res) => {
 router.post("/meta-webhook", async (req, res) => {
   res.sendStatus(200);
   try {
+    if (!acceptMetaWebhook(req, "WhatsApp meta-webhook")) return;
     const entry = req.body?.entry?.[0];
     const wabaId = entry?.id;
     const phoneNumberId = entry?.changes?.[0]?.value?.metadata?.phone_number_id;
