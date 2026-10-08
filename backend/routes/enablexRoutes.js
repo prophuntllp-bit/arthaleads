@@ -55,12 +55,26 @@ async function startRecording(org, voiceId, label) {
 // needs to work against whichever one a given id actually belongs to. ObjectIds
 // are globally unique, so trying Lead first and falling back to ProjectLead is
 // safe - they'll never collide.
-async function findLeadOrProjectLead(id, orgId, { lean = false } = {}) {
+async function findLeadOrProjectLead(id, orgId, { lean = false, user = null } = {}) {
   let doc = await (lean ? Lead.findOne({ _id: id, orgId }).lean() : Lead.findOne({ _id: id, orgId }));
-  if (doc) return { doc, Model: Lead };
-  doc = await (lean ? ProjectLead.findOne({ _id: id, orgId }).lean() : ProjectLead.findOne({ _id: id, orgId }));
-  if (doc) return { doc, Model: ProjectLead };
-  return { doc: null, Model: null };
+  let Model = Lead;
+  if (!doc) {
+    doc = await (lean ? ProjectLead.findOne({ _id: id, orgId }).lean() : ProjectLead.findOne({ _id: id, orgId }));
+    Model = ProjectLead;
+  }
+  if (!doc) return { doc: null, Model: null };
+  // An agent reaches the calls of leads that are theirs (assigned to or created
+  // by them) and of projects they are assigned to; managers and admins reach all.
+  // Anything else answers "not found", so ids cannot be probed.
+  if (user && user.role === "agent" && !(await agentOwns(user, doc, Model))) return { doc: null, Model: null };
+  return { doc, Model };
+}
+
+async function agentOwns(user, doc, Model) {
+  const me = String(user._id);
+  if (Model === Lead) return String(doc.assignedTo) === me || String(doc.createdBy) === me;
+  const project = await require("../models/Project").findOne({ _id: doc.project, orgId: doc.orgId }).select("assignedTo").lean();
+  return !!project?.assignedTo?.map(String).includes(me);
 }
 
 // ── Public: inbound call answer URL ──────────────────────────────────────────
@@ -653,7 +667,7 @@ router.get("/stats", async (req, res, next) => {
 // GET /api/calls/lead/:leadId — full call history for one lead
 router.get("/lead/:leadId", async (req, res, next) => {
   try {
-    const { doc: lead } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId, { lean: true });
+    const { doc: lead } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId, { lean: true, user: req.user });
     if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
 
     const calls = lead.activities
@@ -677,7 +691,7 @@ router.post("/lead/:leadId/summary", async (req, res, next) => {
     if (!process.env.OPENAI_API_KEY) {
       return res.status(503).json({ success: false, message: "OpenAI not configured." });
     }
-    const { doc: lead } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId, { lean: true });
+    const { doc: lead } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId, { lean: true, user: req.user });
     if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
 
     const calls = lead.activities
@@ -828,7 +842,7 @@ router.post("/initiate", protect, async (req, res, next) => {
 
     const [org, found] = await Promise.all([
       Organization.findById(req.user.orgId).select("enablex name").lean(),
-      findLeadOrProjectLead(targetId, req.user.orgId),
+      findLeadOrProjectLead(targetId, req.user.orgId, { user: req.user }),
     ]);
 
     const lead = found.doc;
@@ -951,7 +965,7 @@ router.post("/webrtc/session", protect, async (req, res, next) => {
     // same fix in /initiate above. A client sending leadId for a project lead
     // would otherwise search the wrong collection and get "Lead not found."
     const targetId = projectLeadId || leadId;
-    const found = await findLeadOrProjectLead(targetId, req.user.orgId);
+    const found = await findLeadOrProjectLead(targetId, req.user.orgId, { user: req.user });
     const lead = found.doc;
     const isProjectLead = found.Model === ProjectLead;
 
@@ -1024,7 +1038,7 @@ router.post("/webrtc/:leadId/:activityId/end", protect, async (req, res, next) =
   try {
     const dur       = Math.max(0, Math.round(Number(req.body?.duration ?? 0)));
     const connected = req.body?.connected === true || dur > 0;
-    const { doc: lead, Model } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId);
+    const { doc: lead, Model } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId, { user: req.user });
     if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
 
     const idx = lead.activities.findIndex(a => String(a._id) === req.params.activityId);
@@ -1140,7 +1154,7 @@ router.get("/analytics", async (req, res, next) => {
 router.patch("/:leadId/:activityId/notes", async (req, res, next) => {
   try {
     const { notes } = req.body;
-    const { doc: lead } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId);
+    const { doc: lead } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId, { user: req.user });
     if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
     const idx = lead.activities.findIndex(a => String(a._id) === req.params.activityId);
     if (idx < 0) return res.status(404).json({ success: false, message: "Activity not found" });
@@ -1154,7 +1168,7 @@ router.patch("/:leadId/:activityId/notes", async (req, res, next) => {
 // POST /api/calls/:leadId/:activityId/summarize — on-demand AI analysis
 router.post("/:leadId/:activityId/summarize", async (req, res, next) => {
   try {
-    const { doc: lead, Model } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId);
+    const { doc: lead, Model } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId, { user: req.user });
     if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
     const idx = lead.activities.findIndex(a => String(a._id) === req.params.activityId);
     if (idx < 0) return res.status(404).json({ success: false, message: "Activity not found" });
@@ -1172,7 +1186,8 @@ router.post("/:leadId/followup", async (req, res, next) => {
   try {
     const { title, dueDate, description } = req.body;
     if (!dueDate) return res.status(400).json({ success: false, message: "dueDate is required" });
-    const lead = await Lead.findOne({ _id: req.params.leadId, orgId: req.user.orgId }).select("name").lean();
+    // Project leads are followed up too (the Calls page lists them), so look in both.
+    const { doc: lead } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId, { lean: true, user: req.user });
     if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
     const task = await Task.create({
       orgId:          req.user.orgId,

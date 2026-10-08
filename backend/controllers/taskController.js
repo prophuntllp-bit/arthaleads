@@ -1,6 +1,34 @@
 const Task = require("../models/Task");
 const { sendPushToUser } = require("../utils/push");
 const taskService = require("../services/taskService");
+const User = require("../models/User");
+const Lead = require("../models/Lead");
+const ProjectLead = require("../models/ProjectLead");
+const Project = require("../models/Project");
+
+// Everything a task points at (the assignee, a lead, a project) must belong to
+// the caller's organisation. Empty values mean "not linked" and are stored as
+// null, never as an empty string (which is not a valid id).
+async function checkTaskRefs(body, orgId) {
+  const out = {};
+  if ("assignedTo" in body) {
+    if (!body.assignedTo) return { error: "Choose who the task is for." };
+    const u = await User.findOne({ _id: body.assignedTo, orgId, isActive: true }).select("_id").lean().catch(() => null);
+    if (!u) return { error: "That person is not on your team." };
+  }
+  if ("lead" in body) {
+    if (!body.lead) { out.lead = null; out.leadName = ""; }
+    else {
+      const ok = (await Lead.exists({ _id: body.lead, orgId }).catch(() => null)) || (await ProjectLead.exists({ _id: body.lead, orgId }).catch(() => null));
+      if (!ok) return { error: "That lead was not found." };
+    }
+  }
+  if ("project" in body) {
+    if (!body.project) { out.project = null; out.projectName = ""; }
+    else if (!(await Project.exists({ _id: body.project, orgId }).catch(() => null))) return { error: "That project was not found." };
+  }
+  return { out };
+}
 
 const taskController = {
   // GET /api/tasks  — all roles; agents see only tasks assigned to them
@@ -52,6 +80,8 @@ const taskController = {
     try {
       const { title, description, priority, dueDate, assignedTo, assignedToName, lead, leadName, project, projectName } = req.body;
       const user = req.user;
+      const refs = await checkTaskRefs({ assignedTo, lead, project }, user.orgId);
+      if (refs.error) return res.status(400).json({ success: false, message: refs.error });
 
       const task = await Task.create({
         orgId:          user.orgId,
@@ -88,6 +118,10 @@ const taskController = {
     try {
       const task = await Task.findOne({ _id: req.params.id, orgId: req.user.orgId });
       if (!task) return res.status(404).json({ success: false, message: "Task not found" });
+
+      const refs = await checkTaskRefs(req.body, req.user.orgId);
+      if (refs.error) return res.status(400).json({ success: false, message: refs.error });
+      for (const k of Object.keys(refs.out)) req.body[k] = refs.out[k];
 
       const prevAssignedTo = String(task.assignedTo);
       const allowed = ["title", "description", "priority", "dueDate", "assignedTo", "assignedToName", "lead", "leadName", "project", "projectName"];

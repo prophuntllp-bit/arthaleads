@@ -432,6 +432,10 @@ const projectService = {
     // Ensure source project belongs to the user's org
     const fromProject = await Project.findOne({ _id: fromProjectId, orgId: user.orgId });
     if (!fromProject) throw new AppError("Source project not found", 404);
+    // Same rule as the other project writes: an agent works only in projects they are assigned to.
+    if (user.role === "agent" && !fromProject.assignedTo?.map(String).includes(String(user._id))) {
+      throw new AppError("Access denied", 403);
+    }
     const lead = await ProjectLead.findOne({ _id: leadId, project: fromProjectId });
     if (!lead) throw new AppError("Lead not found", 404);
 
@@ -440,6 +444,9 @@ const projectService = {
         throw new AppError("Lead is already in this project", 400);
       const target = await Project.findOne({ _id: toProjectId, isArchived: { $ne: true }, orgId: user.orgId });
       if (!target) throw new AppError("Target project not found", 404);
+      if (user.role === "agent" && !target.assignedTo?.map(String).includes(String(user._id))) {
+        throw new AppError("You can only move leads into projects you are assigned to", 403);
+      }
       lead.project = toProjectId;
       await lead.save();
       return { data: lead, message: `Transferred to ${target.name}` };

@@ -198,6 +198,16 @@ router.patch("/:id", async (req, res, next) => {
     const update = {};
     ALLOWED.forEach((f) => { if (f in req.body) update[f] = req.body[f] ?? null; });
     if (!Object.keys(update).length) return res.status(400).json({ success: false, message: "No updatable fields" });
+    // An agent edits only leads assigned to or created by them, the same rule
+    // GET and PUT apply. Admins and managers can edit any lead in the org.
+    if (req.user.role === "agent") {
+      const own = await Lead.findOne({ _id: req.params.id, orgId: req.user.orgId }).select("assignedTo createdBy").lean();
+      if (!own) return res.status(404).json({ success: false, message: "Lead not found" });
+      const me = String(req.user._id);
+      if (String(own.assignedTo) !== me && String(own.createdBy) !== me) {
+        return res.status(403).json({ success: false, message: "Access denied" });
+      }
+    }
     const lead = await Lead.findOneAndUpdate(
       { _id: req.params.id, orgId: req.user.orgId },
       { $set: update },
