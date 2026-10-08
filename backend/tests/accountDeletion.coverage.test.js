@@ -55,6 +55,7 @@ for (const [name, Model] of Object.entries(mongoose.models)) {
   const covered = new Set([
     ...(rule.scalar || []).map(([ref]) => ref),
     ...(rule.arrays || []).map(([p, ref]) => `${p}.${ref}`),
+    ...(rule.pull || []),
   ]);
   const missed = refs.filter((r) => !covered.has(r));
   report(missed.length === 0, `${name}: ${refs.length} ref(s) covered${missed.length ? ` — MISSED ${missed.join(", ")}` : ""}`);

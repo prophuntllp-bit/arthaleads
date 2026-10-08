@@ -14,7 +14,7 @@ import { loadRazorpay, RZP_LOAD_ERROR } from "../utils/razorpay";
  * ever disagreed, the server's number is the one that gets charged.
  */
 
-export default function CheckoutModal({ open, planId, onClose, onSuccess, org }) {
+export default function CheckoutModal({ open, planId, onClose, onSuccess, org, initialSeats }) {
   const [config, setConfig] = useState(null);
   const [cycle, setCycle] = useState("annual");
   const [seats, setSeats] = useState(5);
@@ -33,7 +33,7 @@ export default function CheckoutModal({ open, planId, onClose, onSuccess, org })
       .then((r) => {
         setConfig(r.data);
         const p = r.data.plans?.find((x) => x.id === planId);
-        if (p) setSeats((s) => Math.min(Math.max(s, p.minSeats), p.maxSeats));
+        if (p) setSeats((s) => Math.min(Math.max(initialSeats || s, p.minSeats), p.maxSeats));
       })
       .catch(() => setLoadErr("Could not load pricing. Please try again."));
   }, [open, planId]);

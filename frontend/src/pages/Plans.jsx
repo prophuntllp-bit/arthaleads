@@ -136,6 +136,7 @@ export default function Plans() {
   const [checkoutPlan, setCheckoutPlan] = useState(null);
   // Where the org sits in its billing cycle: active / grace / lapsed / none.
   const [sub, setSub] = useState(null);
+  const [boughtSeats, setBoughtSeats] = useState(null);
   const [subBusy, setSubBusy] = useState(false);
   const [storage, setStorage] = useState(null);
   const [manageStorage, setManageStorage] = useState(false);
@@ -143,7 +144,7 @@ export default function Plans() {
 
   const loadSubscription = () =>
     api.get("/billing/me")
-      .then((r) => setSub(r.data.subscription || null))
+      .then((r) => { setSub(r.data.subscription || null); setBoughtSeats(r.data.billing?.seats || null); })
       // Non-fatal: this only drives a banner, and the plan cards below do not
       // depend on it.
       .catch(() => setSub(null));
@@ -433,9 +434,19 @@ export default function Plans() {
 
                 {/* CTA */}
                 {isCurrent ? (
-                  <div className="w-full py-2.5 rounded-xl text-sm font-semibold text-center"
-                    style={{ background: "rgba(var(--app-primary-rgb),0.08)", color: "var(--app-primary)" }}>
-                    Your Current Plan
+                  <div className="space-y-2">
+                    <div className="w-full py-2.5 rounded-xl text-sm font-semibold text-center"
+                      style={{ background: "rgba(var(--app-primary-rgb),0.08)", color: "var(--app-primary)" }}>
+                      Your Current Plan
+                    </div>
+                    {/* Same plan again: renew, or change the number of seats. */}
+                    {user?.role === "admin" && ["starter", "growth"].includes(plan.id) && org?.plan !== "trial" && (
+                      <button onClick={() => setCheckoutPlan(plan.id)}
+                        className="w-full py-2 rounded-xl text-xs font-semibold cursor-pointer transition hover:opacity-80"
+                        style={{ border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
+                        Renew or change seats
+                      </button>
+                    )}
                   </div>
                 ) : isBuyable ? (
                   <button onClick={() => setCheckoutPlan(plan.id)}
@@ -511,6 +522,7 @@ export default function Plans() {
       <CheckoutModal
         open={Boolean(checkoutPlan)}
         planId={checkoutPlan}
+        initialSeats={org?.plan === checkoutPlan ? boughtSeats || undefined : undefined}
         org={org}
         onClose={() => setCheckoutPlan(null)}
         // Pull the org again so the new plan, seat count and paid-through date

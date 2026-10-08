@@ -24,7 +24,7 @@ export default function ResetPassword() {
 
   // Strength rules
   const rules = [
-    { label: "At least 6 characters", ok: password.length >= 6 },
+    { label: "At least 8 characters", ok: password.length >= 8 },
     { label: "Contains a number",     ok: /\d/.test(password) },
     { label: "Passwords match",       ok: password && password === confirm },
   ];

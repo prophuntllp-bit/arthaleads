@@ -301,7 +301,7 @@ const authController = {
         details: { targetRole: target.role, targetEmail: target.email },
       });
 
-      res.json({ success: true, user: { _id: target._id, name: target.name, email: target.email, role: target.role }, originalToken });
+      res.json({ success: true, user: { _id: target._id, name: target.name, email: target.email, role: target.role }, originalToken, token });
     } catch (err) {
       next(err);
     }

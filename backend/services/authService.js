@@ -31,6 +31,53 @@ async function assertOrgApproved(user) {
   if (org.approvalStatus === "rejected") throw new AppError("SIGNUP_REJECTED", 403);
 }
 
+
+// Enforce per-plan team member limits before an active seat is taken (inviting someone,
+// or turning a deactivated person back on).
+async function assertSeatAvailable(orgId) {
+  // Enforce per-plan team member limits
+  // starter: 10  |  trial/growth/pro: 30  |  enterprise: unlimited
+  //
+  // These are the caps the pricing page advertises — keep them in step with
+  // maxSeats in frontend/src/utils/plan.js, or the website sells a team size
+  // this refuses to create.
+  //
+  // Starter was 3, which the five-seat commercial minimum made impossible:
+  // the floor would have exceeded the ceiling and no Starter customer could
+  // have been onboarded at the size they were sold.
+  const org = await Organization.findById(orgId).select("plan seats").lean();
+  if (org && org.plan !== "enterprise") {
+    // One definition of the ceiling, shared with GET /api/org/seats so the
+    // number the Team page shows is the number enforced here.
+    const { seatLimitFor, PLAN_SEAT_CAP } = require("../constants/planPricing");
+    const planCap = PLAN_SEAT_CAP[org.plan];
+    const limit = seatLimitFor(org.plan, org.seats);
+    if (limit !== null && limit !== undefined) {
+      const currentCount = await User.countDocuments({ orgId, isActive: true });
+      if (currentCount >= limit) {
+        const planLabel = org.plan === "starter" ? "Starter" : "Growth";
+        const next = org.plan === "starter" ? "Growth" : "Enterprise";
+        // Say which ceiling was actually hit. "Your plan is limited to 5"
+        // is untrue when the org simply bought 5 of an available 30, and it
+        // points at an upgrade when all they need is another seat.
+        const cappedBySeats = org.seats && limit === org.seats && limit < (planCap ?? Infinity);
+        throw new AppError(
+          cappedBySeats
+            ? `Your subscription covers ${limit} seats and all of them are in use. Add more seats to invite another member.`
+            : `${planLabel} plan is limited to ${limit} team members. Upgrade to ${next} to add more.`,
+          403
+        );
+      }
+    }
+  }
+}
+
+// An organisation always keeps at least one active admin, or nobody could manage it.
+async function assertAnotherActiveAdmin(orgId, exceptUserId) {
+  const others = await User.countDocuments({ orgId, role: "admin", isActive: true, _id: { $ne: exceptUserId } });
+  if (!others) throw new AppError("Your workspace needs at least one active admin. Make someone else an admin first.", 400);
+}
+
 const authService = {
   // Self-serve signup. The caller (authController.signup) has already proven
   // the person controls `data.email` via the OTP step — this never runs on an
@@ -322,6 +369,7 @@ const authService = {
       if (actor.role !== "admin") {
         throw new AppError("Only admins can change roles", 403);
       }
+      if (user.role === "admin" && updates.role !== "admin") await assertAnotherActiveAdmin(user.orgId, user._id);
       user.role = updates.role;
     }
 
@@ -355,41 +403,7 @@ const authService = {
     const existing = await User.findOne({ email: payload.email });
     if (existing) throw new AppError("Email already registered", 409);
 
-    // Enforce per-plan team member limits
-    // starter: 10  |  trial/growth/pro: 30  |  enterprise: unlimited
-    //
-    // These are the caps the pricing page advertises — keep them in step with
-    // maxSeats in frontend/src/utils/plan.js, or the website sells a team size
-    // this refuses to create.
-    //
-    // Starter was 3, which the five-seat commercial minimum made impossible:
-    // the floor would have exceeded the ceiling and no Starter customer could
-    // have been onboarded at the size they were sold.
-    const org = await Organization.findById(orgId).select("plan seats").lean();
-    if (org && org.plan !== "enterprise") {
-      // One definition of the ceiling, shared with GET /api/org/seats so the
-      // number the Team page shows is the number enforced here.
-      const { seatLimitFor, PLAN_SEAT_CAP } = require("../constants/planPricing");
-      const planCap = PLAN_SEAT_CAP[org.plan];
-      const limit = seatLimitFor(org.plan, org.seats);
-      if (limit !== null && limit !== undefined) {
-        const currentCount = await User.countDocuments({ orgId, isActive: true });
-        if (currentCount >= limit) {
-          const planLabel = org.plan === "starter" ? "Starter" : "Growth";
-          const next = org.plan === "starter" ? "Growth" : "Enterprise";
-          // Say which ceiling was actually hit. "Your plan is limited to 5"
-          // is untrue when the org simply bought 5 of an available 30, and it
-          // points at an upgrade when all they need is another seat.
-          const cappedBySeats = org.seats && limit === org.seats && limit < (planCap ?? Infinity);
-          throw new AppError(
-            cappedBySeats
-              ? `Your subscription covers ${limit} seats and all of them are in use. Add more seats to invite another member.`
-              : `${planLabel} plan is limited to ${limit} team members. Upgrade to ${next} to add more.`,
-            403
-          );
-        }
-      }
-    }
+    await assertSeatAvailable(orgId);
 
     const user = await User.create({ ...payload, orgId });
 
@@ -411,6 +425,13 @@ const authService = {
     if (targetId === adminId.toString() && updates.isActive === false) {
       throw new AppError("You cannot deactivate yourself", 400);
     }
+
+    if (user.role === "admin" && user.isActive && (
+      (updates.role !== undefined && updates.role !== "admin") || updates.isActive === false
+    )) {
+      await assertAnotherActiveAdmin(user.orgId, user._id);
+    }
+    if (updates.isActive === true && !user.isActive) await assertSeatAvailable(user.orgId);
 
     ["name", "email", "phone", "role", "avatar", "isActive"].forEach((key) => {
       if (updates[key] !== undefined) user[key] = updates[key];
@@ -445,6 +466,11 @@ const authService = {
     if (!user) throw new AppError("User not found", 404);
     if (adminOrgId && user.orgId?.toString() !== adminOrgId.toString()) {
       throw new AppError("Access denied", 403);
+    }
+    if (user.isActive) {
+      if (user.role === "admin") await assertAnotherActiveAdmin(user.orgId, user._id);
+    } else {
+      await assertSeatAvailable(user.orgId);   // switching someone back on takes a seat
     }
     user.isActive = !user.isActive;
     await user.save({ validateBeforeSave: false });

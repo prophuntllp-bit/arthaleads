@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Search } from "lucide-react";
-import api from "../services/api";
+import api, { setToken } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 // "Switch account" inside the profile menu. Admins only: signs in as someone
@@ -34,6 +34,8 @@ export default function AccountSwitcher({ onDone }) {
     setBusy(p._id);
     try {
       const { data } = await api.post(`/auth/switch-user/${p._id}`);
+      // Browsers that do not keep the cookie authorise with a stored token; point it at the switched person too.
+      if (data.token) setToken(data.token);
       sessionStorage.setItem("impersonating", JSON.stringify({
         kind: "switch",
         adminName: data.user.name, adminEmail: data.user.email, orgName: org?.name || "",

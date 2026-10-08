@@ -41,6 +41,7 @@ const TOMBSTONE = "Deleted user";
 //   drop    — the document exists only because that person did; it goes.
 //   scalar  — [refField, nameField|null] pairs, cleared on the document.
 //   arrays  — [arrayPath, refField, nameField|null], cleared per matching element.
+//   pull    — array fields of user ids; the person is removed from the list, the others stay.
 //   scrub   — free-text fields holding the person's own details, emptied.
 //
 // Customer-facing names (Booking.customerName, Invoice.customerName,
@@ -55,17 +56,19 @@ const DISPOSITION = {
 
   // Organisation records that outlive whoever touched them.
   Lead: {
-    scalar: [["createdBy", null], ["assignedTo", "assignedToName"], ["followUpSetBy", "followUpSetByName"]],
+    scalar: [["createdBy", null], ["assignedTo", "assignedToName"], ["followUpSetBy", "followUpSetByName"], ["deletedBy", "deletedByName"]],
     arrays: [["notes", "addedBy", "addedByName"], ["activities", "performedBy", "performedByName"]],
   },
   ProjectLead: {
-    scalar: [["remarkUpdatedBy", null], ["followUpSetBy", "followUpSetByName"], ["importedBy", null]],
+    scalar: [["remarkUpdatedBy", null], ["followUpSetBy", "followUpSetByName"], ["importedBy", null], ["assignedTo", "assignedToName"]],
     arrays: [["notes", "addedBy", "addedByName"], ["activities", "performedBy", "performedByName"]],
   },
   Task:           { scalar: [["assignedTo", "assignedToName"], ["assignedBy", "assignedByName"]] },
   RoutingRule:    { scalar: [["assignTo", "assignToName"], ["createdBy", null]] },
   WaConversation: { scalar: [["assignedTo", "assignedToName"]] },
-  Project:        { scalar: [["assignedTo", null], ["createdBy", null]] },
+  // assignedTo is a list of people: only this person leaves it (setting it to null
+  // would have taken every other assignee off the project too).
+  Project:        { scalar: [["createdBy", null], ["advisorId", null]], pull: ["assignedTo"] },
   Automation:     { scalar: [["createdBy", null], ["updatedBy", null]] },
   Booking:        { scalar: [["createdBy", null]] },
   Invoice:        { scalar: [["createdBy", null]] },
@@ -76,7 +79,14 @@ const DISPOSITION = {
   // model's output, not a record about the person who raised it, and deleting
   // it would throw away the moderation history Play expects us to act on.
   ContentReport:  { scalar: [["userId", null]] },
-  Organization:   { scalar: [["approvedBy", null], ["deletionRequestedBy", null]] },
+  Organization:   { scalar: [["approvedBy", null], ["deletionRequestedBy", null]],
+    pull: ["whatsapp.notifyOn.newConversation", "whatsapp.notifyOn.lowCredits", "whatsapp.notifyOn.qualityDrop"] },
+
+  // Who created an order, agent or campaign. The record is the organisation's.
+  CreditOrder:    { scalar: [["createdBy", null]] },
+  StorageOrder:   { scalar: [["createdBy", null]] },
+  WaAgent:        { scalar: [["createdBy", "createdByName"]] },
+  WaCampaign:     { scalar: [["createdBy", "createdByName"]] },
 
   // The audit trail is kept — it is the record of who did what to whom, and
   // erasing it on request would make it useless as a security control. The
@@ -131,6 +141,11 @@ async function eraseUser(userId) {
       const set = { [ref]: null };
       if (nameField) set[nameField] = TOMBSTONE;
       const res = await Model.updateMany({ [ref]: id }, { $set: set });
+      changed += res.modifiedCount || 0;
+    }
+
+    for (const path of rule.pull || []) {
+      const res = await Model.updateMany({ [path]: id }, { $pull: { [path]: id } });
       changed += res.modifiedCount || 0;
     }
 
