@@ -1,5 +1,7 @@
 # Arthaleads prelaunch dashboard and marketing audit
 
+> **Historical report at 0763d37.** Latest functional evidence and remaining launch blockers are in [the frontend cross-verification report](2026-10-08-cross-verification.md), tested against 3bef24a. The 57 findings and blocked sandbox status below are the original snapshot, not current unresolved counts.
+
 Audit date: 8 October 2026, IST. Proposed launch: 15 October 2026.
 Application source reviewed: **0763d37**. Audit registration: f12e1a4.
 Final pull also included Claude's 4d65a5c mobile 1.0.12 release metadata; it did not change the dashboard workflow implementation reviewed here.
