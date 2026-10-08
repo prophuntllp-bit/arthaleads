@@ -67,7 +67,7 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 ### Claude Code, 2026-10-08 (IST)
 
 - Dashboard (`frontend/src/pages/Dashboard.jsx`): every widget's data (follow-ups, hot, stale, projects, team attendance, integrations, WhatsApp status) is fetched by the page and it shows one skeleton until all arrive, so cards no longer pop in one by one.
-- **Storage packs and free-up.** Customers buy extra space in 10 GB blocks (price and terms in `STORAGE_ADDON`, `backend/constants/plans.js`): `StorageOrder` model, `services/storageOrderService.js`, `routes/storageRoutes.js` mounted at `/api/storage`, Razorpay webhook dispatch in `billingWebhookRoutes.js`. Bought blocks live in `Organization.storage.packs` with an expiry; `storageLimitBytes` counts only unexpired ones. Admins can delete old recordings and attendance photos (`services/storageCleanup.js`). UI: `StorageManageModal.jsx`, opened from the sidebar `StorageCard`, the 80% popup and the Plans page.
+- **Storage packs and free-up.** Customers buy extra space in 10 GB blocks (price and terms in `STORAGE_ADDON`, `backend/constants/plans.js`): `StorageOrder` model, `services/storageOrderService.js`, `routes/storageRoutes.js` mounted at `/api/storage`, Razorpay webhook dispatch in `billingWebhookRoutes.js`. Bought blocks live in `Organization.storage.packs` with an expiry; `storageLimitBytes` counts only unexpired ones. Admins/managers can list and delete each project's photos, videos, brochure and floor plan (`GET/DELETE /api/storage/project-files`); admins can delete old recordings and attendance photos (`services/storageCleanup.js`). UI: `StorageManageModal.jsx`, opened from the sidebar `StorageCard`, the 80% popup and the Plans page.
 
 ### Claude Code, 2026-10-07 (IST), evening
 

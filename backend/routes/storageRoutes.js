@@ -81,6 +81,71 @@ router.post("/verify", adminOnly, async (req, res) => {
   }
 });
 
+// ── Project files: list and remove what a project holds ─────────────────────
+const managerOrAdmin = authorize("admin", "manager", "super_admin");
+const keyOfUrl = (url) => {
+  const k = String(url || "").split("/api/media/")[1];
+  return k ? decodeURIComponent(k.split("?")[0]) : null;
+};
+
+router.get("/project-files", managerOrAdmin, async (req, res) => {
+  try {
+    const Project = require("../models/Project");
+    const StorageObject = require("../models/StorageObject");
+    const projects = await Project.find({ orgId: req.user.orgId, isArchived: { $ne: true } })
+      .select("name images brochureUrl floorPlanUrl videos").lean();
+    const files = [];
+    for (const p of projects) {
+      const add = (kind, url, label) => { const key = keyOfUrl(url); if (key) files.push({ projectId: p._id, kind, url, key, label }); };
+      (p.images || []).forEach((u, i) => add("image", u, `Photo ${i + 1}`));
+      (p.videos || []).forEach((v, i) => add("video", v.url, `Video ${i + 1}`));
+      add("brochure", p.brochureUrl, "Brochure");
+      add("floorplan", p.floorPlanUrl, "Floor plan");
+    }
+    const sizes = new Map((await StorageObject.find({ orgId: oid(req.orgId), key: { $in: files.map((f) => f.key) } })
+      .select("key bytes").lean()).map((o) => [o.key, o.bytes]));
+    const out = projects.map((p) => {
+      const mine = files.filter((f) => String(f.projectId) === String(p._id)).map((f) => ({ kind: f.kind, url: f.url, label: f.label, bytes: sizes.get(f.key) || 0 }));
+      return { _id: p._id, name: p.name, bytes: mine.reduce((n, f) => n + f.bytes, 0), files: mine };
+    }).filter((p) => p.files.length).sort((a, b) => b.bytes - a.bytes);
+    res.json({ projects: out });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+router.delete("/project-files", managerOrAdmin, async (req, res) => {
+  try {
+    const Project = require("../models/Project");
+    const up = require("../utils/upload");
+    const { projectId, kind, url } = req.body || {};
+    const project = await Project.findOne({ _id: projectId, orgId: req.user.orgId, isArchived: { $ne: true } });
+    if (!project) return res.status(404).json({ message: "Project not found." });
+    if (kind === "image") {
+      if (!(project.images || []).includes(url)) return res.status(404).json({ message: "Photo not found." });
+      project.images = project.images.filter((u) => u !== url);
+      await project.save();
+      await up.deleteProjectImage(url);
+    } else if (kind === "video") {
+      if (!(project.videos || []).some((v) => v.url === url)) return res.status(404).json({ message: "Video not found." });
+      project.videos = project.videos.filter((v) => v.url !== url);
+      await project.save();
+      await up.deleteProjectVideo(url);
+    } else if (kind === "brochure") {
+      if (!project.brochureUrl) return res.status(404).json({ message: "Brochure not found." });
+      await up.deleteProjectBrochure(project._id.toString());
+      project.brochureUrl = "";
+      await project.save();
+    } else if (kind === "floorplan") {
+      if (!project.floorPlanUrl) return res.status(404).json({ message: "Floor plan not found." });
+      await up.deleteProjectFloorPlan(project._id.toString());
+      project.floorPlanUrl = "";
+      await project.save();
+    } else {
+      return res.status(400).json({ message: "Unknown file type." });
+    }
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
 function freeUpArgs(req) {
   const days = parseInt(req.body.olderThanDays, 10);
   if (!cleanup.CATEGORIES.includes(req.body.category)) return { error: "Choose recordings or attendance photos." };

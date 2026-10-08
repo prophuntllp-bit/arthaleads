@@ -25,6 +25,76 @@ const CATEGORY_LABEL = {
 const AGE_CHOICES = [30, 90, 180, 365];
 const TERMS = { 1: "1 month", 3: "3 months", 12: "12 months" };
 
+// The photos, videos, brochure and floor plan each project holds, biggest
+// project first, each removable on the spot.
+function ProjectFiles({ onChanged }) {
+  const [open, setOpen] = useState(false);
+  const [projects, setProjects] = useState(null);
+  const [confirm, setConfirm] = useState(null);   // `${projectId}|${url}`
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(() => {
+    api.get("/storage/project-files").then((r) => setProjects(r.data.projects)).catch(() => setProjects([]));
+  }, []);
+  useEffect(() => { if (open && projects === null) load(); }, [open, projects, load]);
+
+  const remove = async (p, f) => {
+    setBusy(true);
+    try {
+      await api.delete("/storage/project-files", { data: { projectId: p._id, kind: f.kind, url: f.url } });
+      toast.success(`${f.label} removed from ${p.name}.`);
+      setConfirm(null);
+      load(); onChanged?.();
+    } catch (e) {
+      toast.error(e?.response?.data?.message || "Could not remove it.");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="mt-1.5">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="text-[11px] font-semibold cursor-pointer" style={{ color: "var(--app-primary)" }}>
+        {open ? "Hide project files" : "Review and delete project files"}
+      </button>
+      {open && (
+        <div className="mt-2 rounded-xl p-3 space-y-3 max-h-72 overflow-y-auto" style={{ border: "1px solid var(--app-border)" }}>
+          {projects === null ? (
+            <Loader2 className="w-4 h-4 animate-spin text-app-soft" />
+          ) : projects.length === 0 ? (
+            <p className="text-xs text-app-soft">No project files.</p>
+          ) : projects.map((p) => (
+            <div key={p._id}>
+              <p className="text-xs font-bold text-app flex justify-between gap-2"><span className="truncate">{p.name}</span><span className="tabular-nums text-app-soft shrink-0">{formatBytes(p.bytes)}</span></p>
+              <div className="mt-1 space-y-1">
+                {p.files.map((f) => {
+                  const id = `${p._id}|${f.url}`;
+                  return (
+                    <div key={id} className="flex items-center gap-2 text-xs">
+                      {f.kind === "image"
+                        ? <img src={f.url} alt="" className="w-8 h-8 rounded-md object-cover shrink-0" loading="lazy" />
+                        : <span className="w-8 h-8 rounded-md shrink-0 flex items-center justify-center text-[9px] font-bold uppercase text-app-soft" style={{ background: "var(--app-surface-low)" }}>{f.kind === "video" ? "MP4" : "PDF"}</span>}
+                      <span className="flex-1 min-w-0 truncate text-app">{f.label}</span>
+                      <span className="tabular-nums text-app-soft shrink-0">{formatBytes(f.bytes)}</span>
+                      {confirm === id ? (
+                        <span className="flex items-center gap-1.5 shrink-0">
+                          <button type="button" disabled={busy} onClick={() => remove(p, f)} className="font-bold cursor-pointer" style={{ color: "#dc2626" }}>Delete</button>
+                          <button type="button" onClick={() => setConfirm(null)} className="text-app-soft cursor-pointer">Cancel</button>
+                        </span>
+                      ) : (
+                        <button type="button" aria-label={`Delete ${f.label}`} onClick={() => setConfirm(id)} className="shrink-0 text-app-soft hover:text-red-500 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          <p className="text-[11px] text-app-soft">Deleted files can't be brought back. The AI agent and project page stop showing them.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function StorageManageModal({ open, onClose }) {
   const { user, org } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -160,11 +230,7 @@ export default function StorageManageModal({ open, onClose }) {
                       <div className="mt-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--app-border)" }}>
                         <div className="h-full rounded-full" style={{ width: `${Math.max(2, (v.bytes / Math.max(ov.usedBytes, 1)) * 100)}%`, background: "var(--app-primary)", opacity: 0.75 }} />
                       </div>
-                      {key === "project_media" && (
-                        <p className="mt-1 text-[11px] text-app-soft">
-                          Remove files from inside a project: open it from <Link to="/projects" onClick={onClose} className="font-semibold" style={{ color: "var(--app-primary)" }}>Projects</Link> and delete what you no longer use.
-                        </p>
-                      )}
+                      {key === "project_media" && <ProjectFiles onChanged={load} />}
                       {key === "recordings" && (
                         <p className="mt-1 text-[11px] text-app-soft">Recordings are removed on their own after {ov.recordingDays} days on your plan.</p>
                       )}
