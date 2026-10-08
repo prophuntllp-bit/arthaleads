@@ -4,6 +4,7 @@ const User = require("../models/User");
 const { protect, authorize, invalidateOrgCache } = require("../middlewares/auth");
 const { planGate } = require("../middlewares/planGate");
 const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
+const { publicOrg } = require("../utils/publicOrg");
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ router.get("/me", async (req, res, next) => {
   try {
     const org = await Organization.findById(req.orgId);
     if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
-    res.json({ success: true, org });
+    res.json({ success: true, org: publicOrg(org) });
   } catch (err) { next(err); }
 });
 
@@ -28,7 +29,7 @@ router.put("/me", authorize("admin"), async (req, res, next) => {
     if (industry) org.industry = industry;
     await org.save();
     invalidateOrgCache(req.orgId); // bust cache so next request sees updated name/industry
-    res.json({ success: true, org });
+    res.json({ success: true, org: publicOrg(org) });
   } catch (err) { next(err); }
 });
 
@@ -70,7 +71,7 @@ router.post("/me/onboarding", authorize("admin"), async (req, res, next) => {
       ? await User.findByIdAndUpdate(req.user._id, { $set: userUpdate }, { new: true })
       : await User.findById(req.user._id);
 
-    res.json({ success: true, org, user });
+    res.json({ success: true, org: publicOrg(org), user });
   } catch (err) { next(err); }
 });
 
@@ -215,7 +216,7 @@ router.patch("/me/logo", authorize("admin"), async (req, res, next) => {
     );
     if (!org) return res.status(404).json({ success: false, message: "Organization not found." });
     invalidateOrgCache(req.orgId);
-    res.json({ success: true, org });
+    res.json({ success: true, org: publicOrg(org) });
   } catch (err) { next(err); }
 });
 
@@ -242,7 +243,7 @@ router.patch("/me/billing", authorize("admin"), async (req, res, next) => {
     );
     if (!org) return res.status(404).json({ success: false, message: "Organization not found." });
     invalidateOrgCache(req.orgId);
-    res.json({ success: true, org });
+    res.json({ success: true, org: publicOrg(org) });
   } catch (err) { next(err); }
 });
 
