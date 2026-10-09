@@ -171,6 +171,28 @@ export const QUICK_ANSWERS = [
     a: "Settings -> scroll to the bottom -> 'Delete account' (Admins only). Deletion is scheduled 30 days out and nothing is removed in the meantime - you can cancel from the same place or from the link in the confirmation email at any point in that window. After 30 days the organisation and everything in it is permanently erased, so export anything worth keeping first.",
     goto: "/settings",
   },
+  {
+    id: "storage",
+    q: "How do I free up or add storage space?",
+    a: "Click the Storage card at the bottom of the sidebar (Admins only) to see what is using your space. From there you can delete call recordings or attendance photos older than a date you choose, review and delete project files one by one, or 'Add more space' in 10 GB blocks at Rs 99 per block per month for 1, 3 or 12 months. Leads and notes do not count towards storage. At 100% new uploads pause, but nothing already stored is ever deleted for being over the limit.",
+  },
+  {
+    id: "transfer-project",
+    q: "How do I move a lead to another project?",
+    a: "On the Leads page, or inside a project's Leads tab, use the Transfer option on the lead's row, pick the destination project (or the main pipeline) and confirm. Notes, follow-up, status, assignee and history all move with it. A lead removed from a project can be restored from that project's Dump Leads.",
+    goto: "/projects",
+  },
+  {
+    id: "meta-capi",
+    q: "How do I send lead outcomes back to Meta?",
+    a: "Integrations -> 'Meta conversion tracking' (Admins, Growth plan and up). Paste the Dataset ID and a Conversions API access token from Meta Events Manager, choose which stages to send (by default New lead -> Lead, Site Visit -> Schedule, Closed Won -> Purchase), send a test event with Meta's test code to confirm it arrives, then switch it on. Only leads from Facebook lead ads or click-to-WhatsApp ads can be matched.",
+    goto: "/integrations",
+  },
+  {
+    id: "search",
+    q: "How do I find a lead quickly?",
+    a: "Press Ctrl+K (Cmd+K on Mac) on any page, or use the search box at the top, and type a name or phone number. Pick the lead from the live suggestions.",
+  },
 ];
 
 // Guided tours. Each step targets an element by data-tour attribute (preferred)
