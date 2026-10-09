@@ -57,6 +57,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
+- [Claude Code] 2026-10-09 IST: marketing site pass (SEO/indexing: per-route static head tags, canonical, og-image, sitemap; intro video section; 15 missing feature explanations; premium polish). Files: frontend/src/pages/Landing.jsx, Features.jsx, data/features.js, components/Public*, utils/useSEO.js, vercel.json, public/*, frontend/scripts/*, backend blogController sitemap. Preview on localhost before push.
+
 
 
 
