@@ -114,7 +114,7 @@ export default function MarketingChatBot() {
     } catch {
       setMessages((m) => [...m, {
         role: "bot",
-        text: "Couldn't reach the server. Please try again, or email contact@arthaleads.com / WhatsApp +91 80801 97945.",
+        text: "Couldn't reach the server. Please try again, or email contact@arthaleads.com / WhatsApp +91 90670 97779.",
         cta: "contact",
       }]);
     } finally {

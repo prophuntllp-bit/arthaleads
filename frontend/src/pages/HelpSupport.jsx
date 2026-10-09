@@ -22,9 +22,9 @@ const supportCards = [
   {
     icon: PhoneCall,
     title: "Call Support",
-    detail: "+91 80801 97945",
+    detail: "+91 90670 97779",
     note: "For urgent CRM access or lead routing issues.",
-    href: "tel:+918080197945",
+    href: "tel:+919067097779",
   },
   {
     icon: Mail,
@@ -36,7 +36,7 @@ const supportCards = [
   {
     icon: MessageSquareMore,
     title: "WhatsApp Help",
-    detail: "+91 80801 97945",
+    detail: "+91 90670 97779",
     note: "Quick help for day-to-day sales team questions.",
     href: waLink(WA_MESSAGES.support),
   },

@@ -72,6 +72,11 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-09 IST, project page crash + help bot knowledge
+
+- `dc36292` ProjectDetail used `useMemo` without importing it, so every project page crashed in production (audit FE01, introduced by my batch A). Leads transfer callback for project leads called two setters that do not exist; now uses `removeLead`. Ran an `no-undef` lint over all of frontend/src: no other undefined names (only the Vite `__APP_BUILD__` define). Verified the project page Info/Leads/Prospective tabs render on the local demo account.
+- (this commit) Help assistant and marketing bot knowledge in `backend/utils/openai.js`: corrected stats to the website's (50+ teams, 10,000+ leads), removed live features from "coming soon" (Google Ads, duplicate detection, late marks), fixed `/integrations` path and ticket location, dropped the obsolete "server sleeping" login step, added a "NEWER FEATURES" block (search, project transfer, project dump/chat, consent, tasks, seats and renewals with credit, storage and packs, Meta conversion tracking, connection health, Google Ads, Vistrow auto-call, attendance photo fallback, paging, referral statuses, password change sign-out). Four new quick answers in `frontend/src/data/helpData.js`. Every claim checked against the code; STOP-keyword opt-out and Dump "import into project" do not exist and are not claimed.
+
 ### Claude Code, 2026-10-09 IST, Vistrow Voice settings are a page, not a popup (branch claude/vistrow-picker-options)
 
 - New settings page `pages/VistrowVoiceSettingsPage.jsx` with two tabs: Connection token (`/integrations/vistrow-voice`, the old popup's content, now `components/VistrowVoiceSettings.jsx` `VoiceConnectionPanel`) and Auto-call new leads (`/integrations/vistrow-calling`). The connected Vistrow Voice row shows a Settings gear (`ConnectionCard` `onSettings`) instead of Edit; the tile goes to the Auto-call tab. The `VoiceWizard` modal and `VistrowCalling.jsx` are removed. Browser checks: `frontend/e2e/vistrow-outbound/drive.cjs` and `drive-list.cjs`.
