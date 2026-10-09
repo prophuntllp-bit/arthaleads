@@ -73,6 +73,13 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-09 IST, WhatsApp bot: notice for unsupported messages, no silent first "Hi"
+
+- `routes/whatsappRoutes.js`: when a customer sends a Meta `unsupported` message and the bot is ON (Growth+), the bot sends one short polite line ("I could not open that message, please send it again as normal text or photo"), at most once an hour per chat, in English, Hinglish, Marathi (Latin letters) or Devanagari following the customer's earlier messages. Reactions get their own type and never trigger it. Photos and voice notes still get no automatic reply (unchanged, by design; easy to extend with the same helper if wanted).
+- First-contact fallback: if the AI is not configured, errors, or returns nothing for a customer's FIRST message, they get "Hi <name>! Thanks for messaging <org>. Which project or property are you looking for? Our team will also be with you shortly." and the chat is handed to the team as before. Not sent again on later turns, and not when the org is out of credits.
+- Both are marked `WaMessage.isNotice` so they never count as a real reply (first-reply logic ignores them). They use one service-reply credit like any bot message.
+- 12-assertion scratch test (stubbed WhatsApp and OpenAI) plus the earlier WhatsApp scratch suites all pass.
+
 ### Claude Code, 2026-10-09 IST, booking clip
 
 - New tour clip `frontend/public/tour/booking.{mp4,webm,webp}` (10 s, 1600x900, silent, ~0.3 MB): a new booking in the Bookings list, one click on Invoice, "Invoice #1 created!", then the Tax Invoice preview. Recorded by me from the LOCAL demo CRM (localhost:3002 + demo API 5055) using Chrome screencast frames encoded with ffmpeg; recorder scripts are in the session scratchpad, not in the repo. Demo-only changes: the 4 seeded demo bookings were re-saved so totals and GST show (were 0.00) and the demo firm got sample billing details (fake PAN/GSTIN/bank sample values).

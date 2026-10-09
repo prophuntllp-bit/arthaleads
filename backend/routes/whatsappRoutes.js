@@ -280,7 +280,7 @@ function parseMetaMessages(payload) {
         } else if (msg.type === "location") {
           out.push({ ...base, msgText: `[Location] ${msg.location?.name || msg.location?.address || ""}`.trim(), msgType: "location" });
         } else if (msg.type === "reaction") {
-          out.push({ ...base, msgText: `[Reaction] ${msg.reaction?.emoji || ""}`.trim(), msgType: "unsupported" });
+          out.push({ ...base, msgText: `[Reaction] ${msg.reaction?.emoji || ""}`.trim(), msgType: "reaction" });
         } else if (msg.type === "unsupported") {
           // Meta sends this when the customer's message is a kind WhatsApp does not hand to
           // business accounts: a poll, a view-once photo or voice note, a channel post,
@@ -786,6 +786,11 @@ async function handleInbound(org, parsed) {
     catch (err) { console.error("[WhatsApp Bot] agent switch check failed:", err.message); }
   }
 
+  if (msgType === "unsupported") {
+    try { await maybeNoticeUnsupported(org, conv); }
+    catch (err) { console.error("[WhatsApp Bot] unsupported notice failed:", err.message); }
+  }
+
   // Photos, voice notes and the like are saved above for the team; the bot can only read text and taps.
   const botCanRead = ["text", "button", "interactive"].includes(msgType);
   if (conv.botEnabled && botCanRead) {
@@ -992,6 +997,93 @@ async function recoverLostBotReplies({ now = new Date(), resume = resumeBotIfOwe
     catch (err) { console.error("[WhatsApp Bot] lost-reply recovery failed:", err.message); }
   }
   return { checked: convs.length, recovered };
+}
+
+// ── Short automatic notices ───────────────────────────────────────────────────
+// Two situations used to end in silence: the customer sent something the bot
+// cannot read (WhatsApp type "unsupported"), or their very first message got no
+// answer because the AI failed or came back empty. A one-line, polite notice
+// fixes both. Kept in the languages the bot already detects.
+const NOTICE_TEXT = {
+  unsupported: {
+    english:    "Sorry, I could not open that message. Could you please send it again as a normal text message or photo?",
+    hinglish:   "Sorry, mujhe woh message khul nahi paya. Kya aap use dobara normal text ya photo ke roop mein bhej sakte hain?",
+    marathi:    "Sorry, mala toh message ughadta aala nahi. Tumhi to punha normal text kinva photo mhanun pathvu shakta ka?",
+    devanagari: "क्षमा करें, वह संदेश मुझसे खुल नहीं पाया। कृपया उसे दोबारा सामान्य टेक्स्ट या फोटो के रूप में भेजें।",
+  },
+  firstContact: {
+    english:    "Hi {name}! Thanks for messaging {org}. Which project or property are you looking for? Our team will also be with you shortly.",
+    hinglish:   "Hi {name}! {org} ko message karne ke liye shukriya. Aap kaunsa project ya property dekh rahe hain? Hamari team bhi jaldi aapse judegi.",
+    marathi:    "Hi {name}! {org} la message kelyabaddal dhanyavad. Tumhi konta project kinva property pahat ahat? Amchi team lavkarach tumchyashi sampark karel.",
+    devanagari: "नमस्ते {name}! {org} को संदेश भेजने के लिए धन्यवाद। आप कौन-सा प्रोजेक्ट या प्रॉपर्टी देख रहे हैं? हमारी टीम भी जल्द ही आपसे जुड़ेगी।",
+  },
+};
+
+function noticeText(kind, lang, org, conversation) {
+  const set = NOTICE_TEXT[kind];
+  const t = set[lang] || set.english;
+  const first = String(conversation.contactName || "").trim().split(/\s+/)[0];
+  // A contact name that is just their number is not a name worth greeting.
+  const name = first && !/^\+?\d+$/.test(first) ? first : "there";
+  return t.replace("{name}", name).replace("{org}", org.name || "us");
+}
+
+/** Plain text from the bot, marked as a notice. Never throws; returns whether it went out. */
+async function sendBotNotice(org, conversation, text, botName = "Artha Assistant") {
+  try {
+    const q = await credits.quote(org._id, "service", 1);
+    let held = 0;
+    try { held = await credits.reserve(org._id, { category: "service", count: 1 }); }
+    catch (err) { if (err instanceof credits.InsufficientCreditsError) return false; throw err; }
+    let msgId;
+    try { msgId = await sendProviderMessage(org, conversation.contactPhone, text); }
+    catch (err) { await credits.release(org._id, held); throw err; }
+    await WaMessage.create({
+      orgId: org._id, conversationId: conversation._id, waMsgId: msgId,
+      direction: "outbound", sender: "bot", senderName: botName,
+      body: text, status: "sent", timestamp: new Date(),
+      reservedPaise: held, creditCategory: "service", freeTierApplied: q.freeCount > 0,
+      isNotice: true,
+    });
+    await WaConversation.findByIdAndUpdate(conversation._id, { lastMessageAt: new Date(), lastMessagePreview: text.slice(0, 80) });
+    return true;
+  } catch (err) {
+    console.error("[WhatsApp Bot] notice send failed:", err?.response?.data || err.message);
+    return false;
+  }
+}
+
+async function customerLanguage(conversation, extra = []) {
+  const inbound = await WaMessage.find({ conversationId: conversation._id, direction: "inbound" })
+    .sort({ timestamp: -1 }).limit(6).select("body").lean();
+  const texts = [...inbound.reverse().map((m) => m.body), ...extra].filter((b) => b && !String(b).startsWith("["));
+  return detectCustomerLanguage(texts);
+}
+
+/** The customer sent something WhatsApp does not pass on. Say so once an hour, never more. */
+async function maybeNoticeUnsupported(org, conversation) {
+  if (!conversation.botEnabled || levelOf(org.plan) < levelOf("growth")) return;
+  const recent = await WaMessage.exists({
+    conversationId: conversation._id, direction: "outbound", isNotice: true,
+    timestamp: { $gte: new Date(Date.now() - 60 * 60 * 1000) },
+  });
+  if (recent) return;
+  const lang = await customerLanguage(conversation);
+  await sendBotNotice(org, conversation, noticeText("unsupported", lang, org, conversation));
+}
+
+/**
+ * The bot could not produce a real first reply (AI error, no key, empty answer).
+ * If the customer has not yet had any real answer, acknowledge them rather than
+ * leave a "Hi" hanging; the thread is handed to a person right after.
+ */
+async function firstContactFallback(org, conversation, inboundText) {
+  const answered = await WaMessage.exists({
+    conversationId: conversation._id, direction: "outbound", sender: "bot", isGreeting: { $ne: true }, isNotice: { $ne: true },
+  });
+  if (answered) return false;
+  const lang = await customerLanguage(conversation, [inboundText]);
+  return sendBotNotice(org, conversation, noticeText("firstContact", lang, org, conversation));
 }
 
 // Sent once, as the very first outbound message on a brand-new conversation —
@@ -1789,6 +1881,7 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
   // path used to sail straight into a 401 from OpenAI and swallow it.
   if (!process.env.OPENAI_API_KEY) {
     console.error("[WhatsApp Bot] OPENAI_API_KEY is not set — handing the thread to a human");
+    await firstContactFallback(org, conversation, inboundText);
     await handOffToHuman(org, conversation, { notify: true, reason: "the AI assistant is not configured" });
     return;
   }
@@ -1810,7 +1903,7 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     // had a real back-and-forth with the bot yet, so it must still ask
     // something before pitching. Excludes the greeting itself so a returning
     // customer on turn 2+ is never mistaken for a brand-new one.
-    const isFirstBotReply = !recentMsgs.some((m) => m.direction === "outbound" && m.sender === "bot" && !m.isGreeting);
+    const isFirstBotReply = !recentMsgs.some((m) => m.direction === "outbound" && m.sender === "bot" && !m.isGreeting && !m.isNotice);
 
     const botName = agent?.name || "Artha Assistant";
     const sourceProject = await resolveSourceProject(org, agent, conversation.campaignRef, lead);
@@ -1873,6 +1966,12 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     const wantsFloorPlan = reply.includes("[SHARE_FLOORPLAN]") || !!plan?.send.includes("floorplan");
     reply = reply.replace(/\[SHARE_(PHOTOS|BROCHURE|VIDEO|FLOORPLAN)\]/g, "").trim();
 
+    // The model came back with nothing to say. For a first message that must not
+    // be silence; for a later one, saying nothing is the model's own call.
+    if (!reply && isFirstBotReply && !(plan?.send.length)) {
+      await firstContactFallback(org, conversation, inboundText);
+    }
+
     if (reply) {
       // The bot spends real money on every reply. Hold the credit before the
       // send, not after — an unfunded org must go quiet rather than run up a
@@ -1931,6 +2030,7 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     // An out-of-credits org is not a failure — it has already been told, and
     // the thread should stay with the bot for when it tops up.
     if (err instanceof credits.InsufficientCreditsError) return;
+    await firstContactFallback(org, conversation, inboundText).catch(() => {});
     await handOffToHuman(org, conversation, {
       notify: true,
       reason: "the AI hit an error, so this needs a reply from you",

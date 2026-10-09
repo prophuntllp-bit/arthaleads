@@ -16,6 +16,8 @@ const waMessageSchema = new mongoose.Schema({
   // has to be told apart from the bot's actual answers when deciding whether
   // this is still the customer's first real exchange with the assistant.
   isGreeting:      { type: Boolean, default: false },
+  // Automatic one-off notices from the bot (could not open your message, first-contact fallback). Marked so they are never counted as a real reply.
+  isNotice:        { type: Boolean, default: false },
   timestamp:       { type: Date, default: Date.now },
 
   // The buttons or list rows this message was actually sent with — WhatsApp
