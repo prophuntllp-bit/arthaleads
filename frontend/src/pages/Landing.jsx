@@ -16,6 +16,8 @@ import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
+import IntroVideo from "../components/IntroVideo";
+import { HeroTour } from "../components/ProductTour";
 
 // ── Smooth scroll helper ──────────────────────────────────────────────────────
 function scrollTo(id) {
@@ -65,170 +67,99 @@ const TICKER_LEADS = [
 ];
 
 function Hero({ isDark }) {
-  const mockupRef  = useRef(null);
-  const mousePos   = useRef({ x: 0, y: 0 });
-  const currentRot = useRef({ x: 0, y: 0 });
-  const rafRef     = useRef(null);
-
-  useEffect(() => {
-    const onMove = (e) => {
-      mousePos.current = {
-        x: (e.clientX / window.innerWidth  - 0.5) * 2,
-        y: (e.clientY / window.innerHeight - 0.5) * 2,
-      };
-    };
-    const tick = () => {
-      currentRot.current.x += (mousePos.current.y * -6 - currentRot.current.x) * 0.05;
-      currentRot.current.y += (mousePos.current.x *  9 - currentRot.current.y) * 0.05;
-      if (mockupRef.current) {
-        mockupRef.current.style.transform =
-          `perspective(1400px) rotateX(${currentRot.current.x}deg) rotateY(${currentRot.current.y}deg)`;
-      }
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    window.addEventListener("mousemove", onMove);
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
-
-  const heroBg     = isDark ? "#0d0d1a" : "linear-gradient(135deg, #fff7f0 0%, #fff 60%)";
+  const heroBg     = isDark ? "#0d0d1a" : "linear-gradient(180deg, #fff7f0 0%, #fffaf6 45%, #ffffff 100%)";
   const headingClr = isDark ? "#ffffff" : "#111827";
   const bodyClr    = isDark ? "rgba(255,255,255,0.6)" : "#6b7280";
   const softClr    = isDark ? "rgba(255,255,255,0.4)" : "#9ca3af";
   const btnBorder  = isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
   const btnText    = isDark ? "rgba(255,255,255,0.70)" : "#374151";
-  const gridOpacity = isDark ? "0.03" : "0.04";
-  const chipBg     = isDark ? "rgba(255,255,255,0.06)" : "#ffffff";
-  const chipBdr    = isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
+  const btnBg      = isDark ? "transparent" : "rgba(255,255,255,0.7)";
+  const gridOpacity = isDark ? "0.03" : "0.035";
+  const chipBg     = isDark ? "rgba(22,22,34,0.92)" : "rgba(255,255,255,0.96)";
+  const chipBdr    = isDark ? "rgba(255,255,255,0.10)" : "#ece5dc";
   const chipText   = isDark ? "rgba(255,255,255,0.85)" : "#111827";
   const tickerBg   = isDark ? "rgba(255,255,255,0.04)" : "#ffffff";
   const tickerBdr  = isDark ? "rgba(255,255,255,0.07)" : "#e5e7eb";
 
   return (
     <section id="hero" className="relative overflow-hidden" style={{ background: heroBg }}>
-      {/* Background glow blobs */}
+      {/* Background: one soft glow behind the product and a faint grid that fades out */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#ff6b00]/10 rounded-full blur-3xl" style={{ animation: "blobDrift1 8s ease-in-out infinite" }} />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-orange-900/10 rounded-full blur-3xl" style={{ animation: "blobDrift2 10s ease-in-out infinite" }} />
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#ff6b00]/5 rounded-full blur-3xl" style={{ animation: "blobDrift1 12s ease-in-out infinite reverse" }} />
+        <div className="absolute left-1/2 -translate-x-1/2 top-[38%] w-[900px] max-w-[120vw] h-[520px] rounded-full blur-3xl"
+          style={{ background: "radial-gradient(ellipse at center, rgba(255,107,0,0.16) 0%, transparent 70%)" }} />
         <div className="absolute inset-0"
-          style={{ opacity: gridOpacity, backgroundImage: "linear-gradient(rgba(255,107,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,1) 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
+          style={{ opacity: gridOpacity, backgroundImage: "linear-gradient(rgba(255,107,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,1) 1px,transparent 1px)", backgroundSize: "60px 60px",
+            maskImage: "linear-gradient(to bottom, black 0%, transparent 55%)", WebkitMaskImage: "linear-gradient(to bottom, black 0%, transparent 55%)" }} />
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12 lg:pt-40 lg:pb-16">
-        {/* Copy left, product right on desktop; stacked (copy first) below lg. */}
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-14 lg:gap-16 xl:gap-24 items-center">
-
-          {/* ── Copy column ── */}
-          <div className="text-center lg:text-left max-w-xl mx-auto lg:mx-0">
-            {/* In half the width the two sentences would break mid-phrase
-                ("Manage Every / Lead. Close More / Deals."), so the second one
-                gets its own line from lg up and the size is tuned to keep each
-                sentence to a single line. */}
-            <h1 className="text-4xl sm:text-5xl lg:text-[2.6rem] xl:text-[3.25rem] font-black leading-[1.08] mb-8" style={{ color: headingClr }}>
-              Manage Every Lead.{" "}
-              <span className="lg:block text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
-                Close More Deals.
-              </span>
-            </h1>
-            <p className="text-lg sm:text-xl leading-relaxed max-w-xl mx-auto lg:mx-0 mb-12 lg:mb-10" style={{ color: bodyClr }}>
-              Arthaleads brings every property enquiry - Facebook ads, Google campaigns, WhatsApp chats,
-              and walk-ins - into one powerful workspace. Built for real estate developers and channel partners.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-5 mb-16 lg:mb-14">
-              <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-                className="flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-1 text-base">
-                Start Free Trial <ArrowRight className="w-5 h-5" />
-              </a>
-              <button onClick={() => scrollTo("features")}
-                className="flex items-center gap-2 px-8 py-4 rounded-2xl transition-all duration-200 text-base font-medium border"
-                style={{ color: btnText, borderColor: btnBorder }}>
-                <PlayCircle className="w-5 h-5" /> See How It Works
-              </button>
-            </div>
-            <div className="grid grid-cols-3 gap-8 max-w-xl mx-auto lg:mx-0">
-              {[
-                { num: "10,000+", label: "Leads Managed" },
-                { num: "50+",     label: "Teams Onboarded" },
-                { num: "3×",      label: "Faster Follow-ups" },
-              ].map((s) => (
-                <div key={s.label} className="text-center lg:text-left">
-                  <div className="text-2xl sm:text-3xl font-black text-[#ff6b00]">{s.num}</div>
-                  <div className="text-xs sm:text-sm mt-0.5" style={{ color: softClr }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
+        {/* ── Copy, centred above the product ── */}
+        <div className="text-center max-w-3xl mx-auto">
+          <h1 className="text-4xl sm:text-5xl lg:text-[3.6rem] xl:text-[4rem] font-black leading-[1.05] tracking-[-0.02em] mb-6"
+            style={{ color: headingClr, textWrap: "balance" }}>
+            Manage Every Lead.{" "}
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
+              Close More Deals.
+            </span>
+          </h1>
+          <p className="text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-9" style={{ color: bodyClr, textWrap: "pretty" }}>
+            Arthaleads brings every property enquiry - Facebook ads, Google campaigns, WhatsApp chats
+            and walk-ins - into one workspace, and replies on WhatsApp while your team sleeps.
+            Built for real estate developers and channel partners.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 lg:mb-14">
+            <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
+              className="flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-0.5 text-base">
+              Start Free Trial <ArrowRight className="w-5 h-5" />
+            </a>
+            <button onClick={() => scrollTo("tour")}
+              className="flex items-center gap-2 px-8 py-4 rounded-2xl transition-all duration-200 text-base font-medium border hover:-translate-y-0.5"
+              style={{ color: btnText, borderColor: btnBorder, background: btnBg }}>
+              <PlayCircle className="w-5 h-5" /> Watch the 2-min film
+            </button>
           </div>
+        </div>
 
-          {/* ── Mockup area ── */}
-          {/* Bleeds past the right gutter on large screens so the laptop still
-              reads at scale in half the width. The section clips overflow, so
-              this never introduces a horizontal scrollbar. */}
-          <div className="relative w-full mx-auto lg:mx-0 lg:-mr-10 xl:-mr-24 2xl:-mr-32" style={{ maxWidth: 900 }}>
-
-          {/* Deep glow behind mockup */}
-          <div className="absolute pointer-events-none"
-            style={{ inset: "-20px 60px", background: "radial-gradient(ellipse at 50% 55%, rgba(255,107,0,0.22) 0%, transparent 68%)", filter: "blur(48px)" }} />
-
-          {/* ── Floating stat badges ── */}
-          {/* The laptop fills 14.8%–84.8% of the mockup image, so in a half-width
-              column there is only ~90px of gutter either side. Left at their old
-              offsets the badges sat squarely on the screen instead of floating at
-              its edges, so each is pushed outward far enough to straddle the
-              laptop's outer edge. The section clips overflow, so the extra reach
-              costs nothing. */}
-          <div className="absolute -left-4 sm:-left-5 lg:-left-8 top-10 z-20 hidden sm:flex items-center gap-2 px-3 py-2.5 rounded-2xl shadow-2xl"
-            style={{ background: chipBg, border: `1px solid ${chipBdr}`, backdropFilter: "blur(14px)", animation: "floatA 4s ease-in-out infinite" }}>
+        {/* ── The real product ── */}
+        <div className="relative max-w-6xl mx-auto">
+          {/* Two quiet live-activity badges straddling the frame edges */}
+          <div className="absolute -left-10 xl:-left-24 top-[30%] z-20 hidden lg:flex items-center gap-2 px-3 py-2.5 rounded-2xl shadow-xl"
+            style={{ background: chipBg, border: `1px solid ${chipBdr}`, backdropFilter: "blur(14px)", animation: "floatA 5s ease-in-out infinite" }}>
             <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
             <div>
               <div className="text-xs font-bold" style={{ color: chipText }}>+14 New Leads</div>
               <div className="text-[10px]" style={{ color: softClr }}>Today · Live</div>
             </div>
           </div>
-
-          <div className="absolute -right-4 sm:-right-5 lg:-right-8 top-14 z-20 hidden sm:flex items-center gap-2.5 px-3 py-2.5 rounded-2xl shadow-2xl"
-            style={{ background: chipBg, border: `1px solid ${chipBdr}`, backdropFilter: "blur(14px)", animation: "floatB 5s ease-in-out infinite" }}>
-            <span className="text-xl leading-none">📞</span>
+          <div className="absolute -right-6 xl:-right-14 top-[58%] z-20 hidden lg:flex items-center gap-2.5 px-3 py-2.5 rounded-2xl shadow-xl"
+            style={{ background: chipBg, border: `1px solid ${chipBdr}`, backdropFilter: "blur(14px)", animation: "floatB 6s ease-in-out infinite" }}>
+            <span className="w-7 h-7 rounded-full bg-[#25D366]/15 flex items-center justify-center shrink-0">
+              <WaLogo size={14} />
+            </span>
             <div>
-              <div className="text-xs font-bold" style={{ color: chipText }}>Follow-up</div>
-              <div className="text-[10px]" style={{ color: softClr }}>Scheduled · 2:30 PM</div>
+              <div className="text-xs font-bold" style={{ color: chipText }}>Site visit booked</div>
+              <div className="text-[10px]" style={{ color: softClr }}>by the AI agent · 1:04 AM</div>
             </div>
           </div>
 
-          <div className="absolute -right-4 lg:-right-6 bottom-16 z-20 hidden sm:flex items-center gap-2.5 px-3 py-2.5 rounded-2xl shadow-2xl"
-            style={{ background: chipBg, border: `1px solid ${chipBdr}`, backdropFilter: "blur(14px)", animation: "floatC 4.5s ease-in-out infinite" }}>
-            <span className="text-xl leading-none">🏠</span>
-            <div>
-              <div className="text-xs font-bold" style={{ color: chipText }}>Site Visit Booked!</div>
-              <div className="text-[10px]" style={{ color: softClr }}>Raj Patil · Pune</div>
-            </div>
-          </div>
-
-          <div className="absolute -left-2 lg:-left-5 bottom-20 z-30 hidden lg:flex items-center gap-2 px-3 py-2.5 rounded-xl shadow-2xl"
-            style={{ background: isDark ? "rgba(20,30,20,0.92)" : "#ffffff", border: "1.5px solid #22c55e", backdropFilter: "blur(12px)", animation: "floatA 6s ease-in-out infinite 1s" }}>
-            <span className="w-2.5 h-2.5 rounded-full bg-green-400 shrink-0 animate-pulse" />
-            <span className="text-xs font-bold" style={{ color: isDark ? "#86efac" : "#15803d" }}>Deal Closed ✓</span>
-          </div>
-
-          {/* ── Mockup image with mouse parallax ── */}
-          <div ref={mockupRef} style={{ willChange: "transform", transformStyle: "preserve-3d", position: "relative", zIndex: 1 }}>
-            <link rel="preload" as="image" href="/hero-mockup.png" />
-            <img
-              src="/hero-mockup.png"
-              alt="Arthaleads CRM Dashboard"
-              className="w-full"
-              style={{ display: "block", filter: "drop-shadow(0 40px 80px rgba(0,0,0,0.22))", mixBlendMode: isDark ? "normal" : "multiply" }}
-            />
-          </div>
-
-          </div>
+          <HeroTour isDark={isDark} />
         </div>
 
+        <div className="flex items-center justify-center gap-8 sm:gap-12 mt-12 lg:mt-14">
+            {[
+              { num: "10,000+", label: "Leads Managed" },
+              { num: "50+",     label: "Teams Onboarded" },
+              { num: "3×",      label: "Faster Follow-ups" },
+            ].map((s) => (
+              <div key={s.label} className="text-center">
+                <div className="text-2xl sm:text-3xl font-black text-[#ff6b00] tabular-nums">{s.num}</div>
+                <div className="text-xs sm:text-sm mt-0.5" style={{ color: softClr }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
         {/* ── Live lead ticker ── */}
-        <div className="mt-14 lg:mt-20 relative overflow-hidden"
+        <div className="mt-12 lg:mt-16 relative overflow-hidden"
           style={{ maskImage: "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)", WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)" }}>
           <div style={{ display: "flex", gap: 10, animation: "tickerScroll 30s linear infinite", width: "max-content" }}>
             {[...TICKER_LEADS, ...TICKER_LEADS].map(({ name, src, srcClr, action, city }, i) => (
@@ -254,25 +185,16 @@ function Hero({ isDark }) {
             from { transform: translateX(0); }
             to   { transform: translateX(-50%); }
           }
-          @keyframes blobDrift1 {
-            0%,100% { transform: translate(0,0) scale(1); }
-            50%     { transform: translate(30px,-20px) scale(1.1); }
-          }
-          @keyframes blobDrift2 {
-            0%,100% { transform: translate(0,0) scale(1); }
-            50%     { transform: translate(-25px,15px) scale(0.95); }
-          }
           @keyframes floatA {
             0%,100% { transform: translateY(0px); }
             50%     { transform: translateY(-10px); }
           }
           @keyframes floatB {
             0%,100% { transform: translateY(0px); }
-            50%     { transform: translateY(-14px); }
+            50%     { transform: translateY(-12px); }
           }
-          @keyframes floatC {
-            0%,100% { transform: translateY(0px); }
-            50%     { transform: translateY(-8px); }
+          @media (prefers-reduced-motion: reduce) {
+            #hero * { animation: none !important; }
           }
         `}</style>
       </div>
@@ -396,7 +318,7 @@ function Features({ isDark }) {
         <div className="mt-16 lg:mt-20 pt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
           style={{ borderTop: `1px solid ${rule}` }}>
           <p className="text-[15px]" style={{ color: body }}>
-            {FEATURES.length} features in all — attendance, invoicing, analytics, automation and more.
+            {FEATURES.length} features in all, including WhatsApp consent and credits, tasks, invoicing and the Meta Conversions API.
           </p>
           <Link to="/features"
             className="inline-flex items-center gap-2 font-semibold text-[15px] text-[#ff6b00] hover:gap-3 transition-all duration-200 whitespace-nowrap">
@@ -625,8 +547,8 @@ function About({ isDark }) {
 
   const stats = [
     { num: 50,    suffix: "+",  label: "Real Estate Teams",    sub: "actively using Arthaleads",    color: "#ff6b00" },
-    { num: 10000, suffix: "+",  label: "Leads Managed Monthly",sub: "across all organisations",     color: "#22c55e" },
-    { num: 98,    suffix: "%",  label: "Uptime Guaranteed",    sub: "enterprise-grade reliability", color: "#3b82f6" },
+    { num: 10000, suffix: "+",  label: "Leads Managed",sub: "across all organisations",     color: "#22c55e" },
+    { num: 24,    suffix: "/7", label: "WhatsApp AI Replies",  sub: "day and night, in your buyer's language", color: "#3b82f6" },
     { num: 3,     suffix: "×",  label: "Faster Follow-ups",    sub: "vs. manual spreadsheet teams", color: "#a855f7" },
   ];
 
@@ -1721,8 +1643,8 @@ export default function Landing() {
   const { isDark } = usePublicTheme();
 
   useSEO({
-    title:       "Arthaleads – Lead Management CRM for Real Estate | India's #1 Property CRM",
-    description: "Arthaleads is the best CRM for real estate leads in India. Capture, track & convert property leads from Facebook, Google, WhatsApp & website forms. Built for developers, brokers & channel partners.",
+    title:       "Arthaleads – Lead Management CRM for Real Estate in India",
+    description: "Arthaleads is a CRM for real estate sales teams in India. Capture, track and convert property leads from Facebook, Google, WhatsApp and website forms, with an AI WhatsApp agent that replies day and night. Built for developers, brokers and channel partners.",
     canonical:   "https://www.arthaleads.com",
   });
 
@@ -1755,6 +1677,7 @@ export default function Landing() {
       <Hero isDark={isDark} />
       <SourcesStrip isDark={isDark} />
       <Features isDark={isDark} />
+      <IntroVideo isDark={isDark} />
       <HowItWorks isDark={isDark} />
       <About isDark={isDark} />
       <Testimonials isDark={isDark} />

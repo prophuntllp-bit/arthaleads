@@ -73,6 +73,14 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-09 IST, marketing site pass (hero tour, video, features, SEO)
+
+- **Hero product tour** (`components/ProductTour.jsx`, used by `Landing.jsx`): six tabs, each plays a silent 10 s clip from `public/tour/<id>.mp4|.webm` (made by the video session) and moves on when it ends; clicking a tab stops auto-advance and loops that clip. Poster `<id>.webp` shows underneath, clips pause off screen, Data Saver / reduced motion get stills. The old laptop mockup is gone. Intro film (EN/HI, 13 MB each, `public/video/`) sits lower on the home page (`IntroVideo.jsx`), not on Features.
+- **Features page** (`Features.jsx`, `data/features.js`): 32 features in 7 workflow groups; covers the 15 capabilities the launch audit listed as missing. Copy checked against the code.
+- **Indexing**: `frontend/scripts/seo-pages.mjs` runs after `vite build` (`npm run build`) and writes one HTML file per public page with its own title, description, canonical and social tags (read from each page's `useSEO`). `index.html` = home page tags; untouched copy kept as `app.html`, which `vercel.json` rewrites everything else to (CRM host, unknown URLs). `cleanUrls` + no trailing slash; `app.arthaleads.com` sends `X-Robots-Tag: noindex`; 404 page is noindex. Static `public/sitemap.xml` removed, the API's dynamic sitemap (now all 20 public pages + posts) is served at `/sitemap.xml`. `og-image.png` added (end card of the film). The splash screen no longer holds the marketing site for 1.8 s.
+- **Home copy**: removed "India's #1" / "best" and the "98% uptime guaranteed" tile (now "24/7 WhatsApp AI replies"); stats match the bots (50+ teams, 10,000+ leads). Nav switches to the hamburger below 1280 px so the two logos and menu never wrap.
+- Watch: Vercel must run `npm run build` (default). Google Search Console: resubmit sitemap, then "Validate fix" on the duplicate-canonical issue.
+
 ### Claude Code, 2026-10-09 IST, blog redesign + "by Vistrow Technologies" logo
 
 - Blog index (`PublicBlog.jsx`): title + search header, toolbar (count, active filters, topic dropdown), large featured card for the newest post, three-column card grid, pagination, closing CTA. Article page (`PublicBlogPost.jsx`): breadcrumb, category pill, author + share (LinkedIn, WhatsApp, copy link), summary callout, hero image, sticky sidebar (search, topic, numbered "In this article" with active section, suggested reading), About box, suggested articles. New shared `components/BlogCard.jsx`. Page size is now 10 (featured + 9 on page 1). Structure follows vistrow.com/blog; the chip "browse" bar is deliberately not copied.

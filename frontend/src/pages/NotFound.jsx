@@ -1,10 +1,15 @@
-﻿import { useEffect } from "react";
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Compass } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useSEO } from "../utils/useSEO";
 
 export default function NotFound() {
-  useEffect(() => { document.title = "404 - Page Not Found · Arthaleads"; }, []);
+  // The host serves this page with a 200 for any unknown path (single-page
+  // app), so tell search engines not to index it - otherwise every mistyped
+  // URL becomes a "soft 404" duplicate of the homepage shell.
+  useSEO({ title: "404 - Page Not Found · Arthaleads", robots: "noindex, follow" });
+  useEffect(() => { document.querySelector('link[rel="canonical"]')?.remove(); }, []);
   const { user } = useAuth();
   const navigate = useNavigate();
 

@@ -102,8 +102,24 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 //  2. At least 1.8s has passed so the animation is actually visible
 const reactReady = new Promise((resolve) => {
   requestAnimationFrame(() => requestAnimationFrame(resolve));
+  // Hidden tabs and some crawlers never run animation frames; don't let the
+  // splash cover the marketing site forever because of that.
+  if (window.location.hostname !== "app.arthaleads.com") setTimeout(resolve, 400);
 });
-const minDisplay = new Promise((resolve) => setTimeout(resolve, 1800));
+// The marketing site skips the 1.8s minimum: visitors (and Google's page-speed
+// measurement) should see the page the moment it has content. It waits only
+// until the routed page has painted a heading or nav, capped at 1.5s.
+const isCrmHost = window.location.hostname === "app.arthaleads.com";
+const minDisplay = isCrmHost
+  ? new Promise((resolve) => setTimeout(resolve, 1800))
+  : new Promise((resolve) => {
+      const started = Date.now();
+      const check = () => {
+        if (document.querySelector("#root h1, #root nav") || Date.now() - started > 1500) resolve();
+        else setTimeout(check, 40);
+      };
+      check();
+    });
 
 Promise.all([reactReady, minDisplay]).then(() => {
   const splash = document.getElementById("app-splash");

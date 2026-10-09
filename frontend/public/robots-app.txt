@@ -1,2 +1,6 @@
 User-agent: *
-Disallow: /
+Allow: /
+
+# The CRM host answers every page with an X-Robots-Tag: noindex header.
+# Crawling is allowed so search engines can see that header and drop any
+# app.arthaleads.com URL from results; blocking crawling would hide it.

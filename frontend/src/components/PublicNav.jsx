@@ -192,7 +192,7 @@ function NavInner({ onScrollTo }) {
   function closeAll() { setResOpen(false); setCompOpen(false); }
 
   function NavLink({ id, label, href }) {
-    const style = { fontSize: 14, fontWeight: 500, color: textMuted, transition: "color 0.2s" };
+    const style = { fontSize: 14, fontWeight: 500, color: textMuted, transition: "color 0.2s", whiteSpace: "nowrap" };
     const hov   = { color: textActive };
     const shared = {
       style,
@@ -252,7 +252,7 @@ function NavInner({ onScrollTo }) {
           </div>
 
           {/* Desktop nav links */}
-          <div className="hidden lg:flex items-center gap-5 xl:gap-6">
+          <div className="hidden xl:flex items-center gap-6">
             <NavLink id="hero"        label="Home" />
             <NavLink href="/features" label="Features" />
             <NavLink href="/about-us" label="About Us" />
@@ -300,7 +300,7 @@ function NavInner({ onScrollTo }) {
           </div>
 
           {/* Desktop CTAs */}
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="hidden xl:flex items-center gap-3">
             <button
               onClick={toggle}
               className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors hover:bg-black/5"
@@ -310,7 +310,7 @@ function NavInner({ onScrollTo }) {
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
             <a href={CRM_LOGIN_URL} {...CRM_LINK_PROPS}
-              className="text-sm font-medium transition-colors px-4 py-2"
+              className="text-sm font-medium transition-colors px-4 py-2 whitespace-nowrap"
               style={{ color: textMuted }}
               onMouseEnter={e => (e.currentTarget.style.color = textActive)}
               onMouseLeave={e => (e.currentTarget.style.color = textMuted)}
@@ -318,14 +318,14 @@ function NavInner({ onScrollTo }) {
               Login
             </a>
             <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-              className="bg-[#ff6b00] hover:bg-[#e05f00] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-0.5"
+              className="bg-[#ff6b00] hover:bg-[#e05f00] text-white text-sm font-semibold px-5 py-2.5 rounded-xl whitespace-nowrap transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-0.5"
             >
               Get Started Free
             </a>
           </div>
 
           {/* Mobile: theme + hamburger */}
-          <div className="flex items-center gap-2 lg:hidden">
+          <div className="flex items-center gap-2 xl:hidden">
             <button onClick={toggle} className="w-8 h-8 flex items-center justify-center rounded-lg" style={{ color: textMuted }} aria-label="Toggle theme">
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
@@ -338,7 +338,7 @@ function NavInner({ onScrollTo }) {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="lg:hidden backdrop-blur-xl" style={{ background: mobileBg, borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb"}` }}>
+        <div className="xl:hidden backdrop-blur-xl" style={{ background: mobileBg, borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb"}` }}>
           <div className="px-4 py-4 space-y-1">
 
             {/* Primary links */}
