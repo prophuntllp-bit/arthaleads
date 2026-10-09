@@ -252,11 +252,7 @@ export default function VistrowOutboundSection() {
   return (
     <section className="card p-6 space-y-8" data-testid="vistrow-outbound">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="max-w-2xl">
-          <p className="stitch-kicker mb-1">Vistrow Voice</p>
-          <h2 className="text-lg font-bold text-app">Let Vistrow's AI agents call your new leads</h2>
-          <p className="text-sm text-app-soft mt-1">Four quick steps. Nothing is called until you finish step 4, and only brand-new leads are ever included - never the leads you already have.</p>
-        </div>
+        <p className="max-w-2xl text-sm text-app-soft">Four quick steps. Nothing is called until you finish step 4, and only brand-new leads are ever included - never the leads you already have.</p>
         <span className="text-xs font-semibold px-2.5 py-1 rounded-full" data-testid="master-state" style={st.enabled ? { background: "rgba(34,197,94,0.12)", color: "#15803d" } : { background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}>
           {st.enabled ? `Live since ${when(st.enabledAt)}` : "Not switched on"}
         </span>
@@ -278,8 +274,8 @@ export default function VistrowOutboundSection() {
             <input className="input" type="password" autoComplete="new-password" value={conn.secret} onChange={(e) => setConn({ ...conn, secret: e.target.value })}
               placeholder={st.config.hasSecret ? "Saved - type a new one only to replace it" : "Paste the key from Vistrow"} /></div>
         </div>
-        <div className="md:pl-10 space-y-2">
-          <button type="button" className="text-xs font-semibold text-app-soft hover:text-app" onClick={() => setShowHelp((v) => !v)}>{showHelp ? "Hide" : "Where do I find these?"}</button>
+        <div className="md:pl-10 space-y-3">
+          <div><button type="button" className="text-xs font-semibold underline text-app-soft hover:text-app" onClick={() => setShowHelp((v) => !v)}>{showHelp ? "Hide help" : "Where do I find these?"}</button></div>
           {showHelp && <p className="text-xs text-app-soft rounded-xl px-3 py-2.5" style={{ background: "var(--app-surface-low)" }}>In Vistrow Voice, open your account's lead-import (ArthaLeads) settings. It shows the account number and a connection key to copy. Ask your Vistrow contact if you cannot see it. Never share the key in chat or email.</p>}
           {configured && (
             <p className="text-xs flex items-center gap-1.5" data-testid="connection-check" style={{ color: agentList.state === "ok" ? "#15803d" : agentList.state === "error" ? "#b45309" : "var(--app-text-soft)" }}>
@@ -288,7 +284,7 @@ export default function VistrowOutboundSection() {
               {agentList.state === "error" && <><AlertTriangle className="w-3.5 h-3.5" /> {agentList.problem?.message}</>}
             </p>
           )}
-          <button type="button" className="btn-primary rounded-xl" disabled={busy === "conn" || !conn.accountId || (!conn.secret && !st.config.hasSecret)} onClick={saveConn}>{busy === "conn" ? <Loader2 className="w-4 h-4 animate-spin" /> : configured ? "Save changes" : "Connect"}</button>
+          <div><button type="button" className="btn-primary rounded-xl" disabled={busy === "conn" || !conn.accountId || (!conn.secret && !st.config.hasSecret)} onClick={saveConn}>{busy === "conn" ? <Loader2 className="w-4 h-4 animate-spin" /> : configured ? "Save changes" : "Connect"}</button></div>
         </div>
       </div>
 

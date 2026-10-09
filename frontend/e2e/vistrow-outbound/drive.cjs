@@ -39,6 +39,13 @@ const assert = require("assert");
     await page.screenshot({ path: path.join(here, "01-initial.png"), fullPage: true });
   });
 
+  await step("dedicated page: own title, a way back to Integrations, step 1 help and Connect are on separate lines", async () => {
+    await page.getByRole("heading", { name: "Auto-call new leads" }).waitFor();
+    const help = await root.getByText("Where do I find these?").boundingBox();
+    const connect = await root.getByRole("button", { name: "Connect", exact: true }).boundingBox();
+    assert.ok(connect.y >= help.y + help.height - 1, "Connect sits below the help link, not beside it");
+  });
+
   await step("step 1: only an account number and a key are asked for; saving hides the key and applies the default address", async () => {
     await root.locator('label:has-text("Vistrow account number") + input').fill("acct_123");
     await root.getByPlaceholder("Paste the key from Vistrow").fill("a-very-secret-key-0123456789");
@@ -89,7 +96,7 @@ const assert = require("assert");
     assert.equal(await opts.count(), 1);
     await page.getByPlaceholder("Search by agent or knowledge base").fill("zzz");
     await page.getByText(/No agent matches/).waitFor();
-    await page.getByRole("heading", { name: /Let Vistrow/ }).click(); // click outside closes it
+    await root.getByText(/Four quick steps/).click(); // click outside closes it
     assert.equal(await page.getByRole("listbox").count(), 0);
   });
 
@@ -268,6 +275,11 @@ const assert = require("assert");
     await root.getByRole("button", { name: "Save changes" }).click();
     await page.getByText(/Sending was switched off because the connection changed/).waitFor();
     assert.equal((await fake()).enabled, false);
+  });
+
+  await step("the back arrow returns to Integrations", async () => {
+    await page.getByRole("button", { name: "Back to Integrations" }).click();
+    await page.getByTestId("integrations-list").waitFor();
   });
 
   await page.screenshot({ path: path.join(here, "03-final.png"), fullPage: true });

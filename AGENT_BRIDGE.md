@@ -73,6 +73,10 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-09 IST, Vistrow auto-call setup moved to its own page (branch claude/vistrow-calling-page)
+
+- The "auto-call new leads" setup is now `/integrations/vistrow-calling` (new `pages/VistrowCalling.jsx`, route in `App.jsx`), opened from a button on the Vistrow Voice card in Integrations (admin only). Removed the inline block from `pages/Automation.jsx`; fixed step 1 layout. Backend unchanged. Browser check updated (`frontend/e2e/vistrow-outbound`).
+
 ### Claude Code, 2026-10-09 IST, Vistrow outbound lead.created (PR #3, draft, not merged, off by default)
 
 - Opt-in outbound new-lead delivery to Vistrow Voice with per-source call switches, route rows and a guided setup in Automation; agents are picked by name/knowledge base from Vistrow's `GET /leads/inbound/{account}/agents` and the raw agent id never reaches the browser. Docs: `docs/vistrow-outbound-lead-created.md`. Tests: `cd backend && npm run test:vistrow`; browser check in `frontend/e2e/vistrow-outbound`. Not verified: real MongoDB for the new store, live Vistrow calls.
