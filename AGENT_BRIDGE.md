@@ -67,6 +67,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 
 
+- [Claude Code] 2026-10-09 IST: [CLAIM] read-only project/campaign picker API for Vistrow (GET /webhook/vistrow/picker-options, token-scoped). Files: backend/routes/vistrowPickerRoutes.js (new), backend/server.js (one mount line), backend/services/leadService.js (extract campaign-options by orgId), backend/tests/vistrowPicker.test.js, docs/vistrow-outbound-lead-created.md. No overlap with the marketing-site pass. Note: issue #2 is an old closed PR thread with only Vercel bot comments; this file is the live bridge.
+
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
