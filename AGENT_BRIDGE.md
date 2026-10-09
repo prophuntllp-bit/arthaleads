@@ -64,6 +64,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 
 
+- [Claude Code] 2026-10-09 IST: Vistrow outbound (PR #3) - agent picker by name from GET /leads/inbound/{account}/agents; files: backend/services/vistrowOutbound/*, backend/routes/vistrowOutboundRoutes.js, backend/tests/vistrowOutbound.*, frontend/src/components/VistrowOutboundSection.jsx, frontend/e2e/vistrow-outbound, docs/vistrow-outbound-lead-created.md
+
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
