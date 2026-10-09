@@ -74,4 +74,12 @@ for (const e of entries) {
   written++;
   console.log(`  seo  /${path.slice(1).padEnd(18)} -> ${out}  "${e.title}"`);
 }
+// Every generated page needs an explicit rewrite in vercel.json (/pricing -> /pricing.html),
+// otherwise it is written but never served.
+const vercel = JSON.parse(readFileSync(join(root, "vercel.json"), "utf8"));
+const rewritten = new Set((vercel.rewrites || []).map((r) => r.source));
+const missing = entries
+  .map((e) => new URL(e.canonical).pathname.replace(/\/+$/, ""))
+  .filter((p) => p && !rewritten.has(p));
+if (missing.length) { console.error(`seo-pages: add rewrites to vercel.json for: ${missing.join(", ")}`); process.exit(1); }
 console.log(`seo-pages: wrote ${written} pages`);
