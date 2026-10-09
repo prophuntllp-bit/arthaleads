@@ -73,6 +73,12 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-09 IST, Features page rebuilt (film autoplay, first 5 blog posts)
+
+- `Features.jsx`: sticky 7-step workflow progress bar (follows scroll, click to jump), each workflow has its real product screen (clip plays only while on screen, from `/tour/*`) beside its heading, alternating sides, with the feature cards below (grid fills every row, cards fade in, hover lifts). Last group ("Control") is centred with no screen. Respects reduced motion and Data Saver. Sections use `overflow-x-clip` so the slide-in does not cause sideways scroll on phones.
+- `IntroVideo.jsx` (home film): autoplays muted when more than half visible, pauses when it leaves, "Turn on sound" button; Play button only when autoplay is blocked / reduced motion / Data Saver.
+- Sanity: 5 draft posts imported (ids `drafts.blog-<slug>`, scheduled 10-14 Oct 2026 09:30 IST). They go live on their dates once published in the Studio.
+
 ### Claude Code, 2026-10-09 IST, blog link previews + hero cleanup
 
 - `frontend/api/blog-post.js` (Vercel function, `vercel.json` routes `/blog/:slug` to it): fetches the post from the API and writes its own title, description, canonical and share image into the app shell, so WhatsApp/LinkedIn previews and Google's first pass see the real tags. Edge-cached 5 min; unknown slug returns 404 with the plain shell; API outage falls back to the plain shell. `GET /api/blog/posts/:slug?nocount=1` no longer adds a view. If blog posts ever 404, revert the `/blog/:slug` rewrite in `vercel.json` first.
