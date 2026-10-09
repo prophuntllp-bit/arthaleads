@@ -32,20 +32,21 @@ Optional, only when present: `email`, `whatsapp`, `lead_source`, `source_detail`
 ## Agent list (picker)
 `GET {web address}/leads/inbound/{account_id}/agents`, same key in `X-Vistrow-Webhook-Token` or `Authorization: Bearer` (never the URL). Expected: `{agents:[{id,name,knowledge_base}]}`, active agents with a knowledge base only. ArthaLeads shows "name - knowledge base" in a searchable dropdown; the `id` stays on the server (the browser only holds an opaque ref, mapped back to the id when a choice is saved) and is stored/sent as `agent_id`. 401/403, 404, 5xx/timeouts, an empty list and an unreadable reply each get a plain-language message in the setup screen. The list is fetched after the connection is saved and on refresh.
 
-## Picker data for Vistrow (projects and campaigns)
-Vistrow's Integrations screen can offer pickers instead of free text. Server-to-server, read-only:
+## Project picker data for Vistrow
+Vistrow's Integrations screen offers a searchable project picker instead of free text. Server to server, read-only, projects only (no campaign/ad list until a separate contract is agreed):
 
-    GET {ArthaLeads API}/webhook/vistrow/picker-options
-    Authorization: Bearer <Vistrow Voice connection token>     (or X-ArthaLeads-Token)
+    GET {ArthaLeads API}/webhook/lead/projects
+    X-ArthaLeads-Connection-Token: <the organisation's Vistrow Voice connection token>
 
-The token is the existing "Vistrow Voice" connection token from Integrations (the one used for `/webhook/lead`). It identifies the organisation, so no org id is passed. It is refused in the URL (`400 token_in_url`), only a Vistrow Voice connection works (Website/Custom tokens get `401`), Enterprise only (`403 plan`), 30 requests/min, `Cache-Control: no-store`.
+    200 { "ok": true, "projects": [ { "id": "<project id>", "name": "SP Khopoli" } ] }
+    401 { "ok": false, "reason": "missing_token" | "invalid_token" }
+    403 { "ok": false, "reason": "plan" }
+    400 { "ok": false, "reason": "token_in_url" }
+    429 { "ok": false, "reason": "rate_limited" }
 
-    200 { "ok": true, "org_id": "...",
-          "projects":  [ { "id": "<project id>", "name": "SP Khopoli", "location": "Khopoli" } ],   // active only, A-Z, max 200
-          "campaigns": [ { "source": "facebook_campaign"|"whatsapp_ad"|"google_campaign", "id": "...", "name": "...", "leads": 9 } ] }
-    401 { "ok": false, "reason": "missing_token" | "invalid_token" }   403 { "reason": "plan" }   429 { "reason": "rate_limited" }
+The token is the existing "Vistrow Voice" connection token (the one used for `POST /webhook/lead`); it identifies the organisation, so no org id is passed. Header only: a token in the URL is refused, and Website/Custom/Facebook/Google tokens and inactive connections get `401`. Enterprise plan only, 30 requests/min, `no-store`. Returns active projects only (`isArchived != true`, the CRM's own source), A-Z, at most 200, with only `id` and `name`. Nothing is written and no auto-call switch or integration setting is read or changed.
 
-Show `name` (plus `location`) in the picker; keep `id` on the Vistrow server only, since it is what matches a lead: `lead.created` carries `project` (name) and `custom_fields.project_id`, and `campaign_id`/`ad_id`. Campaigns come only from leads that really arrived (no invented list); Facebook leads often store the form/source label rather than the campaign name, so a name may read "Facebook campaign …7766". Nothing is written and no call can result.
+Show `name` in the picker; keep `id` on the Vistrow server. A lead's project reaches Vistrow as `project` (name) and `custom_fields.project_id` (this id) in `lead.created`.
 
 ## Response handling
 2xx `{ok:true}` (also `deduped`) = delivered. `queued:false` => delivered but warning "call not queued". 2xx `{ok:false,reason}` and 4xx (except 408/429) = permanent, shown to the admin, never marked delivered. Transport errors, 408, 429 (Retry-After honoured), 5xx = retry.

@@ -76,9 +76,9 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 - The "auto-call new leads" setup is now `/integrations/vistrow-calling` (new `pages/VistrowCalling.jsx`, route in `App.jsx`), opened from a button on the Vistrow Voice card in Integrations (admin only). Removed the inline block from `pages/Automation.jsx`; fixed step 1 layout. Backend unchanged. Browser check updated (`frontend/e2e/vistrow-outbound`).
 
-### Claude Code, 2026-10-09 IST, Vistrow picker-options API (branch claude/vistrow-picker-options)
+### Claude Code, 2026-10-09 IST, Vistrow project picker API (branch claude/vistrow-picker-options)
 
-- Added read-only `GET /webhook/vistrow/picker-options` (Vistrow Voice connection token in a header, tenant from the token, Enterprise only): active projects and real campaigns/ads for Vistrow's pickers. New `routes/vistrowPickerRoutes.js`, one mount line in `server.js`; contract in `docs/vistrow-outbound-lead-created.md`; tests `backend/tests/vistrowPicker.test.js` (in `npm run test:vistrow`). Not verified against a real MongoDB or live Vistrow.
+- Added read-only `GET /webhook/lead/projects` (header `X-ArthaLeads-Connection-Token` = the org's Vistrow Voice connection token, tenant from the token, Enterprise only): active projects `{id,name}` only for Vistrow's picker (contract agreed with Vistrow, their PR #11). Replaces the earlier `/webhook/vistrow/picker-options` draft; no campaign/ad list. New `routes/vistrowPickerRoutes.js`, one mount line in `server.js`; contract in `docs/vistrow-outbound-lead-created.md`; tests `backend/tests/vistrowPicker.test.js` (in `npm run test:vistrow`). Not verified against a real MongoDB or live Vistrow.
 
 ### Claude Code, 2026-10-09 IST, Vistrow outbound lead.created (PR #3, draft, not merged, off by default)
 
