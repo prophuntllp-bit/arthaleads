@@ -1,4 +1,4 @@
-﻿// pages/Landing.jsx - Arthaleads public marketing homepage
+// pages/Landing.jsx - Arthaleads public marketing homepage
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
@@ -295,9 +295,9 @@ function SourcesStrip({ isDark }) {
     { name: "WhatsApp",      color: "#25D366", type: "Auto",   Logo: WaLogo },
     { name: "Google Ads",    color: "#4285F4", type: "Auto",   Logo: GoogleLogo },
     { name: "Walk-ins",      color: "#ff6b00", type: "Manual", Logo: ({ size }) => <Building2 style={{ width: size, height: size, color: "#ff6b00" }} /> },
-    { name: "99acres",       color: "#f97316", type: "Auto",   Logo: AcresLogo },
-    { name: "Housing.com",   color: "#2563eb", type: "Auto",   Logo: HousingLogo },
-    { name: "MagicBricks",   color: "#dc2626", type: "Auto",   Logo: MagicBricksLogo },
+    { name: "99acres",       color: "#f97316", type: "Manual",   Logo: AcresLogo },
+    { name: "Housing.com",   color: "#2563eb", type: "Manual",   Logo: HousingLogo },
+    { name: "MagicBricks",   color: "#dc2626", type: "Manual",   Logo: MagicBricksLogo },
     { name: "Email & Forms", color: "#6366f1", type: "Manual", Logo: ({ size }) => <Mail style={{ width: size, height: size, color: "#6366f1" }} /> },
   ];
 
@@ -1385,7 +1385,7 @@ function Contact({ isDark }) {
 
   const info = [
     { icon: Mail,   label: "Email Us",  val: "contact@arthaleads.com",   href: "mailto:contact@arthaleads.com" },
-    { icon: Phone,  label: "Call Us",   val: "+91 80801 97945",          href: "tel:+918080197945" },
+    { icon: Phone,  label: "Call Us",   val: "+91 90670 97779",          href: "tel:+919067097779" },
     { icon: MapPin, label: "Based In",  val: "Pune, Maharashtra, India", href: null },
   ];
 

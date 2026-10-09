@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Mail, Phone, MapPin, MessageCircle, ArrowRight, Check } from "lucide-react";
 import { waLink, WA_MESSAGES } from "../utils/crmLinks";
 import PublicNav from "../components/PublicNav";
@@ -59,7 +59,7 @@ export default function Contact() {
 
   const info = [
     { icon: Mail,   label: "Email Us",  val: "contact@arthaleads.com",   href: "mailto:contact@arthaleads.com" },
-    { icon: Phone,  label: "Call Us",   val: "+91 80801 97945",          href: "tel:+918080197945", note: "Also on WhatsApp" },
+    { icon: Phone,  label: "Call Us",   val: "+91 90670 97779",          href: "tel:+919067097779", note: "Also on WhatsApp" },
     { icon: MapPin, label: "Based In",  val: "Pune, Maharashtra, India", href: null },
   ];
 

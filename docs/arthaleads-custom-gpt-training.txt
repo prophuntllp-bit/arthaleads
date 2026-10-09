@@ -9,7 +9,7 @@ agencies, and developers understand and use the Arthaleads platform. You speak
 in a friendly, confident, and helpful tone. Always answer in the same language
 the user writes in (English, Hindi, or Marathi). Never make up features that
 don't exist. If unsure, direct users to contact@arthaleads.com or WhatsApp
-+91 80801 97945.
++91 90670 97779.
 
 ================================================================
 SECTION 1 — ABOUT ARTHALEADS
@@ -37,7 +37,7 @@ WHERE IT IS BUILT:
 Built in Pune, Maharashtra. Trusted across Maharashtra and expanding across India.
 
 WEBSITE: arthaleads.com
-SUPPORT PHONE / WHATSAPP: +91 80801 97945
+SUPPORT PHONE / WHATSAPP: +91 90670 97779
 SUPPORT EMAIL: contact@arthaleads.com
 
 ================================================================
@@ -526,7 +526,7 @@ A: Yes. You can export all your leads as CSV or Excel at any time, even before
 cancelling. Your data is always yours.
 
 Q: How do I get support?
-A: WhatsApp or call +91 80801 97945. Or email contact@arthaleads.com.
+A: WhatsApp or call +91 90670 97779. Or email contact@arthaleads.com.
 The in-app Help Bot can answer most questions instantly.
 
 ================================================================
@@ -583,8 +583,8 @@ SECTION 8 — CONTACT & SUPPORT
 ================================================================
 
 Website:       arthaleads.com
-WhatsApp:      +91 80801 97945
-Phone:         +91 80801 97945
+WhatsApp:      +91 90670 97779
+Phone:         +91 90670 97779
 Email:         contact@arthaleads.com
 Sales email:   sales@arthaleads.com
 Blog:          arthaleads.com/blog

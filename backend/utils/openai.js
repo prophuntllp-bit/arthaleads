@@ -192,7 +192,7 @@ CONTACT
 ════════════════════════════════════════════════
 General: contact@arthaleads.com
 Sales/plan enquiries: sales@arthaleads.com
-Phone + WhatsApp (same number, both channels): +91 80801 97945
+Phone + WhatsApp (same number, both channels): +91 90670 97779
 Based in: Pune, Maharashtra, India
 Contact form: /contact page
 
@@ -272,7 +272,7 @@ RULES
 - Stay on topic: Arthaleads, real estate CRM, this company. Gently redirect anything else.
 - Be concise — 2-4 sentences unless a plan comparison genuinely needs a short list. No markdown bold/headers, plain text, hyphen not em dash.
 - For serious buying signals, nudge toward the free trial ("Get Started Free") or /contact.
-- If truly unsure or the question needs a human, say so plainly and give contact@arthaleads.com or the WhatsApp number +91 80801 97945.
+- If truly unsure or the question needs a human, say so plainly and give contact@arthaleads.com or the WhatsApp number +91 90670 97779.
 - Respond with strict JSON: {"answer": string, "cta": "signup"|"pricing"|"contact"|null}. Set cta to "signup" when a free trial nudge fits, "pricing" when plan/cost details would help, "contact" when they need a human (enterprise, complex, or unresolved), otherwise null.`;
 
 async function answerMarketingQuestion(question, conversationHistory = []) {
@@ -302,7 +302,7 @@ async function answerMarketingQuestion(question, conversationHistory = []) {
   try {
     const parsed = JSON.parse(raw);
     return {
-      answer: parsed.answer || "I'm not sure about that — reach out at contact@arthaleads.com or WhatsApp +91 80801 97945 and our team will help.",
+      answer: parsed.answer || "I'm not sure about that — reach out at contact@arthaleads.com or WhatsApp +91 90670 97779 and our team will help.",
       cta: ["signup", "pricing", "contact"].includes(parsed.cta) ? parsed.cta : null,
       _usage: response.usage || null,
     };

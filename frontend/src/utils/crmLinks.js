@@ -17,9 +17,9 @@ export const CRM_LINK_PROPS = { target: "_blank", rel: "noopener noreferrer" };
 // right and /contact still had a placeholder -- on the button a visitor is
 // most likely to press, directly under a "Call Us" row showing the real
 // number. Copies drift silently; a constant cannot.
-export const WHATSAPP_NUMBER = "918080197945";
-export const PHONE_DISPLAY   = "+91 80801 97945";
-export const PHONE_TEL       = "tel:+918080197945";
+export const WHATSAPP_NUMBER = "919067097779";
+export const PHONE_DISPLAY   = "+91 90670 97779";
+export const PHONE_TEL       = "tel:+919067097779";
 
 /**
  * A wa.me link with the first message already typed.

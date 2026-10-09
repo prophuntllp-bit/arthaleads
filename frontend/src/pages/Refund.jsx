@@ -166,7 +166,7 @@ export default function Refund() {
           <p style={{ color: "var(--app-text-soft)" }}>
             WhatsApp:{" "}
             <a href={waLink(WA_MESSAGES.support)} target="_blank" rel="noopener noreferrer" style={{ color: "var(--app-primary)" }} className="hover:underline">
-              +91 80801 97945
+              +91 90670 97779
             </a>
           </p>
         </ContactBox>

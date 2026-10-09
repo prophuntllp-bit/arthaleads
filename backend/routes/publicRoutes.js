@@ -42,7 +42,7 @@ router.post("/chat", async (req, res, next) => {
     if (!process.env.OPENAI_API_KEY) {
       return res.status(503).json({
         success: false,
-        message: "Chat isn't available right now — email contact@arthaleads.com or WhatsApp +91 80801 97945.",
+        message: "Chat isn't available right now — email contact@arthaleads.com or WhatsApp +91 90670 97779.",
       });
     }
 
