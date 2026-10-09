@@ -30,6 +30,14 @@ export default function VistrowCalling() {
         </div>
       </div>
 
+      {isAdmin && (
+        <p className="text-xs text-app-soft">
+          Looking for the token that lets Vistrow send qualified calls into ArthaLeads?{" "}
+          <button type="button" className="font-semibold underline hover:text-app" data-testid="manage-token-link"
+            onClick={() => navigate("/integrations", { state: { openVoiceToken: true } })}>Manage the connection token</button>
+        </p>
+      )}
+
       {isAdmin
         ? <VistrowOutboundSection />
         : <p className="text-sm text-app-soft">Only an admin can change these settings.</p>}

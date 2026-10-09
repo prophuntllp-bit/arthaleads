@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle, Check, ChevronDown, Copy, ExternalLink, Pause, Pencil, Play, RefreshCw, SearchCheck, ShieldCheck, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, Copy, ExternalLink, Mic, Pause, Pencil, Play, RefreshCw, SearchCheck, ShieldCheck, Trash2 } from "lucide-react";
 import Tooltip from "./Tooltip";
 
 // One card per lead-source connection on the Integrations page. Every card has
@@ -81,6 +81,7 @@ export default function ConnectionCard({
   onEdit, onDelete, onCopy, onDiagnose, onRefreshToken, onReconnect, refreshing = false,
   onToggleActive, toggling = false,
   formNamesEditor = null,
+  onAutoCall = null, // Vistrow Voice only: opens the dedicated "Auto-call new leads" page (passed for admins only)
 }) {
   const [showForms, setShowForms] = useState(false);
   const paused = item.isActive === false || item.status === "paused";
@@ -214,6 +215,7 @@ export default function ConnectionCard({
 
       <footer className="mt-auto flex items-center gap-2 border-t border-[color:var(--app-border)] pt-3">
         <button type="button" className="btn-secondary rounded-xl" onClick={onEdit}><Pencil className="h-4 w-4" /> Edit</button>
+        {onAutoCall && <button type="button" className="btn-secondary rounded-xl" onClick={onAutoCall} data-testid="vistrow-calling-link"><Mic className="h-4 w-4" /> Auto-call new leads</button>}
         {isFb && <button type="button" className="btn-secondary rounded-xl" onClick={onDiagnose} title="Check why leads may not be arriving"><SearchCheck className="h-4 w-4" /> Diagnose</button>}
         {item.externalSourceUrl && (
           <a href={item.externalSourceUrl} target="_blank" rel="noreferrer" className="btn-secondary rounded-xl"><ExternalLink className="h-4 w-4" /> Open</a>

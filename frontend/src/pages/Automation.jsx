@@ -1138,23 +1138,6 @@ function VoiceCard({ conn, onDelete }) {
   );
 }
 
-// Admin-only entry to the dedicated "auto-call new leads" setup page (off by default).
-function VistrowCallingLink() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  if (user?.role !== "admin" && user?.role !== "super_admin") return null;
-  return (
-    <button type="button" onClick={() => navigate("/integrations/vistrow-calling")} data-testid="vistrow-calling-link"
-      className="mt-3 w-full flex items-center justify-between rounded-xl border px-4 py-3 text-left hover:bg-black/5" style={{ borderColor: "var(--app-border)" }}>
-      <span>
-        <span className="block text-sm font-semibold text-app">Auto-call new leads</span>
-        <span className="block text-xs text-app-soft">Choose which new leads Vistrow's agents may call. Off until you switch it on.</span>
-      </span>
-      <ChevronRight className="w-4 h-4 text-app-soft shrink-0" />
-    </button>
-  );
-}
-
 /* ─── Vistrow Voice wizard ─────────────────────────────────────────────────── */
 function VoiceWizard({ open, onClose, onChanged }) {
   const [loading, setLoading] = useState(false);
@@ -1920,6 +1903,11 @@ export default function Automation() {
     api.get("/whatsapp/status").then((r) => setWaStatus(r.data)).catch(() => setWaStatus({ connected: false }));
   }, []);
 
+  // "Manage the connection token" link on the auto-call page lands here with the token modal open.
+  useEffect(() => {
+    if (location.state?.openVoiceToken) setVoiceWizardOpen(true);
+  }, [location.state]);
+
   useEffect(() => {
     if (!location.state?.presetPlatform) return;
     const platform = location.state.presetPlatform;
@@ -2135,7 +2123,9 @@ export default function Automation() {
                     } else if (isWebsiteForm) {
                       setWpWizardOpen(true);
                     } else if (platform === "Vistrow Voice") {
-                      setVoiceWizardOpen(true);
+                      // The tile opens the guided "Auto-call new leads" page. The connection
+                      // token is still managed from the connection row below (and from a link on that page).
+                      navigate("/integrations/vistrow-calling");
                     } else if (platform === "Google") {
                       setGoogleWizardOpen(true);
                     } else {
@@ -2214,6 +2204,7 @@ export default function Automation() {
                   endpointPath={ingestPath(item.platform, item.webhookPath)}
                   onCopy={copyEndpoint}
                   onEdit={() => openEdit(item)}
+                  onAutoCall={isVistrowVoice && (authUser?.role === "admin" || authUser?.role === "super_admin") ? () => navigate("/integrations/vistrow-calling") : null}
                   onDelete={() => setDeleting(item)}
                   onToggleActive={() => toggleActive(item)}
                   toggling={togglingId === item._id}
@@ -2228,7 +2219,7 @@ export default function Automation() {
                         setItems((prev) => prev.map((i) => (i._id === id ? { ...i, formLabels } : i)))
                       }
                     />
-                  ) : isVistrowVoice ? <VistrowCallingLink /> : null}
+                  ) : null}
                 />
               );
             }}
