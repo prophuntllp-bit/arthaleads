@@ -1,9 +1,12 @@
 // components/IntroVideo.jsx - the 2-minute product film, in English and Hindi.
 //
-// Self-hosted from /public/video. It starts by itself, muted, when more than
-// half of it is on screen, and pauses when it scrolls away (browsers only allow
-// autoplay without sound; the film has a voice-over, so a "Turn on sound"
-// button sits on the video). Nothing downloads until it nears the screen
+// Self-hosted from /public/video. It starts by itself, with sound, when more
+// than half of it is on screen, and pauses when it scrolls away. Browsers only
+// allow sound if the visitor has already clicked, tapped or pressed a key on the
+// site (arriving from another page of ours or the language toggle counts); when
+// they refuse, it starts muted and the sound comes on at the visitor's first
+// click, tap or key press anywhere on the page, with a "Turn on sound" button
+// on the video as the fallback. Nothing downloads until it nears the screen
 // (preload="metadata" + a ~40 KB poster). Visitors on Data Saver or with
 // reduced motion get a play button instead of autoplay.
 import { useEffect, useRef, useState } from "react";
@@ -54,8 +57,12 @@ export default function IntroVideo({ isDark, id = "tour" }) {
   const tryPlay = () => {
     const el = videoRef.current;
     if (!el || userPaused.current) return;
-    el.muted = muted;
-    el.play().then(() => { setStarted(true); setBlocked(false); }).catch(() => setBlocked(true));
+    // Try with sound first; if the browser refuses, fall back to a muted start.
+    el.muted = false;
+    el.play().then(() => { setMuted(false); setStarted(true); setBlocked(false); }).catch(() => {
+      el.muted = true;
+      el.play().then(() => { setMuted(true); setStarted(true); setBlocked(false); }).catch(() => setBlocked(true));
+    });
   };
 
   // Start when more than half is visible, pause when it leaves.
@@ -79,6 +86,18 @@ export default function IntroVideo({ isDark, id = "tour" }) {
     return () => { io.disconnect(); document.removeEventListener("visibilitychange", onVis); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang]);
+
+  // Muted start: the first real gesture anywhere on the page grants sound.
+  useEffect(() => {
+    if (!started || !muted) return;
+    const on = () => {
+      const el = videoRef.current;
+      if (el && !el.paused) { el.muted = false; setMuted(false); }
+    };
+    const evs = ["pointerdown", "keydown", "touchend"];
+    evs.forEach((e) => window.addEventListener(e, on, { once: true, passive: true }));
+    return () => evs.forEach((e) => window.removeEventListener(e, on));
+  }, [started, muted, lang]);
 
   const manualPlay = () => {
     userPaused.current = false;
@@ -144,7 +163,6 @@ export default function IntroVideo({ isDark, id = "tour" }) {
             poster={v.poster}
             preload="metadata"
             playsInline
-            muted
             controls={started}
             className="absolute inset-0 w-full h-full object-cover"
             aria-label={`ArthaLeads product tour (${v.label})`}
@@ -153,7 +171,7 @@ export default function IntroVideo({ isDark, id = "tour" }) {
             onPlay={() => { userPaused.current = false; }}
           />
 
-          {/* Autoplay is silent: one clear button to hear the voice-over. */}
+          {/* Only shown when the browser made the film start silent. */}
           {started && muted && !blocked && (
             <button type="button" onClick={soundOn}
               className="absolute left-4 top-4 sm:left-6 sm:top-6 flex items-center gap-2 pl-3 pr-4 py-2 rounded-full bg-black/70 hover:bg-black/85 text-white text-sm font-semibold backdrop-blur transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">

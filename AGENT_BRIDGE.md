@@ -290,3 +290,5 @@ Re-verified each P1 with a test against the real handlers (two orgs, in-memory M
   re-archiving is pending with the owner. Do not add them back to a project.
 - `test_ctwa_flow_v3.cjs` (scratch, not in repo) had 4 pre-existing failing
   assertions on baseline.
+
+- Claude: IntroVideo autoplay now tries sound first, falls back to muted and unmutes on first click/tap/key (frontend/src/components/IntroVideo.jsx).
