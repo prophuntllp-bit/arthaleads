@@ -20,7 +20,7 @@ const SCREEN = {
   prioritise: { id: "dashboard",   path: "dashboard" },
   talk:       { id: "inbox",       path: "conversations" },
   projects:   { id: "project",     path: "projects" },
-  close:      { id: "pipeline",    path: "pipeline" },
+  close:      { id: "booking",     path: "bookings" },
   team:       { id: "performance", path: "performance" },
 };
 

@@ -73,6 +73,11 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-09 IST, booking clip
+
+- New tour clip `frontend/public/tour/booking.{mp4,webm,webp}` (10 s, 1600x900, silent, ~0.3 MB): a new booking in the Bookings list, one click on Invoice, "Invoice #1 created!", then the Tax Invoice preview. Recorded by me from the LOCAL demo CRM (localhost:3002 + demo API 5055) using Chrome screencast frames encoded with ffmpeg; recorder scripts are in the session scratchpad, not in the repo. Demo-only changes: the 4 seeded demo bookings were re-saved so totals and GST show (were 0.00) and the demo firm got sample billing details (fake PAN/GSTIN/bank sample values).
+- Added as the 7th hero-tour tab ("Bookings", before Performance) and as the screen for the "Close" workflow on /features.
+
 ### Claude Code, 2026-10-09 IST, WhatsApp: silent chats investigated, clearer unsupported text, lost-reply safety net
 
 - Investigated two Prophunt chats the bot never answered (read-only DB look, counts and the two threads only; nothing written). **Sadare** (8 Oct 23:59 IST): Meta type `unsupported` (poll, view-once media, channel post and the like), which the bot cannot read by design; lead and thread were created from it. **Aditya Polekar** (8 Oct 18:14 IST): plain "Hi", bot ON, the reply was lost because the API container was replaced by the audit-fix deploys at 18:13 to 18:25 while the reply was in flight. Of about 210 new conversations in 3 weeks only these two had no reply.

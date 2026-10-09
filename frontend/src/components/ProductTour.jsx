@@ -9,7 +9,7 @@
 // Files live in /public/tour as <id>.mp4, <id>.webm and <id>.webp (poster).
 import { useEffect, useRef, useState } from "react";
 import {
-  LayoutDashboard, MessageCircle, UserRound, KanbanSquare, Building2, BarChart3,
+  LayoutDashboard, MessageCircle, UserRound, KanbanSquare, Building2, BarChart3, Receipt,
 } from "lucide-react";
 
 const STEPS = [
@@ -28,6 +28,9 @@ const STEPS = [
   { id: "project", icon: Building2, label: "Projects", path: "projects",
     title: "Each project with its own leads and media",
     desc: "Photos, brochure, pricing and the team for every project, with its own lead list and pipeline." },
+  { id: "booking", icon: Receipt, label: "Bookings", path: "bookings",
+    title: "From closed deal to invoice",
+    desc: "Record the booking and brokerage and GST are worked out for you. One click makes a branded tax invoice you can download and track until the payment arrives." },
   { id: "performance", icon: BarChart3, label: "Performance", path: "performance",
     title: "Know who is closing",
     desc: "Calls, site visits and closings for every team member, across the main pipeline and every project." },
