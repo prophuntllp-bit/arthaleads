@@ -110,6 +110,10 @@
       "destination": "/wordpress-plugin.html"
     },
     {
+      "source": "/blog/:slug",
+      "destination": "/api/blog-post?slug=:slug"
+    },
+    {
       "source": "/(.*)",
       "destination": "/app.html"
     }

@@ -66,7 +66,8 @@ const blogController = {
       if (!post) return next(new AppError("Post not found", 404));
 
       // Increment view count (fire-and-forget)
-      BlogPost.updateOne({ _id: post._id }, { $inc: { views: 1 } }).catch(() => {});
+      // ?nocount=1 is the page-tag lookup used for link previews; it is not a reader.
+      if (!req.query.nocount) BlogPost.updateOne({ _id: post._id }, { $inc: { views: 1 } }).catch(() => {});
 
       res.json({ success: true, post });
     } catch (err) { next(err); }

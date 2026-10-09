@@ -73,6 +73,11 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-09 IST, blog link previews + hero cleanup
+
+- `frontend/api/blog-post.js` (Vercel function, `vercel.json` routes `/blog/:slug` to it): fetches the post from the API and writes its own title, description, canonical and share image into the app shell, so WhatsApp/LinkedIn previews and Google's first pass see the real tags. Edge-cached 5 min; unknown slug returns 404 with the plain shell; API outage falls back to the plain shell. `GET /api/blog/posts/:slug?nocount=1` no longer adds a view. If blog posts ever 404, revert the `/blog/:slug` rewrite in `vercel.json` first.
+- Removed the two floating cards ("+14 New Leads", "Site visit booked") from the home hero.
+
 ### Claude Code, 2026-10-09 IST, marketing site pass (hero tour, video, features, SEO)
 
 - **Hero product tour** (`components/ProductTour.jsx`, used by `Landing.jsx`): six tabs, each plays a silent 10 s clip from `public/tour/<id>.mp4|.webm` (made by the video session) and moves on when it ends; clicking a tab stops auto-advance and loops that clip. Poster `<id>.webp` shows underneath, clips pause off screen, Data Saver / reduced motion get stills. The old laptop mockup is gone. Intro film (EN/HI, 13 MB each, `public/video/`) sits lower on the home page (`IntroVideo.jsx`), not on Features.

@@ -75,8 +75,6 @@ function Hero({ isDark }) {
   const btnText    = isDark ? "rgba(255,255,255,0.70)" : "#374151";
   const btnBg      = isDark ? "transparent" : "rgba(255,255,255,0.7)";
   const gridOpacity = isDark ? "0.03" : "0.035";
-  const chipBg     = isDark ? "rgba(22,22,34,0.92)" : "rgba(255,255,255,0.96)";
-  const chipBdr    = isDark ? "rgba(255,255,255,0.10)" : "#ece5dc";
   const chipText   = isDark ? "rgba(255,255,255,0.85)" : "#111827";
   const tickerBg   = isDark ? "rgba(255,255,255,0.04)" : "#ffffff";
   const tickerBdr  = isDark ? "rgba(255,255,255,0.07)" : "#e5e7eb";
@@ -122,26 +120,6 @@ function Hero({ isDark }) {
 
         {/* ── The real product ── */}
         <div className="relative max-w-6xl mx-auto">
-          {/* Two quiet live-activity badges straddling the frame edges */}
-          <div className="absolute -left-10 xl:-left-24 top-[30%] z-20 hidden lg:flex items-center gap-2 px-3 py-2.5 rounded-2xl shadow-xl"
-            style={{ background: chipBg, border: `1px solid ${chipBdr}`, backdropFilter: "blur(14px)", animation: "floatA 5s ease-in-out infinite" }}>
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
-            <div>
-              <div className="text-xs font-bold" style={{ color: chipText }}>+14 New Leads</div>
-              <div className="text-[10px]" style={{ color: softClr }}>Today · Live</div>
-            </div>
-          </div>
-          <div className="absolute -right-6 xl:-right-14 top-[58%] z-20 hidden lg:flex items-center gap-2.5 px-3 py-2.5 rounded-2xl shadow-xl"
-            style={{ background: chipBg, border: `1px solid ${chipBdr}`, backdropFilter: "blur(14px)", animation: "floatB 6s ease-in-out infinite" }}>
-            <span className="w-7 h-7 rounded-full bg-[#25D366]/15 flex items-center justify-center shrink-0">
-              <WaLogo size={14} />
-            </span>
-            <div>
-              <div className="text-xs font-bold" style={{ color: chipText }}>Site visit booked</div>
-              <div className="text-[10px]" style={{ color: softClr }}>by the AI agent · 1:04 AM</div>
-            </div>
-          </div>
-
           <HeroTour isDark={isDark} />
         </div>
 
@@ -184,14 +162,6 @@ function Hero({ isDark }) {
           @keyframes tickerScroll {
             from { transform: translateX(0); }
             to   { transform: translateX(-50%); }
-          }
-          @keyframes floatA {
-            0%,100% { transform: translateY(0px); }
-            50%     { transform: translateY(-10px); }
-          }
-          @keyframes floatB {
-            0%,100% { transform: translateY(0px); }
-            50%     { transform: translateY(-12px); }
           }
           @media (prefers-reduced-motion: reduce) {
             #hero * { animation: none !important; }
