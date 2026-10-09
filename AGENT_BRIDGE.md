@@ -68,6 +68,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 
 
+- [Claude Code] 2026-10-09 IST: hold-to-delete button for project deletion. Files: frontend/src/components/HoldToConfirmButton.jsx (new), components/UI.jsx (ConfirmDialog holdToConfirm prop), pages/ProjectDetail.jsx (one prop). No overlap with the marketing pass.
+
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
