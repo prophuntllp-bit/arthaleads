@@ -319,6 +319,12 @@ cron.schedule("*/10 * * * *", () => {
     .catch((err) => logger.error(`[meta-capi] sweep failed: ${err.message}`));
 });
 
+// ── Every 10 minutes: copy newly published (or scheduled-and-now-due) Sanity posts into the blog ──
+cron.schedule("*/10 * * * *", () => {
+  require("../services/sanityBlogSync").sync()
+    .catch((err) => logger.error(`[sanity-sync] failed: ${err.message}`));
+});
+
 module.exports = { runDailyReminder, runUpcomingReminder, runTaskReminder, runBackup, refreshFacebookTokens };
 
 // ── Every 5 minutes: follow-up nudges for people who stopped mid-way through

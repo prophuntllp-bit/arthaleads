@@ -33,6 +33,10 @@ const blogPostSchema = new mongoose.Schema(
     canonicalUrl:      { type: String, default: "" },
     // Author
     author:            { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    // Set when the post is written in Sanity Studio and copied here by
+    // services/sanityBlogSync.js. Posts without it were written in the CRM editor.
+    sanityId:          { type: String, default: undefined },
+    sanityUpdatedAt:   { type: Date, default: null },
     // Engagement
     readingTime:       { type: Number, default: 1 },
     views:             { type: Number, default: 0 },
@@ -54,5 +58,6 @@ blogPostSchema.pre("save", function (next) {
 
 blogPostSchema.index({ status: 1, publishedAt: -1 });
 blogPostSchema.index({ category: 1 });
+blogPostSchema.index({ sanityId: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model("BlogPost", blogPostSchema);

@@ -73,6 +73,11 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-09 IST, Sanity blog connected
+
+- Sanity project **ArthaLeads**, id `2racdioq`, dataset `production` (public, so published posts are readable with no token and nothing secret lives in Railway). Studio code in `studio/` (own package, not part of the app builds), deployed to https://arthaleads.sanity.studio (redeploy with `cd studio && npx sanity deploy`; needs `npx sanity login`).
+- `backend/services/sanityBlogSync.js` copies live Sanity posts into `BlogPost` every 10 minutes (cron in `utils/scheduler.js`): portable text -> our block types, link/escape safe, category created by name, SEO fields fall back to title/summary. Posts need a `Publish at` time that has passed, so daily posts can be scheduled. Unpublishing in Sanity turns the copy into a draft. A slug already used by a CRM-editor post is never overwritten. `BlogPost.sanityId` / `sanityUpdatedAt` are new (sparse unique index). 13-assertion scratch test passed against the real Sanity query plus fakes. Env overrides if ever needed: `SANITY_PROJECT_ID`, `SANITY_DATASET`, `SANITY_READ_TOKEN` (only for a private dataset).
+
 ### Claude Code, 2026-10-09 IST, hold-to-delete for projects
 
 - Deleting a project now needs a press-and-hold (red fill sweeps across ~1.6s; releasing early, sliding off or blurring cancels; Enter/Space also works; reduced motion respected). New `components/HoldToConfirmButton.jsx`; `ConfirmDialog` in `components/UI.jsx` gained a backward-compatible `holdToConfirm` prop; only `ProjectDetail`'s project delete uses it. Check: `frontend/e2e/hold-to-delete/drive.cjs`. Not verified on the live site or with touch input.
