@@ -237,12 +237,17 @@ function NavInner({ onScrollTo }) {
               href="https://www.vistrow.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:inline-block pl-3 text-[11px] font-medium transition-colors"
-              style={{ color: textMuted, borderLeft: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : "#d1d5db"}` }}
-              onMouseEnter={e => (e.currentTarget.style.color = "#ff6b00")}
-              onMouseLeave={e => (e.currentTarget.style.color = textMuted)}
+              aria-label="Arthaleads is a product of Vistrow Technologies"
+              className="flex items-center gap-1.5 sm:gap-2 pl-2 sm:pl-3 transition-opacity hover:opacity-80"
+              style={{ borderLeft: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : "#d1d5db"}` }}
             >
-              by Vistrow
+              <span className="text-[11px] font-medium" style={{ color: textMuted }}>by</span>
+              <img
+                src={isDark ? "/vistrow-technologies-dark.png" : "/vistrow-technologies.png"}
+                alt="Vistrow Technologies"
+                className="h-6 sm:h-8 w-auto"
+                width="103" height="32"
+              />
             </a>
           </div>
 

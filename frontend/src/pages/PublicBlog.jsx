@@ -1,10 +1,11 @@
-﻿import { useEffect, useState, useCallback } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { useSearchParams, Link } from "react-router-dom";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import api from "../services/api";
-import { Clock, Tag, Search, ChevronLeft, ChevronRight, ArrowRight, BookOpen, Calendar } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ChevronDown, BookOpen, X, ArrowRight } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
+import BlogCard, { FeaturedCard, blogTheme } from "../components/BlogCard";
 import { usePublicTheme } from "../context/PublicThemeContext";
 
 // ── SEO meta updater ───────────────────────────────────────────────────────────
@@ -37,104 +38,47 @@ function setMeta(name, content) {
   el.setAttribute("content", content);
 }
 
-function fmtDate(d) {
-  if (!d) return "";
-  return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
-}
+const PAGE_SIZE = 10;
 
-function PostCard({ post, isDark }) {
-  const cardBg     = isDark ? "rgba(255,255,255,0.05)" : "#ffffff";
-  const cardBorder = isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
-  const titleColor = isDark ? "#ffffff" : "#111827";
-  const softText   = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const placeholderBg = isDark ? "rgba(255,255,255,0.03)" : "#f3f4f6";
-
+function Skeleton({ isDark }) {
+  const t = blogTheme(isDark);
+  const block = isDark ? "rgba(255,255,255,0.06)" : "#efeae3";
   return (
-    <Link
-      to={`/blog/${post.slug}`}
-      className="group flex flex-col rounded-2xl overflow-hidden border hover:border-orange-300 transition-all hover:shadow-lg"
-      style={{ background: cardBg, borderColor: cardBorder }}
-    >
-      {post.featuredImage ? (
-        <div className="h-48 overflow-hidden">
-          <img
-            src={post.featuredImage}
-            alt={post.featuredImageAlt || post.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7" aria-hidden="true">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="rounded-[26px] border overflow-hidden animate-pulse" style={{ borderColor: t.cardBorder, background: t.card }}>
+          <div style={{ aspectRatio: "16 / 10", background: block }} />
+          <div className="p-6 space-y-3">
+            <div className="h-3 rounded w-1/3" style={{ background: block }} />
+            <div className="h-5 rounded w-5/6" style={{ background: block }} />
+            <div className="h-3 rounded w-full" style={{ background: block }} />
+            <div className="h-3 rounded w-2/3" style={{ background: block }} />
+          </div>
         </div>
-      ) : (
-        <div className="h-40 flex items-center justify-center" style={{ background: placeholderBg }}>
-          <BookOpen className="w-10 h-10 text-orange-200" />
-        </div>
-      )}
-      <div className="flex-1 p-5">
-        {post.category && (
-          <span
-            className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide mb-3"
-            style={{ background: `${post.category.color}20`, color: post.category.color }}
-          >
-            {post.category.name}
-          </span>
-        )}
-        <h2 className="font-bold text-base leading-snug mb-2 group-hover:text-orange-500 transition-colors line-clamp-2" style={{ color: titleColor }}>
-          {post.title}
-        </h2>
-        {post.excerpt && (
-          <p className="text-sm leading-relaxed line-clamp-3 mb-4" style={{ color: softText }}>{post.excerpt}</p>
-        )}
-        <div className="flex items-center gap-3 text-[11px] mt-auto" style={{ color: softText }}>
-          {post.publishedAt && (
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              {fmtDate(post.publishedAt)}
-            </span>
-          )}
-          <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            {post.readingTime || 1} min read
-          </span>
-        </div>
-      </div>
-      <div className="px-5 pb-4">
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-500 group-hover:gap-2.5 transition-all">
-          Read more <ArrowRight className="w-3.5 h-3.5" />
-        </span>
-      </div>
-    </Link>
+      ))}
+    </div>
   );
 }
 
 function BlogPageInner() {
   const { isDark } = usePublicTheme();
+  const t = blogTheme(isDark);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [posts,       setPosts]       = useState([]);
-  const [categories,  setCategories]  = useState([]);
-  const [total,       setTotal]       = useState(0);
-  const [page,        setPage]        = useState(1);
-  const [pages,       setPages]       = useState(1);
-  const [loading,     setLoading]     = useState(false);
-  const [search,      setSearch]      = useState(searchParams.get("q") || "");
-  const [catFilter,   setCatFilter]   = useState(searchParams.get("category") || "");
-  const [tagFilter,   setTagFilter]   = useState(searchParams.get("tag") || "");
+  const [posts,      setPosts]      = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [total,      setTotal]      = useState(0);
+  const [page,       setPage]       = useState(1);
+  const [pages,      setPages]      = useState(1);
+  const [loading,    setLoading]    = useState(true);
+  const [search,     setSearch]     = useState(searchParams.get("q") || "");
+  const [catFilter,  setCatFilter]  = useState(searchParams.get("category") || "");
+  const [tagFilter,  setTagFilter]  = useState(searchParams.get("tag") || "");
 
   useSEO({
     title: "Real Estate CRM Blog | Lead Management Tips & Insights – Arthaleads",
     description: "Expert guides on real estate lead management, CRM best practices, and property sales strategies. Helping Indian developers & brokers close more deals.",
     url: "https://www.arthaleads.com/blog",
   });
-
-  const bg         = isDark ? "#0d0d1a" : "#ffffff";
-  const textColor  = isDark ? "#ffffff" : "#111827";
-  const softText   = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const cardBg     = isDark ? "rgba(255,255,255,0.04)" : "#ffffff";
-  const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-  const heroBg     = isDark
-    ? "linear-gradient(135deg, #1a0a00 0%, #0d0d1a 100%)"
-    : "linear-gradient(135deg, #fff7ed 0%, #ffedd5 50%, #fed7aa 100%)";
-  const searchBg   = isDark ? "rgba(255,255,255,0.06)" : "#ffffff";
-  const searchBorder = isDark ? "rgba(255,255,255,0.10)" : "#fed7aa";
-  const inputText  = isDark ? "#ffffff" : "#1f2937";
 
   useEffect(() => {
     api.get("/blog/categories").then((r) => setCategories(r.data.categories || [])).catch(() => {});
@@ -143,7 +87,7 @@ function BlogPageInner() {
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page, limit: 9 });
+      const params = new URLSearchParams({ page, limit: PAGE_SIZE });
       if (search) params.set("search", search);
       if (catFilter) params.set("category", catFilter);
       if (tagFilter) params.set("tag", tagFilter);
@@ -160,202 +104,153 @@ function BlogPageInner() {
 
   useEffect(() => { setPage(1); }, [search, catFilter, tagFilter]);
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
+  useEffect(() => { if (page > 1) window.scrollTo({ top: 360, behavior: "smooth" }); }, [page]);
 
+  const hasFilters = !!(search || catFilter || tagFilter);
   const clearFilters = () => { setSearch(""); setCatFilter(""); setTagFilter(""); setSearchParams({}); };
-  const hasFilters = search || catFilter || tagFilter;
+  const showFeatured = !hasFilters && page === 1 && posts.length > 0;
+  const featured = showFeatured ? posts[0] : null;
+  const grid = showFeatured ? posts.slice(1) : posts;
+  const catName = categories.find((c) => c._id === catFilter)?.name;
 
   return (
-    <div className="min-h-screen" style={{ background: bg }}>
+    <div className="min-h-screen" style={{ background: t.bg }}>
       <PublicNav />
 
-      {/* Hero */}
-      <div className="relative overflow-hidden py-28 px-4 text-center" style={{ background: heroBg }}>
-        <div className="absolute inset-0 opacity-5"
-          style={{ backgroundImage: "radial-gradient(circle at 20% 50%, #f97316 0%, transparent 50%), radial-gradient(circle at 80% 20%, #ea580c 0%, transparent 50%)" }} />
-        <div className="relative max-w-3xl mx-auto">
-          <span className="inline-block px-4 py-1.5 rounded-full text-xs font-bold bg-orange-500 text-white uppercase tracking-widest mb-4">
-            Arthaleads Blog
-          </span>
-          <h1 className="text-4xl md:text-5xl font-extrabold leading-tight mb-4" style={{ color: textColor }}>
-            Real Estate CRM<br />
-            <span className="text-orange-500">Insights &amp; Tips</span>
-          </h1>
-          <p className="text-lg max-w-2xl mx-auto mb-8" style={{ color: softText }}>
-            Expert strategies for lead management, sales automation, and growing your real estate business.
-          </p>
-          {/* Search */}
-          <div
-            className="flex max-w-md mx-auto rounded-2xl overflow-hidden shadow-lg"
-            style={{ background: searchBg, border: `1px solid ${searchBorder}` }}
-          >
-            <div className="flex items-center pl-4">
-              <Search className="w-4 h-4" style={{ color: softText }} />
-            </div>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search articles…"
-              className="flex-1 px-3 py-3 text-sm outline-none bg-transparent"
-              style={{ color: inputText }}
-            />
-            {search && (
-              <button onClick={() => setSearch("")} className="px-3 text-gray-400 hover:text-orange-500 transition text-sm">✕</button>
-            )}
+      {/* ── Header: title on the left, search on the right ── */}
+      <header className="relative overflow-hidden pt-32 pb-10 lg:pt-40 lg:pb-14"
+        style={{ background: isDark ? "#0d0d1a" : "linear-gradient(180deg,#fff7f0 0%,#ffffff 100%)" }}>
+        <div className="absolute -top-24 right-0 w-[520px] h-[520px] rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, rgba(255,107,0,0.13), transparent 65%)" }} />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-[1.4fr_1fr] gap-8 lg:gap-16 items-end">
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">The Arthaleads Journal</span>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.05] tracking-tight mt-4" style={{ color: t.heading, textWrap: "balance" }}>
+              How real estate teams{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">win more leads</span>
+            </h1>
           </div>
+          <div>
+            <p className="text-base sm:text-lg leading-relaxed mb-5" style={{ color: t.body }}>
+              Practical guides on lead follow-up, WhatsApp selling, site visits and running a sales floor, written for Indian developers and channel partners.
+            </p>
+            <label className="relative block">
+              <span className="sr-only">Search articles</span>
+              <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: t.muted }} />
+              <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search articles"
+                className="w-full rounded-2xl py-3.5 pl-11 pr-4 text-[15px] outline-none border transition-shadow focus:shadow-[0_0_0_3px_rgba(255,107,0,0.18)] focus:border-[#ff6b00]"
+                style={{ background: t.field, borderColor: t.cardBorder, color: t.heading }} />
+            </label>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Toolbar: count, active filters, topic picker ── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap items-center justify-between gap-3 py-5" style={{ borderTop: `1px solid ${t.rule}`, borderBottom: `1px solid ${t.rule}` }}>
+          <div className="flex flex-wrap items-center gap-2 text-sm" style={{ color: t.body }}>
+            <span className="font-semibold tabular-nums" style={{ color: t.heading }}>{total}</span>
+            <span>{total === 1 ? "article" : "articles"}</span>
+            {tagFilter && <Chip onClear={() => setTagFilter("")} isDark={isDark}>#{tagFilter}</Chip>}
+            {search && <Chip onClear={() => setSearch("")} isDark={isDark}>"{search}"</Chip>}
+            {hasFilters && <button onClick={clearFilters} className="text-xs underline underline-offset-2 ml-1" style={{ color: t.muted }}>Clear all</button>}
+          </div>
+          {categories.length > 0 && (
+            <label className="relative inline-flex items-center">
+              <span className="sr-only">Topic</span>
+              <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)}
+                className="appearance-none rounded-xl border py-2.5 pl-4 pr-10 text-sm font-medium outline-none cursor-pointer focus:border-[#ff6b00]"
+                style={{ background: t.field, borderColor: t.cardBorder, color: t.heading }}>
+                <option value="">All topics</option>
+                {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+              </select>
+              <ChevronDown className="w-4 h-4 absolute right-3 pointer-events-none" style={{ color: t.muted }} />
+            </label>
+          )}
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-6xl mx-auto px-4 py-12">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Posts grid */}
-          <div className="flex-1">
-            {hasFilters && (
-              <div className="flex flex-wrap items-center gap-2 mb-6">
-                <span className="text-xs" style={{ color: softText }}>Filters:</span>
-                {search && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
-                    "{search}" <button onClick={() => setSearch("")}>×</button>
-                  </span>
-                )}
-                {catFilter && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
-                    {categories.find((c) => c._id === catFilter)?.name || catFilter} <button onClick={() => setCatFilter("")}>×</button>
-                  </span>
-                )}
-                {tagFilter && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
-                    #{tagFilter} <button onClick={() => setTagFilter("")}>×</button>
-                  </span>
-                )}
-                <button onClick={clearFilters} className="text-xs hover:text-red-400 transition" style={{ color: softText }}>Clear all</button>
-              </div>
+      {/* ── Articles ── */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
+        {loading ? (
+          <Skeleton isDark={isDark} />
+        ) : posts.length === 0 ? (
+          <div className="text-center py-20">
+            <BookOpen className="w-12 h-12 mx-auto mb-4 text-[#ff6b00]/40" />
+            <h2 className="text-lg font-bold mb-2" style={{ color: t.heading }}>{hasFilters ? "No articles match" : "New articles are on the way"}</h2>
+            <p className="text-sm" style={{ color: t.body }}>{hasFilters ? `Nothing found${catName ? ` in ${catName}` : ""}. Try a different search or topic.` : "Check back soon."}</p>
+            {hasFilters && <button onClick={clearFilters} className="mt-5 px-5 py-2.5 rounded-xl bg-[#ff6b00] text-white text-sm font-semibold">Show all articles</button>}
+          </div>
+        ) : (
+          <>
+            {featured && (
+              <section aria-label="Latest article" className="mb-10 lg:mb-14">
+                <FeaturedCard post={featured} isDark={isDark} />
+              </section>
+            )}
+            {grid.length > 0 && (
+              <section aria-label="Articles">
+                {showFeatured && <h2 className="text-2xl sm:text-3xl font-black tracking-tight mb-7" style={{ color: t.heading }}>More to read</h2>}
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">
+                  {grid.map((p) => <BlogCard key={p._id} post={p} isDark={isDark} />)}
+                </div>
+              </section>
             )}
 
-            {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="rounded-2xl border animate-pulse" style={{ borderColor: cardBorder, background: cardBg }}>
-                    <div className="h-48" style={{ background: isDark ? "rgba(255,255,255,0.03)" : "#f3f4f6" }} />
-                    <div className="p-5 space-y-3">
-                      <div className="h-3 rounded w-1/4" style={{ background: isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb" }} />
-                      <div className="h-4 rounded w-3/4" style={{ background: isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb" }} />
-                      <div className="h-3 rounded w-full" style={{ background: isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb" }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : posts.length === 0 ? (
-              <div className="text-center py-20">
-                <BookOpen className="w-12 h-12 text-orange-200 mx-auto mb-4" />
-                <h3 className="text-lg font-bold mb-2" style={{ color: textColor }}>No posts found</h3>
-                <p className="text-sm" style={{ color: softText }}>{hasFilters ? "Try adjusting your filters." : "No blog posts published yet."}</p>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between mb-6">
-                  <p className="text-sm" style={{ color: softText }}>{total} article{total !== 1 ? "s" : ""}</p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {posts.map((post) => <PostCard key={post._id} post={post} isDark={isDark} />)}
-                </div>
-              </>
-            )}
-
-            {/* Pagination */}
             {pages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-10">
-                <button
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
-                  className="p-2 rounded-xl border transition disabled:opacity-30 hover:border-orange-400"
-                  style={{ borderColor: cardBorder }}
-                >
-                  <ChevronLeft className="w-4 h-4" style={{ color: textColor }} />
+              <nav aria-label="Pages" className="flex items-center justify-center gap-2 mt-12">
+                <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} aria-label="Previous page"
+                  className="p-2.5 rounded-xl border transition disabled:opacity-30 hover:border-[#ff6b00]" style={{ borderColor: t.cardBorder }}>
+                  <ChevronLeft className="w-4 h-4" style={{ color: t.heading }} />
                 </button>
                 {[...Array(pages)].map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setPage(i + 1)}
-                    className={`w-9 h-9 rounded-xl text-sm font-semibold transition ${
-                      page === i + 1 ? "bg-orange-500 text-white" : "border hover:border-orange-400"
-                    }`}
-                    style={page !== i + 1 ? { borderColor: cardBorder, color: softText } : {}}
-                  >{i + 1}</button>
+                  <button key={i} onClick={() => setPage(i + 1)} aria-current={page === i + 1 ? "page" : undefined}
+                    className={`w-10 h-10 rounded-xl text-sm font-semibold transition ${page === i + 1 ? "bg-[#ff6b00] text-white" : "border hover:border-[#ff6b00]"}`}
+                    style={page !== i + 1 ? { borderColor: t.cardBorder, color: t.body } : {}}>{i + 1}</button>
                 ))}
-                <button
-                  disabled={page >= pages}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="p-2 rounded-xl border transition disabled:opacity-30 hover:border-orange-400"
-                  style={{ borderColor: cardBorder }}
-                >
-                  <ChevronRight className="w-4 h-4" style={{ color: textColor }} />
+                <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} aria-label="Next page"
+                  className="p-2.5 rounded-xl border transition disabled:opacity-30 hover:border-[#ff6b00]" style={{ borderColor: t.cardBorder }}>
+                  <ChevronRight className="w-4 h-4" style={{ color: t.heading }} />
                 </button>
-              </div>
+              </nav>
             )}
+          </>
+        )}
+      </main>
+
+      {/* ── Closing call to action ── */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 lg:pb-24">
+        <div className="relative overflow-hidden rounded-[30px] px-7 py-10 sm:px-12 sm:py-14 flex flex-col md:flex-row md:items-center md:justify-between gap-6"
+          style={{ background: "linear-gradient(135deg,#ff7a1a 0%,#e85d04 100%)" }}>
+          <div className="absolute -right-16 -top-16 w-72 h-72 rounded-full bg-white/10 pointer-events-none" />
+          <div className="relative max-w-xl">
+            <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight">Put these ideas to work on your own leads</h2>
+            <p className="text-white/85 mt-2 text-[15px]">Arthaleads brings every enquiry, WhatsApp chat and follow-up into one workspace for your sales team.</p>
           </div>
-
-          {/* Sidebar */}
-          <div className="lg:w-72 flex-shrink-0 space-y-6">
-            {categories.length > 0 && (
-              <div className="rounded-2xl p-5 border" style={{ background: cardBg, borderColor: cardBorder }}>
-                <h3 className="text-sm font-bold mb-4 flex items-center gap-2" style={{ color: textColor }}>
-                  <Tag className="w-4 h-4 text-orange-500" /> Categories
-                </h3>
-                <div className="space-y-1.5">
-                  <button
-                    onClick={() => setCatFilter("")}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-sm transition ${!catFilter ? "bg-orange-500 text-white font-semibold" : "hover:bg-orange-500/5"}`}
-                    style={!catFilter ? {} : { color: softText }}
-                  >All Categories</button>
-                  {categories.map((c) => (
-                    <button
-                      key={c._id}
-                      onClick={() => setCatFilter(catFilter === c._id ? "" : c._id)}
-                      className={`w-full text-left px-3 py-2 rounded-xl text-sm transition flex items-center gap-2 ${
-                        catFilter === c._id ? "font-semibold" : "hover:bg-orange-500/5"
-                      }`}
-                      style={catFilter === c._id
-                        ? { background: `${c.color}20`, color: c.color }
-                        : { color: softText }
-                      }
-                    >
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c.color }} />
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* CTA */}
-            <div className="rounded-2xl p-5 text-center overflow-hidden relative"
-              style={{ background: "linear-gradient(135deg, #f97316, #ea580c)" }}>
-              <div className="absolute inset-0 opacity-10"
-                style={{ backgroundImage: "radial-gradient(circle at 70% 30%, white 0%, transparent 60%)" }} />
-              <div className="relative">
-                <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-3">
-                  <BookOpen className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-base font-bold text-white mb-2">Manage Leads Better</h3>
-                <p className="text-xs text-orange-100 mb-4 leading-relaxed">
-                  Try Arthaleads CRM - built for Indian real estate teams.
-                </p>
-                <a
-                  href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-                  className="inline-block px-5 py-2.5 rounded-xl bg-white text-orange-600 text-xs font-bold hover:bg-orange-50 transition"
-                >
-                  Start Free Trial →
-                </a>
-              </div>
-            </div>
+          <div className="relative flex flex-col sm:flex-row gap-3 shrink-0">
+            <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-white text-[#e85d04] font-bold text-[15px] hover:-translate-y-0.5 transition-transform">
+              Start Free Trial <ArrowRight className="w-4 h-4" />
+            </a>
+            <Link to="/features" className="inline-flex items-center justify-center px-6 py-3.5 rounded-2xl border border-white/50 text-white font-semibold text-[15px] hover:bg-white/10 transition-colors">
+              See all features
+            </Link>
           </div>
         </div>
-      </div>
+      </section>
 
       <PublicFooter />
     </div>
+  );
+}
+
+function Chip({ children, onClear, isDark }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full text-xs font-semibold"
+      style={{ background: isDark ? "rgba(255,107,0,0.16)" : "#fff0e3", color: "#e85d04" }}>
+      {children}
+      <button onClick={onClear} aria-label="Remove filter" className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-[#ff6b00]/20"><X className="w-3 h-3" /></button>
+    </span>
   );
 }
 

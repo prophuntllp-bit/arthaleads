@@ -90,10 +90,17 @@ export default function PublicFooter() {
             href="https://www.vistrow.com"
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="Arthaleads is a product of Vistrow Technologies"
             style={{ color: text }}
-            className="text-xs hover:text-[#ff6b00] transition-colors"
+            className="flex items-center gap-2 text-xs transition-opacity hover:opacity-80"
           >
-            By Vistrow
+            by
+            <img
+              src={isDark ? "/vistrow-technologies-dark.png" : "/vistrow-technologies.png"}
+              alt="Vistrow Technologies"
+              className="h-8 w-auto"
+              width="103" height="32"
+            />
           </a>
         </div>
       </div>

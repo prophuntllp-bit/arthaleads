@@ -73,6 +73,11 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-09 IST, blog redesign + "by Vistrow Technologies" logo
+
+- Blog index (`PublicBlog.jsx`): title + search header, toolbar (count, active filters, topic dropdown), large featured card for the newest post, three-column card grid, pagination, closing CTA. Article page (`PublicBlogPost.jsx`): breadcrumb, category pill, author + share (LinkedIn, WhatsApp, copy link), summary callout, hero image, sticky sidebar (search, topic, numbered "In this article" with active section, suggested reading), About box, suggested articles. New shared `components/BlogCard.jsx`. Page size is now 10 (featured + 9 on page 1). Structure follows vistrow.com/blog; the chip "browse" bar is deliberately not copied.
+- `PublicNav.jsx` / `PublicFooter.jsx`: "by Vistrow" text replaced by the Vistrow Technologies logo (`public/vistrow-technologies.png` and `-dark.png`, shown on mobile too). Verified on a local demo database seeded with 11 sample posts (local only, nothing in production).
+
 ### Claude Code, 2026-10-09 IST, Sanity blog connected
 
 - Sanity project **ArthaLeads**, id `2racdioq`, dataset `production` (public, so published posts are readable with no token and nothing secret lives in Railway). Studio code in `studio/` (own package, not part of the app builds), deployed to https://arthaleads.sanity.studio (redeploy with `cd studio && npx sanity deploy`; needs `npx sanity login`).
