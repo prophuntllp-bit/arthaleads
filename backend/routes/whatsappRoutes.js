@@ -279,6 +279,15 @@ function parseMetaMessages(payload) {
           out.push({ ...base, msgText: caption ? `[${label}] ${caption}` : `[${label}]`, msgType: msg.type, referral: msg.referral || null });
         } else if (msg.type === "location") {
           out.push({ ...base, msgText: `[Location] ${msg.location?.name || msg.location?.address || ""}`.trim(), msgType: "location" });
+        } else if (msg.type === "reaction") {
+          out.push({ ...base, msgText: `[Reaction] ${msg.reaction?.emoji || ""}`.trim(), msgType: "unsupported" });
+        } else if (msg.type === "unsupported") {
+          // Meta sends this when the customer's message is a kind WhatsApp does not hand to
+          // business accounts: a poll, a view-once photo or voice note, a channel post,
+          // and similar. The content itself never reaches us, so say so plainly instead of
+          // leaving the team with a bare tag and no idea what to do.
+          out.push({ ...base, msgType: "unsupported",
+            msgText: "[Unsupported message] The customer sent something WhatsApp does not pass on to business accounts (for example a poll, a view-once photo or a channel post). Ask them to send it again as a normal message." });
         } else if (msg.type) {
           out.push({ ...base, msgText: `[${msg.type} message]`, msgType: "unsupported" });
         }
