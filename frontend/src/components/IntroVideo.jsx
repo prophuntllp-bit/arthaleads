@@ -151,7 +151,7 @@ export default function IntroVideo({ isDark, id = "tour" }) {
         <div className="relative rounded-[22px] sm:rounded-[28px] overflow-hidden"
           style={{
             aspectRatio: "16 / 9",
-            background: "#111",
+            background: isDark ? "#0d0c11" : "#f0ece6",   // matches the film's own edge colour, so no dark hairline can show
             boxShadow: isDark
               ? "0 0 0 1px rgba(255,255,255,0.08), 0 40px 80px -20px rgba(0,0,0,0.7)"
               : "0 0 0 1px rgba(17,24,39,0.06), 0 40px 80px -24px rgba(120,60,10,0.28)",
@@ -164,7 +164,7 @@ export default function IntroVideo({ isDark, id = "tour" }) {
             preload="metadata"
             playsInline
             controls={started}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover" style={{ transform: "scale(1.01)" }}
             aria-label={`ArthaLeads product tour (${v.label})`}
             onLoadedData={() => { if (visible.current) tryPlay(); }}
             onPause={() => { if (ourPause.current) ourPause.current = false; else if (started && !document.hidden) userPaused.current = true; }}
