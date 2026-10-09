@@ -31,6 +31,7 @@ const onboarding = require("../services/whatsappOnboardingService");
 const { getNextAssignee } = require("../utils/assignLead");
 const RoutingRule = require("../models/RoutingRule");
 const { matchRoutingRule, fileLeadInRoutedProject } = require("../utils/routingRules");
+const { emitLeadCreated, routedProject } = require("../utils/emitLeadCreated");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { scoreLead, scoreLabel } = require("../utils/leadScorer");
 const { fillTemplate } = require("../utils/formFieldMapper");
@@ -437,6 +438,9 @@ async function autoCaptureWhatsAppLead(org, phone, name, campaignRef) {
     }],
   });
   if (ruleMatch) await fileLeadInRoutedProject(ruleMatch, lead);
+  // New-lead hand-off to Vistrow (no-op unless the owner enabled it). Not awaited.
+  // campaignRef rides on the lead itself, so ad id/headline reach the payload from there.
+  emitLeadCreated(lead, { origin: campaignRef ? "whatsapp-ctwa" : "whatsapp-inbound", routeSource: "whatsapp", project: routedProject(ruleMatch) });
   return lead;
 }
 
@@ -3751,6 +3755,7 @@ router.get("/unread", async (req, res) => {
 
 // Called by the scheduler every few minutes (utils/scheduler.js).
 router.runFlowNudges = (now) => ctwaFlow.runNudges(now);
+router.autoCaptureWhatsAppLead = autoCaptureWhatsAppLead; // exposed for tests
 
 router._detectCustomerLanguage = detectCustomerLanguage;
 router._detectMediaAsk = detectMediaAsk;

@@ -65,6 +65,7 @@ const DISPOSITION = {
   },
   Task:           { scalar: [["assignedTo", "assignedToName"], ["assignedBy", "assignedByName"]] },
   RoutingRule:    { scalar: [["assignTo", "assignToName"], ["createdBy", null]] },
+  OutboundIntegration: { scalar: [["createdBy", null], ["updatedBy", null], ["enabledBy", "enabledByName"]] },
   WaConversation: { scalar: [["assignedTo", "assignedToName"]] },
   // assignedTo is a list of people: only this person leaves it (setting it to null
   // would have taken every other assignee off the project too).
