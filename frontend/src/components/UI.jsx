@@ -3,7 +3,8 @@ import { STATUS_COLORS, PRIORITY_COLORS, SOURCE_COLORS, ROLE_COLORS } from "../u
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { X, Loader2, Phone, MessageCircle, Inbox as InboxIcon, ChevronDown, Check, Calendar, ChevronLeft, ChevronRight, Sparkles, Headphones } from "lucide-react";
+import { X, Loader2, Phone, MessageCircle, Inbox as InboxIcon, ChevronDown, Check, Calendar, ChevronLeft, ChevronRight, Sparkles, Headphones, Trash2 } from "lucide-react";
+import HoldToConfirmButton from "./HoldToConfirmButton";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import { useSoftPhone } from "../context/SoftPhoneContext";
@@ -213,15 +214,22 @@ export function FormField({ label, error, children }) {
 // Defaults to a destructive "Delete" confirmation, which is what every existing
 // caller wants. Pass confirmLabel / confirmTone="primary" for a confirmation that
 // is not a deletion, so the button never says "Delete" for something that isn't.
-export function ConfirmDialog({ open, onClose, onConfirm, title, message, loading, confirmLabel = "Delete", confirmTone = "danger" }) {
+// holdToConfirm: the destructive button must be pressed and held (red fill sweeps across) instead of clicked.
+export function ConfirmDialog({ open, onClose, onConfirm, title, message, loading, confirmLabel = "Delete", confirmTone = "danger", holdToConfirm = false, holdLabel = "Hold to delete" }) {
   return (
     <Modal open={open} onClose={onClose} title={title} size="sm">
       <p className="text-app-soft text-sm mb-6">{message}</p>
       <div className="flex gap-3 justify-end">
         <button className="btn-secondary" onClick={onClose}>Cancel</button>
-        <button className={confirmTone === "primary" ? "btn-primary" : "btn-danger"} onClick={onConfirm} disabled={loading}>
-          {loading ? <Spinner size="sm" /> : confirmLabel}
-        </button>
+        {holdToConfirm ? (
+          <HoldToConfirmButton onConfirm={onConfirm} disabled={loading} confirmedContent={loading ? <Spinner size="sm" /> : undefined} resetAfter={0}>
+            <Trash2 aria-hidden="true" className="h-4 w-4" />{holdLabel}
+          </HoldToConfirmButton>
+        ) : (
+          <button className={confirmTone === "primary" ? "btn-primary" : "btn-danger"} onClick={onConfirm} disabled={loading}>
+            {loading ? <Spinner size="sm" /> : confirmLabel}
+          </button>
+        )}
       </div>
     </Modal>
   );

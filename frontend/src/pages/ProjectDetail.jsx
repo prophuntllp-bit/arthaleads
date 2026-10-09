@@ -1734,6 +1734,7 @@ export default function ProjectDetail() {
         onClose={() => setShowDeleteProject(false)}
         onConfirm={handleDeleteProject}
         loading={deletingProject}
+        holdToConfirm
         title="Delete Project"
         message={`Are you sure you want to delete "${project.name}"? All imported leads will remain but the project will be removed.`}
       />

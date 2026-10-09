@@ -68,11 +68,14 @@ only be verified live so Claude Code or the owner can check it on production.
 
 
 
-- [Claude Code] 2026-10-09 IST: hold-to-delete button for project deletion. Files: frontend/src/components/HoldToConfirmButton.jsx (new), components/UI.jsx (ConfirmDialog holdToConfirm prop), pages/ProjectDetail.jsx (one prop). No overlap with the marketing pass.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
+
+### Claude Code, 2026-10-09 IST, hold-to-delete for projects
+
+- Deleting a project now needs a press-and-hold (red fill sweeps across ~1.6s; releasing early, sliding off or blurring cancels; Enter/Space also works; reduced motion respected). New `components/HoldToConfirmButton.jsx`; `ConfirmDialog` in `components/UI.jsx` gained a backward-compatible `holdToConfirm` prop; only `ProjectDetail`'s project delete uses it. Check: `frontend/e2e/hold-to-delete/drive.cjs`. Not verified on the live site or with touch input.
 
 ### Claude Code, 2026-10-09 IST, project page crash + help bot knowledge
 
