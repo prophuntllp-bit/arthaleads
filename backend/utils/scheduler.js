@@ -327,6 +327,13 @@ cron.schedule("*/10 * * * *", () => {
 
 module.exports = { runDailyReminder, runUpcomingReminder, runTaskReminder, runBackup, refreshFacebookTokens };
 
+// ── Every 2 minutes: answer customers whose bot reply was lost to a restart ──
+cron.schedule("*/2 * * * *", () => {
+  require("../routes/whatsappRoutes").recoverLostBotReplies()
+    .then(({ recovered }) => { if (recovered) logger.info(`[wa-bot] re-answered ${recovered} chat(s) whose reply was lost`); })
+    .catch((err) => logger.error(`[wa-bot] lost-reply sweep failed: ${err.message}`));
+});
+
 // ── Every 5 minutes: follow-up nudges for people who stopped mid-way through
 // an agent's button flow (only agents that enabled it). Required lazily so the
 // WhatsApp routes module is not pulled in when the scheduler loads.

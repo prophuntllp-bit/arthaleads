@@ -953,6 +953,47 @@ async function resumeBotIfOwed(org, convId) {
   });
 }
 
+/**
+ * Safety net for replies lost to a server restart.
+ *
+ * The bot answers after the webhook has already been acknowledged, in this
+ * process. If the server is replaced (a deploy) or crashes in those few
+ * seconds, the customer's message is saved but never answered, and nothing
+ * retried it (seen live: a "Hi" at 18:14 landed between two deploys and got
+ * silence). This finds chats where the bot is ON, the customer's last message
+ * is plain text, and nothing has been sent back for 2 to 30 minutes, and
+ * answers them once. Skipped on purpose: media and unsupported messages (the bot
+ * cannot read them), chats in the middle of a button flow, and any message
+ * already tried. Older than 30 minutes is left alone: by then a human or the
+ * follow-up nudges have it, and a late "Hi" reply reads oddly.
+ *
+ * `resume` is injectable so the selection can be tested without sending.
+ */
+async function recoverLostBotReplies({ now = new Date(), resume = resumeBotIfOwed } = {}) {
+  const from = new Date(now.getTime() - 30 * 60 * 1000);
+  const to = new Date(now.getTime() - 2 * 60 * 1000);
+  const convs = await WaConversation.find({
+    botEnabled: true,
+    lastMessageAt: { $gte: from, $lte: to },
+    $or: [{ "flowState.step": { $exists: false } }, { "flowState.step": null }, { "flowState.step": "" }],
+  }).select("_id orgId botRecoveryKey").limit(50).lean();
+
+  let recovered = 0;
+  for (const c of convs) {
+    if (botQueues.has(String(c._id))) continue; // still being answered right now
+    const last = await WaMessage.findOne({ conversationId: c._id }).sort({ timestamp: -1 }).select("direction body mediaType").lean();
+    if (!last || last.direction !== "inbound") continue;
+    if (last.mediaType !== "text" || !last.body || last.body.startsWith("[")) continue;
+    if (c.botRecoveryKey === String(last._id)) continue;
+    await WaConversation.updateOne({ _id: c._id }, { $set: { botRecoveryKey: String(last._id) } });
+    const org = await Organization.findById(c.orgId).lean();
+    if (!org?.whatsapp?.enabled) continue;
+    try { await resume(org, c._id); recovered++; }
+    catch (err) { console.error("[WhatsApp Bot] lost-reply recovery failed:", err.message); }
+  }
+  return { checked: convs.length, recovered };
+}
+
 // Sent once, as the very first outbound message on a brand-new conversation —
 // before the AI's contextual reply to whatever the customer actually wrote.
 // Failure here must never block the real reply that follows.
@@ -3764,6 +3805,7 @@ router.get("/unread", async (req, res) => {
 
 // Called by the scheduler every few minutes (utils/scheduler.js).
 router.runFlowNudges = (now) => ctwaFlow.runNudges(now);
+router.recoverLostBotReplies = recoverLostBotReplies;
 router.autoCaptureWhatsAppLead = autoCaptureWhatsAppLead; // exposed for tests
 
 router._detectCustomerLanguage = detectCustomerLanguage;

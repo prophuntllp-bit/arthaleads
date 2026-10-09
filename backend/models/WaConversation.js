@@ -63,6 +63,8 @@ const waConversationSchema = new mongoose.Schema({
   // above: "field absent" means "doesn't apply", not "at the first step".
   // Follow-up nudges the button flow has sent since the customer last wrote
   // (reset to 0 on every inbound message) — capped at 2. See ctwaFlowService.runNudges.
+    // Id of the customer message the lost-reply sweep has already tried to answer, so it never tries twice.
+    botRecoveryKey: { type: String, default: "" },
   nudgeCount: { type: Number, default: 0 },
   lastNudgeAt: { type: Date, default: null },
   // Last "hot lead" alert pushed for this thread; debounces repeat alerts.

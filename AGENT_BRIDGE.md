@@ -73,6 +73,12 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-09 IST, WhatsApp: silent chats investigated, clearer unsupported text, lost-reply safety net
+
+- Investigated two Prophunt chats the bot never answered (read-only DB look, counts and the two threads only; nothing written). **Sadare** (8 Oct 23:59 IST): Meta type `unsupported` (poll, view-once media, channel post and the like), which the bot cannot read by design; lead and thread were created from it. **Aditya Polekar** (8 Oct 18:14 IST): plain "Hi", bot ON, the reply was lost because the API container was replaced by the audit-fix deploys at 18:13 to 18:25 while the reply was in flight. Of about 210 new conversations in 3 weeks only these two had no reply.
+- `parseMetaMessages`: `unsupported` now stores a plain explanation for the team; reactions store `[Reaction] <emoji>`.
+- `recoverLostBotReplies` (`routes/whatsappRoutes.js`, cron every 2 min in `utils/scheduler.js`, `WaConversation.botRecoveryKey`): answers chats where the bot is ON, the last message is plain text, nothing was sent back for 2 to 30 minutes, not mid button-flow, never tried before. 11-assertion scratch test passed. Expect an `[wa-bot] re-answered N chat(s)` log line when it fires.
+
 ### Claude Code, 2026-10-09 IST, Features page rebuilt (film autoplay, first 5 blog posts)
 
 - `Features.jsx`: sticky 7-step workflow progress bar (follows scroll, click to jump), each workflow has its real product screen (clip plays only while on screen, from `/tour/*`) beside its heading, alternating sides, with the feature cards below (grid fills every row, cards fade in, hover lifts). Last group ("Control") is centred with no screen. Respects reduced motion and Data Saver. Sections use `overflow-x-clip` so the slide-in does not cause sideways scroll on phones.
