@@ -3,6 +3,7 @@ const Project = require("../models/Project");
 const Lead = require("../models/Lead");
 const { getNextAssignee } = require("../utils/assignLead");
 const { sendPushToAll } = require("../utils/push");
+const { emitLeadCreated } = require("../utils/emitLeadCreated");
 
 // GET /api/public/form/:token
 async function getForm(req, res, next) {
@@ -103,6 +104,9 @@ async function submitLead(req, res, next) {
         meta: {},
       }],
     });
+
+    // New-lead hand-off to Vistrow (no-op unless the owner enabled it). Not awaited.
+    emitLeadCreated(lead, { origin: "qr", project: project ? { id: project._id, name: project.name } : undefined });
 
     sendPushToAll({
       type: "new_lead",

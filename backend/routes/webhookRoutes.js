@@ -9,6 +9,7 @@ const logger = require("../config/logger");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { getNextAssignee } = require("../utils/assignLead");
 const { matchRoutingRule, matchWebsiteRoutingRule, fileLeadInRoutedProject } = require("../utils/routingRules");
+const { emitLeadCreated, routedProject } = require("../utils/emitLeadCreated");
 const Organization    = require("../models/Organization");
 const { mapGoogleLeadFields, fromWebhookColumns } = require("../utils/googleLeadFields");
 const { mapCustomFieldsToLead } = require("../utils/formFieldMapper");
@@ -666,6 +667,17 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
         });
 
         if (ruleMatch && !isTestLead) await fileLeadInRoutedProject(ruleMatch, createdLead);
+        // New-lead hand-off to Vistrow (no-op unless the owner enabled it). Not awaited.
+        emitLeadCreated(createdLead, {
+          origin: "webhook-facebook", routeSource: "facebook", isTest: isTestLead, project: routedProject(ruleMatch),
+          attribution: {
+            form_id: formId, form_name: formName,
+            page_id: leadDetails.page_id || leadData.page_id || "",
+            campaign_id: leadData.campaign_id || "", campaign_name: campaignName,
+            adset_id: leadData.adset_id || leadDetails.adset_id || "", adset_name: adsetName,
+            ad_id: leadData.ad_id || leadDetails.ad_id || "", ad_name: adName,
+          },
+        });
         if (!isTestLead && createdLead.metaLeadId) require("../services/metaConversions").track(createdLead, "New", createdLead.createdAt);
 
         if (automation) {
@@ -893,6 +905,8 @@ router.post("/website", express.json(), websiteLeadLimiter, async (req, res) => 
     });
 
     if (ruleMatch) await fileLeadInRoutedProject(ruleMatch, lead);
+    // New-lead hand-off to Vistrow (no-op unless the owner enabled it). Not awaited.
+    emitLeadCreated(lead, { origin: "webhook-website", routeSource: "website", isTest: form_plugin === "manual_test", project: routedProject(ruleMatch) });
 
     automation.status = "connected";
     automation.lastSyncAt = new Date();
@@ -1392,6 +1406,15 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
     automation.lastSyncAt = new Date();
     await automation.save();
 
+    // New-lead hand-off to Vistrow, for partner/bot token sources only. A lead that
+    // arrives FROM Vistrow (its platform, or any call data) is its own result
+    // coming back, never a new lead to send out again: that would loop.
+    emitLeadCreated(lead, {
+      origin: "webhook-custom", vistrowOrigin: automation.platform === "Vistrow Voice" || !!voiceCall,
+      // Only a WhatsApp provider token counts as the WhatsApp source; "Custom" never auto-calls.
+      routeSource: automation.platform === "WhatsApp" ? "whatsapp" : undefined,
+    });
+
     // Push notification — targeted to assignee if assigned, broadcast otherwise
     if (assignee?._id) {
       sendPushToUser(assignee._id, {
@@ -1551,6 +1574,14 @@ router.post("/google", express.json(), googleLeadLimiter, async (req, res) => {
     });
 
     if (ruleMatch && !isTestLead) await fileLeadInRoutedProject(ruleMatch, lead);
+    // New-lead hand-off to Vistrow (no-op unless the owner enabled it). Not awaited.
+    emitLeadCreated(lead, {
+      origin: "webhook-google", isTest: isTestLead, project: routedProject(ruleMatch),
+      attribution: {
+        campaign_id: campaign_id ? String(campaign_id) : "", campaign_name: campaign_name || "",
+        adgroup_id: adgroup_id ? String(adgroup_id) : "", adgroup_name: adgroup_name || "",
+      },
+    });
 
     automation.status = "connected";
     automation.lastSyncAt = new Date();

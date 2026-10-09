@@ -11,6 +11,7 @@ const WaMessage = require("../models/WaMessage");
 const { AppError } = require("../middlewares/errorHandler");
 const { sendPushToUser } = require("../utils/push");
 const { getNextAssignee } = require("../utils/assignLead");
+const { emitLeadCreated, emitLeadsCreated } = require("../utils/emitLeadCreated");
 const { formatISTDate, istDateKey, startOfISTDay, endOfISTDay } = require("../utils/datetime");
 const OPTS = require("../constants/leadOptions");
 
@@ -303,6 +304,8 @@ const leadService = {
     }
 
     await lead.save();
+    // New-lead hand-off to Vistrow (no-op unless the owner enabled it). Not awaited.
+    emitLeadCreated(lead, { origin: "manual" });
     return { lead, duplicate };
   },
 
@@ -895,6 +898,8 @@ const leadService = {
 
     // Phase 3: insertMany is atomic per batch; if it throws, nothing is persisted
     const inserted = await Lead.insertMany(docs, { ordered: true });
+    // A spreadsheet is not leads arriving: only sent if the owner opted imports in, and capped.
+    emitLeadsCreated(inserted, { origin: "import" });
     return { inserted, duplicates };
   },
 

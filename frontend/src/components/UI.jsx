@@ -210,14 +210,17 @@ export function FormField({ label, error, children }) {
   );
 }
 
-export function ConfirmDialog({ open, onClose, onConfirm, title, message, loading }) {
+// Defaults to a destructive "Delete" confirmation, which is what every existing
+// caller wants. Pass confirmLabel / confirmTone="primary" for a confirmation that
+// is not a deletion, so the button never says "Delete" for something that isn't.
+export function ConfirmDialog({ open, onClose, onConfirm, title, message, loading, confirmLabel = "Delete", confirmTone = "danger" }) {
   return (
     <Modal open={open} onClose={onClose} title={title} size="sm">
       <p className="text-app-soft text-sm mb-6">{message}</p>
       <div className="flex gap-3 justify-end">
         <button className="btn-secondary" onClick={onClose}>Cancel</button>
-        <button className="btn-danger" onClick={onConfirm} disabled={loading}>
-          {loading ? <Spinner size="sm" /> : "Delete"}
+        <button className={confirmTone === "primary" ? "btn-primary" : "btn-danger"} onClick={onConfirm} disabled={loading}>
+          {loading ? <Spinner size="sm" /> : confirmLabel}
         </button>
       </div>
     </Modal>

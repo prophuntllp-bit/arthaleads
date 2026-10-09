@@ -12,6 +12,7 @@ import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../compon
 import CustomSelect from "../components/CustomSelect";
 import WhatsAppIcon from "../components/WhatsAppIcon";
 import MetaConversionsSection from "../components/MetaConversionsSection";
+import VistrowOutboundSection from "../components/VistrowOutboundSection";
 import ConnectionCard, { ConnectionGroups } from "../components/ConnectionCard";
 
 /* ─── platform presets (non-Facebook) ─────────────────────────────────────── */
@@ -2335,6 +2336,9 @@ export default function Automation() {
         {/* Meta Conversions API */}
         <MetaConversionsSection />
       </div>
+
+      {/* New leads out to Vistrow Voice: contacts, and which agent may call which lead (admin only, off by default) */}
+      <VistrowOutboundSection />
     </div>
   );
 }

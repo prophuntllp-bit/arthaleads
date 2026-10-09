@@ -66,6 +66,9 @@ if (process.env.NODE_ENV === "production" && !process.env.FB_APP_SECRET) {
 console.log("[BOOT] Connecting to DB...");
 connectDB().then(async () => {
   console.log("[BOOT] DB connected");
+  // Retries/recovery for outbound lead deliveries. Idles unless an org has
+  // enabled the Vistrow outbound integration (nothing is ever queued otherwise).
+  require("./services/vistrowOutbound").startWorker();
   // One-time migration: clear auto-defaulted "Not Contacted" remarks (never manually set)
   try {
     const mongoose = require("mongoose");
@@ -321,6 +324,8 @@ app.use("/api/org",   orgRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/automations", automationRoutes);
 app.use("/api/routing-rules", require("./routes/routingRuleRoutes"));
+// Owner-only controls for pushing new leads out to Vistrow Voice (off until enabled).
+app.use("/api/integrations/vistrow-outbound", require("./routes/vistrowOutboundRoutes"));
 app.use("/api/projects", projectRoutes);
 app.use("/api/push", pushRoutes);
 app.use("/api/voice", require("./routes/voiceRoutes"));
