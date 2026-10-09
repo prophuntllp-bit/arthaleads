@@ -296,6 +296,7 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 // ── Webhooks BEFORE json parser (they verify signatures over the raw body) ────
+app.use("/webhook/vistrow", require("./routes/vistrowPickerRoutes")); // read-only picker data for Vistrow (token-scoped)
 app.use("/webhook", webhookRoutes);
 app.use("/api/billing/webhook", require("./routes/billingWebhookRoutes"));
 
