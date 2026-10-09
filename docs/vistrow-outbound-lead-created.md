@@ -1,6 +1,6 @@
 # ArthaLeads -> Vistrow Voice: outbound `lead.created`
 
-Opt-in, off by default. Admin setup: **Integrations -> Vistrow Voice card -> "Auto-call new leads"** (page `/integrations/vistrow-calling`) (four steps: connect, sources, agents, review and switch on). Technical details (web address, header mode, test/check tools, safety settings, delivery log) sit in a collapsed section.
+Opt-in, off by default. Admin setup: **Integrations -> Vistrow Voice card -> Settings gear** (page `/integrations/vistrow-voice`, tabs: Connection / Auto-call new leads at `/integrations/vistrow-calling`) (four steps: connect, sources, agents, review and switch on). Technical details (web address, header mode, test/check tools, safety settings, delivery log) sit in a collapsed section.
 
 ## What is sent, and when
 * Only for a **new** lead, after it is saved, from: manual add, Website webhook, Facebook webhook, Google webhook/poller, custom `/webhook/lead` (legacy path), WhatsApp/CTWA auto-capture, QR/public form, and small spreadsheet imports (opt-in, never called).
@@ -31,6 +31,22 @@ Optional, only when present: `email`, `whatsapp`, `lead_source`, `source_detail`
 
 ## Agent list (picker)
 `GET {web address}/leads/inbound/{account_id}/agents`, same key in `X-Vistrow-Webhook-Token` or `Authorization: Bearer` (never the URL). Expected: `{agents:[{id,name,knowledge_base}]}`, active agents with a knowledge base only. ArthaLeads shows "name - knowledge base" in a searchable dropdown; the `id` stays on the server (the browser only holds an opaque ref, mapped back to the id when a choice is saved) and is stored/sent as `agent_id`. 401/403, 404, 5xx/timeouts, an empty list and an unreadable reply each get a plain-language message in the setup screen. The list is fetched after the connection is saved and on refresh.
+
+## Project picker data for Vistrow
+Vistrow's Integrations screen offers a searchable project picker instead of free text. Server to server, read-only, projects only (no campaign/ad list until a separate contract is agreed):
+
+    GET {ArthaLeads API}/webhook/lead/projects
+    X-ArthaLeads-Connection-Token: <the organisation's Vistrow Voice connection token>
+
+    200 { "ok": true, "projects": [ { "id": "<project id>", "name": "SP Khopoli" } ] }
+    401 { "ok": false, "reason": "missing_token" | "invalid_token" }
+    403 { "ok": false, "reason": "plan" }
+    400 { "ok": false, "reason": "token_in_url" }
+    429 { "ok": false, "reason": "rate_limited" }
+
+The token is the existing "Vistrow Voice" connection token (the one used for `POST /webhook/lead`); it identifies the organisation, so no org id is passed. Header only: a token in the URL is refused, and Website/Custom/Facebook/Google tokens and inactive connections get `401`. Enterprise plan only, 30 requests/min, `no-store`. Returns active projects only (`isArchived != true`, the CRM's own source), A-Z, at most 200, with only `id` and `name`. Nothing is written and no auto-call switch or integration setting is read or changed.
+
+Show `name` in the picker; keep `id` on the Vistrow server. A lead's project reaches Vistrow as `project` (name) and `custom_fields.project_id` (this id) in `lead.created`.
 
 ## Response handling
 2xx `{ok:true}` (also `deduped`) = delivered. `queued:false` => delivered but warning "call not queued". 2xx `{ok:false,reason}` and 4xx (except 408/429) = permanent, shown to the admin, never marked delivered. Transport errors, 408, 429 (Retry-After honoured), 5xx = retry.

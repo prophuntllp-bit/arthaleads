@@ -67,7 +67,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 
 
-- [Claude Code] 2026-10-09 IST: [CLAIM] read-only project/campaign picker API for Vistrow (GET /webhook/vistrow/picker-options, token-scoped). Files: backend/routes/vistrowPickerRoutes.js (new), backend/server.js (one mount line), backend/services/leadService.js (extract campaign-options by orgId), backend/tests/vistrowPicker.test.js, docs/vistrow-outbound-lead-created.md. No overlap with the marketing-site pass. Note: issue #2 is an old closed PR thread with only Vercel bot comments; this file is the live bridge.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
@@ -78,9 +77,21 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 - `dc36292` ProjectDetail used `useMemo` without importing it, so every project page crashed in production (audit FE01, introduced by my batch A). Leads transfer callback for project leads called two setters that do not exist; now uses `removeLead`. Ran an `no-undef` lint over all of frontend/src: no other undefined names (only the Vite `__APP_BUILD__` define). Verified the project page Info/Leads/Prospective tabs render on the local demo account.
 - (this commit) Help assistant and marketing bot knowledge in `backend/utils/openai.js`: corrected stats to the website's (50+ teams, 10,000+ leads), removed live features from "coming soon" (Google Ads, duplicate detection, late marks), fixed `/integrations` path and ticket location, dropped the obsolete "server sleeping" login step, added a "NEWER FEATURES" block (search, project transfer, project dump/chat, consent, tasks, seats and renewals with credit, storage and packs, Meta conversion tracking, connection health, Google Ads, Vistrow auto-call, attendance photo fallback, paging, referral statuses, password change sign-out). Four new quick answers in `frontend/src/data/helpData.js`. Every claim checked against the code; STOP-keyword opt-out and Dump "import into project" do not exist and are not claimed.
 
+### Claude Code, 2026-10-09 IST, Vistrow Voice settings are a page, not a popup (branch claude/vistrow-picker-options)
+
+- New settings page `pages/VistrowVoiceSettingsPage.jsx` with two tabs: Connection token (`/integrations/vistrow-voice`, the old popup's content, now `components/VistrowVoiceSettings.jsx` `VoiceConnectionPanel`) and Auto-call new leads (`/integrations/vistrow-calling`). The connected Vistrow Voice row shows a Settings gear (`ConnectionCard` `onSettings`) instead of Edit; the tile goes to the Auto-call tab. The `VoiceWizard` modal and `VistrowCalling.jsx` are removed. Browser checks: `frontend/e2e/vistrow-outbound/drive.cjs` and `drive-list.cjs`.
+
+### Claude Code, 2026-10-09 IST, Vistrow Voice tile goes to the auto-call page (branch claude/vistrow-picker-options)
+
+- The Vistrow Voice quick-connect tile on Integrations now navigates to `/integrations/vistrow-calling` instead of opening the token modal. The connected Vistrow Voice row keeps Edit (token modal) and gets a real "Auto-call new leads" button (`ConnectionCard` `onAutoCall`, admins only); the earlier link in PR #5 sat in the Facebook-only "Name your lead forms" slot and never showed. The auto-call page links back to the token modal. No setting or source switch is touched. Check: `frontend/e2e/vistrow-outbound/drive-list.cjs`.
+
 ### Claude Code, 2026-10-09 IST, Vistrow auto-call setup moved to its own page (branch claude/vistrow-calling-page)
 
 - The "auto-call new leads" setup is now `/integrations/vistrow-calling` (new `pages/VistrowCalling.jsx`, route in `App.jsx`), opened from a button on the Vistrow Voice card in Integrations (admin only). Removed the inline block from `pages/Automation.jsx`; fixed step 1 layout. Backend unchanged. Browser check updated (`frontend/e2e/vistrow-outbound`).
+
+### Claude Code, 2026-10-09 IST, Vistrow project picker API (branch claude/vistrow-picker-options)
+
+- Added read-only `GET /webhook/lead/projects` (header `X-ArthaLeads-Connection-Token` = the org's Vistrow Voice connection token, tenant from the token, Enterprise only): active projects `{id,name}` only for Vistrow's picker (contract agreed with Vistrow, their PR #11). Replaces the earlier `/webhook/vistrow/picker-options` draft; no campaign/ad list. New `routes/vistrowPickerRoutes.js`, one mount line in `server.js`; contract in `docs/vistrow-outbound-lead-created.md`; tests `backend/tests/vistrowPicker.test.js` (in `npm run test:vistrow`). Not verified against a real MongoDB or live Vistrow.
 
 ### Claude Code, 2026-10-09 IST, Vistrow outbound lead.created (PR #3, draft, not merged, off by default)
 

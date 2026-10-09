@@ -46,9 +46,11 @@ const deliveries = () => [
 ];
 
 export default {
+  defaults: { baseURL: "http://localhost:5000/api" },
   async get(url) {
     if (url === "/integrations/vistrow-outbound") return ok({ status: status() });
     if (url.startsWith("/integrations/vistrow-outbound/deliveries")) return ok({ deliveries: deliveries() });
+    if (url === "/automations/voice/connections") return ok({ connections: [{ id: "c1", name: "Vistrow Voice", status: "connected", token: "AW-test-token-0000", lastSyncAt: null }] });
     if (url === "/projects") return { data: { data: PROJECTS } };
     if (url === "/leads/domains") return { data: { pages: [{ domain: "shaporjipallonji.com", path: "/shapoorji-pallonji-khopoli/", count: 12 }, { domain: "shaporjipallonji.com", path: "/treetopia/", count: 3 }] } };
     if (url === "/leads/campaign-options") return { data: { options: { whatsapp: { ad_id: [{ value: "120252242040050286", label: "900+ Acre New Launch", count: 28 }] } } } };
