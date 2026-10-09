@@ -12,7 +12,6 @@ import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../compon
 import CustomSelect from "../components/CustomSelect";
 import WhatsAppIcon from "../components/WhatsAppIcon";
 import MetaConversionsSection from "../components/MetaConversionsSection";
-import VistrowOutboundSection from "../components/VistrowOutboundSection";
 import ConnectionCard, { ConnectionGroups } from "../components/ConnectionCard";
 
 /* ─── platform presets (non-Facebook) ─────────────────────────────────────── */
@@ -1139,6 +1138,23 @@ function VoiceCard({ conn, onDelete }) {
   );
 }
 
+// Admin-only entry to the dedicated "auto-call new leads" setup page (off by default).
+function VistrowCallingLink() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  if (user?.role !== "admin" && user?.role !== "super_admin") return null;
+  return (
+    <button type="button" onClick={() => navigate("/integrations/vistrow-calling")} data-testid="vistrow-calling-link"
+      className="mt-3 w-full flex items-center justify-between rounded-xl border px-4 py-3 text-left hover:bg-black/5" style={{ borderColor: "var(--app-border)" }}>
+      <span>
+        <span className="block text-sm font-semibold text-app">Auto-call new leads</span>
+        <span className="block text-xs text-app-soft">Choose which new leads Vistrow's agents may call. Off until you switch it on.</span>
+      </span>
+      <ChevronRight className="w-4 h-4 text-app-soft shrink-0" />
+    </button>
+  );
+}
+
 /* ─── Vistrow Voice wizard ─────────────────────────────────────────────────── */
 function VoiceWizard({ open, onClose, onChanged }) {
   const [loading, setLoading] = useState(false);
@@ -2212,7 +2228,7 @@ export default function Automation() {
                         setItems((prev) => prev.map((i) => (i._id === id ? { ...i, formLabels } : i)))
                       }
                     />
-                  ) : null}
+                  ) : isVistrowVoice ? <VistrowCallingLink /> : null}
                 />
               );
             }}
@@ -2337,8 +2353,6 @@ export default function Automation() {
         <MetaConversionsSection />
       </div>
 
-      {/* New leads out to Vistrow Voice: contacts, and which agent may call which lead (admin only, off by default) */}
-      <VistrowOutboundSection />
     </div>
   );
 }
