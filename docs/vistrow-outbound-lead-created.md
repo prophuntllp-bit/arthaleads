@@ -1,6 +1,6 @@
 # ArthaLeads -> Vistrow Voice: outbound `lead.created`
 
-Opt-in, off by default. Admin setup: **Integrations -> Vistrow Voice card -> "Auto-call new leads"** (page `/integrations/vistrow-calling`) (four steps: connect, sources, agents, review and switch on). Technical details (web address, header mode, test/check tools, safety settings, delivery log) sit in a collapsed section.
+Opt-in, off by default. Admin setup: **Integrations -> Vistrow Voice card -> Settings gear** (page `/integrations/vistrow-voice`, tabs: Connection / Auto-call new leads at `/integrations/vistrow-calling`) (four steps: connect, sources, agents, review and switch on). Technical details (web address, header mode, test/check tools, safety settings, delivery log) sit in a collapsed section.
 
 ## What is sent, and when
 * Only for a **new** lead, after it is saved, from: manual add, Website webhook, Facebook webhook, Google webhook/poller, custom `/webhook/lead` (legacy path), WhatsApp/CTWA auto-capture, QR/public form, and small spreadsheet imports (opt-in, never called).

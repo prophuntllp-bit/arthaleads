@@ -40,7 +40,8 @@ const assert = require("assert");
   });
 
   await step("dedicated page: own title, a way back to Integrations, step 1 help and Connect are on separate lines", async () => {
-    await page.getByRole("heading", { name: "Auto-call new leads" }).waitFor();
+    await page.getByRole("heading", { name: "Vistrow Voice settings" }).waitFor();
+    assert.equal(await page.getByTestId("tab-calling").getAttribute("aria-selected"), "true");
     const help = await root.getByText("Where do I find these?").boundingBox();
     const connect = await root.getByRole("button", { name: "Connect", exact: true }).boundingBox();
     assert.ok(connect.y >= help.y + help.height - 1, "Connect sits below the help link, not beside it");
@@ -275,6 +276,17 @@ const assert = require("assert");
     await root.getByRole("button", { name: "Save changes" }).click();
     await page.getByText(/Sending was switched off because the connection changed/).waitFor();
     assert.equal((await fake()).enabled, false);
+  });
+
+  await step("the Connection tab is its own page (/integrations/vistrow-voice) with the token, not a popup", async () => {
+    await page.getByTestId("tab-connection").click();
+    await page.getByTestId("voice-connection").waitFor();
+    assert.match(await page.getByTestId("path").innerText(), /vistrow-voice/);
+    const t = await page.getByTestId("voice-connection").innerText();
+    assert.match(t, /AW-test-token-0000/); assert.match(t, /Add Another Connection/); assert.match(t, /How to connect/i);
+    assert.equal(await page.getByRole("dialog").count(), 0);
+    await page.getByTestId("tab-calling").click();
+    await page.getByTestId("vistrow-outbound").waitFor();
   });
 
   await step("the back arrow returns to Integrations", async () => {

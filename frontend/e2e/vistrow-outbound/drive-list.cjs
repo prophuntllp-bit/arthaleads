@@ -21,23 +21,22 @@ const here = __dirname;
     assert.equal(await path_(), "/integrations");
     await tile().waitFor();
   });
-  await step("clicking the Vistrow Voice quick-connect tile navigates to the dedicated page and opens no modal", async () => {
+  await step("clicking the Vistrow Voice quick-connect tile navigates to the settings page (Auto-call tab) and opens no modal", async () => {
     await tile().click();
     await page.getByTestId("calling-page").waitFor();
     assert.equal(await path_(), "/integrations/vistrow-calling");
     assert.equal(await page.getByRole("dialog").count(), 0);
     assert.equal(await page.getByText("HOW TO CONNECT").count(), 0);
   });
-  await step("the connected row keeps its token actions (Edit opens the token modal) and also offers Auto-call new leads", async () => {
+  await step("the connected row shows a Settings gear (no Edit popup); it opens the dedicated settings page", async () => {
     await page.goto("file://" + path.join(here, "index-list.html"));
-    await page.getByTestId("vistrow-calling-link").waitFor();
-    await page.getByRole("button", { name: "Edit" }).first().click();
-    await page.getByText("HOW TO CONNECT").waitFor();
-    await page.screenshot({ path: path.join(here, "06-token-modal.png") });
-    await page.getByRole("button", { name: "Close" }).click();
-    await page.getByTestId("vistrow-calling-link").click();
+    await page.getByTestId("vistrow-settings-link").waitFor();
+    assert.equal(await page.getByRole("button", { name: "Edit" }).count(), 0, "Vistrow row has no Edit popup button");
+    await page.getByTestId("vistrow-settings-link").click();
     await page.getByTestId("calling-page").waitFor();
-    assert.equal(await path_(), "/integrations/vistrow-calling");
+    assert.equal(await path_(), "/integrations/vistrow-voice");
+    assert.equal(await page.getByRole("dialog").count(), 0);
+    assert.equal(await page.getByText("HOW TO CONNECT").count(), 0);
   });
 
   await step("nothing was written: no source switched on, no setting changed", async () => {

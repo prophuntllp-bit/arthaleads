@@ -11,6 +11,7 @@ createRoot(document.getElementById("root")).render(
     <Routes>
       <Route path="/integrations" element={<Automation />} />
       <Route path="/integrations/vistrow-calling" element={<div data-testid="calling-page">Auto-call new leads page</div>} />
+      <Route path="/integrations/vistrow-voice" element={<div data-testid="calling-page">Vistrow Voice settings page</div>} />
       <Route path="/plans" element={<div data-testid="plans-page">plans</div>} />
     </Routes>
   </MemoryRouter>

@@ -72,6 +72,10 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-09 IST, Vistrow Voice settings are a page, not a popup (branch claude/vistrow-picker-options)
+
+- New settings page `pages/VistrowVoiceSettingsPage.jsx` with two tabs: Connection token (`/integrations/vistrow-voice`, the old popup's content, now `components/VistrowVoiceSettings.jsx` `VoiceConnectionPanel`) and Auto-call new leads (`/integrations/vistrow-calling`). The connected Vistrow Voice row shows a Settings gear (`ConnectionCard` `onSettings`) instead of Edit; the tile goes to the Auto-call tab. The `VoiceWizard` modal and `VistrowCalling.jsx` are removed. Browser checks: `frontend/e2e/vistrow-outbound/drive.cjs` and `drive-list.cjs`.
+
 ### Claude Code, 2026-10-09 IST, Vistrow Voice tile goes to the auto-call page (branch claude/vistrow-picker-options)
 
 - The Vistrow Voice quick-connect tile on Integrations now navigates to `/integrations/vistrow-calling` instead of opening the token modal. The connected Vistrow Voice row keeps Edit (token modal) and gets a real "Auto-call new leads" button (`ConnectionCard` `onAutoCall`, admins only); the earlier link in PR #5 sat in the Facebook-only "Name your lead forms" slot and never showed. The auto-call page links back to the token modal. No setting or source switch is touched. Check: `frontend/e2e/vistrow-outbound/drive-list.cjs`.

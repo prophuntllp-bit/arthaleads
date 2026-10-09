@@ -371,7 +371,7 @@ const LeadPipeline   = lazy(() => import("./pages/LeadPipeline"));
 const Team           = lazy(() => import("./pages/Team"));
 const Performance    = lazy(() => import("./pages/Performance"));
 const Automation     = lazy(() => import("./pages/Automation"));
-const VistrowCalling = lazy(() => import("./pages/VistrowCalling"));
+const VistrowVoiceSettingsPage = lazy(() => import("./pages/VistrowVoiceSettingsPage"));
 const TelephonyIntegration = lazy(() => import("./pages/TelephonyIntegration"));
 const WhatsAppIntegration = lazy(() => import("./pages/WhatsAppIntegration"));
 const Settings       = lazy(() => import("./pages/Settings"));
@@ -836,7 +836,8 @@ export default function App() {
             <Route element={<RequireRole roles={["admin", "manager"]} />}>
               <Route path="/team" element={<Team />} />
               <Route path="/integrations" element={<Automation />} />
-              <Route path="/integrations/vistrow-calling" element={<VistrowCalling />} />
+              <Route path="/integrations/vistrow-voice" element={<VistrowVoiceSettingsPage tab="connection" />} />
+              <Route path="/integrations/vistrow-calling" element={<VistrowVoiceSettingsPage tab="calling" />} />
               <Route path="/integrations/telephony" element={<TelephonyIntegration />} />
               <Route path="/integrations/whatsapp" element={<WhatsAppIntegration />} />
               {/* The page was renamed Automation -> Integrations. Keep the old
