@@ -29,6 +29,9 @@ Optional, only when present: `email`, `whatsapp`, `lead_source`, `source_detail`
 * **Website page rules can carry project context:** the page URL is sent as `custom_fields.source_page`; a rule's optional project becomes `project` / `custom_fields.project_id` when the lead has no project of its own.
 * Re-checked at send time; a change since creation can only downgrade to no-call.
 
+## Agent list (picker)
+`GET {web address}/leads/inbound/{account_id}/agents`, same key in `X-Vistrow-Webhook-Token` or `Authorization: Bearer` (never the URL). Expected: `{agents:[{id,name,knowledge_base}]}`, active agents with a knowledge base only. ArthaLeads shows "name - knowledge base" in a searchable dropdown; the `id` stays on the server (the browser only holds an opaque ref, mapped back to the id when a choice is saved) and is stored/sent as `agent_id`. 401/403, 404, 5xx/timeouts, an empty list and an unreadable reply each get a plain-language message in the setup screen. The list is fetched after the connection is saved and on refresh.
+
 ## Response handling
 2xx `{ok:true}` (also `deduped`) = delivered. `queued:false` => delivered but warning "call not queued". 2xx `{ok:false,reason}` and 4xx (except 408/429) = permanent, shown to the admin, never marked delivered. Transport errors, 408, 429 (Retry-After honoured), 5xx = retry.
 
@@ -36,4 +39,4 @@ Optional, only when present: `email`, `whatsapp`, `lead_source`, `source_detail`
 `auto_call` / `agent_id` / `auto_call_reason` / `route_label` key names; `budget` as a display string; `queued:false` response shape; an agent-list endpoint (so the UI can offer agents without a pasted code). **Compliance:** ArthaLeads holds no call-consent or DND data (only WhatsApp marketing opt-in, sent as `consent_basis` / `opt_out`); DND/TRAI checks must be done on the Vistrow side.
 
 ## Tests
-`cd backend && npm run test:vistrow` (197 checks, no database needed); browser check in `frontend/e2e/vistrow-outbound`.
+`cd backend && npm run test:vistrow` (210 checks, no database needed); browser check in `frontend/e2e/vistrow-outbound`.

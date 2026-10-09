@@ -26,6 +26,7 @@ const routeSchema = new mongoose.Schema(
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project", default: null },
     projectName: { type: String, trim: true, default: "" },
     agentId: { type: String, trim: true, default: "" },
+    agentKb: { type: String, trim: true, default: "" }, // knowledge base name, display only
     agentLabel: { type: String, trim: true, maxlength: 120, default: "" },
   },
   { timestamps: true }

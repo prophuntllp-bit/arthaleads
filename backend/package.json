@@ -9,7 +9,7 @@
     "seed": "node utils/seed.js",
     "sandbox": "node scripts/sandbox.js",
     "audit": "npm audit --audit-level=moderate",
-    "test:vistrow": "node tests/vistrowOutbound.unit.test.js && node tests/vistrowOutbound.routing.test.js && node tests/vistrowOutbound.service.test.js && node tests/vistrowOutbound.paths.test.js",
+    "test:vistrow": "node tests/vistrowOutbound.unit.test.js && node tests/vistrowOutbound.routing.test.js && node tests/vistrowOutbound.service.test.js && node tests/vistrowOutbound.paths.test.js && node tests/vistrowOutbound.agents.test.js",
     "test": "node tests/accountDeletion.coverage.test.js && node tests/accountDeletion.behaviour.test.js && node tests/accountDeletion.db.test.js && node tests/contentReport.db.test.js && npm run test:vistrow"
   },
   "dependencies": {

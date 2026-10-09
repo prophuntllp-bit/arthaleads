@@ -93,12 +93,12 @@ function parseRetryAfter(v) {
   return Number.isFinite(t) ? Math.min(Math.max(t - Date.now(), 0), RETRY_AFTER_CAP_MS) : 0;
 }
 
-async function httpSend({ url, headers, body, timeoutMs = REQUEST_TIMEOUT_MS, fetchImpl = globalThis.fetch }) {
+async function httpSend({ url, headers, body, method = "POST", timeoutMs = REQUEST_TIMEOUT_MS, fetchImpl = globalThis.fetch }) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   const t0 = Date.now();
   try {
-    const res = await fetchImpl(url, { method: "POST", headers, body, redirect: "manual", signal: ctrl.signal });
+    const res = await fetchImpl(url, { method, headers, ...(method === "GET" ? {} : { body }), redirect: "manual", signal: ctrl.signal });
     const text = (await res.text()).slice(0, MAX_RESPONSE_CHARS);
     let json = null;
     try { json = JSON.parse(text); } catch { /* non-JSON body */ }

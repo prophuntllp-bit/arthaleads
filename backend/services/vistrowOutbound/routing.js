@@ -161,6 +161,14 @@ function validateRoutingInput(body) {
           row.matchValue = v;
         }
 
+        // The browser never holds a Vistrow agent id: it names an agent by an opaque `agentRef`
+        // (resolved server-side against Vistrow's live list), or sends neither to keep the row's
+        // current agent. agentRef "" clears it. agentId is accepted for server-side callers/tests.
+        if (r.agentRef !== undefined && r.agentRef !== "") {
+          if (!/^[a-f0-9]{24}$/.test(String(r.agentRef))) { errors.push(`${where}: choose an agent from the list`); return; }
+          row.agentRef = String(r.agentRef);
+        }
+        row.keepAgent = r.agentRef === undefined && r.agentId === undefined;
         const agentId = String(r.agentId || "").trim();
         if (agentId && !AGENT_ID_RE.test(agentId)) { errors.push(`${where}: the agent id has unsupported characters`); return; }
         row.agentId = agentId; // empty = "Unassigned": the row resolves to no call

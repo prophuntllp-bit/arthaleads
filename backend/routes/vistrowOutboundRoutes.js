@@ -15,6 +15,7 @@ const { validateConfigInput, sensitiveChanges } = require("../services/vistrowOu
 const T = require("../services/vistrowOutbound/transport");
 const { maskPhone } = require("../services/vistrowOutbound/phone");
 const R = require("../services/vistrowOutbound/routing");
+const agentsLib = require("../services/vistrowOutbound/agents");
 const { service } = require("../services/vistrowOutbound");
 const { mongoStore, toConfig } = require("../services/vistrowOutbound/store.mongo");
 
@@ -22,6 +23,8 @@ const router = express.Router();
 router.use(protect, authorize("admin"));
 
 const testLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { success: false, message: "Too many test requests - wait a minute." } });
+
+const agentsLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { success: false, message: "Too many requests - wait a minute." } });
 
 const fail = (res, err, where) => {
   logger.error(`[vistrow-outbound] ${where} failed: ${err?.name || "Error"}${err?.code ? `:${err.code}` : ""}`);
@@ -33,6 +36,8 @@ const load = (orgId) => OutboundIntegration.findOne({ orgId, provider: "vistrow"
 const percentile = (sorted, p) => (sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length))] : null);
 
 async function buildStatus(orgId, doc) {
+  let secret = "";
+  try { secret = doc?.secretEnc ? doc.getSecret() : ""; } catch { secret = ""; }
   const since = new Date(Date.now() - 24 * 3600 * 1000);
   const recent = { orgId, isTest: false, createdAt: { $gte: since } };
   const [grouped, callsAsked, callsDeclined, delivered] = await Promise.all([
@@ -70,7 +75,7 @@ async function buildStatus(orgId, doc) {
         routes: (src?.routes || []).map((r) => ({
           id: String(r._id), label: R.routeLabel(r), customLabel: r.label || "", matchKind: r.matchKind, matchValue: r.matchValue,
           projectId: r.projectId ? String(r.projectId) : "", projectName: r.projectName || "",
-          agentId: r.agentId || "", agentLabel: r.agentLabel || "", unassigned: !r.agentId,
+          agentRef: r.agentId && secret ? agentsLib.refFor(secret, r.agentId) : "", agentLabel: r.agentLabel || "", agentKb: r.agentKb || "", unassigned: !r.agentId,
         })),
       }];
     })),
@@ -196,6 +201,17 @@ router.put("/routing", async (req, res) => {
     const names = new Map(found.map((p) => [String(p._id), p.name]));
     for (const id of wanted) if (!names.has(id)) return res.status(400).json({ success: false, message: "One of the chosen projects no longer exists." });
 
+    // Agents are chosen by name; map each chosen ref back to Vistrow's id using the live list.
+    const refs = new Set();
+    for (const k of R.SOURCE_KEYS) for (const r of value[k]?.routes || []) if (r.agentRef) refs.add(r.agentRef);
+    const byRef = new Map();
+    if (refs.size) {
+      const listed = await agentsLib.listAgents({ baseUrl: doc.baseUrl, accountId: doc.accountId, authMode: doc.authMode, secret: doc.getSecret() });
+      if (!listed.ok) return res.status(400).json({ success: false, message: listed.message, code: listed.code });
+      listed.agents.forEach((a) => byRef.set(a.ref, a));
+      for (const ref of refs) if (!byRef.has(ref)) return res.status(400).json({ success: false, message: "That agent is no longer available in Vistrow. Refresh the list and choose again." });
+    }
+
     const now = new Date();
     for (const k of R.SOURCE_KEYS) {
       const incoming = value[k];
@@ -206,13 +222,21 @@ router.put("/routing", async (req, res) => {
         cur.enabled = incoming.enabled;
       }
       if (incoming.routes) {
-        const existing = new Set((cur.routes || []).map((r) => String(r._id)));
-        cur.routes = incoming.routes.map((r) => ({
-          ...(r._id && existing.has(r._id) ? { _id: r._id } : {}),
-          label: r.label, matchKind: r.matchKind, matchValue: r.matchValue,
-          projectId: r.projectId || null, projectName: r.projectId ? names.get(r.projectId) : "",
-          agentId: r.agentId, agentLabel: r.agentLabel,
-        }));
+        const before = new Map((cur.routes || []).map((r) => [String(r._id), r]));
+        cur.routes = incoming.routes.map((r) => {
+          const prev = r._id ? before.get(r._id) : null;
+          const pick = r.agentRef ? byRef.get(r.agentRef) : null;
+          const agent = pick ? { agentId: pick.id, agentLabel: pick.name, agentKb: pick.knowledgeBase }
+            : r.keepAgent && prev ? { agentId: prev.agentId, agentLabel: prev.agentLabel, agentKb: prev.agentKb }
+            : r.agentRef === undefined && r.agentId ? { agentId: r.agentId, agentLabel: r.agentLabel, agentKb: "" }
+            : { agentId: "", agentLabel: "", agentKb: "" };
+          return {
+            ...(prev ? { _id: r._id } : {}),
+            label: r.label, matchKind: r.matchKind, matchValue: r.matchValue,
+            projectId: r.projectId || null, projectName: r.projectId ? names.get(r.projectId) : "",
+            ...agent,
+          };
+        });
       }
     }
     doc.updatedBy = req.user._id;
@@ -221,6 +245,20 @@ router.put("/routing", async (req, res) => {
     for (const k of R.SOURCE_KEYS) if (value[k]?.enabled !== undefined) logger.warn(`[vistrow-outbound] source ${k} calls ${value[k].enabled ? "ENABLED" : "disabled"} org=${req.user.orgId} by=${req.user._id}`);
     res.json({ success: true, status: await buildStatus(req.user.orgId, doc) });
   } catch (err) { fail(res, err, "save routing"); }
+});
+
+// GET /api/integrations/vistrow-outbound/agents
+// The agents (with their knowledge base) the owner may choose from. Ids are never returned:
+// each entry has a name, a knowledge-base name and an opaque ref. Failures come back as a
+// plain-language `problem`, not an HTTP error, so the setup screen can explain them inline.
+router.get("/agents", agentsLimiter, async (req, res) => {
+  try {
+    const doc = await load(req.user.orgId);
+    if (!doc || !doc.secretEnc) return res.json({ success: true, agents: [], problem: { code: "not_ready", message: agentsLib.PROBLEMS.not_ready } });
+    const r = await agentsLib.listAgents({ baseUrl: doc.baseUrl, accountId: doc.accountId, authMode: doc.authMode, secret: doc.getSecret() });
+    if (!r.ok) return res.json({ success: true, agents: [], problem: { code: r.code, message: r.message } });
+    res.json({ success: true, agents: r.agents.map((a) => ({ ref: a.ref, name: a.name, knowledgeBase: a.knowledgeBase })) });
+  } catch (err) { fail(res, err, "agents"); }
 });
 
 // POST /api/integrations/vistrow-outbound/simulate  { source, pageUrl?, projectId?, adId? }
@@ -232,7 +270,8 @@ router.post("/simulate", async (req, res) => {
     if (!doc) return res.status(400).json({ success: false, message: "Save the connection details first." });
     const b = req.body || {};
     const inputs = { routeSource: String(b.source || ""), sourcePage: String(b.pageUrl || ""), projectId: String(b.projectId || ""), adId: String(b.adId || "") };
-    res.json({ success: true, decision: R.resolveRouting(toConfig(doc), inputs) });
+    const { agentId, ...decision } = R.resolveRouting(toConfig(doc), inputs); // the raw agent id stays on the server
+    res.json({ success: true, decision });
   } catch (err) { fail(res, err, "simulate"); }
 });
 
@@ -264,7 +303,7 @@ router.get("/deliveries", async (req, res) => {
       deliveries: rows.map((d) => ({
         id: d._id, eventId: d.eventId, leadId: d.leadId, status: d.status, skipReason: d.skipReason, origin: d.origin, isTest: d.isTest,
         autoCall: d.autoCall, autoCallReason: d.autoCallReason, routeSource: d.routeSource, routeLabel: d.routeLabel,
-        agentId: d.agentId, agentLabel: d.agentLabel, callQueued: d.callQueued, callReason: d.callReason,
+        agentLabel: d.agentLabel, callQueued: d.callQueued, callReason: d.callReason,
         phone: maskPhone(d.phoneKey), attempts: d.attempts, nextAttemptAt: d.nextAttemptAt, lastHttpStatus: d.lastHttpStatus,
         lastErrorCode: d.lastErrorCode, lastErrorMessage: d.lastErrorMessage, lastLatencyMs: d.lastLatencyMs, endToEndMs: d.endToEndMs,
         deduped: d.deduped, createdAt: d.createdAt, deliveredAt: d.deliveredAt,
