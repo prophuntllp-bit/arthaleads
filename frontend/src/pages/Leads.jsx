@@ -1475,14 +1475,10 @@ export default function Leads() {
         onTransferred={() => {
           const meta = transferMeta;
           setTransferMeta(null);
-          if (meta?.leadType === "project") {
-            // Remove from project leads list optimistically
-            setProjLeads((prev) => prev.filter((l) => l._id !== meta.lead._id));
-            setProjRefreshKey((k) => k + 1);
-          } else {
-            // Remove transferred lead from main pipeline list
-            removeLead(meta?.lead._id);
-          }
+          // The unified list holds main and project leads alike; drop the
+          // moved row from it either way (it reappears under its new home on
+          // the next fetch).
+          if (meta?.lead?._id) removeLead(meta.lead._id);
         }}
       />
 
