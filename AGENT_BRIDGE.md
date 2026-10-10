@@ -57,7 +57,7 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
-- [Claude Code] 2026-10-09 IST: marketing site pass (SEO/indexing: per-route static head tags, canonical, og-image, sitemap; intro video section; 15 missing feature explanations; premium polish). Files: frontend/src/pages/Landing.jsx, Features.jsx, data/features.js, components/Public*, utils/useSEO.js, vercel.json, public/*, frontend/scripts/*, backend blogController sitemap. Preview on localhost before push.
+- [Claude Code] 2026-10-10 IST: Sanity blog schema to match Vistrow SEO structure (Content / SEO with live score / Social / Advanced SEO tabs) and wire the new fields into sync, sitemap, page tags and JSON-LD. Files: studio/*, backend/models/BlogPost.js, backend/services/sanityBlogSync.js, backend/controllers/blogController.js (sitemap), frontend/api/blog-post.js, frontend/src/pages/PublicBlogPost.jsx, frontend/src/components/BlogCard.jsx.
 
 
 
