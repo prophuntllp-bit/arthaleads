@@ -79,6 +79,7 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 - `BlogPost` model: new fields `authorName, secondaryKeywords, breadcrumbTitle, og*, twitter*, schemaType, robots{...}, excludeFromSitemap, redirectUrl, redirectPermanent`. `sanityBlogSync.applySeo` maps them with safe defaults (missing switches = index, follow) and rejects non-https canonicals and unsafe redirects.
 - Sitemap leaves out noindex, excluded and redirected posts. `frontend/api/blog-post.js` now writes meta robots, canonical override, separate OG/X tags, keywords, article times and Article JSON-LD (schema type, author) into the page source, and 301/302-redirects when a redirect is set. `PublicBlogPost.jsx` sets the same tags client-side and follows redirects; `authorOf` prefers the Studio author name.
 - Verified: 10-assertion sync/sitemap test (memory DB), 11-assertion Vercel-function test (stubbed API), score-logic test (Vistrow-style sample scores 95 with only the social check failing), studio build, frontend build. Studio UI itself checked only after deploy (local studio needs the owner's Sanity login).
+- Studio deployed to https://arthaleads.sanity.studio (deployed schema has all 39 fields). `sanity deploy` was failing with "Failed to parse installed version for [object Object]": the auto-update check needs `@sanity/vision` installed, so it is now a dependency and the Vision tab is enabled (as in the Vistrow studio).
 
 ### Claude Code, 2026-10-09 IST, WhatsApp bot: notice for unsupported messages, no silent first "Hi"
 

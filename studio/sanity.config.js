@@ -1,5 +1,6 @@
 import { defineConfig } from "sanity";
 import { structureTool } from "sanity/structure";
+import { visionTool } from "@sanity/vision";
 import { schemaTypes } from "./schemaTypes";
 
 export default defineConfig({
@@ -7,6 +8,6 @@ export default defineConfig({
   title: "ArthaLeads Blog",
   projectId: "2racdioq",
   dataset: "production",
-  plugins: [structureTool()],
+  plugins: [structureTool(), visionTool()],
   schema: { types: schemaTypes },
 });
