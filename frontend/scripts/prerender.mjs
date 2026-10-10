@@ -69,13 +69,15 @@ g.innerHeight = 860;
 // ── 3. Render and inject ──────────────────────────────────────────────────
 // Added to each prerendered page's <head>:
 //  - sections that fade in on scroll start at opacity:0 in their first render;
-//    in the static copy they are simply shown.
+//    in the static copy they are simply shown. Match exactly "opacity:0" (then
+//    ";" or end of attribute): a bare substring match also caught decorative
+//    values like the hero grid's opacity:0.035 and drew it at full strength.
 //  - the HTML is rendered in the light theme. Visitors who chose dark (and the
 //    CRM host, which serves the same files for /) keep the splash screen and
 //    never see it; everyone else skips the splash, because the page itself is
 //    already on screen.
 const HEAD_EXTRA = `    <style id="prerender-css">
-      [data-prerendered] [style*="opacity:0"] { opacity: 1 !important; transform: none !important; filter: none !important; }
+      [data-prerendered] [style*="opacity:0;"], [data-prerendered] [style$="opacity:0"] { opacity: 1 !important; transform: none !important; filter: none !important; }
       [data-prerender-hide] [data-prerendered] { visibility: hidden; }
       html:not([data-prerender-hide]) #app-splash { display: none; }
     </style>
