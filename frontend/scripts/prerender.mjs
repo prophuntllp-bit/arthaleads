@@ -89,7 +89,11 @@ for (const path of Object.keys(PAGES)) {
   const file = join(dist, path === "/" ? "index.html" : `${path.slice(1)}.html`);
   if (!existsSync(file)) { console.warn(`  prerender  ${path}: no ${file}, skipped`); continue; }
   try {
-    const body = render(path);
+    // Videos in the static copy show their poster only: no autoplay, no
+    // preloading. The live app starts them itself once it has taken over, so
+    // a 2.4 MB clip no longer competes with the first paint on slow phones.
+    const body = render(path)
+      .replace(/<video\b[^>]*>/g, (tag) => tag.replace(/\sautoplay=""/g, "").replace(/\spreload="[^"]*"/g, "") .replace(/^<video/, '<video preload="none"'));
     if (!body || body.length < 500) throw new Error(`suspiciously small output (${body.length} bytes)`);
     const shell = readFileSync(file, "utf8");
     if (!shell.includes('<div id="root"></div>')) throw new Error("no empty #root in shell");
