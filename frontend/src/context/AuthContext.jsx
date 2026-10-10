@@ -64,6 +64,13 @@ export function AuthProvider({ children }) {
   // Re-validate session on mount - cookie is sent automatically via withCredentials.
   // AbortSignal lets login/signup cancel this request before it settles.
   useEffect(() => {
+    // The marketing site (www) never uses the session: every CRM route there
+    // redirects to app.arthaleads.com (RequireAppHost in App.jsx). Checking it
+    // anyway cost every visitor a request and a 401 console error.
+    if (["www.arthaleads.com", "arthaleads.com"].includes(window.location.hostname)) {
+      setLoading(false);
+      return undefined;
+    }
     const controller = new AbortController();
     authMeControllerRef.current = controller;
 

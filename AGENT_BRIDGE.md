@@ -57,7 +57,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
-- [Claude Code] 2026-10-10 IST: marketing site audit + improvements (engagement, premium motion, SEO/perf fixes). Files: frontend/src/pages/Landing.jsx, Features.jsx, Pricing.jsx, Compare.jsx, AboutUs.jsx, Contact.jsx, CaseStudies.jsx, PublicBlog*.jsx, components/Public*, components/motion/*, styles.css (marketing parts), public/*, vercel.json, backend blogController sitemap if needed.
 
 
 
@@ -73,6 +72,15 @@ only be verified live so Claude Code or the owner can check it on production.
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
+
+### Claude Code, 2026-10-10 IST, marketing site audit: speed, honesty, engagement, motion
+
+- **Speed:** `public/logo.png` 1.1 MB -> 44 KB (512 px) and `ai-avatar2.png` 2.4 MB -> 55 KB (192 px), same names so every reference benefits. Deleted unreferenced `ai-avatar.png`, `hero-mockup.png`, `gallery-1..4.jpg`, `AI AVATAR AGENT .png` (only the unused `InfiniteGallery.jsx` named the gallery files). `vercel.json`: `/assets/*` cached 1 year immutable, `/tour` and `/video` 1 week. Marketing host skips the `/auth/me` session check (`AuthContext`) and the Google sign-in provider/script (`main.jsx`), since every CRM route there redirects to app.arthaleads.com. Chat widget lazy-loads when the page is idle (`PublicNav`). Blog uses resized Sanity images (`sizedImage` in `BlogCard.jsx`).
+- **SEO:** generated marketing pages (`scripts/seo-pages.mjs`) allow pinch zoom and preconnect to the API and Sanity CDN; `app.html` (CRM) keeps its fixed viewport. Home description 156 chars, home canonical now `https://www.arthaleads.com/` (matches sitemap). Shorter titles on /compare, /download-app, /product-updates, /wordpress-plugin, /contact; longer /blog description. Home FAQ section with FAQPage JSON-LD.
+- **Consistency:** plans moved to `src/data/plans.js`, used by home and /pricing (home showed old seat limits and "pricing on request"). Enterprise CTA is "Talk to sales" (WhatsApp) on both. About page now 50+ teams / 10,000+ leads / 24/7 AI replies (was 500+ / 50,000+ / 99.9% uptime). Removed the unbacked "4.8 from 90+ users" rating and real company names from home testimonials (quotes still unverified, see owner note). "Zero duplicate calls guaranteed" softened.
+- **Engagement:** WhatsApp demo link under the hero, WhatsApp + phone in the footer, "Book a demo on WhatsApp" in the final CTA, /pricing shows a live price estimate (seats x plan, monthly/annual, GST) and sends Enterprise/pricing questions to WhatsApp instead of `sales@`. Home contact form now sends a reCAPTCHA token; both contact forms tolerate non-JSON errors. `/#pricing`-style links land on the section. Compare table scrolls sideways on phones; "Let us know" is a link. Refer link goes to app.arthaleads.com/signup.
+- **Motion:** new `components/motion/Motion.jsx` (Reveal, CountUp, Spotlight, ScrollProgress, Magnetic; one shared IntersectionObserver, off for reduced-motion and Data Saver) + CSS in `styles.css`. Hero headline word rise, drifting glow, shine + magnetic CTA, count-up stats; staggered reveals and pointer spotlight on features, sources, pricing cards (home and /pricing), FAQ; scroll progress bar on all marketing pages. Timers in How-it-works/Testimonials/About counters now respect reduced motion. A11y labels on the menu button and carousel dots (bigger tap targets).
+- Verified on a local production build (desktop + 375 px, no horizontal overflow, calculator maths checked). Not changed, for the owner: intro film autoplay-with-sound behaviour (owner's earlier choice), brand-orange contrast, apex domain 307 (Vercel dashboard), prerendering page bodies.
 
 ### Claude Code, 2026-10-10 IST, Studio on Sanity 6 + the 5 draft posts brought to 100/100
 

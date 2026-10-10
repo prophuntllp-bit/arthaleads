@@ -6,7 +6,7 @@ import api from "../services/api";
 import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, ChevronRight, Link2, Linkedin, MessageCircle, Search, Tag } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
-import BlogCard, { CategoryLabel, authorOf, blogTheme, fmtDate } from "../components/BlogCard";
+import BlogCard, { CategoryLabel, authorOf, blogTheme, fmtDate, sizedImage } from "../components/BlogCard";
 import { usePublicTheme } from "../context/PublicThemeContext";
 
 const SITE = "https://www.arthaleads.com";
@@ -149,7 +149,7 @@ function RenderBlock({ block, t, isDark }) {
     case "image":
       return block.content ? (
         <figure className="my-10">
-          <img src={block.content} alt={block.alt || ""} loading="lazy" className="rounded-[22px] w-full" />
+          <img src={sizedImage(block.content, 1200)} alt={block.alt || ""} loading="lazy" decoding="async" className="rounded-[22px] w-full" />
           {block.caption && <figcaption className="text-center text-xs mt-3" style={{ color: t.muted }}>{block.caption}</figcaption>}
         </figure>
       ) : null;
@@ -426,7 +426,7 @@ function BlogPostInner() {
 
           {post.featuredImage && (
             <figure className="mt-10 max-w-5xl">
-              <img src={post.featuredImage} alt={post.featuredImageAlt || post.title} loading="eager" fetchpriority="high"
+              <img src={sizedImage(post.featuredImage, 1400)} alt={post.featuredImageAlt || post.title} loading="eager" fetchpriority="high"
                 className="w-full rounded-[26px] sm:rounded-[32px] object-cover max-h-[520px]" />
             </figure>
           )}

@@ -739,3 +739,34 @@ html.is-native .top-scroll-mirror::-webkit-scrollbar { display: block !important
 /* Leads status tabs: the highlight slides between tabs */
 .tab-pill-animate { transition: left 260ms cubic-bezier(0.22, 1, 0.36, 1), width 260ms cubic-bezier(0.22, 1, 0.36, 1); }
 @media (prefers-reduced-motion: reduce) { .tab-pill-animate { transition: none; } }
+
+/* ── Marketing motion kit (components/motion/Motion.jsx) ── */
+.spotlight-card { position: relative; isolation: isolate; }
+.spotlight-card::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: -1; pointer-events: none;
+  background: radial-gradient(420px circle at var(--sx, 50%) var(--sy, 50%), var(--spot), transparent 60%);
+  opacity: 0; transition: opacity 300ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .spotlight-card:hover::before { opacity: 1; }
+}
+.shine-btn { position: relative; overflow: hidden; }
+.shine-btn::after {
+  content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%; pointer-events: none;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,0.45), transparent);
+  transform: skewX(-20deg); animation: shine-sweep 4.5s ease-in-out infinite;
+}
+@keyframes shine-sweep { 0%, 70% { left: -60%; } 100% { left: 130%; } }
+@keyframes float-soft { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes aurora-drift {
+  0%   { transform: translate3d(-6%, -4%, 0) rotate(0deg) scale(1); }
+  50%  { transform: translate3d(5%, 3%, 0) rotate(8deg) scale(1.08); }
+  100% { transform: translate3d(-6%, -4%, 0) rotate(0deg) scale(1); }
+}
+@keyframes word-rise { from { opacity: 0; transform: translateY(0.45em); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
+.word-rise { display: inline-block; opacity: 0; animation: word-rise 800ms cubic-bezier(.2,.7,.2,1) forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .shine-btn::after, .word-rise { animation: none !important; }
+  .word-rise { opacity: 1; }
+  .spotlight-card::before { display: none; }
+}

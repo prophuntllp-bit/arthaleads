@@ -86,7 +86,7 @@ function DownloadAppInner() {
   const { isDark } = usePublicTheme();
 
   useSEO({
-    title: "Download the Arthaleads Android App – Real Estate CRM on Your Phone",
+    title: "Arthaleads Android App: Real Estate CRM on Your Phone",
     description: "Install the Arthaleads Android app to get instant lead alerts, call and log leads from your phone, and record site visits with location. Free with any Arthaleads account.",
     canonical: "https://www.arthaleads.com/download-app",
   });

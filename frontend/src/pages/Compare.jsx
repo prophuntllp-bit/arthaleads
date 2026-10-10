@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
+import { waLink, CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import { Check, X, Search, ArrowRight, Sparkles } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
@@ -67,7 +67,7 @@ export default function Compare() {
   const [query, setQuery] = useState("");
 
   useSEO({
-    title:       "Arthaleads vs LeadRat, Sell.do & Kylas | Real Estate CRM Comparison",
+    title:       "Arthaleads vs LeadRat, Sell.do & Kylas: CRM Comparison",
     description: "Compare Arthaleads with LeadRat, Sell.do, and Kylas. See how India’s real estate CRMs stack up on lead management, automation, analytics, and value.",
     canonical:   "https://www.arthaleads.com/compare",
   });
@@ -130,7 +130,9 @@ export default function Compare() {
       {/* Comparison table */}
       <section className="pb-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${cardBorder}` }}>
+          {/* Below sm the five columns would crush into ~340px: scroll sideways instead. */}
+          <div className="overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="rounded-2xl overflow-hidden min-w-[560px] sm:min-w-0" style={{ border: `1px solid ${cardBorder}` }}>
             {/* Sticky header row */}
             <div className="grid sticky top-16 z-10" style={{ gridTemplateColumns: "minmax(0,1.6fr) repeat(4, minmax(0,1fr))", background: headBg, borderBottom: `1px solid ${cardBorder}` }}>
               <div className="px-4 py-3 text-xs font-bold uppercase tracking-wide flex items-center" style={{ color: softText }}>Feature</div>
@@ -173,6 +175,7 @@ export default function Compare() {
               </div>
             ))}
           </div>
+          </div>
 
           {/* Legend */}
           <div className="flex items-center justify-center gap-6 mt-5 text-xs" style={{ color: softText }}>
@@ -182,7 +185,9 @@ export default function Compare() {
           </div>
           <p className="text-center text-xs mt-4 max-w-2xl mx-auto" style={{ color: softText }}>
             Comparison based on publicly available information as of May 2026. Competitor features may change —
-            we keep this page updated. Spotted something out of date? Let us know.
+            we keep this page updated. Spotted something out of date?{" "}
+            <a href={waLink("Hi Arthaleads, something on your CRM comparison page looks out of date: ")} target="_blank" rel="noopener noreferrer"
+              className="text-[#ff6b00] font-semibold hover:underline">Let us know</a>.
           </p>
         </div>
       </section>

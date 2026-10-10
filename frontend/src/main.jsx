@@ -75,10 +75,18 @@ import "@fontsource/inter/600.css";
 import "@fontsource/inter/700.css";
 import "./styles.css";
 
+// Google sign-in is only used on /login and /signup, which live on
+// app.arthaleads.com. On the marketing site the provider would still load
+// Google's ~100 KB client script on every page for nothing.
+const IS_MARKETING_HOST = ["www.arthaleads.com", "arthaleads.com"].includes(window.location.hostname);
+const GoogleAuth = ({ children }) => IS_MARKETING_HOST
+  ? children
+  : <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>{children}</GoogleOAuthProvider>;
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <HelmetProvider>
-      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>
+      <GoogleAuth>
         <ThemeProvider>
           <BrowserRouter>
             <App />
@@ -92,7 +100,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <UpdateBanner />
           </BrowserRouter>
         </ThemeProvider>
-      </GoogleOAuthProvider>
+      </GoogleAuth>
     </HelmetProvider>
   </React.StrictMode>
 );

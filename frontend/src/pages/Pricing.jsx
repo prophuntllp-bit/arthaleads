@@ -1,114 +1,15 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
+import { Reveal, Spotlight } from "../components/motion/Motion";
 import { Check, Zap, Users, Target, ChevronDown, ArrowRight, Sparkles } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
-import { PLAN_PRICING, formatINR, freeMonths } from "../utils/plan";
+import { PLAN_PRICING, formatINR, freeMonths, withGST } from "../utils/plan";
+import { PLANS } from "../data/plans";
 
-const PLANS = [
-  {
-    id: "starter",
-    name: "Starter",
-    tagline: "For solo brokers and small channel partner teams",
-    color: "#3b82f6",
-    maxMembers: PLAN_PRICING.starter.maxSeats,
-    userLimit: "5 to 10 members",
-    groups: [
-      { label: "Lead Management", items: [
-        "Unlimited lead imports (CSV / Excel)",
-        "Lead pipeline - Kanban (6 stages)",
-        "Follow-up scheduling & reminders",
-        "Lead source tracking",
-        "Push notifications & new lead alerts",
-      ] },
-      { label: "Integrations", items: [
-        "Facebook Lead Ads auto-import",
-        "WhatsApp capture",
-        "Website / WordPress plugin",
-        "WhatsApp Inbox with manual replies",
-        "2 projects",
-        "2 GB file storage, call recordings kept 30 days",
-      ] },
-      // Roles belong on Starter: the five-seat minimum is sold as one admin,
-      // one manager and three agents, so the tier has to include the thing that
-      // makes that a team rather than five logins. Attendance and the
-      // performance dashboard stay on Growth — those are genuinely plan-gated
-      // in the API, whereas authorize() has always applied on every plan.
-      { label: "Team", items: [
-        "Role-based access (Admin / Manager / Agent)",
-      ] },
-      { label: "Support", items: ["Email support"] },
-    ],
-    cta: "Start Free Trial",
-    ctaAction: "signup",
-  },
-  {
-    id: "growth",
-    name: "Growth",
-    tagline: "For active real estate teams that need automation and insights",
-    color: "#ff6b00",
-    popular: true,
-    maxMembers: PLAN_PRICING.growth.maxSeats,
-    userLimit: "5 to 30 members",
-    groups: [
-      { label: "Everything in Starter, plus", items: [
-        "Unlimited projects",
-        "WhatsApp AI agent",
-        "WhatsApp templates and campaigns",
-        "15 GB file storage, call recordings kept 90 days",
-        "Duplicate lead detection",
-        "Auto round-robin lead assignment",
-        "Bulk lead export",
-        "Campaign routing rules",
-      ] },
-      { label: "Team", items: [
-        "Attendance tracking",
-        "Team performance dashboard",
-      ] },
-      { label: "Analytics", items: [
-        "Advanced analytics & conversion reports",
-        "Booking rate & call-back metrics",
-        "Individual agent response tracking",
-      ] },
-      { label: "Support", items: ["Priority support"] },
-    ],
-    cta: "Start Free Trial",
-    ctaAction: "signup",
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    tagline: "For large developers, franchise networks and multi-branch orgs",
-    color: "#a855f7",
-    maxMembers: Infinity,
-    userLimit: "25+ members, unlimited",
-    groups: [
-      { label: "Everything in Growth, plus", items: [
-        "Google Ads integration",
-        "Custom webhook & API access",
-        "WhatsApp button flow for click-to-WhatsApp ads",
-        "Vistrow Voice AI calling",
-        "100 GB file storage (more on request), call recordings kept 1 year",
-        "Multi-org management",
-        "Advanced automation management",
-      ] },
-      { label: "Customisation", items: [
-        "Custom branding & white-label",
-        "Custom reporting",
-        "On-site onboarding & training",
-      ] },
-      { label: "Account", items: [
-        "Dedicated account manager",
-        "SLA-backed uptime",
-      ] },
-    ],
-    cta: "Start Free Trial",
-    ctaAction: "signup",
-  },
-];
 
 const FAQS = [
   ["Is there a free trial?", "Yes. The Growth plan comes with a 14-day free trial that includes every Growth feature, with 1 GB of file storage during the trial (15 GB once you subscribe to Growth). No credit card is required, and you can upgrade or cancel anytime."],
@@ -125,6 +26,7 @@ export default function Pricing() {
   const [members, setMembers] = useState(5);
   const [hovered, setHovered] = useState(null);
   const [openFaq, setOpenFaq] = useState(null);
+  const [billing, setBilling] = useState("monthly");
 
   useSEO({
     title:       "Pricing | Arthaleads Real Estate CRM Plans",
@@ -172,7 +74,14 @@ export default function Pricing() {
     return "enterprise";
   }, [members]);
 
-  const annual = false; // kept for CTA logic compatibility
+  // What the chosen team would pay on the recommended plan (five-seat minimum).
+  const estimate = useMemo(() => {
+    const price = PLAN_PRICING[recommended];
+    if (!price || price.custom) return null;
+    const seats = Math.max(members, price.minSeats);
+    const base = billing === "annual" ? price.annual * seats : price.monthly * seats;
+    return { seats, base, gst: withGST(base) - base, total: withGST(base), perMonth: billing === "annual" ? Math.round(base / 12) : base };
+  }, [members, recommended, billing]);
 
   return (
     <div className="min-h-screen" style={{ background: bg, color: heading, fontFamily: "Inter, sans-serif" }}>
@@ -229,12 +138,48 @@ export default function Pricing() {
             <span>1</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50+</span>
           </div>
 
-          <p className="mt-4 text-sm" style={{ color: body }}>
-            Recommended plan:{" "}
-            <span className="font-bold" style={{ color: PLANS.find((p) => p.id === recommended).color }}>
-              {PLANS.find((p) => p.id === recommended).name}
-            </span>
-          </p>
+          <div className="mt-5 grid sm:grid-cols-[1fr_auto] gap-4 items-end pt-5" style={{ borderTop: `1px solid ${divBdr}` }}>
+            <div>
+              <p className="text-sm" style={{ color: body }}>
+                Recommended plan:{" "}
+                <span className="font-bold" style={{ color: PLANS.find((p) => p.id === recommended).color }}>
+                  {PLANS.find((p) => p.id === recommended).name}
+                </span>
+              </p>
+              {estimate ? (
+                <>
+                  <div className="flex items-baseline gap-2 mt-1.5">
+                    <span key={`${recommended}-${billing}-${estimate.seats}`} className="text-3xl font-black tabular-nums" style={{ color: heading }}>
+                      {formatINR(estimate.base)}
+                    </span>
+                    <span className="text-sm" style={{ color: body }}>/ {billing === "annual" ? "year" : "month"} + GST</span>
+                  </div>
+                  <p className="text-xs mt-1" style={{ color: taglineClr }}>
+                    {estimate.seats} seats{members < estimate.seats ? ` (minimum ${estimate.seats})` : ""} · {formatINR(estimate.total)} including 18% GST
+                    {billing === "annual" ? ` · works out to ${formatINR(estimate.perMonth)} a month` : ""}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm mt-1.5" style={{ color: heading }}>
+                  Teams this size get a custom Enterprise quote.{" "}
+                  <a href={waLink("Hi Arthaleads! I'd like an Enterprise quote for a team of " + (members >= 50 ? "50+" : members) + " people.")}
+                    target="_blank" rel="noopener noreferrer" className="font-semibold text-[#ff6b00] hover:underline">Ask on WhatsApp</a>
+                </p>
+              )}
+            </div>
+            <div role="radiogroup" aria-label="Billing period" className="inline-flex p-1 rounded-xl self-start sm:self-end"
+              style={{ background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6" }}>
+              {[["monthly", "Monthly"], ["annual", "Annual · 2 months free"]].map(([id, label]) => (
+                <button key={id} type="button" role="radio" aria-checked={billing === id} onClick={() => setBilling(id)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer"
+                  style={billing === id
+                    ? { background: isDark ? "#1f1f33" : "#ffffff", color: heading, boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }
+                    : { color: body }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Free trial banner */}
@@ -259,7 +204,7 @@ export default function Pricing() {
       {/* Plan cards */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
-          {PLANS.map((plan) => {
+          {PLANS.map((plan, idx) => {
             const isHovered = hovered === plan.id;
             const isPopular = plan.popular;
             // Behaviour comes from ctaAction, appearance from `popular`. They
@@ -274,8 +219,9 @@ export default function Pricing() {
             };
             const isReco    = recommended === plan.id;
             return (
-              <div key={plan.id}
-                className="relative flex flex-col rounded-2xl transition-all duration-300 overflow-hidden"
+              <Reveal key={plan.id} delay={idx * 110} className="flex">
+              <Spotlight color={`${plan.color}1a`}
+                className="relative flex flex-col flex-1 rounded-2xl transition-all duration-300 overflow-hidden"
                 style={{
                   background: isPopular ? popBg : cardBg,
                   border: isReco
@@ -389,7 +335,7 @@ export default function Pricing() {
                   <a
                     {...(plan.ctaAction === "signup"
                       ? { href: CRM_SIGNUP_URL, ...CRM_LINK_PROPS }
-                      : { href: `mailto:sales@arthaleads.com?subject=${encodeURIComponent(`${plan.name} plan enquiry`)}&body=${encodeURIComponent(`Hi, I'd like to know more about the ${plan.name} plan for my real estate team.`)}` })}
+                      : { href: waLink(`Hi Arthaleads! I'd like a quote for the ${plan.name} plan for my real estate team.`), target: "_blank", rel: "noopener noreferrer" })}
                     className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-center block"
                     style={ctaStyle}
                     {...ctaHover}
@@ -397,7 +343,8 @@ export default function Pricing() {
                     {plan.cta}
                   </a>
                 </div>
-              </div>
+              </Spotlight>
+              </Reveal>
             );
           })}
         </div>
@@ -442,9 +389,11 @@ export default function Pricing() {
                       style={{ color: "#ff6b00", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
                     />
                   </button>
-                  {open && (
-                    <p className="px-5 pb-4 text-sm leading-relaxed" style={{ color: body }}>{a}</p>
-                  )}
+                  <div className="grid transition-[grid-template-rows] duration-300 ease-out" style={{ gridTemplateRows: open ? "1fr" : "0fr" }}>
+                    <div className="overflow-hidden">
+                      <p className="px-5 pb-4 text-sm leading-relaxed" style={{ color: body }}>{a}</p>
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -454,11 +403,11 @@ export default function Pricing() {
           <div className="text-center mt-10">
             <p className="text-sm mb-4" style={{ color: body }}>Still have questions about pricing?</p>
             <a
-              href="mailto:sales@arthaleads.com?subject=Pricing%20enquiry&body=Hi%2C%20I%27d%20like%20to%20talk%20about%20Arthaleads%20pricing%20for%20my%20team."
+              href={waLink(WA_MESSAGES.sales)} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:-translate-y-0.5"
               style={{ background: "#ff6b00", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }}
             >
-              Talk to our team <ArrowRight className="w-4 h-4" />
+              Talk to us on WhatsApp <ArrowRight className="w-4 h-4" />
             </a>
           </div>
         </div>

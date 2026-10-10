@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Menu, X, ChevronDown, Sun, Moon,
@@ -9,7 +9,20 @@ import {
 } from "lucide-react";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { CRM_LOGIN_URL, CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
-import MarketingChatBot from "./MarketingChatBot";
+import { ScrollProgress } from "./motion/Motion";
+
+// The chat widget is not needed for first paint; load it once the page is idle.
+const MarketingChatBot = lazy(() => import("./MarketingChatBot"));
+function IdleChatBot() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 1500));
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const id = idle(() => setReady(true), { timeout: 3000 });
+    return () => cancel(id);
+  }, []);
+  return ready ? <Suspense fallback={null}><MarketingChatBot /></Suspense> : null;
+}
 
 const NAV_RESOURCES = [
   { label: "Blog",             href: "/blog",             desc: "Guides, market notes & product news", icon: BookOpen },
@@ -329,7 +342,8 @@ function NavInner({ onScrollTo }) {
             <button onClick={toggle} className="w-8 h-8 flex items-center justify-center rounded-lg" style={{ color: textMuted }} aria-label="Toggle theme">
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <button onClick={() => setMobileOpen(o => !o)} className="w-8 h-8 flex items-center justify-center" style={{ color: textMuted }}>
+            <button onClick={() => setMobileOpen(o => !o)} className="w-10 h-10 -mr-1 flex items-center justify-center" style={{ color: textMuted }}
+              aria-label={mobileOpen ? "Close menu" : "Open menu"} aria-expanded={mobileOpen}>
               {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
@@ -409,8 +423,9 @@ function NavInner({ onScrollTo }) {
 export default function PublicNav({ onScrollTo }) {
   return (
     <>
+      <ScrollProgress />
       <NavInner onScrollTo={onScrollTo} />
-      <MarketingChatBot />
+      <IdleChatBot />
     </>
   );
 }

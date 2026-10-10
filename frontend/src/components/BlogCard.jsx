@@ -5,6 +5,11 @@ import { ArrowUpRight, ArrowRight } from "lucide-react";
 export const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
 
+// Sanity serves originals (often several MB). Ask its CDN for the size we show,
+// in WebP/AVIF where the browser supports it. Other URLs pass through.
+export const sizedImage = (url, width) =>
+  url && url.includes("cdn.sanity.io") && !url.includes("?") ? `${url}?w=${width}&fit=max&auto=format&q=75` : url;
+
 export const authorOf = (post) => post.authorName || post.author?.name || "Arthaleads Team";
 
 // Theme tokens for blog surfaces, so both pages agree.
@@ -47,7 +52,7 @@ export default function BlogCard({ post, isDark, eager = false }) {
       style={{ background: t.card, borderColor: t.cardBorder }}>
       <div className="relative overflow-hidden" style={{ aspectRatio: "16 / 10" }}>
         {post.featuredImage ? (
-          <img src={post.featuredImage} alt={post.featuredImageAlt || post.title}
+          <img src={sizedImage(post.featuredImage, 720)} alt={post.featuredImageAlt || post.title}
             loading={eager ? "eager" : "lazy"} decoding="async"
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]" />
         ) : <CoverFallback isDark={isDark} />}
@@ -103,7 +108,7 @@ export function FeaturedCard({ post, isDark }) {
       </div>
       <div className="relative order-1 lg:order-2 min-h-[220px] sm:min-h-[300px] lg:min-h-[420px]">
         {post.featuredImage ? (
-          <img src={post.featuredImage} alt={post.featuredImageAlt || post.title} loading="eager" decoding="async"
+          <img src={sizedImage(post.featuredImage, 1200)} alt={post.featuredImageAlt || post.title} loading="eager" fetchpriority="high" decoding="async"
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
         ) : <CoverFallback isDark={isDark} />}
       </div>

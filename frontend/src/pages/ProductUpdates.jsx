@@ -144,7 +144,7 @@ function ProductUpdatesInner() {
   const { isDark } = usePublicTheme();
 
   useSEO({
-    title: "Product Updates - Arthaleads CRM Latest Features & Improvements",
+    title: "Product Updates: New Arthaleads CRM Features",
     description: "See the latest features, improvements, and updates to Arthaleads CRM. Stay up to date with India’s top real estate lead management platform.",
     canonical: "https://www.arthaleads.com/product-updates",
   });

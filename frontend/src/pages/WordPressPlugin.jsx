@@ -265,7 +265,7 @@ function WordPressPluginInner() {
   const [activeStep, setActiveStep] = useState(0);
 
   useSEO({
-    title: "Free WordPress Plugin – Capture Website Leads into Arthaleads CRM",
+    title: "Free WordPress Plugin for Real Estate Leads | Arthaleads",
     description: "Download the free Arthaleads WordPress plugin to automatically capture leads from Contact Form 7, WPForms, Elementor, Gravity Forms and 5 more form builders directly into your CRM.",
     canonical: "https://www.arthaleads.com/wordpress-plugin",
   });

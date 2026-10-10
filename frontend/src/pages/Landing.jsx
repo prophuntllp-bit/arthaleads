@@ -16,10 +16,16 @@ import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
+import { getRecaptchaToken } from "../utils/recaptcha";
 import IntroVideo from "../components/IntroVideo";
 import { HeroTour } from "../components/ProductTour";
+import { PLANS } from "../data/plans";
+import { PLAN_PRICING, formatINR } from "../utils/plan";
+import { Reveal, CountUp, Spotlight, Magnetic } from "../components/motion/Motion";
 
 // ── Smooth scroll helper ──────────────────────────────────────────────────────
+const REDUCED_MOTION = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -85,6 +91,11 @@ function Hero({ isDark }) {
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute left-1/2 -translate-x-1/2 top-[38%] w-[900px] max-w-[120vw] h-[520px] rounded-full blur-3xl"
           style={{ background: "radial-gradient(ellipse at center, rgba(255,107,0,0.16) 0%, transparent 70%)" }} />
+        {/* Two slow aurora blobs drifting behind the headline */}
+        <div className="absolute -top-24 left-[8%] w-[520px] max-w-[80vw] h-[420px] rounded-full blur-3xl opacity-70"
+          style={{ background: "radial-gradient(circle, rgba(255,170,0,0.18), transparent 65%)", animation: "aurora-drift 18s ease-in-out infinite" }} />
+        <div className="absolute -top-10 right-[6%] w-[460px] max-w-[70vw] h-[380px] rounded-full blur-3xl opacity-60"
+          style={{ background: "radial-gradient(circle, rgba(255,107,0,0.14), transparent 65%)", animation: "aurora-drift 22s ease-in-out infinite reverse" }} />
         <div className="absolute inset-0"
           style={{ opacity: gridOpacity, backgroundImage: "linear-gradient(rgba(255,107,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,1) 1px,transparent 1px)", backgroundSize: "60px 60px",
             maskImage: "linear-gradient(to bottom, black 0%, transparent 55%)", WebkitMaskImage: "linear-gradient(to bottom, black 0%, transparent 55%)" }} />
@@ -95,9 +106,17 @@ function Hero({ isDark }) {
         <div className="text-center max-w-3xl mx-auto">
           <h1 className="text-4xl sm:text-5xl lg:text-[3.6rem] xl:text-[4rem] font-black leading-[1.05] tracking-[-0.02em] mb-6"
             style={{ color: headingClr, textWrap: "balance" }}>
-            Manage Every Lead.{" "}
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
-              Close More Deals.
+            <span className="sr-only">Manage Every Lead. Close More Deals.</span>
+            <span aria-hidden="true">
+              {["Manage", "Every", "Lead."].map((w, i) => (
+                <span key={w} className="word-rise" style={{ animationDelay: `${80 + i * 90}ms` }}>{w}&nbsp;</span>
+              ))}
+              <span className="block">
+                {["Close", "More", "Deals."].map((w, i) => (
+                  <span key={w} className="word-rise text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00] pb-1"
+                    style={{ animationDelay: `${380 + i * 90}ms` }}>{w}{i < 2 ? " " : ""}</span>
+                ))}
+              </span>
             </span>
           </h1>
           <p className="text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-9" style={{ color: bodyClr, textWrap: "pretty" }}>
@@ -105,17 +124,26 @@ function Hero({ isDark }) {
             and walk-ins - into one workspace, and replies on WhatsApp while your team sleeps.
             Built for real estate developers and channel partners.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 lg:mb-14">
-            <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-              className="flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-0.5 text-base">
-              Start Free Trial <ArrowRight className="w-5 h-5" />
-            </a>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+            <Magnetic>
+              <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
+                className="shine-btn flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 text-base">
+                Start Free Trial <ArrowRight className="w-5 h-5" />
+              </a>
+            </Magnetic>
             <button onClick={() => scrollTo("tour")}
               className="flex items-center gap-2 px-8 py-4 rounded-2xl transition-all duration-200 text-base font-medium border hover:-translate-y-0.5"
               style={{ color: btnText, borderColor: btnBorder, background: btnBg }}>
               <PlayCircle className="w-5 h-5" /> Watch the 2-min film
             </button>
           </div>
+          <p className="text-sm mb-12 lg:mb-14" style={{ color: softClr }}>
+            14-day free trial, no card needed ·{" "}
+            <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
+              className="font-semibold underline-offset-4 hover:underline" style={{ color: isDark ? "#4ade80" : "#15803d" }}>
+              or book a demo on WhatsApp
+            </a>
+          </p>
         </div>
 
         {/* ── The real product ── */}
@@ -130,7 +158,7 @@ function Hero({ isDark }) {
               { num: "3×",      label: "Faster Follow-ups" },
             ].map((s) => (
               <div key={s.label} className="text-center">
-                <div className="text-2xl sm:text-3xl font-black text-[#ff6b00] tabular-nums">{s.num}</div>
+                <CountUp value={s.num} className="block text-2xl sm:text-3xl font-black text-[#ff6b00] tabular-nums" />
                 <div className="text-xs sm:text-sm mt-0.5" style={{ color: softClr }}>{s.label}</div>
               </div>
             ))}
@@ -200,10 +228,11 @@ function SourcesStrip({ isDark }) {
           Capture leads from every source
         </p>
         <div className="flex flex-wrap justify-center gap-4">
-          {sources.map(({ name, color, type, Logo }) => {
+          {sources.map(({ name, color, type, Logo }, idx) => {
             const isHovered = hoveredSource === name;
             return (
-              <div key={name}
+              <Reveal key={name} delay={idx * 55} y={14}>
+              <div
                 className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl transition-all duration-200 cursor-default"
                 style={{
                   background: isHovered ? `${color}12` : chipBg,
@@ -225,6 +254,7 @@ function SourcesStrip({ isDark }) {
                   {type}
                 </span>
               </div>
+              </Reveal>
             );
           })}
         </div>
@@ -254,7 +284,7 @@ function Features({ isDark }) {
     <section id="features" className="py-16 lg:py-24" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <div className="max-w-3xl mb-14 lg:mb-20">
+        <Reveal className="max-w-3xl mb-14 lg:mb-20">
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">
             Powerful Features
           </span>
@@ -268,12 +298,13 @@ function Features({ isDark }) {
             Built for the Indian real estate market - from small channel partner offices to
             large developer sales teams.
           </p>
-        </div>
+        </Reveal>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 xl:gap-x-16 gap-y-12 lg:gap-y-16">
-          {HOME_FEATURES.map(({ icon: Icon, color, title, short, desc }) => (
-            <div key={title}>
-              <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-5"
+          {HOME_FEATURES.map(({ icon: Icon, color, title, short, desc }, i) => (
+            <Reveal key={title} delay={(i % 3) * 90 + Math.floor(i / 3) * 60}>
+            <Spotlight className="group -m-5 p-5 rounded-3xl transition-transform duration-300 hover:-translate-y-1" color={`${color}1f`}>
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-5 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
                 style={{ background: `${color}14` }}>
                 <Icon className="w-5 h-5" style={{ color }} />
               </div>
@@ -281,7 +312,8 @@ function Features({ isDark }) {
               <p className="text-[15px] leading-relaxed" style={{ color: itemText }}>
                 {short || desc}
               </p>
-            </div>
+            </Spotlight>
+            </Reveal>
           ))}
         </div>
 
@@ -310,7 +342,7 @@ const HOW_STEPS = [
     color: "#ff6b00",
     title: "Import or Capture Leads",
     desc: "Connect your Facebook Ad account for auto-import, paste a CSV, or add leads manually. Our system normalises phone numbers and removes duplicates instantly.",
-    highlight: "Zero duplicate calls guaranteed",
+    highlight: "Duplicates flagged before anyone calls",
   },
   {
     num: 2,
@@ -348,6 +380,7 @@ function HowItWorks({ isDark }) {
 
   const startTimer = () => {
     clearInterval(intervalRef.current);
+    if (REDUCED_MOTION()) return;
     intervalRef.current = setInterval(() => setActive((a) => (a + 1) % HOW_STEPS.length), 4500);
   };
   useEffect(() => { startTimer(); return () => clearInterval(intervalRef.current); }, []);
@@ -479,8 +512,11 @@ function HowItWorks({ isDark }) {
                 </button>
                 <div className="flex gap-1.5 items-center">
                   {HOW_STEPS.map((s, i) => (
-                    <button key={i} onClick={() => goTo(i)} className="rounded-full transition-all duration-300 cursor-pointer"
-                      style={{ width: i === active ? 20 : 6, height: 6, background: i === active ? step.color : (isDark ? "rgba(255,255,255,0.15)" : "#e5e7eb") }} />
+                    <button key={i} onClick={() => goTo(i)} aria-label={`Step ${i + 1}: ${s.label}`} aria-current={i === active}
+                      className="cursor-pointer p-2 -m-1 flex items-center">
+                      <span className="block rounded-full transition-all duration-300"
+                        style={{ width: i === active ? 20 : 6, height: 6, background: i === active ? step.color : (isDark ? "rgba(255,255,255,0.15)" : "#e5e7eb") }} />
+                    </button>
                   ))}
                 </div>
                 <button onClick={() => goTo((active + 1) % HOW_STEPS.length)}
@@ -536,6 +572,7 @@ function About({ isDark }) {
       if (!entry.isIntersecting) return;
       setVisible(true);
       observer.disconnect();
+      if (REDUCED_MOTION()) { setCounts(stats.map((st) => st.num)); return; }
       stats.forEach((stat, i) => {
         const duration = 1600;
         const fps = 60;
@@ -662,7 +699,7 @@ function Testimonials({ isDark }) {
   const reviews = [
     {
       name: "Rajesh Patil",
-      role: "Sales Head, Kolte Patil Channel Partner",
+      role: "Sales Head, channel partner firm",
       city: "Pune",
       quote: "Before Arthaleads our team was managing 500+ Facebook leads in WhatsApp groups. Now everything is centralised and our follow-up rate has tripled.",
       stars: 5,
@@ -672,7 +709,7 @@ function Testimonials({ isDark }) {
     },
     {
       name: "Priya Sharma",
-      role: "Founder, Milestone Properties",
+      role: "Founder, residential brokerage",
       city: "Mumbai",
       quote: "The project import feature is a game-changer. We imported 2,000 leads in minutes and the duplicate detection saved us from calling the same people twice.",
       stars: 5,
@@ -682,7 +719,7 @@ function Testimonials({ isDark }) {
     },
     {
       name: "Amit Deshmukh",
-      role: "Manager, Magarpatta Real Estate",
+      role: "Sales Manager, developer team",
       city: "Pune",
       quote: "Our conversion rate jumped from 2% to 6% in 3 months. The analytics dashboard gives us clarity we never had before with Excel sheets.",
       stars: 5,
@@ -692,7 +729,7 @@ function Testimonials({ isDark }) {
     },
     {
       name: "Sneha Kulkarni",
-      role: "Director, Kulkarni Associates",
+      role: "Director, brokerage firm",
       city: "Nashik",
       quote: "We were losing track of leads coming from 99acres, Housing, and Facebook. Arthaleads brings everything into one place. Our team saved around 2 hours daily on manual follow-ups.",
       stars: 4,
@@ -702,7 +739,7 @@ function Testimonials({ isDark }) {
     },
     {
       name: "Vikram Joshi",
-      role: "Co-founder, Urban Nest Realty",
+      role: "Co-founder, realty firm",
       city: "Nagpur",
       quote: "Honestly wasn't sure about switching from our Excel setup. But after a week the team didn't want to go back. The mobile app makes site visit tracking effortless.",
       stars: 5,
@@ -712,7 +749,7 @@ function Testimonials({ isDark }) {
     },
     {
       name: "Meena Agarwal",
-      role: "Channel Partner, Pride Purple Properties",
+      role: "Channel Partner",
       city: "Thane",
       quote: "The WhatsApp integration alone was worth it. Leads from our broadcasts now land directly into the CRM with source tagging. No more copy-pasting names into sheets.",
       stars: 4,
@@ -725,6 +762,7 @@ function Testimonials({ isDark }) {
   const TOTAL = reviews.length;
 
   useEffect(() => {
+    if (REDUCED_MOTION()) return undefined;
     timerRef.current = setInterval(() => {
       if (!isPausedRef.current) setActive(a => (a + 1) % TOTAL);
     }, 4000);
@@ -773,19 +811,6 @@ function Testimonials({ isDark }) {
             From solo brokers in Nashik to 30-member developer teams in Mumbai - here's what they say.
           </p>
 
-          {/* Aggregate rating bar */}
-          <div className="inline-flex items-center gap-3 mt-5 px-5 py-2.5 rounded-full"
-            style={{ background: isDark ? "rgba(255,255,255,0.05)" : "#fff", border: `1px solid ${cardBdr}` }}>
-            <div className="flex gap-0.5">
-              {[1,2,3,4,5].map(i => (
-                <svg key={i} width="14" height="14" viewBox="0 0 24 24" fill={i <= 4 ? "#ff6b00" : "none"} stroke="#ff6b00" strokeWidth="2">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                </svg>
-              ))}
-            </div>
-            <span className="font-bold text-sm" style={{ color: heading }}>4.8</span>
-            <span className="text-xs" style={{ color: sub }}>avg rating from 90+ users</span>
-          </div>
         </div>
 
         {/* Desktop: 3-card window */}
@@ -902,7 +927,7 @@ function Testimonials({ isDark }) {
 
         {/* Controls */}
         <div className="flex items-center justify-center gap-4">
-          <button onClick={prev} className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-all"
+          <button onClick={prev} aria-label="Previous review" className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-all"
             style={{ background: cardBg, border: `1px solid ${cardBdr}`, color: sub }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = "#ff6b00"; e.currentTarget.style.color = "#ff6b00"; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = cardBdr; e.currentTarget.style.color = sub; }}>
@@ -911,17 +936,18 @@ function Testimonials({ isDark }) {
 
           <div className="flex items-center gap-2">
             {reviews.map((_, i) => (
-              <button key={i} onClick={() => goTo(i)} className="cursor-pointer transition-all rounded-full"
-                style={{
+              <button key={i} onClick={() => goTo(i)} aria-label={`Show review ${i + 1}`} aria-current={i === active}
+                className="cursor-pointer p-2 -m-2 flex items-center">
+                <span className="block transition-all rounded-full" style={{
                   width: i === active ? "24px" : "8px",
                   height: "8px",
                   background: i === active ? "#ff6b00" : dotBg,
-                }}>
+                }} />
               </button>
             ))}
           </div>
 
-          <button onClick={next} className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-all"
+          <button onClick={next} aria-label="Next review" className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-all"
             style={{ background: cardBg, border: `1px solid ${cardBdr}`, color: sub }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = "#ff6b00"; e.currentTarget.style.color = "#ff6b00"; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = cardBdr; e.currentTarget.style.color = sub; }}>
@@ -934,12 +960,12 @@ function Testimonials({ isDark }) {
           <div className="flex -space-x-2">
             {reviews.map((r, i) => (
               <div key={i} className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white ring-2"
-                style={{ background: r.avatarClr, ringColor: bg, zIndex: reviews.length - i }}>
+                style={{ background: r.avatarClr, boxShadow: `0 0 0 2px ${bg}`, zIndex: reviews.length - i }}>
                 {r.avatar}
               </div>
             ))}
           </div>
-          <p className="text-xs" style={{ color: sub }}>Join <strong style={{ color: heading }}>90+ teams</strong> already using Arthaleads</p>
+          <p className="text-xs" style={{ color: sub }}>Join <strong style={{ color: heading }}>50+ teams</strong> already using Arthaleads</p>
         </div>
       </div>
     </section>
@@ -949,129 +975,7 @@ function Testimonials({ isDark }) {
 // ── Pricing ───────────────────────────────────────────────────────────────────
 function Pricing({ isDark }) {
   const [hoveredPlan, setHoveredPlan] = useState(null);
-
-  const plans = [
-    {
-      id: "starter",
-      name: "Starter",
-      tagline: "For solo brokers and small channel partner teams",
-      color: "#3b82f6",
-      userLimit: "Up to 3 members",
-      groups: [
-        {
-          label: "Lead Management",
-          items: [
-            "Unlimited lead imports (CSV / Excel)",
-            "Lead pipeline - Kanban (6 stages)",
-            "Follow-up scheduling & reminders",
-            "Lead source tracking",
-            "Push notifications & new lead alerts",
-          ],
-        },
-        {
-          label: "Integrations",
-          items: [
-            "Facebook Lead Ads auto-import",
-            "WhatsApp capture",
-            "Website / WordPress plugin",
-            "WhatsApp Inbox with manual replies",
-            "2 projects",
-            "2 GB file storage, call recordings kept 30 days",
-          ],
-        },
-        {
-          label: "Support",
-          items: ["Email support"],
-        },
-      ],
-      cta: "Start Free Trial",
-      ctaAction: "signup",
-    },
-    {
-      id: "growth",
-      name: "Growth",
-      tagline: "For active real estate teams that need automation and insights",
-      color: "#ff6b00",
-      popular: true,
-      trial: true,
-      userLimit: "Up to 20 members",
-      groups: [
-        {
-          label: "Everything in Starter, plus",
-          items: [
-            "Unlimited projects",
-            "WhatsApp AI agent",
-            "WhatsApp templates and campaigns",
-            "15 GB file storage, call recordings kept 90 days",
-            "Duplicate lead detection",
-            "Auto round-robin lead assignment",
-            "Bulk lead export",
-            "Campaign routing rules",
-          ],
-        },
-        {
-          label: "Team & Roles",
-          items: [
-            "Role-based access (Admin / Manager / Agent)",
-            "Attendance tracking",
-            "Team performance dashboard",
-          ],
-        },
-        {
-          label: "Analytics",
-          items: [
-            "Advanced analytics & conversion reports",
-            "Booking rate & call-back metrics",
-            "Individual agent response tracking",
-          ],
-        },
-        {
-          label: "Support",
-          items: ["Priority support"],
-        },
-      ],
-      cta: "Start Free Trial",
-      ctaAction: "signup",
-    },
-    {
-      id: "enterprise",
-      name: "Enterprise",
-      tagline: "For large developers, franchise networks and multi-branch orgs",
-      color: "#a855f7",
-      userLimit: "Unlimited members",
-      groups: [
-        {
-          label: "Everything in Growth, plus",
-          items: [
-            "Google Ads integration",
-            "Custom webhook & API access",
-            "WhatsApp button flow for click-to-WhatsApp ads",
-            "Vistrow Voice AI calling",
-            "100 GB file storage (more on request), call recordings kept 1 year",
-            "Multi-org management",
-            "Advanced automation management",
-          ],
-        },
-        {
-          label: "Customisation",
-          items: [
-            "Custom branding & white-label",
-            "Custom reporting",
-            "On-site onboarding & training",
-          ],
-        },
-        {
-          label: "Account",
-          items: [
-            "Dedicated account manager",
-            "SLA-backed uptime",
-          ],
-        },
-      ],
-      cta: "Start Free Trial",
-      ctaAction: "signup",
-    },
-  ];
+  const plans = PLANS;
 
   const bg         = isDark ? "#0d0d1a" : "#f9fafb";
   const heading    = isDark ? "#ffffff" : "#111827";
@@ -1104,7 +1008,7 @@ function Pricing({ isDark }) {
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">team size</span>
           </h2>
           <p className="text-base max-w-lg mx-auto mb-6" style={{ color: body }}>
-            No hidden fees. Pricing tailored to your team - contact us for exact numbers.
+            Simple per-seat pricing from {formatINR(PLAN_PRICING.starter.monthly)} per user per month. No setup fee, no hidden charges.
           </p>
 
           {/* Free trial banner */}
@@ -1126,12 +1030,13 @@ function Pricing({ isDark }) {
 
         {/* Plan cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
-          {plans.map((plan) => {
+          {plans.map((plan, idx) => {
             const isHovered = hoveredPlan === plan.id;
             const isPopular = plan.popular;
             return (
-              <div key={plan.id}
-                className="relative flex flex-col rounded-2xl transition-all duration-300 cursor-default overflow-hidden"
+              <Reveal key={plan.id} delay={idx * 110} className="flex">
+              <Spotlight color={`${plan.color}1a`}
+                className="relative flex flex-col flex-1 rounded-2xl transition-all duration-300 cursor-default overflow-hidden"
                 style={{
                   background: isPopular ? popBg : cardBg,
                   border: isPopular
@@ -1177,10 +1082,22 @@ function Pricing({ isDark }) {
                     <span className="text-xs font-semibold" style={{ color: plan.color }}>{plan.userLimit}</span>
                   </div>
 
-                  {/* Pricing */}
-                  <div className="flex items-center gap-2 mb-5 pb-5" style={{ borderBottom: `1px solid ${divBdr}` }}>
-                    <span className="text-sm" style={{ color: body }}>Pricing on request</span>
-                    <ChevronRight className="w-3.5 h-3.5" style={{ color: body }} />
+                  {/* Price, from the same table /pricing and billing use */}
+                  <div className="mb-5 pb-5" style={{ borderBottom: `1px solid ${divBdr}` }}>
+                    {PLAN_PRICING[plan.id]?.custom ? (
+                      <>
+                        <div className="text-3xl font-black" style={{ color: heading }}>Custom quote</div>
+                        <p className="text-xs mt-1.5" style={{ color: body }}>From {PLAN_PRICING[plan.id].minSeats} seats, priced on team size and rollout.</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-4xl font-black tracking-tight" style={{ color: heading }}>{formatINR(PLAN_PRICING[plan.id].monthly)}</span>
+                          <span className="text-xs font-medium" style={{ color: body }}>/ user / month</span>
+                        </div>
+                        <p className="text-xs mt-1.5" style={{ color: body }}>Plus 18% GST · minimum {PLAN_PRICING[plan.id].minSeats} seats</p>
+                      </>
+                    )}
                   </div>
 
                   {/* Feature groups */}
@@ -1206,23 +1123,22 @@ function Pricing({ isDark }) {
                   </div>
 
                   {/* CTA */}
-                  <button
-                    // Straight to the CRM. "/signup" also worked, but only via
-                    // the marketing host's redirect guard -- an extra hop on
-                    // the button every plan card now uses.
-                    onClick={() => plan.ctaAction === "signup" ? window.location.href = CRM_SIGNUP_URL : scrollTo("contact")}
-                    className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 cursor-pointer"
+                  <a
+                    {...(plan.ctaAction === "signup"
+                      ? { href: CRM_SIGNUP_URL, ...CRM_LINK_PROPS }
+                      : { href: waLink(`Hi Arthaleads! I'd like a quote for the ${plan.name} plan for my real estate team.`), target: "_blank", rel: "noopener noreferrer" })}
+                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-center block ${isPopular ? "shine-btn" : ""}`}
                     style={isPopular
                       ? { background: "#ff6b00", color: "#fff", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }
                       : { border: `1px solid ${altBtnBdr}`, color: altBtnClr, background: "transparent" }
                     }
                     onMouseEnter={e => { if (!isPopular) { e.currentTarget.style.borderColor = plan.color; e.currentTarget.style.color = plan.color; } }}
                     onMouseLeave={e => { if (!isPopular) { e.currentTarget.style.borderColor = altBtnBdr; e.currentTarget.style.color = altBtnClr; } }}>
-                    {plan.cta}
-                    {isPopular && <span className="ml-2">-&gt;</span>}
-                  </button>
+                    {plan.cta}{isPopular && " →"}
+                  </a>
                 </div>
-              </div>
+              </Spotlight>
+              </Reveal>
             );
           })}
         </div>
@@ -1409,13 +1325,14 @@ function ContactForm({ isDark }) {
     setError("");
     const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/api$/, "");
     try {
+      const recaptchaToken = await getRecaptchaToken("contact");
       const res = await fetch(`${apiBase}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, recaptchaToken }),
       });
-      const data = await res.json();
-      if (data.success) setSent(true);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) setSent(true);
       else setError(data.message || "Something went wrong. Please try again.");
     } catch {
       setError("Network error. Please try again.");
@@ -1565,6 +1482,86 @@ function ContactForm({ isDark }) {
   );
 }
 
+// ── FAQ ───────────────────────────────────────────────────────────────────────
+// Also published as FAQPage structured data (see Landing below). Keep answers
+// true to the product: plan names and prices come from utils/plan.js.
+const HOME_FAQS = [
+  ["What is Arthaleads?",
+   "Arthaleads is a CRM built for real estate sales teams in India. It collects every property enquiry in one place, assigns it to the right person, reminds them to follow up, and tracks each lead from first call to site visit and booking."],
+  ["Which lead sources can I connect?",
+   "Facebook and Instagram lead ads import automatically, WhatsApp chats become leads, and website forms connect through our WordPress plugin or API. Google Ads is available on Enterprise. Portal leads from 99acres, Housing.com and MagicBricks can be added or imported from a sheet."],
+  ["Can the WhatsApp AI reply to buyers in Hindi or Marathi?",
+   "Yes. On Growth and Enterprise the WhatsApp AI agent answers buyer questions day and night and follows the buyer's language, including English, Hinglish, Hindi and Marathi. Your team can take over any chat at any time."],
+  ["Is there a mobile app for my sales team?",
+   "Yes. Agents get an Android app for calling leads, logging outcomes and seeing today's follow-ups, and the web app works on any phone or computer."],
+  ["How much does it cost?",
+   `Starter is ${formatINR(PLAN_PRICING.starter.monthly)} and Growth is ${formatINR(PLAN_PRICING.growth.monthly)} per user per month, plus 18% GST, with a five-seat minimum. Enterprise is quoted on team size. Every team can start with a 14-day free trial, no credit card needed.`],
+  ["Can I take my data with me?",
+   "Always. Export your leads to CSV or Excel whenever you like. Read how we protect your data on our Security page."],
+];
+
+function FAQ({ isDark }) {
+  const [open, setOpen] = useState(0);
+  const bg      = isDark ? "#0d0d1a" : "#ffffff";
+  const heading = isDark ? "#ffffff" : "#111827";
+  const body    = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
+  const cardBdr = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
+  const cardBg  = isDark ? "rgba(255,255,255,0.025)" : "#ffffff";
+
+  return (
+    <section id="faq" className="py-16 lg:py-24" style={{ background: bg }}>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-[1fr_1.4fr] gap-10 lg:gap-16">
+        <Reveal className="lg:sticky lg:top-28 self-start">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">Questions</span>
+          <h2 className="text-3xl sm:text-4xl font-black mt-4 mb-4 leading-[1.12]" style={{ color: heading }}>
+            Everything you are{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">wondering about</span>
+          </h2>
+          <p className="text-base leading-relaxed mb-6" style={{ color: body }}>
+            Still unsure whether Arthaleads fits your team? Ask us directly, we usually reply within minutes.
+          </p>
+          <a href={waLink(WA_MESSAGES.sales)} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm text-white transition-transform duration-200 hover:-translate-y-0.5"
+            style={{ background: "#128C7E", boxShadow: "0 6px 20px rgba(18,140,126,0.3)" }}>
+            <WaLogo size={16} /> Ask on WhatsApp
+          </a>
+        </Reveal>
+
+        <div className="space-y-3">
+          {HOME_FAQS.map(([q, a], i) => {
+            const isOpen = open === i;
+            return (
+              <Reveal key={q} delay={i * 60} y={16}>
+                <div className="rounded-2xl border transition-colors duration-300"
+                  style={{ background: cardBg, borderColor: isOpen ? "rgba(255,107,0,0.45)" : cardBdr }}>
+                  <button type="button" onClick={() => setOpen(isOpen ? -1 : i)} aria-expanded={isOpen}
+                    aria-controls={`faq-a-${i}`} id={`faq-q-${i}`}
+                    className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left cursor-pointer">
+                    <span className="text-[15px] font-semibold" style={{ color: heading }}>{q}</span>
+                    <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-300"
+                      style={{ background: isOpen ? "#ff6b00" : (isDark ? "rgba(255,255,255,0.06)" : "#fff7ed"), transform: isOpen ? "rotate(45deg)" : "none" }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={isOpen ? "#fff" : "#ff6b00"} strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                    </span>
+                  </button>
+                  <div id={`faq-a-${i}`} role="region" aria-labelledby={`faq-q-${i}`}
+                    className="grid transition-[grid-template-rows] duration-300 ease-out"
+                    style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}>
+                    <div className="overflow-hidden">
+                      <p className="px-5 pb-5 text-sm leading-relaxed" style={{ color: body }}>
+                        {a}{i === HOME_FAQS.length - 1 && <> <Link to="/security" className="text-[#ff6b00] font-semibold hover:underline">Open Security</Link></>}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── Final CTA ─────────────────────────────────────────────────────────────────
 function FinalCTA({ isDark }) {
   const bg      = isDark ? "#0d0d1a" : "#fff7f0";
@@ -1575,11 +1572,13 @@ function FinalCTA({ isDark }) {
 
   return (
     <section className="py-12 relative overflow-hidden" style={{ background: bg }}>
-      <div className="absolute inset-0 pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute inset-0 opacity-[0.06]"
           style={{ backgroundImage: "radial-gradient(circle at 50% 50%, #ff6b00 0%, transparent 70%)" }} />
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] max-w-[110vw] h-[340px] rounded-full blur-3xl"
+          style={{ background: "conic-gradient(from 90deg, rgba(255,107,0,0.22), rgba(255,170,0,0.10), rgba(255,107,0,0.22))", animation: "aurora-drift 16s ease-in-out infinite" }} />
       </div>
-      <div className="relative max-w-3xl mx-auto text-center px-4 sm:px-6">
+      <Reveal className="relative max-w-3xl mx-auto text-center px-4 sm:px-6">
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-4" style={{ color: heading }}>
           Stop losing leads to{" "}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
@@ -1591,18 +1590,20 @@ function FinalCTA({ isDark }) {
           Start your free trial today - no credit card needed.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-            className="flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-1">
-            Get Started Free
-            <ArrowRight className="w-5 h-5" />
-          </a>
-          <button onClick={() => scrollTo("contact")}
-            className="flex items-center gap-2 px-8 py-4 rounded-2xl transition-all duration-200 font-medium border"
+          <Magnetic>
+            <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
+              className="shine-btn flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50">
+              Get Started Free
+              <ArrowRight className="w-5 h-5" />
+            </a>
+          </Magnetic>
+          <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 px-8 py-4 rounded-2xl transition-all duration-200 font-medium border hover:-translate-y-0.5"
             style={{ color: btnText, borderColor: btnBdr }}>
-            Talk to Sales
-          </button>
+            <WaLogo size={18} /> Book a demo on WhatsApp
+          </a>
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -1614,11 +1615,17 @@ export default function Landing() {
 
   useSEO({
     title:       "Arthaleads – Lead Management CRM for Real Estate in India",
-    description: "Arthaleads is a CRM for real estate sales teams in India. Capture, track and convert property leads from Facebook, Google, WhatsApp and website forms, with an AI WhatsApp agent that replies day and night. Built for developers, brokers and channel partners.",
-    canonical:   "https://www.arthaleads.com",
+    description: "Real estate CRM for Indian sales teams. Capture leads from Facebook, Google, WhatsApp and your website, and let AI reply to buyers on WhatsApp day and night.",
+    canonical:   "https://www.arthaleads.com/",
   });
 
-  useEffect(() => { window.scrollTo(0, 0); }, []);
+  useEffect(() => {
+    // Nav links from other pages arrive as /#pricing, /#contact...: land on that section.
+    const id = window.location.hash.slice(1);
+    if (!id) { window.scrollTo(0, 0); return undefined; }
+    const t = setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: REDUCED_MOTION() ? "auto" : "smooth", block: "start" }), 150);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -1638,7 +1645,16 @@ export default function Landing() {
       })),
     });
     document.head.appendChild(script);
-    return () => { document.getElementById("howto-jsonld-landing")?.remove(); };
+    const faq = document.createElement("script");
+    faq.id = "faq-jsonld-landing";
+    faq.type = "application/ld+json";
+    faq.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": HOME_FAQS.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
+    });
+    document.head.appendChild(faq);
+    return () => { document.getElementById("howto-jsonld-landing")?.remove(); document.getElementById("faq-jsonld-landing")?.remove(); };
   }, []);
 
   return (
@@ -1652,6 +1668,7 @@ export default function Landing() {
       <About isDark={isDark} />
       <Testimonials isDark={isDark} />
       <Pricing isDark={isDark} />
+      <FAQ isDark={isDark} />
       <Contact isDark={isDark} />
       <FinalCTA isDark={isDark} />
       <PublicFooter />

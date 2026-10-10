@@ -12,10 +12,10 @@ import { useSEO } from "../utils/useSEO";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 const STATS = [
-  { num: 500,   suffix: "+",   label: "Real Estate Teams",  color: "#ff6b00" },
-  { num: 50000, suffix: "+",   label: "Leads Managed",      color: "#22c55e" },
+  { num: 50,    suffix: "+",   label: "Real Estate Teams",  color: "#ff6b00" },
+  { num: 10000, suffix: "+",   label: "Leads Managed",      color: "#22c55e" },
   { num: 8,     suffix: "",    label: "Form Integrations",  color: "#3b82f6" },
-  { num: 99,    suffix: ".9%", label: "Uptime",             color: "#a855f7" },
+  { num: 24,    suffix: "/7",  label: "WhatsApp AI Replies",             color: "#a855f7" },
 ];
 
 const VALUES = [
@@ -48,9 +48,9 @@ const STORY_POINTS = [
 
 const TIMELINE = [
   { year: "2022", title: "The idea",         desc: "Watched real estate teams lose hot leads across WhatsApp groups and spreadsheets. Knew there had to be a better way." },
-  { year: "2023", title: "First version",    desc: "Shipped the first version of Arthaleads to 5 teams in Pune. Immediate product-market fit. Teams never looked back at Excel." },
+  { year: "2023", title: "First version",    desc: "Shipped the first version of Arthaleads to 5 teams in Pune. The teams who tried it stopped going back to Excel." },
   { year: "2024", title: "Growing fast",     desc: "Expanded to 100+ teams across Maharashtra. Added Facebook Ads integration, pipeline view, and team analytics." },
-  { year: "2025", title: "Scaling up",       desc: "500+ teams, 50,000+ leads managed monthly. Launching WordPress plugin and deepening integrations with Indian property portals." },
+  { year: "2025", title: "Scaling up",       desc: "50+ teams and 10,000+ leads. Launched the WordPress plugin, the Android app and deeper Facebook and WhatsApp integrations." },
 ];
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
@@ -169,7 +169,7 @@ export default function AboutUs() {
 
           {/* Floating chips */}
           <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", animation: "fadeUp 0.6s ease 0.32s both" }}>
-            {["500+ Teams", "Pune · Mumbai · Maharashtra", "Founded 2022"].map(txt => (
+            {["50+ Teams", "Pune · Mumbai · Maharashtra", "Founded 2022"].map(txt => (
               <div key={txt} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 30, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)", border: `1px solid ${isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}` }}>
                 <span style={{ fontSize: 12, color: body, fontWeight: 500 }}>{txt}</span>
               </div>
@@ -488,7 +488,7 @@ export default function AboutUs() {
               background: "rgba(255,107,0,0.1)", border: "1px solid rgba(255,107,0,0.2)",
             }}>
               <Sparkles style={{ width: 11, height: 11, color: "#ff6b00" }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#ff6b00", textTransform: "uppercase", letterSpacing: "0.1em" }}>500+ Teams Trust Us</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#ff6b00", textTransform: "uppercase", letterSpacing: "0.1em" }}>50+ Teams Trust Us</span>
             </div>
             <h2 style={{ fontSize: "clamp(24px, 3.5vw, 36px)", fontWeight: 900, color: heading, lineHeight: 1.2, marginBottom: 14 }}>
               Start managing leads the smarter way

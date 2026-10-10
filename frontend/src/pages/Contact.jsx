@@ -15,7 +15,7 @@ export default function Contact() {
   const [error, setError] = useState("");
 
   useSEO({
-    title:       "Contact Arthaleads | Real Estate CRM Support & Sales – India",
+    title:       "Contact Arthaleads | Real Estate CRM Sales & Support",
     description: "Get in touch with the Arthaleads team. Questions about our real estate lead management CRM, pricing, or integrations? We’re here to help.",
     canonical:   "https://www.arthaleads.com/contact",
   });
@@ -32,8 +32,8 @@ export default function Contact() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, recaptchaToken }),
       });
-      const data = await res.json();
-      if (data.success) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
         setSent(true);
       } else {
         setError(data.message || "Something went wrong. Please try again.");

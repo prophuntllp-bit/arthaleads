@@ -41,7 +41,7 @@ const entries = readdirSync(pages).filter((f) => f.endsWith(".jsx")).map(readSeo
 entries.push({
   file: "PublicBlog.jsx",
   title: "Blog - Arthaleads Real Estate CRM",
-  description: "Expert real estate insights, CRM tips and lead management strategies from Arthaleads.",
+  description: "Practical guides on real estate lead management, WhatsApp follow-up, Facebook lead ads and CRM habits that help Indian sales teams close more deals.",
   canonical: `${SITE}/blog`,
 });
 
@@ -60,8 +60,12 @@ function render({ title, description, canonical }) {
     .replace(/<meta property="og:url"[^>]*>/, `<meta property="og:url" content="${esc(canonical)}">`)
     .replace(/<meta name="twitter:title"[^>]*>/, `<meta name="twitter:title" content="${esc(title)}">`)
     .replace(/<meta name="twitter:description"[^>]*>/, `<meta name="twitter:description" content="${esc(description)}">`)
-    .replace(/<link rel="canonical"[^>]*>\s*/g, "");
+    .replace(/<link rel="canonical"[^>]*>\s*/g, "")
+    // Marketing pages may be zoomed (accessibility); the CRM shell (app.html) keeps its fixed viewport.
+    .replace(/<meta name="viewport"[^>]*>/, `<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />`);
   html = html.replace(/(<meta name="description"[^>]*>)/, `$1\n    <link rel="canonical" href="${esc(canonical)}" />`);
+  // The blog and contact form talk to the API, blog images come from Sanity's CDN.
+  html = html.replace("</head>", `    <link rel="preconnect" href="https://api.arthaleads.com" crossorigin />\n    <link rel="preconnect" href="https://cdn.sanity.io" />\n  </head>`);
   return html;
 }
 

@@ -13,6 +13,8 @@ const MARKETING_PATHS = new Set([
   "/api-docs",
   "/compare",
   "/pricing",
+  "/features",
+  "/download-app",
   "/blog",
   "/about-us",
   "/case-studies",

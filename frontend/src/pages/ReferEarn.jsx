@@ -29,7 +29,7 @@ function ReferralBox() {
     return null;
   }, [org]);
 
-  const link = code ? `https://arthaleads.com/signup?ref=${code}` : "";
+  const link = code ? `https://app.arthaleads.com/signup?ref=${code}` : "";
 
   const cardBg = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
   const border = isDark ? "rgba(255,255,255,0.1)" : "#e5e7eb";
