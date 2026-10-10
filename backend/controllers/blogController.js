@@ -85,7 +85,13 @@ const blogController = {
   async getSitemap(req, res, next) {
     try {
       const baseUrl = "https://www.arthaleads.com";
-      const posts = await BlogPost.find({ status: "published" })
+      // Not-indexed, redirected and opted-out posts stay out of the sitemap.
+      const posts = await BlogPost.find({
+        status: "published",
+        excludeFromSitemap: { $ne: true },
+        "robots.index": { $ne: false },
+        $or: [{ redirectUrl: { $exists: false } }, { redirectUrl: "" }],
+      })
         .select("slug publishedAt updatedAt")
         .sort({ publishedAt: -1 })
         .limit(1000);

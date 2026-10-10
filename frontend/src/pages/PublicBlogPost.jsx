@@ -12,44 +12,65 @@ import { usePublicTheme } from "../context/PublicThemeContext";
 const SITE = "https://www.arthaleads.com";
 
 // ── SEO meta helper ────────────────────────────────────────────────────────────
+function robotsValue(r = {}) {
+  const parts = [r.index === false ? "noindex" : "index", r.follow === false ? "nofollow" : "follow"];
+  if (r.noArchive) parts.push("noarchive");
+  if (r.noImageIndex) parts.push("noimageindex");
+  if (r.noSnippet) parts.push("nosnippet");
+  else if (Number.isInteger(r.maxSnippet)) parts.push(`max-snippet:${r.maxSnippet}`);
+  parts.push(`max-image-preview:${r.maxImagePreview || "large"}`);
+  if (Number.isInteger(r.maxVideoPreview)) parts.push(`max-video-preview:${r.maxVideoPreview}`);
+  return parts.join(", ");
+}
+
 function useSEO(post) {
   useEffect(() => {
     if (!post) return;
     const title = post.metaTitle || post.title;
     const desc  = post.metaDescription || post.excerpt;
     const url   = `${SITE}/blog/${post.slug}`;
+    const full  = `${title} - Arthaleads`;
+    const image = post.ogImage || post.featuredImage;
+    const prevRobots = document.querySelector('meta[name="robots"]')?.getAttribute("content") || "index, follow";
 
-    document.title = `${title} - Arthaleads`;
+    document.title = full;
     setMeta("description",       desc);
-    setMeta("og:title",          title);
-    setMeta("og:description",    desc);
+    setMeta("robots",            robotsValue(post.robots));
+    const keywords = [post.focusKeyword, ...(post.secondaryKeywords || [])].filter(Boolean);
+    if (keywords.length) setMeta("keywords", keywords.join(", "));
+    setMeta("og:title",          post.ogTitle || full);
+    setMeta("og:description",    post.ogDescription || desc);
     setMeta("og:url",            url);
     setMeta("og:type",           "article");
-    if (post.featuredImage) setMeta("og:image", post.featuredImage);
-    setMeta("twitter:card",      "summary_large_image");
-    setMeta("twitter:title",     title);
-    setMeta("twitter:description", desc);
+    if (image) setMeta("og:image", image);
+    setMeta("twitter:card",      post.twitterCard || "summary_large_image");
+    setMeta("twitter:title",     post.twitterTitle || post.ogTitle || full);
+    setMeta("twitter:description", post.twitterDescription || post.ogDescription || desc);
+    if (post.twitterImage || image) setMeta("twitter:image", post.twitterImage || image);
 
     let canon = document.querySelector("link[rel='canonical']");
     if (!canon) { canon = document.createElement("link"); canon.setAttribute("rel", "canonical"); document.head.appendChild(canon); }
-    canon.setAttribute("href", url);
+    canon.setAttribute("href", post.canonicalUrl || url);
 
+    const author = post.authorName || post.author?.name;
+    const allKeywords = [...keywords, ...(post.tags || [])];
     document.getElementById("blog-jsonld")?.remove();
     const script = document.createElement("script");
     script.id = "blog-jsonld";
     script.type = "application/ld+json";
     script.textContent = JSON.stringify({
       "@context": "https://schema.org",
-      "@type":    "BlogPosting",
+      "@type":    post.schemaType || "BlogPosting",
       "headline": post.title,
       "description": desc,
-      "image": post.featuredImage || "",
+      "image": image || "",
       "datePublished": post.publishedAt,
       "dateModified":  post.updatedAt,
       "wordCount": post.readingTime ? post.readingTime * 200 : undefined,
-      "keywords": post.tags?.join(", ") || "real estate CRM, lead management, property CRM India",
-      "author": post.author?.name
-        ? { "@type": "Person", "name": post.author.name }
+      "keywords": allKeywords.length ? allKeywords.join(", ") : "real estate CRM, lead management, property CRM India",
+      "articleSection": post.category?.name || undefined,
+      "author": author && author !== "Arthaleads Team"
+        ? { "@type": "Person", "name": author }
         : { "@type": "Organization", "name": "Arthaleads", "url": SITE },
       "publisher": {
         "@type": "Organization",
@@ -65,21 +86,23 @@ function useSEO(post) {
     const bcScript = document.createElement("script");
     bcScript.id = "breadcrumb-jsonld";
     bcScript.type = "application/ld+json";
+    const crumb = post.breadcrumbTitle || post.title;
     const breadcrumbs = [
       { "@type": "ListItem", "position": 1, "name": "Home",  "item": SITE },
       { "@type": "ListItem", "position": 2, "name": "Blog",  "item": `${SITE}/blog` },
     ];
     if (post.category?.name) {
       breadcrumbs.push({ "@type": "ListItem", "position": 3, "name": post.category.name, "item": `${SITE}/blog?category=${post.category._id}` });
-      breadcrumbs.push({ "@type": "ListItem", "position": 4, "name": post.title, "item": url });
+      breadcrumbs.push({ "@type": "ListItem", "position": 4, "name": crumb, "item": url });
     } else {
-      breadcrumbs.push({ "@type": "ListItem", "position": 3, "name": post.title, "item": url });
+      breadcrumbs.push({ "@type": "ListItem", "position": 3, "name": crumb, "item": url });
     }
     bcScript.textContent = JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": breadcrumbs });
     document.head.appendChild(bcScript);
 
     return () => {
       document.title = "Arthaleads - Real Estate CRM";
+      setMeta("robots", prevRobots);
       document.getElementById("blog-jsonld")?.remove();
       document.getElementById("breadcrumb-jsonld")?.remove();
     };
@@ -301,7 +324,12 @@ function BlogPostInner() {
     setNotFound(false);
     window.scrollTo(0, 0);
     api.get(`/blog/posts/${slug}`)
-      .then((r) => setPost(r.data.post))
+      .then((r) => {
+        // Studio "Redirect Destination": the server already redirects on a full page load.
+        const to = r.data.post?.redirectUrl;
+        if (to) { window.location.replace(to); return; }
+        setPost(r.data.post);
+      })
       .catch((err) => { if (err.response?.status === 404) setNotFound(true); })
       .finally(() => setLoading(false));
   }, [slug]);

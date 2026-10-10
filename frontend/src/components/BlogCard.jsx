@@ -5,7 +5,7 @@ import { ArrowUpRight, ArrowRight } from "lucide-react";
 export const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
 
-export const authorOf = (post) => post.author?.name || "Arthaleads Team";
+export const authorOf = (post) => post.authorName || post.author?.name || "Arthaleads Team";
 
 // Theme tokens for blog surfaces, so both pages agree.
 export function blogTheme(isDark) {

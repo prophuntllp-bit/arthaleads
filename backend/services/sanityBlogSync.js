@@ -26,6 +26,13 @@ const QUERY = `*[_type == "post" && defined(slug.current) && defined(publishedAt
   "featuredImage": featuredImage.asset->url,
   "featuredImageAlt": featuredImage.alt,
   category, tags, publishedAt, metaTitle, metaDescription, focusKeyword,
+  author, secondaryKeywords, breadcrumbTitle, canonicalUrl, schemaType,
+  openGraphTitle, openGraphDescription,
+  "openGraphImage": openGraphImage.asset->url, "openGraphImageAlt": openGraphImage.alt,
+  twitterCard, twitterTitle, twitterDescription, "twitterImage": twitterImage.asset->url,
+  robotsIndex, robotsFollow, robotsNoArchive, robotsNoImageIndex, robotsNoSnippet,
+  robotsMaxSnippet, robotsMaxVideoPreview, robotsMaxImagePreview,
+  excludeFromSitemap, redirectUrl, redirectPermanent,
   body[]{ ..., _type == "image" => { ..., "url": asset->url } }
 } | order(publishedAt desc)`;
 
@@ -107,6 +114,43 @@ async function categoryId(name) {
   return (await BlogCategory.create({ name: clean.slice(0, 100), slug })).id;
 }
 
+const str = (v, n) => String(v || "").trim().slice(0, n);
+const httpsUrl = (u) => (/^https:\/\//i.test(String(u || "").trim()) ? String(u).trim() : "");
+const limit = (v) => (Number.isInteger(v) && v >= -1 ? v : -1);
+const oneOf = (v, list, fallback) => (list.includes(v) ? v : fallback);
+
+/** Social and advanced SEO fields from the Studio's SEO, Social and Advanced SEO tabs. */
+function applySeo(post, d) {
+  post.authorName = str(d.author, 100);
+  post.secondaryKeywords = (d.secondaryKeywords || []).map((k) => str(k, 100)).filter(Boolean).slice(0, 8);
+  post.breadcrumbTitle = str(d.breadcrumbTitle, 60);
+  post.canonicalUrl = httpsUrl(d.canonicalUrl);
+  post.schemaType = oneOf(d.schemaType, ["BlogPosting", "Article", "NewsArticle"], "BlogPosting");
+  post.ogTitle = str(d.openGraphTitle, 95);
+  post.ogDescription = str(d.openGraphDescription, 200);
+  post.ogImage = d.openGraphImage || "";
+  post.ogImageAlt = str(d.openGraphImageAlt, 200);
+  post.twitterCard = oneOf(d.twitterCard, ["summary_large_image", "summary"], "summary_large_image");
+  post.twitterTitle = str(d.twitterTitle, 70);
+  post.twitterDescription = str(d.twitterDescription, 200);
+  post.twitterImage = d.twitterImage || "";
+  // Unset switches keep the safe default: indexed and followed.
+  post.robots = {
+    index: d.robotsIndex !== false,
+    follow: d.robotsFollow !== false,
+    noArchive: d.robotsNoArchive === true,
+    noImageIndex: d.robotsNoImageIndex === true,
+    noSnippet: d.robotsNoSnippet === true,
+    maxSnippet: limit(d.robotsMaxSnippet),
+    maxVideoPreview: limit(d.robotsMaxVideoPreview),
+    maxImagePreview: oneOf(d.robotsMaxImagePreview, ["large", "standard", "none"], "large"),
+  };
+  post.excludeFromSitemap = d.excludeFromSitemap === true;
+  const redirect = String(d.redirectUrl || "").trim();
+  post.redirectUrl = /^(https:\/\/|\/(?!\/))/i.test(redirect) ? redirect : "";
+  post.redirectPermanent = d.redirectPermanent !== false;
+}
+
 async function fetchPublished() {
   const url = `https://${PROJECT_ID}.api.sanity.io/v${API_VERSION}/data/query/${DATASET}?query=${encodeURIComponent(QUERY)}&perspective=published`;
   const res = await fetch(url, { headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {} });
@@ -160,6 +204,7 @@ async function sync() {
     post.metaTitle = String(d.metaTitle || d.title).trim().slice(0, 70);
     post.metaDescription = String(d.metaDescription || d.excerpt || firstText).trim().slice(0, 160);
     post.focusKeyword = String(d.focusKeyword || "").trim().slice(0, 100);
+    applySeo(post, d);
     post.sanityUpdatedAt = new Date(d._updatedAt);
     await post.save();
   }
@@ -176,4 +221,4 @@ async function sync() {
   return stats;
 }
 
-module.exports = { sync, toBlocks, inlineHtml };
+module.exports = { sync, toBlocks, inlineHtml, applySeo };

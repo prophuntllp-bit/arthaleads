@@ -57,7 +57,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
-- [Claude Code] 2026-10-10 IST: Sanity blog schema to match Vistrow SEO structure (Content / SEO with live score / Social / Advanced SEO tabs) and wire the new fields into sync, sitemap, page tags and JSON-LD. Files: studio/*, backend/models/BlogPost.js, backend/services/sanityBlogSync.js, backend/controllers/blogController.js (sitemap), frontend/api/blog-post.js, frontend/src/pages/PublicBlogPost.jsx, frontend/src/components/BlogCard.jsx.
 
 
 
@@ -72,6 +71,14 @@ only be verified live so Claude Code or the owner can check it on production.
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
+
+### Claude Code, 2026-10-10 IST, Sanity blog: Vistrow-style SEO structure
+
+- `studio/schemaTypes/post.js`: four tabs like the Vistrow studio. **Content** (title max 100, URL slug, summary 80 to 320 chars required, category required, author, publish at, collapsed "Image brief" editor notes, featured image with required alt, tags, article). **SEO** (live `components/SeoAudit.jsx` panel: weighted score out of 100, Google preview with character counters, 12-point checklist; focus keyword, up to 8 secondary keywords, SEO title required max 65, SEO description required max 170, breadcrumb title). **Social** (Facebook/LinkedIn title, description, image; X card type, title, description, image; each falls back to the one above). **Advanced SEO** (canonical URL https only, schema type BlogPosting/Article/NewsArticle, robots switches, snippet/video/image preview limits, exclude from sitemap, redirect URL + permanent switch). Kept our rich-text body (links, images, H2/H3) rather than Vistrow's plain sections.
+- Note: SEO title and SEO description are now required, so the 5 existing drafts need them filled before they can be published.
+- `BlogPost` model: new fields `authorName, secondaryKeywords, breadcrumbTitle, og*, twitter*, schemaType, robots{...}, excludeFromSitemap, redirectUrl, redirectPermanent`. `sanityBlogSync.applySeo` maps them with safe defaults (missing switches = index, follow) and rejects non-https canonicals and unsafe redirects.
+- Sitemap leaves out noindex, excluded and redirected posts. `frontend/api/blog-post.js` now writes meta robots, canonical override, separate OG/X tags, keywords, article times and Article JSON-LD (schema type, author) into the page source, and 301/302-redirects when a redirect is set. `PublicBlogPost.jsx` sets the same tags client-side and follows redirects; `authorOf` prefers the Studio author name.
+- Verified: 10-assertion sync/sitemap test (memory DB), 11-assertion Vercel-function test (stubbed API), score-logic test (Vistrow-style sample scores 95 with only the social check failing), studio build, frontend build. Studio UI itself checked only after deploy (local studio needs the owner's Sanity login).
 
 ### Claude Code, 2026-10-09 IST, WhatsApp bot: notice for unsupported messages, no silent first "Hi"
 

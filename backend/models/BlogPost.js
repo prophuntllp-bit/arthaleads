@@ -31,6 +31,34 @@ const blogPostSchema = new mongoose.Schema(
     metaDescription:   { type: String, default: "", maxlength: 160 },
     focusKeyword:      { type: String, default: "", maxlength: 100 },
     canonicalUrl:      { type: String, default: "" },
+    secondaryKeywords: [{ type: String, trim: true, maxlength: 100 }],
+    breadcrumbTitle:   { type: String, default: "", maxlength: 60 },
+    // Social sharing (each falls back to the SEO title / description / featured image)
+    ogTitle:           { type: String, default: "", maxlength: 95 },
+    ogDescription:     { type: String, default: "", maxlength: 200 },
+    ogImage:           { type: String, default: "" },
+    ogImageAlt:        { type: String, default: "" },
+    twitterCard:       { type: String, enum: ["summary_large_image", "summary"], default: "summary_large_image" },
+    twitterTitle:      { type: String, default: "", maxlength: 70 },
+    twitterDescription:{ type: String, default: "", maxlength: 200 },
+    twitterImage:      { type: String, default: "" },
+    // Advanced SEO
+    schemaType:        { type: String, enum: ["BlogPosting", "Article", "NewsArticle"], default: "BlogPosting" },
+    robots: {
+      index:           { type: Boolean, default: true },
+      follow:          { type: Boolean, default: true },
+      noArchive:       { type: Boolean, default: false },
+      noImageIndex:    { type: Boolean, default: false },
+      noSnippet:       { type: Boolean, default: false },
+      maxSnippet:      { type: Number, default: -1 },
+      maxVideoPreview: { type: Number, default: -1 },
+      maxImagePreview: { type: String, enum: ["large", "standard", "none"], default: "large" },
+    },
+    excludeFromSitemap:{ type: Boolean, default: false },
+    redirectUrl:       { type: String, default: "" },
+    redirectPermanent: { type: Boolean, default: true },
+    // Name shown on the article when it came from Sanity (CRM-editor posts use `author`)
+    authorName:        { type: String, default: "", maxlength: 100 },
     // Author
     author:            { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     // Set when the post is written in Sanity Studio and copied here by
