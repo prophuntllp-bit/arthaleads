@@ -73,6 +73,12 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-10 IST, prerendered marketing pages
+
+- `npm run build` now ends with `scripts/prerender.mjs`: builds `src/entry-prerender.jsx` with Vite SSR (Node, no browser, works on Vercel) and writes each of the 20 marketing pages' HTML into its `dist/*.html` inside `<div id="root" data-prerendered>`. Raw HTML now has the h1, headings and copy. Rendered with fake browser globals and reduced motion (count-ups show final numbers, reveals visible); a failing page keeps its plain shell, never fails the build. `app.html` and blog posts (Vercel function) are untouched.
+- `main.jsx`: React does NOT hydrate. The static copy moves to a sibling and stays on screen while the app renders invisibly into #root; swap when #root has a `<footer>` (8 s cap, timer not rAF). Mount-time `scrollTo(0,0)` is ignored while waiting so readers are not yanked up. Head extras per page (`#prerender-css`): opacity:0 sections shown in the static copy, splash hidden for light-theme visitors; dark-theme visitors and app.arthaleads.com (which serves these same files for /) keep the splash and never see the static copy.
+- If a new marketing page is added: add it to `PAGES` in `src/entry-prerender.jsx` (plus seo-pages and vercel.json as before). Pages must not touch window/document during render (effects are fine). If the site ever shows stale or doubled content, remove `&& node scripts/prerender.mjs` from the build script first.
+
 ### Claude Code, 2026-10-10 IST, social profiles in the footer
 
 - `utils/crmLinks.js` `SOCIAL_LINKS` (Instagram arthaleads.crm, LinkedIn company/arthaleads, Facebook page id 61589532765469). `PublicFooter.jsx` has a "Follow Arthaleads" icon row (Instagram, Facebook, LinkedIn, email) under the WhatsApp button. `index.html` Organization `sameAs` now lists these three instead of an unverified twitter.com/arthaleads.

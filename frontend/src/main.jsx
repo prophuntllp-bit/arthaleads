@@ -83,7 +83,59 @@ const GoogleAuth = ({ children }) => IS_MARKETING_HOST
   ? children
   : <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>{children}</GoogleOAuthProvider>;
 
-ReactDOM.createRoot(document.getElementById("root")).render(
+// ── Prerendered pages ──────────────────────────────────────────────────────
+// Marketing pages ship with their HTML already inside #root (scripts/
+// prerender.mjs), so the page is readable before any JavaScript runs. React
+// does not hydrate that markup (theme, cookie banner and other browser-only
+// state would never match); it renders the live page into #root while the
+// static copy stays on screen in a sibling, and the two swap once the live
+// page has rendered its footer. Until then, the pages' own "scroll to top on
+// mount" must not yank a visitor who has already started reading.
+const rootEl = document.getElementById("root");
+if (rootEl.hasAttribute("data-prerendered") && window.location.hostname === "app.arthaleads.com") {
+  // The CRM host serves the same files for / and the marketing paths (they
+  // redirect to /login or the marketing site): never show marketing copy there.
+  rootEl.removeAttribute("data-prerendered");
+  rootEl.textContent = "";
+} else if (rootEl.hasAttribute("data-prerendered")) {
+  const staticCopy = document.createElement("div");
+  staticCopy.setAttribute("data-prerendered", "");
+  while (rootEl.firstChild) staticCopy.appendChild(rootEl.firstChild);
+  rootEl.removeAttribute("data-prerendered");
+  rootEl.parentNode.insertBefore(staticCopy, rootEl);
+  rootEl.style.cssText = "position:absolute;top:0;left:0;width:100%;visibility:hidden;pointer-events:none";
+
+  const realScrollTo = window.scrollTo.bind(window);
+  window.scrollTo = (...args) => {
+    const top = typeof args[0] === "object" ? args[0]?.top : args[1];
+    if (top === 0 && window.scrollY > 0) return;   // ignore the mount-time reset while swapping
+    realScrollTo(...args);
+  };
+
+  let swapped = false;
+  const swap = () => {
+    if (swapped) return;
+    swapped = true;
+    observer.disconnect();
+    // A timer, not requestAnimationFrame: background tabs and some crawlers
+    // never run animation frames, and the static copy must not stay forever.
+    setTimeout(() => {
+      staticCopy.remove();
+      rootEl.style.cssText = "";
+      // Light-theme visitors never saw the splash (hidden by prerender-css); make
+      // sure removing that CSS below cannot bring it back mid-fade.
+      if (!document.documentElement.hasAttribute("data-prerender-hide")) document.getElementById("app-splash")?.remove();
+      window.scrollTo = realScrollTo;
+      document.getElementById("prerender-css")?.remove();
+      document.documentElement.removeAttribute("data-prerender-hide");
+    }, 30);
+  };
+  const observer = new MutationObserver(() => { if (rootEl.querySelector("footer")) swap(); });
+  observer.observe(rootEl, { childList: true, subtree: true });
+  setTimeout(swap, 8000);   // never leave the static copy up if a page has no footer
+}
+
+ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
     <HelmetProvider>
       <GoogleAuth>

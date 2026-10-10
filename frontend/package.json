@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/seo-pages.mjs",
+    "build": "vite build && node scripts/seo-pages.mjs && node scripts/prerender.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

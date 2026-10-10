@@ -549,7 +549,6 @@ function About({ isDark }) {
   const sectionRef = useRef(null);
   const [visible, setVisible] = useState(false);
   const [hoveredCard, setHoveredCard] = useState(null);
-  const [counts, setCounts] = useState([0, 0, 0, 0]);
 
   const stats = [
     { num: 50,    suffix: "+",  label: "Real Estate Teams",    sub: "actively using Arthaleads",    color: "#ff6b00" },
@@ -557,6 +556,8 @@ function About({ isDark }) {
     { num: 24,    suffix: "/7", label: "WhatsApp AI Replies",  sub: "day and night, in your buyer's language", color: "#3b82f6" },
     { num: 3,     suffix: "×",  label: "Faster Follow-ups",    sub: "vs. manual spreadsheet teams", color: "#a855f7" },
   ];
+  // Prerendered HTML (reduced motion on the server) shows the real numbers, not 0.
+  const [counts, setCounts] = useState(() => (REDUCED_MOTION() ? stats.map((st) => st.num) : stats.map(() => 0)));
 
   const points = [
     "Founded by real estate professionals who felt the pain of managing hundreds of leads across WhatsApp, email, and spreadsheets.",
