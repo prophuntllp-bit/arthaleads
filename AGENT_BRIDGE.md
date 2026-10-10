@@ -57,6 +57,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
+- [Claude Code] 2026-10-10 IST: marketing site audit + improvements (engagement, premium motion, SEO/perf fixes). Files: frontend/src/pages/Landing.jsx, Features.jsx, Pricing.jsx, Compare.jsx, AboutUs.jsx, Contact.jsx, CaseStudies.jsx, PublicBlog*.jsx, components/Public*, components/motion/*, styles.css (marketing parts), public/*, vercel.json, backend blogController sitemap if needed.
+
 
 
 
