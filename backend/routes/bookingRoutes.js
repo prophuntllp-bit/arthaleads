@@ -1,13 +1,14 @@
 const express   = require("express");
 const router    = express.Router();
-const { protect } = require("../middlewares/auth");
+const { protect, authorize } = require("../middlewares/auth");
 const { planGate } = require("../middlewares/planGate");
 const Booking   = require("../models/Booking");
 const Developer = require("../models/Developer");
 const Invoice   = require("../models/Invoice");
 
 // "Booking and invoice engine" is sold as a Growth feature.
-router.use(protect, planGate("growth"));
+// Brokerage and billing data: owners and managers only (the sidebar and the mobile app already hide it from agents).
+router.use(protect, authorize("admin", "manager"), planGate("growth"));
 
 function calcFinancials({ considerationValue, brokeragePercent, brokerageAmount,
                           brokerageAdjustment, fosIncentive, eoiIncentive, gstType }) {

@@ -292,3 +292,5 @@ Re-verified each P1 with a test against the real handlers (two orgs, in-memory M
   assertions on baseline.
 
 - Claude: IntroVideo autoplay now tries sound first, falls back to muted and unmutes on first click/tap/key (frontend/src/components/IntroVideo.jsx).
+
+- Claude 2026-10-10: role gates. Agents blocked from /api/bookings, /developers, /invoices (admin/manager only, matches sidebar + mobile); agent cannot assign a WhatsApp chat to someone else; frontend RoleGate on template/campaign builders, AI agent pages, conversation settings, bookings/invoices/developers; template cards no longer open the editor for agents.

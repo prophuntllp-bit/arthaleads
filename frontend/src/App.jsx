@@ -657,6 +657,14 @@ function RequireRole({ roles }) {
   return <Navigate to="/dashboard" replace />;
 }
 
+// Same check as RequireRole, for a single element: an agent who types the URL
+// of a page their sidebar hides lands back on the dashboard.
+function RoleGate({ roles, children }) {
+  const { user } = useAuth();
+  if (user?.role === "super_admin" || roles.includes(user?.role)) return children;
+  return <Navigate to="/dashboard" replace />;
+}
+
 function RedirectIfAuth() {
   const { user, loading } = useAuth();
   if (loading) return null;
@@ -812,23 +820,23 @@ export default function App() {
               <Route index element={<Inbox />} />
               <Route path=":id" element={<Inbox />} />
               <Route path="templates"      element={<PlanOnly min="growth" feature="WhatsApp templates"><TemplatesPage /></PlanOnly>} />
-              <Route path="templates/new"  element={<PlanOnly min="growth" feature="WhatsApp templates"><TemplateBuilder /></PlanOnly>} />
-              <Route path="templates/:id/edit" element={<PlanOnly min="growth" feature="WhatsApp templates"><TemplateBuilder /></PlanOnly>} />
+              <Route path="templates/new"  element={<RoleGate roles={["admin", "manager"]}><PlanOnly min="growth" feature="WhatsApp templates"><TemplateBuilder /></PlanOnly></RoleGate>} />
+              <Route path="templates/:id/edit" element={<RoleGate roles={["admin", "manager"]}><PlanOnly min="growth" feature="WhatsApp templates"><TemplateBuilder /></PlanOnly></RoleGate>} />
               <Route path="campaigns"      element={<PlanOnly min="growth" feature="WhatsApp campaigns"><CampaignsPage /></PlanOnly>} />
-              <Route path="campaigns/new"  element={<PlanOnly min="growth" feature="WhatsApp campaigns"><CampaignBuilder /></PlanOnly>} />
-              <Route path="campaigns/:id"  element={<PlanOnly min="growth" feature="WhatsApp campaigns"><CampaignBuilder /></PlanOnly>} />
+              <Route path="campaigns/new"  element={<RoleGate roles={["admin", "manager"]}><PlanOnly min="growth" feature="WhatsApp campaigns"><CampaignBuilder /></PlanOnly></RoleGate>} />
+              <Route path="campaigns/:id"  element={<RoleGate roles={["admin", "manager"]}><PlanOnly min="growth" feature="WhatsApp campaigns"><CampaignBuilder /></PlanOnly></RoleGate>} />
               <Route path="credits"  element={<CreditsPage />} />
-              <Route path="agent"      element={<PlanOnly min="growth" feature="The WhatsApp AI agent"><AgentsPage /></PlanOnly>} />
-              <Route path="agent/new"  element={<PlanOnly min="growth" feature="The WhatsApp AI agent"><AgentBuilder /></PlanOnly>} />
-              <Route path="agent/:id"  element={<PlanOnly min="growth" feature="The WhatsApp AI agent"><AgentBuilder /></PlanOnly>} />
-              <Route path="settings" element={<ConversationSettings />} />
+              <Route path="agent"      element={<RoleGate roles={["admin"]}><PlanOnly min="growth" feature="The WhatsApp AI agent"><AgentsPage /></PlanOnly></RoleGate>} />
+              <Route path="agent/new"  element={<RoleGate roles={["admin"]}><PlanOnly min="growth" feature="The WhatsApp AI agent"><AgentBuilder /></PlanOnly></RoleGate>} />
+              <Route path="agent/:id"  element={<RoleGate roles={["admin"]}><PlanOnly min="growth" feature="The WhatsApp AI agent"><AgentBuilder /></PlanOnly></RoleGate>} />
+              <Route path="settings" element={<RoleGate roles={["admin"]}><ConversationSettings /></RoleGate>} />
             </Route>
             <Route path="/calls"          element={<Calls />} />
             <Route path="/tasks"         element={<Tasks />} />
             <Route path="/attendance"    element={<Attendance />} />
-            <Route path="/bookings"      element={<Bookings />} />
-            <Route path="/invoices"      element={<Invoices />} />
-            <Route path="/developers"    element={<Developers />} />
+            <Route path="/bookings"      element={<RoleGate roles={["admin", "manager"]}><Bookings /></RoleGate>} />
+            <Route path="/invoices"      element={<RoleGate roles={["admin", "manager"]}><Invoices /></RoleGate>} />
+            <Route path="/developers"    element={<RoleGate roles={["admin", "manager"]}><Developers /></RoleGate>} />
             <Route path="/plans"         element={<Plans />} />
 
             {/* Admin + Manager only (managers get read-only Team — see isAdmin

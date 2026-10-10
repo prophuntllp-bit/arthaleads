@@ -3228,6 +3228,10 @@ router.patch("/conversations/:id", async (req, res) => {
     // made unassigning silently do nothing. assignedToName is denormalised on
     // the document, so it has to move with the id or the two disagree.
     if (assignedTo !== undefined) {
+      // An agent can take a chat or release their own, not hand it to someone else.
+      if (req.user.role === "agent" && assignedTo && String(assignedTo) !== String(req.user._id)) {
+        return res.status(403).json({ message: "Only an admin or manager can assign a chat to someone else." });
+      }
       if (assignedTo === null || assignedTo === "") {
         update.assignedTo = null;
         update.assignedToName = "";

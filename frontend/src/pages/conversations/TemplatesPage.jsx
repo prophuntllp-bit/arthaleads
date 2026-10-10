@@ -329,9 +329,9 @@ export default function TemplatesPage() {
               {shown.map((t) => {
                 const rejected = t.status === "REJECTED";
                 return (
-                  <div key={t.id || t.name} className="card p-4 flex flex-col cursor-pointer transition hover:border-[var(--app-primary)]"
+                  <div key={t.id || t.name} className={`card p-4 flex flex-col transition ${canEdit ? "cursor-pointer hover:border-[var(--app-primary)]" : ""}`}
                     style={rejected ? { borderColor: "rgba(239,68,68,0.35)" } : undefined}
-                    onClick={() => t.id && navigate(`/conversations/templates/${t.id}/edit`)}>
+                    onClick={() => canEdit && t.id && navigate(`/conversations/templates/${t.id}/edit`)}>
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-app truncate">{t.name}</p>

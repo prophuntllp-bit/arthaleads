@@ -1,13 +1,13 @@
 const express   = require("express");
 const router    = express.Router();
-const { protect } = require("../middlewares/auth");
+const { protect, authorize } = require("../middlewares/auth");
 const { planGate } = require("../middlewares/planGate");
 const Invoice   = require("../models/Invoice");
 const Booking   = require("../models/Booking");
 const Developer = require("../models/Developer");
 
 // Invoicing is the second half of the Growth booking engine.
-router.use(protect, planGate("growth"));
+router.use(protect, authorize("admin", "manager"), planGate("growth"));
 
 // GET /api/invoices?status=&page=&limit=
 // One page plus `summary` across ALL invoices, so the totals do not depend on how many are loaded.

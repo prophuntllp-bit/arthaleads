@@ -1,9 +1,9 @@
 const express   = require("express");
 const router    = express.Router();
-const { protect } = require("../middlewares/auth");
+const { protect, authorize } = require("../middlewares/auth");
 const Developer = require("../models/Developer");
 
-router.use(protect);
+router.use(protect, authorize("admin", "manager"));
 
 // GET /api/developers
 router.get("/", async (req, res, next) => {
