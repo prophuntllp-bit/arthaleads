@@ -21,6 +21,14 @@ export const WHATSAPP_NUMBER = "919067097779";
 export const PHONE_DISPLAY   = "+91 90670 97779";
 export const PHONE_TEL       = "tel:+919067097779";
 
+// Official social profiles. Also listed as Organization.sameAs in index.html,
+// which tells Google these accounts belong to Arthaleads.
+export const SOCIAL_LINKS = {
+  instagram: "https://www.instagram.com/arthaleads.crm/",
+  linkedin:  "https://www.linkedin.com/company/arthaleads/",
+  facebook:  "https://www.facebook.com/profile.php?id=61589532765469",
+};
+
 /**
  * A wa.me link with the first message already typed.
  *

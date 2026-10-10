@@ -73,6 +73,10 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-10 IST, social profiles in the footer
+
+- `utils/crmLinks.js` `SOCIAL_LINKS` (Instagram arthaleads.crm, LinkedIn company/arthaleads, Facebook page id 61589532765469). `PublicFooter.jsx` has a "Follow Arthaleads" icon row (Instagram, Facebook, LinkedIn, email) under the WhatsApp button. `index.html` Organization `sameAs` now lists these three instead of an unverified twitter.com/arthaleads.
+
 ### Claude Code, 2026-10-10 IST, marketing site audit: speed, honesty, engagement, motion
 
 - **Speed:** `public/logo.png` 1.1 MB -> 44 KB (512 px) and `ai-avatar2.png` 2.4 MB -> 55 KB (192 px), same names so every reference benefits. Deleted unreferenced `ai-avatar.png`, `hero-mockup.png`, `gallery-1..4.jpg`, `AI AVATAR AGENT .png` (only the unused `InfiniteGallery.jsx` named the gallery files). `vercel.json`: `/assets/*` cached 1 year immutable, `/tour` and `/video` 1 week. Marketing host skips the `/auth/me` session check (`AuthContext`) and the Google sign-in provider/script (`main.jsx`), since every CRM route there redirects to app.arthaleads.com. Chat widget lazy-loads when the page is idle (`PublicNav`). Blog uses resized Sanity images (`sizedImage` in `BlogCard.jsx`).
