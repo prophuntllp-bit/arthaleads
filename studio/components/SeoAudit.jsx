@@ -1,9 +1,11 @@
-import { Badge, Box, Card, Flex, Grid, Stack, Text } from "@sanity/ui";
 import { useFormValue } from "sanity";
 
 // Live SEO score for a blog post, shown at the top of the SEO tab. It never
 // writes anything; it reads the whole document and re-scores on every edit.
 // Mirrors the checklist used in the Vistrow studio. Weights add up to 100.
+// Plain elements on the Studio's CSS colour variables, not @sanity/ui: the
+// hosted studio auto-updates its runtime, and a second bundled copy of
+// @sanity/ui loses the theme (spacing collapses and text overlaps).
 const SITE = "https://www.arthaleads.com/blog/";
 
 const norm = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -58,49 +60,64 @@ export function analyse(doc) {
   return { checks, score, words, density, seoTitle, seoDesc, slug };
 }
 
+const C = {
+  fg: "var(--card-fg-color, #e6e8ec)",
+  muted: "var(--card-muted-fg-color, #9aa1ad)",
+  border: "var(--card-border-color, rgba(255,255,255,0.12))",
+};
+const TONES = {
+  positive: { fg: "#3ecf8e", bg: "rgba(62,207,142,0.12)", border: "rgba(62,207,142,0.45)" },
+  caution:  { fg: "#f5b544", bg: "rgba(245,181,68,0.12)", border: "rgba(245,181,68,0.45)" },
+  critical: { fg: "#f2685c", bg: "rgba(242,104,92,0.12)", border: "rgba(242,104,92,0.45)" },
+  default:  { fg: C.muted, bg: "rgba(127,127,127,0.12)", border: C.border },
+};
+const box = (extra) => ({ border: `1px solid ${C.border}`, borderRadius: 8, padding: 16, ...extra });
+const Pill = ({ tone = "default", big, children }) => {
+  const t = TONES[tone];
+  return (
+    <span style={{ display: "inline-block", whiteSpace: "nowrap", color: t.fg, background: t.bg, borderRadius: 4,
+      padding: big ? "8px 12px" : "2px 6px", fontSize: big ? 16 : 12, fontWeight: 600, lineHeight: 1.3 }}>{children}</span>
+  );
+};
+
 export function SeoAudit() {
   const doc = useFormValue([]);
   const { checks, score, words, density, seoTitle, seoDesc, slug } = analyse(doc);
   const tone = score >= 80 ? "positive" : score >= 50 ? "caution" : "critical";
+  const t = TONES[tone];
 
   return (
-    <Stack space={4}>
-      <Card padding={4} radius={3} tone={tone} border>
-        <Flex align="center" justify="space-between" gap={3}>
-          <Stack space={2}>
-            <Text weight="semibold">SEO score</Text>
-            <Text size={1} muted>{words} words · {density.toFixed(1)}% keyword density</Text>
-          </Stack>
-          <Badge tone={tone} padding={3} fontSize={2}>{score}/100</Badge>
-        </Flex>
-      </Card>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20, color: C.fg, fontSize: 14, lineHeight: 1.45 }}>
+      <div style={box({ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: t.bg, borderColor: t.border })}>
+        <div>
+          <div style={{ fontWeight: 600, color: t.fg }}>SEO score</div>
+          <div style={{ fontSize: 13, color: t.fg, opacity: 0.85, marginTop: 4 }}>{words} words · {density.toFixed(1)}% keyword density</div>
+        </div>
+        <Pill tone={tone} big>{score}/100</Pill>
+      </div>
 
-      <Card padding={4} radius={3} border>
-        <Stack space={3}>
-          <Text weight="semibold">Google preview</Text>
-          <Text size={1} style={{ color: "#1e8e3e", wordBreak: "break-all" }}>{SITE}{slug || "your-post-url"}</Text>
-          <Text size={3} style={{ color: "#4c8bf5" }}>{seoTitle || "Your SEO title"}</Text>
-          <Text size={1} muted>{seoDesc || "Your SEO description appears here."}</Text>
-          <Flex gap={2} wrap="wrap">
-            <Badge tone={seoTitle.length > 60 ? "caution" : "default"}>{seoTitle.length}/60 title characters</Badge>
-            <Badge tone={seoDesc.length > 160 ? "caution" : "default"}>{seoDesc.length}/160 description characters</Badge>
-          </Flex>
-        </Stack>
-      </Card>
+      <div style={box({ display: "flex", flexDirection: "column", gap: 6 })}>
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>Google preview</div>
+        <div style={{ fontSize: 13, color: "#3ecf8e", wordBreak: "break-all" }}>{SITE}{slug || "your-post-url"}</div>
+        <div style={{ fontSize: 19, color: "#6ea8fe", lineHeight: 1.3 }}>{seoTitle || "Your SEO title"}</div>
+        <div style={{ fontSize: 13, color: C.muted }}>{seoDesc || "Your SEO description appears here."}</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
+          <Pill tone={seoTitle.length > 60 ? "caution" : "default"}>{seoTitle.length}/60 title characters</Pill>
+          <Pill tone={seoDesc.length > 160 ? "caution" : "default"}>{seoDesc.length}/160 description characters</Pill>
+        </div>
+      </div>
 
-      <Stack space={3}>
-        <Text weight="semibold">SEO checklist</Text>
-        <Grid columns={[1, 1, 2]} gap={2}>
+      <div>
+        <div style={{ fontWeight: 600, marginBottom: 10 }}>SEO checklist</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 8 }}>
           {checks.map((c) => (
-            <Card key={c.label} padding={3} radius={2} border>
-              <Flex gap={3} align="flex-start">
-                <Badge tone={c.pass ? "positive" : "critical"}>{c.pass ? "Pass" : "Fix"}</Badge>
-                <Box flex={1}><Text size={1}>{c.label}</Text></Box>
-              </Flex>
-            </Card>
+            <div key={c.label} style={box({ padding: 12, display: "flex", gap: 10, alignItems: "flex-start" })}>
+              <Pill tone={c.pass ? "positive" : "critical"}>{c.pass ? "Pass" : "Fix"}</Pill>
+              <span style={{ fontSize: 13 }}>{c.label}</span>
+            </div>
           ))}
-        </Grid>
-      </Stack>
-    </Stack>
+        </div>
+      </div>
+    </div>
   );
 }
