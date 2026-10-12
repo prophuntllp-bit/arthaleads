@@ -61,6 +61,10 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-12 IST, app Leads auto-refresh verified with a test lead
+
+- With the owner's OK, inserted one lead directly in the DB ("TEST - ignore (Claude)", 9999900001, Manual, assigned to/created by Pranav; direct insert so no push or round-robin). With the phone on Leads and untouched it appeared on top after 15 s (804 -> 805). Then moved it to Dump from the app, so it sits in Prophunt's Dump (id 6accd77d936f9261b7a4e18d) and can be deleted permanently from there.
+
 ### Claude Code, 2026-10-12 IST, mobile: Dump restore asks first; Pipeline card opens the lead
 
 - Dump: Restore now confirms (it restored on a single tap; the web does too). While testing, I restored one real lead by that single tap: "Abhishek Ranjan" (918007851222, Sheetal Powar) went from Dump back to Leads (isDeleted false, deletedAt cleared; it had no deletedFrom, so no project copy was created). Owner told; on their go-ahead it was moved back to Dump from the app the same day (isDeleted true again, now deletedByName "Pranav Nair"; the original deletedAt was lost). Dump count back to 272.
