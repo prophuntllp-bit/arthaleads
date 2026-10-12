@@ -36,6 +36,8 @@ import 'tasks/tasks_screen.dart';
 import 'team/team_screen.dart';
 import 'inbox/conversation_screen.dart';
 import '../core/deep_link.dart';
+import '../core/api_client.dart';
+import 'projects/project_detail_screen.dart';
 
 /// Floating button opening the Artha AI help assistant — persistent across
 /// every tab, mirrors the web app's floating HelpBot bubble: same 56dp size
@@ -324,12 +326,23 @@ class _ShellState extends State<Shell> {
   // because builds older than this one only know that spelling.
   static const _routeAliases = <String, String>{
     'automation': 'Integrations',
+    // The web calls the Inbox "Conversations" and Plan & Billing "Plans"; push
+    // links use the web paths, which matched no tab here, so taps did nothing.
+    'conversations': 'Inbox',
+    'plans': 'Plan & Billing',
   };
 
   void _onPendingRoute() {
     final path = PushService.instance.pendingRoute.value;
     if (path == null) return;
     PushService.instance.pendingRoute.value = null;
+    // "/projects/<id>" (new leads in a project): open that project itself.
+    final project = RegExp(r'^/projects/([a-f0-9]{24})').firstMatch(path);
+    if (project != null) {
+      _navigateToLabel('Projects');
+      _openProject(project.group(1)!);
+      return;
+    }
     final normalized = path.toLowerCase().replaceAll(RegExp(r'[-_ ]'), '');
 
     String? targetLabel;
@@ -351,6 +364,19 @@ class _ShellState extends State<Shell> {
     // Through _navigateToLabel: _index counts only the tabs this user can
     // see, so an index into the full _items list landed agents on the wrong tab.
     if (targetLabel != null) _navigateToLabel(targetLabel);
+  }
+
+  Future<void> _openProject(String id) async {
+    try {
+      final res = await ApiClient.instance.dio.get('/projects/$id');
+      final project = (res.data['data'] as Map?)?.cast<String, dynamic>();
+      if (project == null || !mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => ProjectDetailScreen(project: project)),
+      );
+    } catch (_) {
+      // No access or gone: staying on the Projects list is the fallback.
+    }
   }
 
   /// A tapped notification that names a record ("AI assistant could not

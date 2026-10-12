@@ -61,6 +61,11 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-12 IST, every push tap lands somewhere useful in the app
+
+- Server: the hot-lead push ("🔥 ... is interested") now carries `chatLink()` (was url "/conversations"). New-lead / lead-assigned pushes from Facebook, website forms, Google Ads (webhook + poller) and single-lead assign now include `leadId` (url stays "/leads", so older apps and the web behave as before).
+- App `shell.dart`: url aliases `conversations` -> Inbox and `plans` -> Plan & Billing (both matched no tab, so taps did nothing: hot lead, storage full, WhatsApp quality drop); "/projects/<id>" opens that project. With the earlier change, a push with `leadId` opens the lead's detail and one with `conversationId` opens the chat.
+
 ### Claude Code, 2026-10-12 IST, push tap verified end to end; chat opens at the newest message
 
 - Sent one real "AI assistant could not reply" push (owner approved) to the owner's own account via `railway run` (FCM sent 1/1); tapping it on the phone opened that WhatsApp chat in the app. Note: the local backend/.env has no FIREBASE_SERVICE_ACCOUNT, so push tests need `railway run`, and Railway's MONGO_URI (SRV) does not resolve from this PC, so the script read the local .env's MONGO_URI.

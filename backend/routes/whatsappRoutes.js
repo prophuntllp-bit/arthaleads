@@ -663,7 +663,7 @@ async function findLiveLeadByPhone(orgId, phone) {
 const HOT_SIGNAL_RE = /\b(floor\s?plan|3\s?d|virtual|walk\s?through|video|sample\s?flat|site\s?visit|visit|call\s?me|book(ing)?)\b/i;
 async function notifyHotSignal(org, conv, reason) {
   try {
-    const fresh = await WaConversation.findById(conv._id).select("hotAlertedAt assignedTo contactName contactPhone").lean();
+    const fresh = await WaConversation.findById(conv._id).select("hotAlertedAt assignedTo contactName contactPhone leadId").lean();
     if (!fresh) return;
     // At most one alert per thread every 6 hours.
     if (fresh.hotAlertedAt && Date.now() - new Date(fresh.hotAlertedAt).getTime() < 6 * 60 * 60 * 1000) return;
@@ -672,7 +672,7 @@ async function notifyHotSignal(org, conv, reason) {
       type: "hot_lead",
       title: `🔥 ${fresh.contactName || fresh.contactPhone} is interested`,
       body: `${reason} on WhatsApp`,
-      data: { url: "/conversations" },
+      data: chatLink(fresh),
     };
     if (fresh.assignedTo) return void sendPushToUser(fresh.assignedTo, payload).catch(() => {});
     const recipients = org.whatsapp?.notifyOn?.newConversation || [];

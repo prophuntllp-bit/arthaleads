@@ -148,7 +148,7 @@ const leadController = {
           type: "lead_assigned",
           title: `Lead Assigned: ${lead.name}`,
           body: [lead.phone, lead.source].filter(Boolean).join(" · "),
-          data: { url: "/leads" },
+          data: { url: "/leads", leadId: String(lead._id) },
         }).catch(() => {});
       }
     } catch (err) {

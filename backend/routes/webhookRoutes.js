@@ -751,14 +751,14 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
             type: "lead_assigned",
             title: `New Facebook Lead: ${name}`,
             body: [phone, "Facebook"].filter(Boolean).join(" · "),
-            data: { url: "/leads" },
+            data: { url: "/leads", leadId: String(createdLead._id) },
           }).catch((e) => logger.warn("Push notification failed:", e.message));
         } else {
           sendPushToAll({
             type: "new_lead",
             title: "New Facebook Lead 🏠",
             body: `${name} just submitted a lead from Facebook`,
-            data: { url: "/leads", leadName: name, source: "Facebook" },
+            data: { url: "/leads", leadId: String(createdLead._id), leadName: name, source: "Facebook" },
           }, orgId).catch((e) => logger.warn("Push notification failed:", e.message));
         }
       }
@@ -918,14 +918,14 @@ router.post("/website", express.json(), websiteLeadLimiter, async (req, res) => 
         type: "lead_assigned",
         title: `New Website Lead: ${lead.name}`,
         body: [phone, sourceLabel].filter(Boolean).join(" · "),
-        data: { url: "/leads" },
+        data: { url: "/leads", leadId: String(lead._id) },
       }).catch(() => {});
     } else {
       sendPushToAll({
         type: "new_lead",
         title: "New Website Lead 🌐",
         body: `${lead.name} submitted a form on your website`,
-        data: { url: "/leads", leadName: lead.name, source: "Website" },
+        data: { url: "/leads", leadId: String(lead._id), leadName: lead.name, source: "Website" },
       }, orgId).catch(() => {});
     }
 
@@ -1321,14 +1321,14 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
           type: "lead_assigned",
           title: `New Lead: ${lead.name}`,
           body: [cleanPhone, sourceLabel].filter(Boolean).join(" · "),
-          data: { url: "/leads" },
+          data: { url: "/leads", leadId: String(lead._id) },
         }).catch(() => {});
       } else {
         sendPushToAll({
           type: "new_lead",
           title: "New Lead 📥",
           body: `${lead.name} came in from ${sourceLabel}`,
-          data: { url: "/leads", leadName: lead.name, source: leadSource },
+          data: { url: "/leads", leadId: String(lead._id), leadName: lead.name, source: leadSource },
         }, orgId).catch(() => {});
       }
 
@@ -1421,14 +1421,14 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
         type: "lead_assigned",
         title: `New Lead: ${lead.name}`,
         body: [cleanPhone, sourceLabel].filter(Boolean).join(" · "),
-        data: { url: "/leads" },
+        data: { url: "/leads", leadId: String(lead._id) },
       }).catch(() => {});
     } else {
       sendPushToAll({
         type: "new_lead",
         title: "New Lead 📥",
         body: `${lead.name} came in from ${sourceLabel}`,
-        data: { url: "/leads", leadName: lead.name, source: leadSource },
+        data: { url: "/leads", leadId: String(lead._id), leadName: lead.name, source: leadSource },
       }, orgId).catch(() => {});
     }
 
@@ -1592,14 +1592,14 @@ router.post("/google", express.json(), googleLeadLimiter, async (req, res) => {
         type: "lead_assigned",
         title: `New Google Lead: ${lead.name}`,
         body: [cleanPhone, sourceLabel].filter(Boolean).join(" · "),
-        data: { url: "/leads" },
+        data: { url: "/leads", leadId: String(lead._id) },
       }).catch(() => {});
     } else if (!isTestLead) {
       sendPushToAll({
         type: "new_lead",
         title: "New Google Lead 🔍",
         body: `${lead.name} submitted a Google Ads lead form`,
-        data: { url: "/leads", leadName: lead.name, source: "Google" },
+        data: { url: "/leads", leadId: String(lead._id), leadName: lead.name, source: "Google" },
       }, orgId).catch(() => {});
     }
 

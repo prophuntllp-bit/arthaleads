@@ -221,14 +221,14 @@ async function pollOneGoogleAdsConnection(automation) {
           type: "lead_assigned",
           title: `New Google Lead: ${lead.name}`,
           body: [cleanPhone, sourceLabel].filter(Boolean).join(" · "),
-          data: { url: "/leads" },
+          data: { url: "/leads", leadId: String(lead._id) },
         }).catch(() => {});
       } else if (!isTestLead) {
         sendPushToAll({
           type: "new_lead",
           title: "New Google Lead 🔍",
           body: `${lead.name} came in from Google Ads`,
-          data: { url: "/leads", leadName: lead.name, source: "Google" },
+          data: { url: "/leads", leadId: String(lead._id), leadName: lead.name, source: "Google" },
         }, orgId).catch(() => {});
       }
     } catch (err) {
