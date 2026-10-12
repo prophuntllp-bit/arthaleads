@@ -143,14 +143,18 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (!background && _analytics == null) _loading = true;
     });
     // Parallel fetch — mirrors the web dashboard's parallel-fetch fix.
+    // Stale leads, project stats, team attendance and automations are
+    // admin/manager only on the server; an agent would just collect 403s.
+    final staff = context.read<AuthState>().isAdmin;
+    Future<dynamic> staffGet(String path) => staff ? _tryGet(path) : Future.value(null);
     final results = await Future.wait<dynamic>([
       _tryGet('/leads/analytics', dateRangeParams(_dateRange)),
       _tryGet('/leads/hot', {'limit': 5}),
       _tryGet('/leads/followups-due'),
-      _tryGet('/leads/stale'),
-      _tryGet('/projects/stats'),
-      _tryGet('/attendance/team-today'),
-      _tryGet('/automations'),
+      staffGet('/leads/stale'),
+      staffGet('/projects/stats'),
+      staffGet('/attendance/team-today'),
+      staffGet('/automations'),
       _tryGet('/attendance/status'),
       _tryGet('/whatsapp/status'),
     ]);
@@ -1729,7 +1733,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           FadeSlideIn(child: _dashboardHeader(context, auth, a)),
           const SizedBox(height: 10),
-          OnboardingChecklist(
+          // Setup steps (connect Facebook, add a teammate) are admin jobs an
+          // agent cannot do from the app, so agents do not get the checklist.
+          if (role != 'agent') OnboardingChecklist(
             totalLeads: (a?['allTimeTotal'] as num?)?.toInt() ?? 0,
             onNavigate: (label) => widget.onNavigate?.call(label),
           ),

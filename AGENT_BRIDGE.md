@@ -62,6 +62,14 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-12 IST, mobile: agent-role refusals from the endpoint audit (unreleased)
+
+- Leads header: Import CSV and the capture QR are hidden for agents (POST /leads/import and /org/me/qr-token are admin/manager only). "Your templates" cards open the editor only for admin/manager (PUT and AI generate refuse agents).
+- Lead delete: DELETE /leads/bulk silently skips leads an agent may not remove and still returns 200 ("0 lead(s) deleted"); the app said "Moved to Dump" anyway. It now reads the count from the message (`bulkDeleteCount`) and says when nothing moved.
+- Inbox thread: an agent releasing their own chat now confirms, then leaves the screen (they lose access, so polling hit 404 and the next send failed).
+- Dashboard: agents no longer call /leads/stale, /projects/stats, /attendance/team-today, /automations (all refused), and do not get the setup checklist (its steps are admin jobs; the web still shows it to agents).
+- Open, server-side, waiting on the owner: agents can see leads they created (list and GET use assignedTo OR createdBy) but every write (PUT /leads/:id, notes, delete, transfer, bulk delete) checks assignedTo only, though the comment in leadService.update says "assigned to or created by". Same for project leads assigned to an agent in a project they are not on (projectService writes check project membership only). Affects web and app.
+
 ### Claude Code, 2026-10-12 IST, mobile: agents saw "WhatsApp not connected" in the Inbox (after 1.0.13, not released yet)
 
 - `inbox_screen.dart` checked the connection with `GET /whatsapp/settings`, which is admin/manager-only, so every agent got a 403, was shown "WhatsApp not connected" and could not reach their chats. Now uses `GET /whatsapp/status` (open to all roles), the same fix the web's ConversationsLayout already has. A failed check now leaves the list visible instead of the connect screen, and the Connect button is shown to admins only (others are told to ask their admin).

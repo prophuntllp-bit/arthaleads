@@ -404,10 +404,17 @@ class LeadsScreenState extends State<LeadsScreen> {
     final sel = _splitSelection();
     try {
       if (sel.plainIds.isNotEmpty) {
-        await _api.dio.delete('/leads/bulk', data: {'ids': sel.plainIds});
-        _snack(
-          '${sel.plainIds.length} lead(s) ${isSuperAdmin ? 'deleted' : 'moved to Dump'}',
-        );
+        final res = await _api.dio.delete('/leads/bulk', data: {'ids': sel.plainIds});
+        // The server skips leads it will not let this user remove (an agent
+        // can only remove leads assigned to them), so report what it did.
+        final done = bulkDeleteCount(res.data, sel.plainIds.length);
+        final skipped = sel.plainIds.length - done;
+        if (done > 0) {
+          _snack('${plural(done, 'lead')} ${isSuperAdmin ? 'deleted' : 'moved to Dump'}');
+        }
+        if (skipped > 0) {
+          _snack('${plural(skipped, 'lead')} not moved: you can only remove leads assigned to you', error: true);
+        }
       }
       if (sel.skipped > 0) {
         _snack('${sel.skipped} project lead(s) skipped', error: true);
@@ -819,7 +826,9 @@ class LeadsScreenState extends State<LeadsScreen> {
                     ],
                   ),
                 ),
-                IconButton.outlined(
+                // Import and the capture QR are admin/manager only on the
+                // server (POST /leads/import, /org/me/qr-token).
+                if (auth.isAdmin) IconButton.outlined(
                   tooltip: 'Import CSV',
                   onPressed: _importing ? null : _importCsv,
                   icon: _importing
@@ -830,7 +839,7 @@ class LeadsScreenState extends State<LeadsScreen> {
                         )
                       : const Icon(Icons.upload_file_rounded, size: 19),
                 ),
-                const SizedBox(width: 4),
+                if (auth.isAdmin) const SizedBox(width: 4),
                 _exporting
                     ? const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 10),
@@ -863,8 +872,8 @@ class LeadsScreenState extends State<LeadsScreen> {
                           ),
                         ),
                       ),
-                const SizedBox(width: 4),
-                IconButton.outlined(
+                if (auth.isAdmin) const SizedBox(width: 4),
+                if (auth.isAdmin) IconButton.outlined(
                   tooltip: 'Lead capture QR code',
                   onPressed: _showQrCode,
                   icon: const Icon(Icons.qr_code_2_rounded, size: 19),

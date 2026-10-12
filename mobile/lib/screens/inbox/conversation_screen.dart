@@ -543,11 +543,39 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final assignedTo = _conv?['assignedTo'];
     final currentId = assignedTo is Map ? assignedTo['_id'] as String? : null;
     final mine = currentId == myId;
+    // An agent only sees chats assigned to them, so releasing one hands it
+    // back to the team and closes it for them. Say so first.
+    final agentReleasing = mine && auth.role == 'agent';
+    if (agentReleasing) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Release this chat?'),
+          content: const Text(
+            'It goes back to the team as unassigned and will leave your Inbox. An admin or manager can assign it again.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Release')),
+          ],
+        ),
+      );
+      if (ok != true || !mounted) return;
+    }
     try {
       final res = await _api.dio.patch(
         '/whatsapp/conversations/${widget.conversationId}',
         data: {'assignedTo': mine ? null : myId},
       );
+      if (mounted && agentReleasing) {
+        // No access once released: leave instead of polling into a 404.
+        _poll?.cancel();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Released. The chat is back with the team.')),
+        );
+        Navigator.of(context).pop();
+        return;
+      }
       if (mounted) {
         setState(
           () =>

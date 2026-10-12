@@ -253,7 +253,8 @@ class _TemplatesPageState extends State<TemplatesPage> {
             ...shown.map((t) => _YourTemplateCard(
                   template: t,
                   canEdit: canEdit,
-                  onTap: t['id'] != null ? () => _openBuilder(editId: t['id'] as String) : null,
+                  // Editing is admin/manager only on the server; agents just read.
+                  onTap: canEdit && t['id'] != null ? () => _openBuilder(editId: t['id'] as String) : null,
                   onDelete: context.read<AuthState>().isWaAdmin ? () => _delete(t) : null,
                 )),
         ],

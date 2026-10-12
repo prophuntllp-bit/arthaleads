@@ -543,12 +543,25 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
           '/projects/${lead['projectId']}/leads/${lead['_id']}',
         );
       } else {
-        await _api.dio.delete(
+        final res = await _api.dio.delete(
           '/leads/bulk',
           data: {
             'ids': [lead['_id']],
           },
         );
+        // The server skips a lead this user may not remove (an agent can
+        // only remove leads assigned to them) instead of refusing it.
+        if (bulkDeleteCount(res.data, 1) == 0) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Not moved: you can only remove leads assigned to you'),
+                backgroundColor: AppColors.danger,
+              ),
+            );
+          }
+          return;
+        }
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

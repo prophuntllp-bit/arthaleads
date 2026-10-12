@@ -180,3 +180,11 @@ String numFieldText(Object? v) {
   if (n == null || n == 0) return '';
   return n == n.roundToDouble() ? n.toInt().toString() : n.toString();
 }
+
+/// How many leads DELETE /leads/bulk actually removed. The server answers
+/// "3 lead(s) deleted" (no number field); [fallback] if that text changes.
+int bulkDeleteCount(Object? data, int fallback) {
+  final msg = data is Map ? data['message']?.toString() ?? '' : '';
+  final m = RegExp(r'^(\d+)').firstMatch(msg);
+  return m == null ? fallback : int.parse(m.group(1)!);
+}
