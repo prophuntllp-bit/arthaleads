@@ -93,7 +93,7 @@ const _faqs = [
 ];
 
 const _quickActions = [
-  ('Need onboarding support?', 'Ask your admin to add your profile, assign your role, and share your login credentials.'),
+  ('Need onboarding support?', 'Ask your admin to add you to the team and set your role. Your own sign-in details then arrive by email.'),
   ('Need missing lead data?', 'Use Import on the Leads screen to upload a CSV. Export the current list first as a backup before bulk updates.'),
   ('Need admin access?', 'Admins control roles and permissions. Contact your system owner or reach out via WhatsApp support.'),
   ('How do I connect Facebook Lead Ads?', 'Go to Automation, tap Connect Facebook, approve the popup, then select your Page and Lead Ad Form.'),
