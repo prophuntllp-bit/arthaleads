@@ -172,3 +172,11 @@ String roleLabel(String? role) => switch (role) {
   'agent' || null || '' => 'Sales agent',
   _ => role[0].toUpperCase() + role.substring(1).replaceAll('_', ' '),
 };
+
+/// A stored number for an input box: empty when it is unset or 0, so an
+/// empty budget or price opens blank instead of showing "0".
+String numFieldText(Object? v) {
+  final n = v is num ? v : num.tryParse(v?.toString() ?? '');
+  if (n == null || n == 0) return '';
+  return n == n.roundToDouble() ? n.toInt().toString() : n.toString();
+}

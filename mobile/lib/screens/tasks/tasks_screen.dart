@@ -324,13 +324,11 @@ class _TasksScreenState extends State<TasksScreen> {
                     onChanged: (v) => setSheetState(() => assignedTo = v),
                   ),
                 const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Due date'),
-                  subtitle: Text(
-                    DateFormat('dd MMM yyyy, hh:mm a').format(dueDate),
-                  ),
-                  trailing: const Icon(Icons.edit_calendar_rounded),
+                // Boxed like every other field in the form.
+                AppSelectBox(
+                  label: 'Due date',
+                  text: DateFormat('dd MMM yyyy, hh:mm a').format(dueDate),
+                  trailing: const Icon(Icons.edit_calendar_rounded, size: 18),
                   onTap: () async {
                     final date = await showDatePicker(
                       context: ctx,
@@ -358,18 +356,9 @@ class _TasksScreenState extends State<TasksScreen> {
                     });
                   },
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Link to Project (optional)',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF8B5CF6),
-                  ),
-                ),
-                const SizedBox(height: 6),
                 AppSelect<String?>(
-                  label: '',
+                  label: 'Link to project',
+                  note: '(optional)',
                   hint: 'Select project',
                   value: projectId,
                   options: {
@@ -379,16 +368,17 @@ class _TasksScreenState extends State<TasksScreen> {
                   },
                   onChanged: (v) => setSheetState(() => projectId = v),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Link to Lead (optional)',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.blue,
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6, left: 2),
+                  child: Text.rich(
+                    TextSpan(
+                      text: 'Link to lead',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.of(ctx).text),
+                      children: const [TextSpan(text: ' (optional)', style: TextStyle(fontWeight: FontWeight.w400))],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 6),
                 TextField(
                   controller: leadSearchCtrl,
                   decoration: InputDecoration(

@@ -42,11 +42,13 @@ class AppSelect<T> extends StatelessWidget {
         children: [
           if (label.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.only(bottom: 6, left: 2),
               child: Text.rich(
                 TextSpan(
                   text: label,
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.of(context).textSoft),
+                  // Same as LabeledField and the web's .label, so dropdown and text
+                  // field labels in one form look alike.
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.of(context).text),
                   children: [
                     if (note != null)
                       TextSpan(text: ' $note', style: const TextStyle(fontWeight: FontWeight.w400)),
@@ -216,8 +218,8 @@ class AppSelectBox extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Text(label, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: t.textSoft)),
+            padding: const EdgeInsets.only(bottom: 6, left: 2),
+            child: Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: t.text)),
           ),
           InkWell(
             borderRadius: BorderRadius.circular(AppRadii.input),

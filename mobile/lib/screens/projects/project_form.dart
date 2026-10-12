@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
+import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
@@ -101,10 +102,10 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
     text: widget.project?['location'] as String? ?? '',
   );
   late final _priceMin = TextEditingController(
-    text: (widget.project?['priceMin'] as num?)?.toString() ?? '',
+    text: numFieldText(widget.project?['priceMin']),
   );
   late final _priceMax = TextEditingController(
-    text: (widget.project?['priceMax'] as num?)?.toString() ?? '',
+    text: numFieldText(widget.project?['priceMax']),
   );
   late final _area = TextEditingController(
     text: widget.project?['area'] as String? ?? '',
@@ -312,20 +313,18 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
             ),
             _field(_area, 'Area (e.g. 1200–1800 sq ft)'),
             _field(_reraNumber, 'RERA Number'),
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-              leading: const Icon(Icons.event_available_outlined),
-              title: const Text('Possession date'),
-              subtitle: Text(
-                _possessionDate == null
-                    ? 'Not specified'
-                    : DateFormat('dd MMM yyyy').format(_possessionDate!),
-              ),
+            // Boxed like the other fields; the x clears a chosen date.
+            AppSelectBox(
+              label: 'Possession date',
+              text: _possessionDate == null
+                  ? 'Not specified'
+                  : DateFormat('dd MMM yyyy').format(_possessionDate!),
+              placeholder: _possessionDate == null,
               trailing: _possessionDate == null
-                  ? null
-                  : IconButton(
-                      onPressed: () => setState(() => _possessionDate = null),
-                      icon: const Icon(Icons.close),
+                  ? const Icon(Icons.event_available_outlined, size: 18)
+                  : GestureDetector(
+                      onTap: () => setState(() => _possessionDate = null),
+                      child: const Icon(Icons.close, size: 18),
                     ),
               onTap: _pickPossessionDate,
             ),

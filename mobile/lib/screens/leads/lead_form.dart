@@ -50,10 +50,10 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
     text: widget.lead?['followUpNote'] as String? ?? '',
   );
   late final _budgetMin = TextEditingController(
-    text: (widget.lead?['budget'] as Map?)?['min']?.toString() ?? '',
+    text: numFieldText((widget.lead?['budget'] as Map?)?['min']),
   );
   late final _budgetMax = TextEditingController(
-    text: (widget.lead?['budget'] as Map?)?['max']?.toString() ?? '',
+    text: numFieldText((widget.lead?['budget'] as Map?)?['max']),
   );
   late DateTime? _followUpDate = DateTime.tryParse(
     widget.lead?['followUpDate'] as String? ?? '',

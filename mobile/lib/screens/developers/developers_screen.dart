@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/api_client.dart';
+import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
@@ -346,10 +347,10 @@ class _DeveloperFormState extends State<_DeveloperForm> {
       text: widget.developer?['defaultBrokeragePercent']?.toString() ?? '2',
     ),
     'fos': TextEditingController(
-      text: widget.developer?['defaultFosIncentive']?.toString() ?? '0',
+      text: numFieldText(widget.developer?['defaultFosIncentive']),
     ),
     'eoi': TextEditingController(
-      text: widget.developer?['defaultEoiIncentive']?.toString() ?? '0',
+      text: numFieldText(widget.developer?['defaultEoiIncentive']),
     ),
     'rera': TextEditingController(),
   };

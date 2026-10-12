@@ -62,6 +62,12 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-12 IST, mobile form polish (still part of unreleased 1.0.13)
+
+- Dropdown labels (`AppSelect`, `AppSelectBox`) now use the same style as text-field labels (`LabeledField`, the web's `.label`: 14 / medium / text colour), so forms no longer mix two label looks. Task form: due date is a boxed field, "Link to project / lead (optional)" use the normal label instead of purple/blue captions. Project form: possession date boxed.
+- Empty numbers open blank instead of "0" (`numFieldText`): lead budget, project price, developer FOS/EOI incentive.
+- Checked on the phone with no change needed: pipeline per-column board (New 2751, Closed Lost 2456), global search, Artha copilot, lead filters, lead edit, project edit, attendance Team Today / All Records, Raise a Ticket, lead QR. 30 tests pass.
+
 ### Claude Code, 2026-10-12 IST, pipeline stage follows the call outcome for project leads
 
 - Owner report: Soniya worked ~1,400 of her 2,500 project contacts but the pipeline showed all as New. Cause: project leads record work in `booking` (call outcome) / `remark`, and `status` stays "" from the import. Checked read-only in prod: 4,530 org project leads had work but no status.
