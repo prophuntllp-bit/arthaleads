@@ -11,36 +11,17 @@
 // reduced motion get a play button instead of autoplay.
 import { useEffect, useRef, useState } from "react";
 import { Play, Volume2 } from "lucide-react";
+import { filmJsonLd } from "../data/introFilm";
 
 export const INTRO_VIDEOS = {
   en: { label: "English", src: "/video/arthaleads-intro-en.mp4", poster: "/video/arthaleads-intro-en-poster.jpg" },
   hi: { label: "हिन्दी",   src: "/video/arthaleads-intro-hi.mp4", poster: "/video/arthaleads-intro-hi-poster.jpg" },
 };
 
-// VideoObject structured data, so the film can appear in Google video results.
-export function useIntroVideoJsonLd() {
-  useEffect(() => {
-    const el = document.createElement("script");
-    el.type = "application/ld+json";
-    el.id = "intro-video-jsonld";
-    el.textContent = JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "VideoObject",
-      name: "ArthaLeads in 2 minutes",
-      description:
-        "How ArthaLeads answers a buyer on WhatsApp at 1 AM, qualifies them, books the site visit and puts every answer into the lead for your sales team.",
-      thumbnailUrl: ["https://www.arthaleads.com/video/arthaleads-intro-en-poster.jpg"],
-      uploadDate: "2026-10-07",
-      duration: "PT2M17S",
-      contentUrl: "https://www.arthaleads.com/video/arthaleads-intro-en.mp4",
-      inLanguage: "en-IN",
-    });
-    document.head.appendChild(el);
-    return () => el.remove();
-  }, []);
-}
-
-export default function IntroVideo({ isDark, id = "tour" }) {
+// `chapters` (the /product-tour watch page): the structured data carries the key
+// moments, the film starts at ?t=N, and `seek` ({ t, n }, n bumps on every
+// click) jumps to a chapter.
+export default function IntroVideo({ isDark, id = "tour", chapters = false, seek = null }) {
   const [lang, setLang]         = useState("en");
   const [started, setStarted]   = useState(false);   // has played at least once: show the player controls
   const [blocked, setBlocked]   = useState(false);   // autoplay refused or disabled: show the big play button
@@ -50,7 +31,7 @@ export default function IntroVideo({ isDark, id = "tour" }) {
   const visible    = useRef(false);
   const userPaused = useRef(false);   // the visitor paused it themselves: do not restart on scroll
   const ourPause   = useRef(false);   // a pause we caused by scrolling away
-  useIntroVideoJsonLd();
+  const pendingSeek = useRef(null);   // a chapter clicked while the Hindi film was showing
 
   const v = INTRO_VIDEOS[lang];
 
@@ -107,6 +88,31 @@ export default function IntroVideo({ isDark, id = "tour" }) {
     el.play().then(() => { setStarted(true); setBlocked(false); }).catch(() => {});
   };
 
+  // Jump to a time: from ?t=N on arrival, or a chapter click (a click is a
+  // gesture, so sound is allowed). English only: the chapters are timed to it.
+  const seekTo = (t, withSound) => {
+    const el = videoRef.current;
+    if (!el || !Number.isFinite(t)) return;
+    if (lang !== "en") { pendingSeek.current = { t, withSound }; setLang("en"); return; }
+    const go = () => {
+      el.currentTime = Math.max(0, t);
+      userPaused.current = false;
+      if (withSound) { el.muted = false; setMuted(false); }
+      el.play().then(() => { setStarted(true); setBlocked(false); }).catch(() => {});
+    };
+    if (el.readyState >= 1) go(); else el.addEventListener("loadedmetadata", go, { once: true });
+  };
+  useEffect(() => {
+    if (!chapters) return;
+    const t = Number(new URLSearchParams(window.location.search).get("t"));
+    if (t > 0) seekTo(t, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapters]);
+  useEffect(() => {
+    if (seek) { sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); seekTo(seek.t, true); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seek]);
+
   const soundOn = () => { setMuted(false); if (videoRef.current) videoRef.current.muted = false; };
 
   const switchLang = (next) => { if (next !== lang) setLang(next); };
@@ -120,6 +126,8 @@ export default function IntroVideo({ isDark, id = "tour" }) {
 
   return (
     <section id={id} ref={sectionRef} className="relative py-16 lg:py-24 overflow-hidden scroll-mt-20" style={{ background: bg, borderTop: `1px solid ${rail}`, borderBottom: `1px solid ${rail}` }}>
+      {/* VideoObject structured data, in the markup so the prerendered HTML carries it. */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: filmJsonLd({ chapters }) }} />
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8 lg:mb-10">
           <div className="max-w-2xl">
@@ -166,7 +174,11 @@ export default function IntroVideo({ isDark, id = "tour" }) {
             controls={started}
             className="absolute inset-0 w-full h-full object-cover" style={{ transform: "scale(1.01)" }}
             aria-label={`ArthaLeads product tour (${v.label})`}
-            onLoadedData={() => { if (visible.current) tryPlay(); }}
+            onLoadedData={() => {
+              const p = pendingSeek.current;
+              if (p) { pendingSeek.current = null; seekTo(p.t, p.withSound); }
+              else if (visible.current) tryPlay();
+            }}
             onPause={() => { if (ourPause.current) ourPause.current = false; else if (started && !document.hidden) userPaused.current = true; }}
             onPlay={() => { userPaused.current = false; }}
           />

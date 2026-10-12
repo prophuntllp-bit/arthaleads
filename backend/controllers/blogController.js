@@ -112,6 +112,7 @@ const blogController = {
         { url: "/wordpress-plugin", priority: "0.6", changefreq: "monthly" },
         { url: "/api-docs",         priority: "0.6", changefreq: "monthly" },
         { url: "/download-app",     priority: "0.6", changefreq: "monthly" },
+        { url: "/product-tour",     priority: "0.8", changefreq: "monthly", video: true },
         { url: "/refer",            priority: "0.5", changefreq: "monthly" },
         { url: "/careers",          priority: "0.5", changefreq: "monthly" },
         { url: "/contact",          priority: "0.6", changefreq: "monthly" },
@@ -134,14 +135,27 @@ const blogController = {
 
       const allEntries = [...staticPages, ...blogEntries];
 
+      // The product film's watch page also carries a video entry, so Google
+      // finds the video file itself. Keep in step with frontend/src/data/introFilm.js.
+      const videoXml = `
+    <video:video>
+      <video:thumbnail_loc>${baseUrl}/video/arthaleads-intro-en-poster.jpg</video:thumbnail_loc>
+      <video:title>What is ArthaLeads? The real estate CRM in 2 minutes</video:title>
+      <video:description>A buyer messages at 1 AM. See how ArthaLeads replies on WhatsApp, qualifies the buyer, books the site visit, fills in the lead, scores it and tells your team who to call first.</video:description>
+      <video:content_loc>${baseUrl}/video/arthaleads-intro-en.mp4</video:content_loc>
+      <video:duration>137</video:duration>
+      <video:publication_date>2026-10-07T12:00:00+05:30</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>`;
+
       const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
 ${allEntries
   .map(
     (e) => `  <url>
     <loc>${baseUrl}${e.url}</loc>
     <changefreq>${e.changefreq}</changefreq>
-    <priority>${e.priority}</priority>${e.lastmod ? `\n    <lastmod>${e.lastmod}</lastmod>` : ""}
+    <priority>${e.priority}</priority>${e.lastmod ? `\n    <lastmod>${e.lastmod}</lastmod>` : ""}${e.video ? videoXml : ""}
   </url>`
   )
   .join("\n")}

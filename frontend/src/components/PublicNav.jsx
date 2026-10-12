@@ -5,7 +5,7 @@ import {
   BookOpen, BarChart2, Zap, HelpCircle,
   Building2, Briefcase, Puzzle,
   Code2, GitCompare, Shield, Gift,
-  Smartphone,
+  Smartphone, PlayCircle,
 } from "lucide-react";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { CRM_LOGIN_URL, CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
@@ -27,6 +27,7 @@ function IdleChatBot() {
 const NAV_RESOURCES = [
   { label: "Blog",             href: "/blog",             desc: "Guides, market notes & product news", icon: BookOpen },
   { label: "Case Studies",     href: "/case-studies",     desc: "Real results from real teams",       icon: BarChart2 },
+  { label: "Product Tour",     href: "/product-tour",     desc: "Watch Arthaleads in 2 minutes",       icon: PlayCircle },
   { label: "Product Updates",  href: "/product-updates",  desc: "What's new in Arthaleads",           icon: Zap },
   { label: "Help Guide",       href: "/help-guide",       desc: "Tutorials & FAQs",                  icon: HelpCircle },
   { label: "Download App",    href: "/download-app",     desc: "Arthaleads on your Android phone", icon: Smartphone },

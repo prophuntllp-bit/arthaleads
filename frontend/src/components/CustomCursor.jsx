@@ -15,6 +15,7 @@ const MARKETING_PATHS = new Set([
   "/pricing",
   "/features",
   "/download-app",
+  "/product-tour",
   "/blog",
   "/about-us",
   "/case-studies",

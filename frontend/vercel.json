@@ -70,6 +70,10 @@
       "destination": "/download-app.html"
     },
     {
+      "source": "/product-tour",
+      "destination": "/product-tour.html"
+    },
+    {
       "source": "/features",
       "destination": "/features.html"
     },
