@@ -59,6 +59,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-12 18:30 IST: SEO, product film video indexing: fix VideoObject uploadDate, put the schema in the static HTML, new /product-tour watch page (transcript + chapters), video sitemap entry. Files: frontend/src/components/IntroVideo.jsx, frontend/src/pages/ProductTour.jsx (new), App.jsx, entry-prerender.jsx, vercel.json, PublicNav.jsx, PublicFooter.jsx, CustomCursor.jsx, backend/controllers/blogController.js (sitemap)
+
 ## Change log (newest first)
 
 ### Claude Code, 2026-10-12 IST, app Leads auto-refresh verified with a test lead
