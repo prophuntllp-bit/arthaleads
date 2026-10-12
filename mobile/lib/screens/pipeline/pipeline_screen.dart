@@ -37,8 +37,11 @@ class _PipelineScreenState extends State<PipelineScreen> {
   String _pipelineType = 'all'; // 'all' | 'leads' | 'projects'
   bool _loading = true;
   DateTime? _lastUpdated;
-  // How many leads match in total; the board loads at most 2000 (same as web).
-  int _total = 0;
+  // Cards loaded per column (same as the web board); the badge shows the
+  // column's real total from the server.
+  static const _columnLimit = 300;
+  Map<String, int> _columnTotals = {};
+  int get _total => _columnTotals.values.fold(0, (a, b) => a + b);
   Timer? _timer;
 
   @override
@@ -72,19 +75,36 @@ class _PipelineScreenState extends State<PipelineScreen> {
   Future<void> _load({bool silent = false}) async {
     if (!silent) setState(() => _loading = true);
     try {
-      final res = await _api.dio.get(
-        '/leads/unified',
-        queryParameters: {
-          'limit': 2000,
-          'page': 1,
-          'type': _pipelineType,
-          if (_assignedTo.isNotEmpty) 'assignedTo': _assignedTo,
-        },
-      );
+      // One request per column. A single "newest 2000" request filled the
+      // board with whatever arrived last (imported, status-less project
+      // contacts) and left the other columns looking empty.
+      final results = await Future.wait(statusOptions.map((status) async {
+        final res = await _api.dio.get(
+          '/leads/unified',
+          queryParameters: {
+            'limit': _columnLimit,
+            'page': 1,
+            'type': _pipelineType,
+            'status': status,
+            if (_assignedTo.isNotEmpty) 'assignedTo': _assignedTo,
+          },
+        );
+        return (
+          status,
+          (res.data['leads'] as List? ?? []).cast<Map<String, dynamic>>(),
+          (res.data['total'] as num?)?.toInt() ?? 0,
+        );
+      }));
+      final seen = <dynamic>{};
+      final merged = <Map<String, dynamic>>[];
+      for (final (status, leads, _) in results) {
+        for (final l in leads) {
+          if (seen.add(l['_id'])) merged.add({...l, 'status': status});
+        }
+      }
       setState(() {
-        _leads = (res.data['leads'] as List? ?? [])
-            .cast<Map<String, dynamic>>();
-        _total = (res.data['total'] as num?)?.toInt() ?? _leads.length;
+        _leads = merged;
+        _columnTotals = {for (final (status, _, total) in results) status: total};
         _lastUpdated = DateTime.now();
       });
     } catch (e) {
@@ -183,7 +203,12 @@ class _PipelineScreenState extends State<PipelineScreen> {
           data: {'status': nextStatus},
         );
       }
-      setState(() => lead['status'] = nextStatus);
+      setState(() {
+        final from = lead['status'] as String?;
+        if (from != null) _columnTotals[from] = ((_columnTotals[from] ?? 1) - 1).clamp(0, 1 << 30);
+        _columnTotals[nextStatus] = (_columnTotals[nextStatus] ?? 0) + 1;
+        lead['status'] = nextStatus;
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -254,9 +279,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
           // The "Live" time sits here so both filters get the full row and
           // their labels are not cut off.
           subtitle: [
-            _total > _leads.length
-                ? 'Showing ${_leads.length} of $_total leads'
-                : '${_leads.length} leads across ${statusOptions.length} stages',
+            '${plural(_total, 'lead')} across ${statusOptions.length} stages',
             if (_lastUpdated != null)
               'Live ${DateFormat('hh:mm a').format(_lastUpdated!)}',
           ].join(' · '),
@@ -358,7 +381,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
-                                '${stageLeads.length}',
+                                '${(_columnTotals[status] ?? 0) > stageLeads.length ? _columnTotals[status] : stageLeads.length}',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,

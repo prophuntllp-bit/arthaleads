@@ -272,6 +272,9 @@ export default function Inbox() {
   const [sending, setSending]           = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs]   = useState(false);
+  // Long chats: only the newest 60 messages come first; "Load earlier" pages back.
+  const [hasOlder, setHasOlder]         = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [filter, setFilter]             = useState("all");
   const [showTopUp, setShowTopUp]       = useState(false);
   const [showTemplate, setShowTemplate] = useState(false);
@@ -356,12 +359,51 @@ export default function Inbox() {
     if (!silent) setLoadingMsgs(true);
     try {
       const { data } = await api.get(`/whatsapp/conversations/${id}/messages`);
-      setMessages(data.messages || []);
+      const fresh = data.messages || [];
+      // The 3 s poll returns only the newest page; keep any earlier messages
+      // the user already loaded instead of dropping them.
+      setMessages((prev) => {
+        if (!silent || !fresh.length) return fresh;
+        const ids = new Set(fresh.map((m) => m._id));
+        const firstTs = new Date(fresh[0].timestamp).getTime();
+        const kept = prev.filter((m) => !ids.has(m._id) && new Date(m.timestamp).getTime() <= firstTs);
+        if (!kept.length) setHasOlder(!!data.hasMore);
+        return [...kept, ...fresh];
+      });
+      if (!silent) setHasOlder(!!data.hasMore);
       setLastInbound(data.lastInboundAt ?? null);
       setConversations((prev) => prev.map((c) => (c._id === id ? { ...c, unreadCount: 0 } : c)));
     } catch {}
     finally { setLoadingMsgs(false); }
   }, []);
+
+  const loadOlder = useCallback(async () => {
+    const first = messages[0];
+    const el = threadRef.current;
+    if (!activeId || !first || loadingOlder) return;
+    setLoadingOlder(true);
+    const prevHeight = el?.scrollHeight || 0;
+    const prevTop = el?.scrollTop || 0;
+    try {
+      const { data } = await api.get(`/whatsapp/conversations/${activeId}/messages`, {
+        params: { before: first.timestamp, beforeId: first._id },
+      });
+      const older = data.messages || [];
+      setMessages((prev) => {
+        const ids = new Set(prev.map((m) => m._id));
+        return [...older.filter((m) => !ids.has(m._id)), ...prev];
+      });
+      setHasOlder(!!data.hasMore);
+      // Keep the reader's place: the thread grows above them.
+      requestAnimationFrame(() => {
+        if (el) el.scrollTop = el.scrollHeight - prevHeight + prevTop;
+      });
+    } catch {
+      toast.error("Could not load earlier messages");
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [activeId, messages, loadingOlder]);
 
   const fetchConversationDetails = useCallback(async (id) => {
     if (!id) return;
@@ -409,6 +451,7 @@ export default function Inbox() {
   const loadConv = useCallback((id) => {
     setActiveId(id);
     setMessages([]);
+    setHasOlder(false);
     setLastInbound(undefined);
     setMsgInput("");
     fetchConversationDetails(id);
@@ -703,14 +746,25 @@ export default function Inbox() {
             ) : messages.length === 0 ? (
               <div className="text-center text-sm text-app-soft py-12">No messages yet. Start the conversation!</div>
             ) : (
-              threadItems.map((item) => (item.sep ? (
+              <>
+              {hasOlder && (
+                <div className="flex justify-center mb-2">
+                  <button type="button" onClick={loadOlder} disabled={loadingOlder}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-full transition hover:opacity-80 disabled:opacity-60"
+                    style={{ background: "var(--app-card-solid)", border: "1px solid var(--app-border)", color: "var(--app-primary)" }}>
+                    {loadingOlder ? "Loading…" : "Load earlier messages"}
+                  </button>
+                </div>
+              )}
+              {threadItems.map((item) => (item.sep ? (
                 <div key={item.key} className="flex justify-center my-3">
                   <span className="text-[10px] font-semibold px-3 py-1 rounded-full text-app-soft"
                     style={{ background: "var(--app-card-solid)", border: "1px solid var(--app-border)" }}>
                     {item.sep}
                   </span>
                 </div>
-              ) : <Bubble key={item._id} msg={item} />))
+              ) : <Bubble key={item._id} msg={item} />))}
+              </>
             )}
           </div>
 

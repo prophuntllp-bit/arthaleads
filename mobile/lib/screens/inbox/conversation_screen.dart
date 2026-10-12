@@ -35,6 +35,9 @@ class ConversationScreen extends StatefulWidget {
 class _ConversationScreenState extends State<ConversationScreen> {
   final _api = ApiClient.instance;
   final List<Map<String, dynamic>> _messages = [];
+  // Long chats: the newest 60 come first; "Load earlier messages" pages back.
+  bool _hasOlder = false;
+  bool _loadingOlder = false;
   final _inputCtrl = TextEditingController();
   final _scroll = ScrollController();
   bool _loading = true;
@@ -188,8 +191,21 @@ class _ConversationScreenState extends State<ConversationScreen> {
           _scroll.position.pixels >= _scroll.position.maxScrollExtent - 60;
       if (!mounted) return;
       setState(() {
+        // The 3 s poll returns only the newest page; keep any earlier
+        // messages the user already loaded instead of dropping them.
+        final kept = <Map<String, dynamic>>[];
+        if (silent && fresh.isNotEmpty) {
+          final ids = {for (final m in fresh) m['_id']};
+          final firstTs = DateTime.tryParse(fresh.first['timestamp']?.toString() ?? '');
+          kept.addAll(_messages.where((m) {
+            final ts = DateTime.tryParse(m['timestamp']?.toString() ?? '');
+            return !ids.contains(m['_id']) && ts != null && firstTs != null && !ts.isAfter(firstTs);
+          }));
+        }
+        if (!silent || kept.isEmpty) _hasOlder = res.data['hasMore'] == true;
         _messages
           ..clear()
+          ..addAll(kept)
           ..addAll(fresh);
       });
       if (wasAtBottom) {
@@ -597,6 +613,44 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
+  Future<void> _loadOlder() async {
+    if (_loadingOlder || _messages.isEmpty) return;
+    final first = _messages.first;
+    setState(() => _loadingOlder = true);
+    final before = _scroll.hasClients ? _scroll.position.maxScrollExtent : 0.0;
+    final at = _scroll.hasClients ? _scroll.position.pixels : 0.0;
+    try {
+      final res = await _api.dio.get(
+        '/whatsapp/conversations/${widget.conversationId}/messages',
+        queryParameters: {'before': first['timestamp'], 'beforeId': first['_id']},
+      );
+      final older = (res.data['messages'] as List? ?? []).cast<Map<String, dynamic>>();
+      if (!mounted) return;
+      setState(() {
+        final ids = {for (final m in _messages) m['_id']};
+        _messages.insertAll(0, older.where((m) => !ids.contains(m['_id'])));
+        _hasOlder = res.data['hasMore'] == true;
+      });
+      // Keep the reader's place: the thread grows above them.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scroll.hasClients) {
+          _scroll.jumpTo(at + _scroll.position.maxScrollExtent - before);
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Could not load earlier messages')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingOlder = false);
+    }
+  }
+
   String _fmtTime(String? iso) {
     final dt = DateTime.tryParse(iso ?? '')?.toLocal();
     return dt == null ? '' : DateFormat('hh:mm a').format(dt);
@@ -809,8 +863,23 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       horizontal: 10,
                       vertical: 12,
                     ),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, i) {
+                    itemCount: _messages.length + (_hasOlder ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (_hasOlder && index == 0) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Center(
+                            child: _loadingOlder
+                                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
+                                : TextButton.icon(
+                                    onPressed: _loadOlder,
+                                    icon: const Icon(Icons.history_rounded, size: 16),
+                                    label: const Text('Load earlier messages'),
+                                  ),
+                          ),
+                        );
+                      }
+                      final i = _hasOlder ? index - 1 : index;
                       final m = _messages[i];
                       final outbound = m['direction'] == 'outbound';
                       final isBot = m['sender'] == 'bot';

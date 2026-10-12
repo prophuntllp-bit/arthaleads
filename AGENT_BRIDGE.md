@@ -58,10 +58,15 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 
-- [Claude Code] 2026-10-12 IST: long WhatsApp chats: load earlier messages (backend `GET /whatsapp/conversations/:id/messages` gets a `before` cursor + `hasMore`, web Inbox thread, mobile conversation screen). Also mobile: Pipeline one request per column (like a58301e on web), Credits tab hidden for agents. Files: backend/routes/whatsappRoutes.js, frontend/src/pages/Inbox.jsx, mobile/lib/screens/inbox/*, mobile/lib/screens/pipeline/pipeline_screen.dart.
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
+
+### Claude Code, 2026-10-12 IST, long WhatsApp chats load earlier messages; mobile pipeline + credits follow-ups
+
+- `GET /whatsapp/conversations/:id/messages` accepts `?before=<ISO>&beforeId=<id>` and returns `hasMore` (fetches limit+1; ties on the same millisecond broken by `_id`, sort `{timestamp:-1,_id:-1}`). Older pages do not reset `unreadCount`. Old callers without `before` get the same newest 60 as before. 9-assertion memory-DB test: 150 messages (groups of 3 in the same ms) page back to exactly 150, no repeats.
+- Web `Inbox.jsx` and mobile `conversation_screen.dart`: "Load earlier messages" at the top of a thread (keeps the scroll position), and the 3 s poll now merges the newest page instead of replacing the thread, so loaded history is not dropped.
+- Mobile Pipeline: one `/leads/unified` request per status column (300 cards) with the true total in each badge, same as a58301e on web. Mobile Inbox: Credits tab hidden for agents (ledger is admin/manager only since a58301e).
 
 ### Claude Code, 2026-10-12 IST, mobile fixes for 1.0.13 (not released yet)
 

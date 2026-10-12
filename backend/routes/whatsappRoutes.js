@@ -3152,17 +3152,33 @@ router.get("/conversations/:id", async (req, res) => {
 
 router.get("/conversations/:id/messages", async (req, res) => {
   try {
-    const { page = 1, limit = 60 } = req.query;
+    // Newest `limit` messages, or with ?before=<ISO time>&beforeId=<message id>
+    // the `limit` messages just older than that one (the "Load earlier
+    // messages" button). The id breaks ties between messages sent in the same
+    // millisecond, so a page boundary never skips or repeats one.
+    // `hasMore` says whether anything older is left.
+    const { page = 1 } = req.query;
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 60));
     const conv = await WaConversation.findOne({ _id: req.params.id, orgId: req.orgId }).lean();
     if (!conv) return res.status(404).json({ message: "Not found" });
     if (!canAccessConversation(req.user, conv)) return res.status(404).json({ message: "Not found" });
-    const messages = await WaMessage.find({ conversationId: req.params.id })
-      .sort({ timestamp: -1 }).skip((page - 1) * limit).limit(+limit).lean();
-    messages.reverse();
-    await WaConversation.findByIdAndUpdate(req.params.id, { unreadCount: 0 });
+    const filter = { conversationId: req.params.id };
+    const before = req.query.before ? new Date(String(req.query.before)) : null;
+    const older = before && !isNaN(before.getTime());
+    if (older) {
+      const beforeId = mongoose.isValidObjectId(req.query.beforeId) ? new mongoose.Types.ObjectId(String(req.query.beforeId)) : null;
+      filter.$or = beforeId
+        ? [{ timestamp: { $lt: before } }, { timestamp: before, _id: { $lt: beforeId } }]
+        : [{ timestamp: { $lt: before } }];
+    }
+    const rows = await WaMessage.find(filter)
+      .sort({ timestamp: -1, _id: -1 }).skip(older ? 0 : (page - 1) * limit).limit(limit + 1).lean();
+    const hasMore = rows.length > limit;
+    const messages = rows.slice(0, limit).reverse();
+    if (!older) await WaConversation.findByIdAndUpdate(req.params.id, { unreadCount: 0 });
     const lastIn = await WaMessage.findOne({ conversationId: req.params.id, direction: "inbound" })
       .sort({ timestamp: -1 }).select("timestamp").lean();
-    res.json({ messages, lastInboundAt: lastIn?.timestamp || null });
+    res.json({ messages, hasMore, lastInboundAt: lastIn?.timestamp || null });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

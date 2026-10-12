@@ -47,11 +47,14 @@ class _ConversationsShellState extends State<ConversationsShell>
     return a.role == 'super_admin' || canAccess(a.org, min);
   }
 
-  List<_Tab> _tabs(bool isAdmin) => [
+  // isAdmin: admin/super_admin (AI Agents, Settings). isStaff: anyone but an
+  // agent; the Credits statement is admin/manager only on the server (a58301e).
+  List<_Tab> _tabs(bool isAdmin, bool isStaff) => [
     _Tab('Inbox', Icons.chat_rounded, const InboxScreen(), badge: _unread > 0 ? (_unread > 99 ? '99+' : '$_unread') : null),
     const _Tab('Templates', Icons.description_rounded, TemplatesPage(), minPlan: 'growth', feature: 'WhatsApp templates'),
     const _Tab('Campaigns', Icons.campaign_rounded, CampaignsPage(), minPlan: 'growth', feature: 'WhatsApp campaigns'),
-    _Tab('Credits', Icons.account_balance_wallet_rounded, const CreditsPage(), dot: _creditsEmpty),
+    if (isStaff)
+      _Tab('Credits', Icons.account_balance_wallet_rounded, const CreditsPage(), dot: _creditsEmpty),
     if (isAdmin)
       const _Tab('AI Agents', Icons.auto_awesome_rounded, AgentsPage(), minPlan: 'growth', feature: 'The WhatsApp AI agent'),
     if (isAdmin)
@@ -61,8 +64,8 @@ class _ConversationsShellState extends State<ConversationsShell>
   @override
   void initState() {
     super.initState();
-    final isAdmin = context.read<AuthState>().isWaAdmin;
-    _tabController = TabController(length: _tabs(isAdmin).length, vsync: this);
+    final auth = context.read<AuthState>();
+    _tabController = TabController(length: _tabs(auth.isWaAdmin, auth.isAdmin).length, vsync: this);
     _pollUnread();
     _unreadTimer = Timer.periodic(const Duration(seconds: 20), (_) => _pollUnread());
     _loadCreditsBalance();
@@ -92,8 +95,8 @@ class _ConversationsShellState extends State<ConversationsShell>
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = context.watch<AuthState>().isWaAdmin;
-    final tabs = _tabs(isAdmin);
+    final auth = context.watch<AuthState>();
+    final tabs = _tabs(auth.isWaAdmin, auth.isAdmin);
     // Role can only change on a fresh login (new AuthState), so this covers
     // the resize instead of rebuilding the controller mid-session.
     if (_tabController.length != tabs.length) {
