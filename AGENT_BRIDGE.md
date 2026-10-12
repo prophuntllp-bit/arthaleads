@@ -57,8 +57,7 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
-
-
+- [Claude Code] 2026-10-12 IST: (1) agents may change leads they created as well as ones assigned to them (leadService writes, transfer, bulk delete) and project leads assigned to them; (2) "AI could not reply" push opens the lead / WhatsApp chat in the app; (3) mobile Leads list refreshes itself like web. Files: backend/services/leadService.js, backend/services/projectService.js, backend/controllers/leadController.js, push payload code, mobile/lib/core/push_service.dart, mobile/lib/screens/leads/*.
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
