@@ -59,9 +59,14 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-12 18:30 IST: SEO, product film video indexing: fix VideoObject uploadDate, put the schema in the static HTML, new /product-tour watch page (transcript + chapters), video sitemap entry. Files: frontend/src/components/IntroVideo.jsx, frontend/src/pages/ProductTour.jsx (new), App.jsx, entry-prerender.jsx, vercel.json, PublicNav.jsx, PublicFooter.jsx, CustomCursor.jsx, backend/controllers/blogController.js (sitemap)
 
 ## Change log (newest first)
+
+### Claude Code, 2026-10-12 IST, SEO: product film video indexing (f8793a8)
+
+- Search Console flagged the film's VideoObject: "uploadDate is missing a timezone" / "Invalid datetime value". uploadDate is now 2026-10-07T12:00:00+05:30, and the JSON-LD is rendered in IntroVideo's markup (was injected by a useEffect, so the prerendered HTML had none). Film data, chapters and transcript live in frontend/src/data/introFilm.js (re-sync if the film is re-cut).
+- New watch page /product-tour (pages/ProductTour.jsx): film near the top, 9 chapters, full transcript, VideoObject with Clip key moments pointing at /product-tour?t=N (the player seeks to ?t= on arrival and on chapter clicks). Added to App routes, prerender PAGES, vercel.json rewrite, nav Resources, footer Product, CustomCursor list, and the backend sitemap with a <video:video> entry.
+- Same day, owner approved: "Request indexing" sent in Search Console for /wordpress-plugin, /product-updates, /download-app (last crawled 8 Aug, before prerendering).
 
 ### Claude Code, 2026-10-12 IST, app Leads auto-refresh verified with a test lead
 
