@@ -62,6 +62,11 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-12 IST, website plugin download was 1.0.2
+
+- `frontend/public/arthaleads-integration.zip` (the Download button on /wordpress-plugin) was still 1.0.2; source and WordPress.org (slug `arthaleads`) are 1.0.9. Rebuilt from committed source with `git archive` (LF endings, folder `arthaleads-integration/`, same file set as make_zip.py); contents identical to the WordPress.org 1.0.9 release. Also refreshed `wordpress-plugin/arthaleads-integration.zip` (was 1.0.8).
+- Next release: bump the version, publish to WordPress.org, AND copy the new zip to frontend/public, or the site keeps serving the old one.
+
 ### Claude Code, 2026-10-12 IST, mobile form polish (still part of unreleased 1.0.13)
 
 - Dropdown labels (`AppSelect`, `AppSelectBox`) now use the same style as text-field labels (`LabeledField`, the web's `.label`: 14 / medium / text colour), so forms no longer mix two label looks. Task form: due date is a boxed field, "Link to project / lead (optional)" use the normal label instead of purple/blue captions. Project form: possession date boxed.
