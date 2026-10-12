@@ -481,9 +481,20 @@ async function autoAssignConversation(org, conversation) {
       type: "conversation_assigned",
       title: `WhatsApp: ${conversation.contactName || conversation.contactPhone}`,
       body: "Assigned to you",
-      data: { url: "/conversations" },
+      data: chatLink(conversation),
     }).catch(() => {});
   } catch { /* no active agents */ }
+}
+
+// What a WhatsApp push opens when tapped: the web goes to the thread itself
+// (/conversations/:id), the app (1.0.14+) opens the chat by conversationId and
+// falls back to the lead (leadId). Older app builds only read `url` and match it
+// to a tab name; "/conversations/..." never matched one, so nothing changes for
+// them, and the new-lead push keeps url "/leads", which they do follow.
+function chatLink(conv, leadId) {
+  const id = String(conv._id);
+  const lead = leadId || conv.leadId?._id || conv.leadId;
+  return { url: `/conversations/${id}`, conversationId: id, ...(lead ? { leadId: String(lead) } : {}) };
 }
 
 // ── Notification recipients ───────────────────────────────────────────────────
@@ -504,8 +515,8 @@ async function notifyUnclaimedLead(org, payload) {
 // else notify admin/manager) rather than going silent.
 async function notifyNewConversation(org, conv, lead) {
   const payload = lead
-    ? { type: "new_lead", title: `New Lead: ${lead.name}`, body: `${conv.contactPhone} · WhatsApp`, data: { url: "/leads" } }
-    : { type: "new_conversation", title: "New WhatsApp conversation", body: `${conv.contactName || conv.contactPhone} messaged in`, data: { url: "/conversations" } };
+    ? { type: "new_lead", title: `New Lead: ${lead.name}`, body: `${conv.contactPhone} · WhatsApp`, data: { ...chatLink(conv, lead._id), url: "/leads" } }
+    : { type: "new_conversation", title: "New WhatsApp conversation", body: `${conv.contactName || conv.contactPhone} messaged in`, data: chatLink(conv) };
 
   if (lead?.assignedTo) {
     sendPushToUser(lead.assignedTo, payload).catch(() => {});
@@ -1841,7 +1852,7 @@ async function handOffToHuman(org, conversation, { notify = false, reason = "" }
     type: "bot_failed",
     title: "AI assistant could not reply",
     body: `${conversation.contactName || conversation.contactPhone} is waiting for an answer${reason ? ` — ${reason}` : ""}`,
-    data: { url: "/conversations" },
+    data: chatLink(conversation),
   };
   const recipients = org.whatsapp?.notifyOn?.newConversation || [];
   if (recipients.length) recipients.forEach((u) => sendPushToUser(u, payload).catch(() => {}));

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -29,6 +31,26 @@ class PushService {
   /// listens for changes and jumps to the matching tab, then clears it.
   final ValueNotifier<String?> pendingRoute = ValueNotifier(null);
 
+  /// The whole data block of a tapped notification that names a record
+  /// (`conversationId` and/or `leadId`, e.g. "AI assistant could not reply").
+  /// Shell opens that chat or lead instead of just switching tabs.
+  final ValueNotifier<Map<String, String>?> pendingTarget = ValueNotifier(null);
+
+  /// Routes a tapped notification's data: to the record when it names one,
+  /// otherwise to the tab its `url` points at.
+  void _route(Map<String, dynamic> data) {
+    final target = <String, String>{
+      for (final e in data.entries)
+        if (e.value != null) e.key: e.value.toString(),
+    };
+    if ((target['conversationId'] ?? '').isNotEmpty || (target['leadId'] ?? '').isNotEmpty) {
+      pendingTarget.value = target;
+      return;
+    }
+    final url = target['url'];
+    if (url != null && url.isNotEmpty) pendingRoute.value = url;
+  }
+
   Future<void> init() async {
     const androidChannel = AndroidNotificationChannel(
       _channelId,
@@ -45,8 +67,18 @@ class PushService {
         android: AndroidInitializationSettings('ic_notification'),
       ),
       onDidReceiveNotificationResponse: (details) {
-        final url = details.payload;
-        if (url != null && url.isNotEmpty) pendingRoute.value = url;
+        // Foreground notifications carry the data block as JSON (see
+        // _showForeground); older ones carried just the url.
+        final payload = details.payload;
+        if (payload == null || payload.isEmpty) return;
+        try {
+          final decoded = jsonDecode(payload);
+          if (decoded is Map) {
+            _route(decoded.cast<String, dynamic>());
+            return;
+          }
+        } catch (_) {}
+        pendingRoute.value = payload;
       },
     );
 
@@ -70,10 +102,7 @@ class PushService {
     if (initial != null) _handleOpenedMessage(initial);
   }
 
-  void _handleOpenedMessage(RemoteMessage message) {
-    final url = message.data['url'] as String?;
-    if (url != null && url.isNotEmpty) pendingRoute.value = url;
-  }
+  void _handleOpenedMessage(RemoteMessage message) => _route(message.data);
 
   Future<void> _showForeground(RemoteMessage message) async {
     final notification = message.notification;
@@ -92,7 +121,7 @@ class PushService {
           importance: Importance.high,
         ),
       ),
-      payload: message.data['url'] as String?,
+      payload: jsonEncode(message.data),
     );
   }
 

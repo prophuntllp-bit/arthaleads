@@ -34,6 +34,8 @@ import 'referrals/referrals_screen.dart';
 import 'settings/settings_screen.dart';
 import 'tasks/tasks_screen.dart';
 import 'team/team_screen.dart';
+import 'inbox/conversation_screen.dart';
+import '../core/deep_link.dart';
 
 /// Floating button opening the Artha AI help assistant — persistent across
 /// every tab, mirrors the web app's floating HelpBot bubble: same 56dp size
@@ -285,6 +287,12 @@ class _ShellState extends State<Shell> {
     super.initState();
     PushService.instance.init();
     PushService.instance.pendingRoute.addListener(_onPendingRoute);
+    PushService.instance.pendingTarget.addListener(_onPendingTarget);
+    // A cold start from a tapped notification can set it before we listen.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (PushService.instance.pendingTarget.value != null) _onPendingTarget();
+      if (PushService.instance.pendingRoute.value != null) _onPendingRoute();
+    });
     // Admins get the once-a-day file space warning, a few seconds after the
     // app settles.
     Future.delayed(const Duration(seconds: 4), () {
@@ -302,6 +310,7 @@ class _ShellState extends State<Shell> {
   @override
   void dispose() {
     PushService.instance.pendingRoute.removeListener(_onPendingRoute);
+    PushService.instance.pendingTarget.removeListener(_onPendingTarget);
     super.dispose();
   }
 
@@ -331,14 +340,39 @@ class _ShellState extends State<Shell> {
       }
     }
 
-    final match = targetLabel != null
-        ? _items.indexWhere((i) => i.label == targetLabel)
-        : _items.indexWhere(
-            (i) => normalized.contains(
-              i.label.toLowerCase().replaceAll(RegExp(r'[-_ ]'), ''),
-            ),
-          );
-    if (match != -1) setState(() => _index = match);
+    targetLabel ??= _items
+        .where(
+          (i) => normalized.contains(
+            i.label.toLowerCase().replaceAll(RegExp(r'[-_ ]'), ''),
+          ),
+        )
+        .map((i) => i.label)
+        .firstOrNull;
+    // Through _navigateToLabel: _index counts only the tabs this user can
+    // see, so an index into the full _items list landed agents on the wrong tab.
+    if (targetLabel != null) _navigateToLabel(targetLabel);
+  }
+
+  /// A tapped notification that names a record ("AI assistant could not
+  /// reply", a new WhatsApp lead): open that WhatsApp chat, or the lead's
+  /// detail when there is no chat.
+  void _onPendingTarget() {
+    final target = PushService.instance.pendingTarget.value;
+    if (target == null || !mounted) return;
+    PushService.instance.pendingTarget.value = null;
+    final conversationId = target['conversationId'] ?? '';
+    final leadId = target['leadId'] ?? '';
+    if (conversationId.isNotEmpty) {
+      _navigateToLabel('Inbox');
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ConversationScreen(conversationId: conversationId, contactName: ''),
+        ),
+      );
+    } else if (leadId.isNotEmpty) {
+      DeepLink.openLeadId.value = leadId;
+      _navigateToLabel('Leads');
+    }
   }
 
   void _navigateToLabel(String label) {

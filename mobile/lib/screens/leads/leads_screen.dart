@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -75,6 +76,9 @@ class LeadsScreenState extends State<LeadsScreen> {
   // Bumped on every load; a response that comes back after a newer request
   // was sent is dropped, so two overlapping loads can't mix their results.
   int _loadSeq = 0;
+  // Same as the web Leads page (hooks/useLeads.js): a quiet refresh every 15 s
+  // so a lead that arrives while the list is open shows up without pulling.
+  Timer? _autoRefresh;
 
   @override
   void initState() {
@@ -88,6 +92,7 @@ class LeadsScreenState extends State<LeadsScreen> {
     }
     _load(reset: true);
     _loadMeta();
+    _autoRefresh = Timer.periodic(const Duration(seconds: 15), (_) => _refreshTop());
     _scroll.addListener(() {
       if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 400 &&
           !_loading &&
@@ -120,6 +125,7 @@ class LeadsScreenState extends State<LeadsScreen> {
 
   @override
   void dispose() {
+    _autoRefresh?.cancel();
     DeepLink.openLeadId.removeListener(_handleDeepLink);
     DeepLink.leadFilters.removeListener(_handleFilterLink);
     _scroll.dispose();
@@ -193,7 +199,10 @@ class LeadsScreenState extends State<LeadsScreen> {
       final rows = (res.data['leads'] as List? ?? [])
           .cast<Map<String, dynamic>>();
       setState(() {
-        _leads.addAll(rows);
+        // Skip rows already shown: the 15 s refresh can push a lead from
+        // page 1 onto page 2 before that page loads.
+        final have = {for (final l in _leads) l['_id']};
+        _leads.addAll(rows.where((l) => !have.contains(l['_id'])));
         _total = res.data['total'] as int? ?? 0;
         _pages = res.data['pages'] as int? ?? 1;
         final sc = res.data['statusCounts'];
@@ -212,6 +221,49 @@ class LeadsScreenState extends State<LeadsScreen> {
           _initialLoaded = true;
         });
       }
+    }
+  }
+
+  /// The newest page again, merged on top: new leads appear, changed rows
+  /// update, rows further down the user already scrolled to stay. Silent: no
+  /// spinner and a failed poll keeps the list. Skipped while the app is in the
+  /// background or a load is running (this screen is only alive while its tab
+  /// is showing, so it never polls from another tab).
+  Future<void> _refreshTop() async {
+    if (_loading || !_initialLoaded || !mounted) return;
+    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
+    final seq = _loadSeq;
+    final search = _searchCtrl.text.trim();
+    try {
+      final res = await _api.dio.get(
+        '/leads/unified',
+        queryParameters: {
+          'page': 1,
+          'limit': 25,
+          'statusCounts': '1',
+          if (search.isNotEmpty) 'search': search,
+          ..._filters.toParams(),
+        },
+      );
+      // Drop it if a filter, search or page load started meanwhile.
+      if (!mounted || seq != _loadSeq || _loading || _searchCtrl.text.trim() != search) return;
+      final fresh = (res.data['leads'] as List? ?? []).cast<Map<String, dynamic>>();
+      setState(() {
+        final ids = {for (final l in fresh) l['_id']};
+        final older = _leads.where((l) => !ids.contains(l['_id'])).toList();
+        _leads
+          ..clear()
+          ..addAll(fresh)
+          ..addAll(_page > 1 ? older : const []);
+        _total = res.data['total'] as int? ?? _total;
+        _pages = res.data['pages'] as int? ?? _pages;
+        final sc = res.data['statusCounts'];
+        if (sc is Map) {
+          _statusCounts = {for (final e in sc.entries) e.key.toString(): (e.value as num?)?.toInt() ?? 0};
+        }
+      });
+    } catch (_) {
+      // Keep the current list; the next tick tries again.
     }
   }
 

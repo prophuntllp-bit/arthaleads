@@ -314,12 +314,13 @@ const leadController = {
       const { toProjectId } = req.body;
       if (!toProjectId) return next(new AppError("toProjectId required", 400));
 
-      // Agents may only transfer leads that are assigned to them
+      // Agents may only transfer their own leads: assigned to them or created by them
       if (req.user.role === "agent") {
         const lead = await Lead.findOne({ _id: req.params.id, orgId: req.user.orgId }).lean();
         if (!lead) return next(new AppError("Lead not found", 404));
-        if (String(lead.assignedTo) !== String(req.user._id)) {
-          return next(new AppError("You can only transfer leads assigned to you", 403));
+        const me = String(req.user._id);
+        if (String(lead.assignedTo) !== me && String(lead.createdBy) !== me) {
+          return next(new AppError("You can only transfer your own leads", 403));
         }
       }
 

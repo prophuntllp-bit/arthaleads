@@ -57,10 +57,16 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
-- [Claude Code] 2026-10-12 IST: (1) agents may change leads they created as well as ones assigned to them (leadService writes, transfer, bulk delete) and project leads assigned to them; (2) "AI could not reply" push opens the lead / WhatsApp chat in the app; (3) mobile Leads list refreshes itself like web. Files: backend/services/leadService.js, backend/services/projectService.js, backend/controllers/leadController.js, push payload code, mobile/lib/core/push_service.dart, mobile/lib/screens/leads/*.
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
+
+### Claude Code, 2026-10-12 IST, agents can work on the leads they see; push opens the chat/lead; app Leads auto-refresh
+
+- `leadService.js` `agentOwnsLead()`: an agent may update, add/edit notes on, delete and bulk-delete leads assigned to them OR created by them (reads already allowed both; writes checked assignedTo only, so an agent's own new lead that round-robin gave to a colleague was visible but every action said "Access denied"). Transfer in `leadController.js` uses the same rule. Admin/manager unchanged.
+- `projectService.js` `agentCanWorkOn()`: an agent may work on a project lead when on its project OR when the lead is assigned to them personally (notes, remark, fields, delete, transfer source). `GET /projects/:id/leads/:leadId/whatsapp-messages` lets such an agent read the chat. 13-assertion memory-DB test (own/created allowed, others still refused, admin unaffected); `npm test` passes.
+- WhatsApp pushes (`chatLink()` in `whatsappRoutes.js`): "AI assistant could not reply", conversation assigned, new conversation and new WhatsApp lead now carry `conversationId` + `leadId`, and url `/conversations/:id` (web opens the thread). New-lead push keeps url "/leads" for older app builds.
+- App: `PushService` routes a tapped notification with conversationId to that chat (Inbox tab + ConversationScreen) and with only leadId to the lead's detail (DeepLink.openLeadId). Fixed: tab-name routing set `_index` from the full item list, landing agents on the wrong tab. Leads list does a quiet 15 s refresh like web `useLeads` (merges page 1 on top, keeps scrolled rows, paused in background and on other tabs).
 
 ### Claude Code, 2026-10-12 IST, WhatsApp ad leads with 1-character names were never created
 

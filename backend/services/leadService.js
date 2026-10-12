@@ -1,5 +1,6 @@
 // services/leadService.js
 const Lead = require("../models/Lead");
+
 const ProjectLead = require("../models/ProjectLead");
 const { projectCopiesFor, moveLeadIntoProject, mirrorLeadEdit } = require("../utils/projectCopies");
 const { projectLeadFromLead } = require("../utils/projectLeadFromLead");
@@ -15,6 +16,16 @@ const { emitLeadCreated, emitLeadsCreated } = require("../utils/emitLeadCreated"
 const { formatISTDate, istDateKey, startOfISTDay, endOfISTDay } = require("../utils/datetime");
 const OPTS = require("../constants/leadOptions");
 const { projectLeadStage, projectLeadStageCondition } = require("../utils/pipelineStage");
+
+// An agent works on the leads they can see: those assigned to them and those
+// they created themselves (an agent's new lead is often round-robined to a
+// colleague but stays in their list). Reads already used this rule; writes
+// checked assignedTo only, so agents got "Access denied" on leads they could see.
+function agentOwnsLead(lead, user) {
+  const me = String(user._id);
+  const id = (v) => (v && v._id ? String(v._id) : v ? String(v) : "");
+  return id(lead.assignedTo) === me || id(lead.createdBy) === me;
+}
 
 // ── Analytics cache (in-memory, 60-second TTL per org+range) ─────────────────
 // Prevents repeated heavy 18-facet aggregations on every dashboard load.
@@ -558,7 +569,7 @@ const leadService = {
     // Agents can only modify leads assigned to or created by them
     if (
       user.role === "agent" &&
-      lead.assignedTo?.toString() !== user._id.toString()
+      !agentOwnsLead(lead, user)
     ) {
       throw new AppError("Access denied", 403);
     }
@@ -684,7 +695,7 @@ const leadService = {
     // Agents can only delete leads assigned to or created by them
     if (
       user.role === "agent" &&
-      lead.assignedTo?.toString() !== user._id.toString()
+      !agentOwnsLead(lead, user)
     ) {
       throw new AppError("Access denied", 403);
     }
@@ -703,9 +714,10 @@ const leadService = {
   // ── Bulk Delete ───────────────────────────────────────────────────────────
   // super_admin → permanent hard delete; everyone else → soft delete (dump)
   async bulkDelete(ids, user) {
-    // Agents can only delete leads assigned to them
+    // Agents can only delete leads assigned to or created by them (the same
+    // leads they can see, see agentOwnsLead)
     const ownerFilter = user.role === "agent"
-      ? { assignedTo: user._id }
+      ? { $or: [{ assignedTo: user._id }, { createdBy: user._id }] }
       : {};
 
     if (user.role === "super_admin") {
@@ -741,7 +753,7 @@ const leadService = {
     // Agents can only add notes to leads assigned to or created by them
     if (
       user.role === "agent" &&
-      lead.assignedTo?.toString() !== user._id.toString()
+      !agentOwnsLead(lead, user)
     ) {
       throw new AppError("Access denied", 403);
     }
@@ -764,7 +776,7 @@ const leadService = {
 
     if (
       user.role === "agent" &&
-      lead.assignedTo?.toString() !== user._id.toString()
+      !agentOwnsLead(lead, user)
     ) {
       throw new AppError("Access denied", 403);
     }

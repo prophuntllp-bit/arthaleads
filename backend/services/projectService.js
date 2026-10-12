@@ -18,6 +18,17 @@ const { levelOf } = require("../middlewares/planGate");
 const { uploadProjectImage, deleteProjectImage } = require("../utils/upload");
 const { STARTER_PROJECT_CAP } = require("../constants/plans");
 
+// An agent works on a project lead when they are on its project, or when the
+// lead itself is assigned to them (a lead moved in from Leads keeps its
+// assignee). The unified Leads list shows agents both kinds, so writes accept
+// both too. `lead.project` must be populated with assignedTo.
+function agentCanWorkOn(lead, user) {
+  const me = String(user._id);
+  const onProject = (lead.project?.assignedTo || []).map(String).includes(me);
+  const assignee = lead.assignedTo && lead.assignedTo._id ? String(lead.assignedTo._id) : String(lead.assignedTo || "");
+  return onProject || assignee === me;
+}
+
 // The images picked in the project form arrive as base64 data URIs (the
 // browser compresses each to a small JPEG thumbnail before sending). Storing
 // those directly on the document — the old behaviour — bloats Mongo and, more
@@ -273,7 +284,7 @@ const projectService = {
     if (!lead) throw new AppError("Lead not found", 404);
     if (String(lead.project?._id) !== String(projectId)) throw new AppError("Lead not found", 404);
     if (String(lead.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
-    if (user.role === "agent" && !lead.project?.assignedTo?.map(String).includes(user._id.toString())) {
+    if (user.role === "agent" && !agentCanWorkOn(lead, user)) {
       throw new AppError("Access denied", 403);
     }
     lead.notes.push({ text: text.trim(), addedBy: user._id, addedByName: user.name || "", createdAt: new Date() });
@@ -288,7 +299,7 @@ const projectService = {
     if (!lead) throw new AppError("Lead not found", 404);
     if (String(lead.project?._id) !== String(projectId)) throw new AppError("Lead not found", 404);
     if (String(lead.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
-    if (user.role === "agent" && !lead.project?.assignedTo?.map(String).includes(user._id.toString())) {
+    if (user.role === "agent" && !agentCanWorkOn(lead, user)) {
       throw new AppError("Access denied", 403);
     }
 
@@ -324,7 +335,7 @@ const projectService = {
     const check = await ProjectLead.findById(leadId).populate("project", "orgId assignedTo");
     if (!check) throw new AppError("Lead not found", 404);
     if (String(check.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
-    if (user.role === "agent" && !check.project?.assignedTo?.map(String).includes(user._id.toString())) {
+    if (user.role === "agent" && !agentCanWorkOn(check, user)) {
       throw new AppError("Access denied", 403);
     }
 
@@ -349,7 +360,7 @@ const projectService = {
     const lead = await ProjectLead.findById(leadId).populate("project", "orgId assignedTo");
     if (!lead) throw new AppError("Lead not found", 404);
     if (String(lead.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
-    if (user.role === "agent" && !lead.project?.assignedTo?.map(String).includes(user._id.toString())) {
+    if (user.role === "agent" && !agentCanWorkOn(lead, user)) {
       throw new AppError("Access denied", 403);
     }
 
@@ -410,7 +421,7 @@ const projectService = {
     const lead = await ProjectLead.findById(leadId).populate("project", "orgId name assignedTo");
     if (!lead) throw new AppError("Lead not found", 404);
     if (String(lead.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
-    if (user.role === "agent" && !lead.project?.assignedTo?.map(String).includes(user._id.toString())) {
+    if (user.role === "agent" && !agentCanWorkOn(lead, user)) {
       throw new AppError("Access denied", 403);
     }
 
@@ -474,11 +485,11 @@ const projectService = {
     // Ensure source project belongs to the user's org
     const fromProject = await Project.findOne({ _id: fromProjectId, orgId: user.orgId });
     if (!fromProject) throw new AppError("Source project not found", 404);
-    // Same rule as the other project writes: an agent works only in projects they are assigned to.
-    if (user.role === "agent" && !fromProject.assignedTo?.map(String).includes(String(user._id))) {
+    const lead = await ProjectLead.findOne({ _id: leadId, project: fromProjectId });
+    // Same rule as the other project writes (see agentCanWorkOn).
+    if (user.role === "agent" && lead && !agentCanWorkOn({ ...lead.toObject(), project: fromProject }, user)) {
       throw new AppError("Access denied", 403);
     }
-    const lead = await ProjectLead.findOne({ _id: leadId, project: fromProjectId });
     if (!lead) throw new AppError("Lead not found", 404);
 
     if (toProjectId) {

@@ -241,8 +241,22 @@ router.post("/:id/dumped-leads/:leadId/restore", async (req, res, next) => {
 // same leads they already see in it.
 router.get("/:id/leads/:leadId/whatsapp-messages", async (req, res, next) => {
   try {
-    const project = await require("../services/projectService").getById(req.params.id, req.user);
-    const pl = await ProjectLead.findOne({ _id: req.params.leadId, project: project._id }).select("fromLeadId phone").lean();
+    // An agent who is not on the project can still open a lead assigned to
+    // them personally (same rule as projectService's agentCanWorkOn).
+    let projectId;
+    if (req.user.role === "agent") {
+      const p = await Project.findOne({ _id: req.params.id, orgId: req.user.orgId }).select("_id assignedTo").lean();
+      if (!p) return res.status(404).json({ success: false, message: "Project not found" });
+      projectId = p._id;
+      const onProject = (p.assignedTo || []).map(String).includes(String(req.user._id));
+      if (!onProject) {
+        const mine = await ProjectLead.exists({ _id: req.params.leadId, project: p._id, assignedTo: req.user._id });
+        if (!mine) return res.status(404).json({ success: false, message: "Lead not found" });
+      }
+    } else {
+      projectId = (await require("../services/projectService").getById(req.params.id, req.user))._id;
+    }
+    const pl = await ProjectLead.findOne({ _id: req.params.leadId, project: projectId }).select("fromLeadId phone").lean();
     if (!pl) return res.status(404).json({ success: false, message: "Lead not found" });
 
     const WaConversation = require("../models/WaConversation");
