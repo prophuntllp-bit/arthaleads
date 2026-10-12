@@ -111,14 +111,14 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
 
   Future<void> _shareLink(String link, String userName) async {
     final msg =
-        "I use Arthaleads to manage my real estate leads — it's brilliant. "
+        "I use Arthaleads to manage my real estate leads and it's brilliant. "
         "Sign up with my link and we both get a free month: $link";
     await Share.share(msg);
   }
 
   Future<void> _shareWhatsApp(String link) async {
     final message = Uri.encodeComponent(
-      "I use Arthaleads to manage my real estate leads — it's brilliant. "
+      "I use Arthaleads to manage my real estate leads and it's brilliant. "
       'Sign up with my link and we both get a free month: $link',
     );
     await launchUrl(
@@ -132,7 +132,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
       Uri(
         scheme: 'mailto',
         queryParameters: {
-          'subject': 'Try Arthaleads CRM — we both get a free month',
+          'subject': 'Try Arthaleads CRM: we both get a free month',
           'body':
               'Hi,\n\nI use Arthaleads to manage my real estate leads and thought you would find it useful.\n'
               'Sign up with my link and we both get a free month:\n\n$link\n\nCheers,\n$userName',
