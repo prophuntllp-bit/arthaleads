@@ -59,10 +59,15 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-12 19:15 IST: owner does not want /product-tour; remove it (redirect to /#tour), keep the VideoObject date fix on the home page. Same files as f8793a8.
 
 
 ## Change log (newest first)
+
+### Claude Code, 2026-10-12 IST, SEO: /product-tour removed (751dce3)
+
+- Owner did not want a separate watch page for the film (it already sits on the home page). f8793a8 reverted: page, nav/footer links, sitemap entry and data file gone. /product-tour now 308-redirects to /#tour (vercel.json), because Google had already been asked to index it.
+- Kept: VideoObject uploadDate 2026-10-07T12:00:00+05:30, rendered in IntroVideo's markup so the home page's prerendered HTML carries it. Search Console "Validate fix" is running on both uploadDate issues.
+- Lesson: propose new pages / nav changes and wait for the owner's yes.
 
 ### Claude Code, 2026-10-12 IST, SEO: product film video indexing (f8793a8)
 
