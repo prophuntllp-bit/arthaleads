@@ -63,7 +63,7 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ### Claude Code, 2026-10-12 IST, mobile: Dump restore asks first; Pipeline card opens the lead
 
-- Dump: Restore now confirms (it restored on a single tap; the web does too). While testing, I restored one real lead by that single tap: "Abhishek Ranjan" (918007851222, Sheetal Powar) went from Dump back to Leads (isDeleted false, deletedAt cleared; it had no deletedFrom, so no project copy was created). Owner told; undo pending their call.
+- Dump: Restore now confirms (it restored on a single tap; the web does too). While testing, I restored one real lead by that single tap: "Abhishek Ranjan" (918007851222, Sheetal Powar) went from Dump back to Leads (isDeleted false, deletedAt cleared; it had no deletedFrom, so no project copy was created). Owner told; on their go-ahead it was moved back to Dump from the app the same day (isDeleted true again, now deletedByName "Pranav Nair"; the original deletedAt was lost). Dump count back to 272.
 - Pipeline: tapping a card now offers "Open lead details" above the stage list (full lead fetched like Leads).
 
 ### Claude Code, 2026-10-12 IST, every push tap lands somewhere useful in the app
