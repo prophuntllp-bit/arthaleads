@@ -57,12 +57,20 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
-- [Claude Code] 2026-10-12 IST: SECURITY: agent-role data leaks (credits statement, calls page/stats, pipeline, lead source filter counts/ad names) + pipeline not working. Files: backend/routes|controllers|services for leads/calls(enablex)/credits/whatsapp, frontend pages Calls, Pipeline, Leads filters, Inbox Credits.
 
 - [Claude Code] 2026-10-10 IST: mobile app fixes for 1.0.13 (attendance no-camera clock-in, role gating for agents/managers, Bookings/Invoices paging + server totals, project price dash, follow-up note edit, duplicate lead warning, Performance totals, Referrals status, Pipeline filter labels). Files: mobile/lib/** only.
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
+
+### Claude Code, 2026-10-12 IST, SECURITY: agent-role data leaks closed, pipeline columns
+
+- `routes/enablexRoutes.js`: `/calls/stats` and `/calls/analytics` count only the agent's own calls for role agent (`ownCallsMatch`); the "answered calls by agent" card no longer lists colleagues. (The call list was already scoped.)
+- `routes/creditRoutes.js`: `/credits/ledger` (statement naming who each message went to) and `/credits/utilization` are admin/manager/super_admin only. `/credits/balance` stays open (inbox wallet chip). Web: Credits tab hidden and `/conversations/credits` RoleGated for agents.
+- `services/leadService.js`: `getCampaignOptions` (ad names + counts in the Leads source filter) and `getDomains` scoped to the agent's own leads (assignedTo/createdBy), like `getSitePages` already was.
+- `LeadPipeline.jsx`: one `/leads/unified` request per status column (300 cards each) with the true total in the badge. The single "newest 2000" request filled the board with imported status-less project contacts so every other column looked empty, for everyone.
+- Not a leak (checked read-only in prod): Soniya's pipeline showed 2,500 contacts of project "Kalpataru Blossoms (Soniya)", which she alone is assigned to; agents see all leads of projects they are on, by design.
+- Mobile uses the same endpoints, so the app is covered too (Credits/Calls stats now 403/scoped for agents there). 15-assertion HTTP test against a memory DB (fails on the old code).
 
 ### Claude Code, 2026-10-10 IST, prerendered marketing pages
 

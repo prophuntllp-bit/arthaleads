@@ -29,6 +29,9 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
 }
 
+// Cards loaded per column; the badge shows the real total.
+const COLUMN_LIMIT = 300;
+
 export default function LeadPipeline() {
   useEffect(() => { document.title = "Sales Pipeline - Arthaleads CRM"; }, []);
   const { user } = useAuth();
@@ -42,6 +45,7 @@ export default function LeadPipeline() {
   const [members, setMembers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(""); // "" = all members
   const [pipelineType, setPipelineType] = useState("all"); // "all" | "leads" | "projects"
+  const [totals, setTotals] = useState({});                 // status -> true count (columns show at most COLUMN_LIMIT cards)
   const timerRef = useRef(null);
 
   const toggleExpand = (id) => setExpanded(prev => {
@@ -72,10 +76,24 @@ export default function LeadPipeline() {
   const fetchLeads = useCallback(async (silent = false, userId = selectedUserId, type = pipelineType) => {
     if (silent) setRefreshing(true); else setLoading(true);
     try {
-      const params = { limit: 2000, page: 1, type };
-      if (userId) params.userId = userId;
-      const { data } = await api.get("/leads/unified", { params });
-      setLeads(data.leads || []);
+      // One request per column. A single "newest 2000" request filled the board
+      // with whatever arrived last (thousands of imported, status-less project
+      // contacts) and left every other column looking empty. Each column now
+      // gets its own newest cards plus its true total for the badge.
+      const results = await Promise.all(STATUS_OPTIONS.map((status) => {
+        const params = { limit: COLUMN_LIMIT, page: 1, type, status };
+        if (userId) params.userId = userId;
+        return api.get("/leads/unified", { params }).then(({ data }) => ({ status, leads: data.leads || [], total: data.total || 0 }));
+      }));
+      const seen = new Set();
+      const merged = [];
+      for (const r of results) for (const l of r.leads) {
+        if (seen.has(l._id)) continue;
+        seen.add(l._id);
+        merged.push({ ...l, status: r.status });
+      }
+      setLeads(merged);
+      setTotals(Object.fromEntries(results.map((r) => [r.status, r.total])));
       setLastUpdated(new Date());
     } catch {
       if (!silent) toast.error("Failed to load pipeline leads");
@@ -118,6 +136,7 @@ export default function LeadPipeline() {
         updated = data.data;
       }
       setLeads((curr) => curr.map((l) => l._id === lead._id ? { ...l, ...updated, _type: lead._type, projectId: lead.projectId } : l));
+      setTotals((t) => ({ ...t, [lead.status]: Math.max(0, (t[lead.status] || 1) - 1), [nextStatus]: (t[nextStatus] || 0) + 1 }));
       toast.success(`Moved to ${nextStatus}`);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to move lead");
@@ -200,7 +219,7 @@ export default function LeadPipeline() {
                     </div>
                     <p className="flex-1 text-[13px] font-bold text-app">{meta.title}</p>
                     <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${meta.badge}`}>
-                      {stageLeads.length}
+                      {Math.max(totals[status] ?? 0, stageLeads.length)}
                     </span>
                   </div>
                   <div className={`h-0.5 rounded-full ${meta.bar}`} style={{ opacity: 0.6 }} />

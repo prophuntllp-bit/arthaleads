@@ -349,6 +349,8 @@ const leadService = {
       orgId: user.orgId,
       isDeleted: { $ne: true },
       sourceDomain: { $nin: ["", null] },
+      // An agent's filter lists only websites their own leads came from.
+      ...(user.role === "agent" ? { $or: [{ assignedTo: user._id }, { createdBy: user._id }] } : {}),
     });
     return domains.sort((a, b) => a.localeCompare(b));
   },
@@ -363,6 +365,10 @@ const leadService = {
   // form_id works immediately.
   async getCampaignOptions(user) {
     const base = { orgId: user.orgId, isDeleted: { $ne: true } };
+    // Agents get options (ad names, counts) from their own leads only, the
+    // same rule as the lead list; otherwise the Leads filter showed every
+    // campaign in the org with its lead count.
+    if (user.role === "agent") base.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
 
     const fbField = async (metaKey) => Lead.aggregate([
       { $match: { ...base, source: "Facebook" } },

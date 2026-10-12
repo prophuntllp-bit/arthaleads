@@ -637,6 +637,14 @@ router.get("/", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Agents only ever see their own calls: counts and charts are limited to
+// activities they performed. Managers and admins see the whole organisation.
+function ownCallsMatch(user) {
+  if (user.role !== "agent") return {};
+  const mongoose = require("mongoose");
+  return { "activities.performedBy": new mongoose.Types.ObjectId(String(user._id)) };
+}
+
 // GET /api/calls/stats — call counts by status (for dashboard stats row)
 router.get("/stats", async (req, res, next) => {
   try {
@@ -644,7 +652,7 @@ router.get("/stats", async (req, res, next) => {
     const orgId    = new mongoose.Types.ObjectId(String(req.user.orgId));
     const countFor = (Model, extraMatch) => Model.aggregate([
       { $match: { orgId } }, { $unwind: "$activities" },
-      { $match: { "activities.type": "called", ...extraMatch } },
+      { $match: { "activities.type": "called", ...ownCallsMatch(req.user), ...extraMatch } },
       { $count: "total" },
     ]);
     const [answered, missed, total, answeredPL, missedPL, totalPL] = await Promise.all([
@@ -1087,7 +1095,7 @@ router.get("/analytics", async (req, res, next) => {
     const volumeByDayFor = (Model) => Model.aggregate([
       { $match: { orgId } },
       { $unwind: "$activities" },
-      { $match: { "activities.type": "called", "activities.createdAt": { $gte: thirtyAgo } } },
+      { $match: { "activities.type": "called", "activities.createdAt": { $gte: thirtyAgo }, ...ownCallsMatch(req.user) } },
       { $group: {
         _id:      { y: { $year: "$activities.createdAt" }, m: { $month: "$activities.createdAt" }, d: { $dayOfMonth: "$activities.createdAt" } },
         total:    { $sum: 1 },
@@ -1099,7 +1107,7 @@ router.get("/analytics", async (req, res, next) => {
     const durationByAgentFor = (Model) => Model.aggregate([
       { $match: { orgId } },
       { $unwind: "$activities" },
-      { $match: { "activities.type": "called", "activities.meta.status": "answered", "activities.meta.duration": { $gt: 0 } } },
+      { $match: { "activities.type": "called", "activities.meta.status": "answered", "activities.meta.duration": { $gt: 0 }, ...ownCallsMatch(req.user) } },
       { $group: {
         _id:          "$activities.performedBy",
         name:         { $first: "$activities.performedByName" },

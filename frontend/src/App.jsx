@@ -825,7 +825,7 @@ export default function App() {
               <Route path="campaigns"      element={<PlanOnly min="growth" feature="WhatsApp campaigns"><CampaignsPage /></PlanOnly>} />
               <Route path="campaigns/new"  element={<RoleGate roles={["admin", "manager"]}><PlanOnly min="growth" feature="WhatsApp campaigns"><CampaignBuilder /></PlanOnly></RoleGate>} />
               <Route path="campaigns/:id"  element={<RoleGate roles={["admin", "manager"]}><PlanOnly min="growth" feature="WhatsApp campaigns"><CampaignBuilder /></PlanOnly></RoleGate>} />
-              <Route path="credits"  element={<CreditsPage />} />
+              <Route path="credits"  element={<RoleGate roles={["admin", "manager"]}><CreditsPage /></RoleGate>} />
               <Route path="agent"      element={<RoleGate roles={["admin"]}><PlanOnly min="growth" feature="The WhatsApp AI agent"><AgentsPage /></PlanOnly></RoleGate>} />
               <Route path="agent/new"  element={<RoleGate roles={["admin"]}><PlanOnly min="growth" feature="The WhatsApp AI agent"><AgentBuilder /></PlanOnly></RoleGate>} />
               <Route path="agent/:id"  element={<RoleGate roles={["admin"]}><PlanOnly min="growth" feature="The WhatsApp AI agent"><AgentBuilder /></PlanOnly></RoleGate>} />

@@ -30,7 +30,7 @@ const TABS = [
   { to: "/conversations",           label: "Inbox",     icon: Mail, end: true },
   { to: "/conversations/templates", label: "Templates", icon: FileText, minPlan: "growth" },
   { to: "/conversations/campaigns", label: "Campaigns", icon: Megaphone, minPlan: "growth" },
-  { to: "/conversations/credits",   label: "Credits",   icon: Wallet },
+  { to: "/conversations/credits",   label: "Credits",   icon: Wallet,       roles: ["admin", "manager", "super_admin"] },
   // PATCH /whatsapp/settings is admin-only, so a manager opening this would
   // get a 403 on save. Hide rather than tease. Same gate on Agent — it saves
   // through the same endpoint.

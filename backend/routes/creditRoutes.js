@@ -14,6 +14,9 @@ require("../models/WaConversation"); // registered for the statement populate be
 const logger     = require("../config/logger");
 
 router.use(protect);
+// The statement and usage breakdown name the leads messages went to and show
+// the org's spend: admins and managers only. /balance stays open (no lead data;
+// the inbox shows the wallet chip to everyone).
 
 // ── Balance ───────────────────────────────────────────────────────────────────
 // Any signed-in member can read it: an agent needs to know why the composer is
@@ -67,7 +70,7 @@ router.get("/balance", async (req, res) => {
 });
 
 // ── Statement / usage ─────────────────────────────────────────────────────────
-router.get("/ledger", async (req, res) => {
+router.get("/ledger", authorize("admin", "manager", "super_admin"), async (req, res) => {
   try {
     const { page = 1, limit = 50, type } = req.query;
     const filter = { orgId: req.orgId };
@@ -111,7 +114,7 @@ const UTIL_CATEGORIES = [
 const DAY_MS = 86400000;
 const IST_MS = 5.5 * 3600000;
 
-router.get("/utilization", async (req, res) => {
+router.get("/utilization", authorize("admin", "manager", "super_admin"), async (req, res) => {
   try {
     const range = ["7", "30", "month"].includes(String(req.query.range)) ? String(req.query.range) : "30";
     const istNow = Date.now() + IST_MS;
