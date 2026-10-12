@@ -14,6 +14,7 @@ const { getNextAssignee } = require("../utils/assignLead");
 const { emitLeadCreated, emitLeadsCreated } = require("../utils/emitLeadCreated");
 const { formatISTDate, istDateKey, startOfISTDay, endOfISTDay } = require("../utils/datetime");
 const OPTS = require("../constants/leadOptions");
+const { projectLeadStage, projectLeadStageCondition } = require("../utils/pipelineStage");
 
 // ── Analytics cache (in-memory, 60-second TTL per org+range) ─────────────────
 // Prevents repeated heavy 18-facet aggregations on every dashboard load.
@@ -1010,9 +1011,9 @@ const leadService = {
       if (priority) projFilter.priority = priority;
       if (consent === "unknown") projFilter["whatsappConsent.status"] = { $nin: ["granted", "denied"] };
       else if (consent)          projFilter["whatsappConsent.status"] = consent;
-      // A project lead with no status is shown as "New" (see the mapping
-      // below), so the New filter has to find it too.
-      if (status)  projFilter.status  = status === "New" ? { $in: ["New", "", null] } : status;
+      // A project lead's stage comes from its status, or from its call outcome
+      // when no status was set (utils/pipelineStage.js); filtered below, after
+      // the status-free copy used for the per-stage counts is taken.
       if (source)  projFilter.source  = source;
       // Same rule as regular leads above.
       if (booking) projFilter.booking = booking;
@@ -1048,8 +1049,8 @@ const leadService = {
         projFilter.$and = projAndConditions;
       }
       if (projectId) projFilter.project = projectId;
-      projFilterNoStatus = { ...projFilter };
-      delete projFilterNoStatus.status;
+      projFilterNoStatus = { ...projFilter };   // $and is replaced (never mutated) below
+      if (status) projFilter.$and = [...(projFilter.$and || []), projectLeadStageCondition(status)];
 
       [projLeads, projTotal] = await Promise.all([
         ProjectLead.find(projFilter)
@@ -1097,7 +1098,8 @@ const leadService = {
       // board buckets strictly by the exact STATUS_OPTIONS names, so an
       // unset status matched none of them and the lead silently vanished
       // from every column instead of landing in "New".
-      status:       pl.status || "New",
+      // Stored status, or the stage its call outcome implies (pipelineStage.js).
+      status:       projectLeadStage(pl),
       remark:       pl.remark,
       remark1:      pl.remark1,
       remark2:      pl.remark2,
@@ -1126,7 +1128,7 @@ const leadService = {
       const countFor = async (st) => {
         const [a, b] = await Promise.all([
           skipLeads ? 0 : Lead.countDocuments(st ? { ...leadNoStatus, status: st } : leadNoStatus),
-          projFilterNoStatus ? ProjectLead.countDocuments(st ? { ...projFilterNoStatus, status: st === "New" ? { $in: ["New", "", null] } : st } : projFilterNoStatus) : 0,
+          projFilterNoStatus ? ProjectLead.countDocuments(st ? { ...projFilterNoStatus, $and: [...(projFilterNoStatus.$and || []), projectLeadStageCondition(st)] } : projFilterNoStatus) : 0,
         ]);
         return a + b;
       };

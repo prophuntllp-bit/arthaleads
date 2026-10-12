@@ -5,6 +5,7 @@ const Lead = require("../models/Lead");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
 const { mirrorProjectEdit } = require("../utils/projectCopies");
+const { stageAfterOutcome } = require("../utils/pipelineStage");
 const { leadFromProjectLead } = require("../utils/leadFromProjectLead");
 
 // Escape special regex characters in user-supplied search strings to prevent ReDoS
@@ -333,6 +334,8 @@ const projectService = {
       remarkUpdatedBy: user._id,
       remarkUpdatedAt: new Date(),
     };
+    // Marking a New lead Contacted moves its pipeline stage too.
+    if (remark === "Contacted" && ["", "New", null, undefined].includes(check.status)) update.status = "Contacted";
 
     const lead = await ProjectLead.findByIdAndUpdate(leadId, update, { new: true })
       .populate("remarkUpdatedBy", "name");
@@ -372,6 +375,18 @@ const projectService = {
       } else {
         lead.assignedTo = undefined;
         lead.assignedToName = "";
+      }
+    }
+
+    // A call outcome moves the pipeline stage forward (utils/pipelineStage.js),
+    // unless this same edit sets the stage explicitly.
+    if ("booking" in data && !("status" in data)) {
+      const next = stageAfterOutcome(lead.status, lead.booking);
+      if (next) {
+        const from = lead.status || "New";
+        lead.status = next;
+        lead.activities.push({ type: "status_changed", description: `Status changed from "${from}" to "${next}" (call outcome: ${lead.booking})`,
+          performedBy: user._id, performedByName: user.name, meta: { from, to: next } });
       }
     }
 
@@ -440,10 +455,16 @@ const projectService = {
     if (user.role === "agent" && !project.assignedTo?.map(String).includes(user._id.toString())) {
       throw new AppError("Access denied", 403);
     }
-    const result = await ProjectLead.updateMany(
-      { _id: { $in: ids }, project: projectId, orgId: user.orgId },
-      { $set: { booking } }
-    );
+    // Same rule as a single edit: the outcome moves each lead's stage forward.
+    const current = await ProjectLead.find({ _id: { $in: ids }, project: projectId, orgId: user.orgId }).select("status").lean();
+    const ops = current.map((pl) => {
+      const next = stageAfterOutcome(pl.status, booking);
+      const update = { $set: { booking, ...(next ? { status: next } : {}) } };
+      if (next) update.$push = { activities: { type: "status_changed", description: `Status changed from "${pl.status || "New"}" to "${next}" (call outcome: ${booking})`,
+        performedBy: user._id, performedByName: user.name, meta: { from: pl.status || "New", to: next }, createdAt: new Date() } };
+      return { updateOne: { filter: { _id: pl._id }, update } };
+    });
+    const result = ops.length ? await ProjectLead.bulkWrite(ops) : { modifiedCount: 0 };
     const changed = await ProjectLead.find({ _id: { $in: ids }, project: projectId, orgId: user.orgId, fromLeadId: null }).lean();
     for (const pl of changed) await mirrorProjectEdit(pl, { fields: ["booking"] }, user);
     return result.modifiedCount;

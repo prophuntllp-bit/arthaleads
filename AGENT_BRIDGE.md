@@ -62,6 +62,13 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-12 IST, pipeline stage follows the call outcome for project leads
+
+- Owner report: Soniya worked ~1,400 of her 2,500 project contacts but the pipeline showed all as New. Cause: project leads record work in `booking` (call outcome) / `remark`, and `status` stays "" from the import. Checked read-only in prod: 4,530 org project leads had work but no status.
+- New `backend/utils/pipelineStage.js`: a project lead's stage = its `status` if set, else derived (Not Reachable/Call Back/Interested/Low Budget/Other Location/Commercial, remark Contacted or a logged call -> Contacted; Site Visit Booked/Done -> Site Visit; Booked -> Closed Won; Not Interested -> Closed Lost; nothing -> New). Used by `getAllUnified` for the per-status filter, `statusCounts` and the status on each card. No data was rewritten.
+- `projectService.updateLeadFields` / `bulkUpdateStatus`: recording an outcome also stores the stage, forward only (Call Back never moves Negotiation back; Booked/Not Interested always close; Closed Lost re-opens on a positive outcome), with a `status_changed` activity; an explicit status in the same edit wins. `updateRemark`: Contacted moves New -> Contacted. Plain Leads unchanged.
+- Soniya's board will read New 1,075 / Contacted 912 / Site Visit 1 / Closed Lost 512 (= 2,500). 15-assertion memory-DB test.
+
 ### Claude Code, 2026-10-12 IST, long WhatsApp chats load earlier messages; mobile pipeline + credits follow-ups
 
 - `GET /whatsapp/conversations/:id/messages` accepts `?before=<ISO>&beforeId=<id>` and returns `hasMore` (fetches limit+1; ties on the same millisecond broken by `_id`, sort `{timestamp:-1,_id:-1}`). Older pages do not reset `unreadCount`. Old callers without `before` get the same newest 60 as before. 9-assertion memory-DB test: 150 messages (groups of 3 in the same ms) page back to exactly 150, no repeats.
