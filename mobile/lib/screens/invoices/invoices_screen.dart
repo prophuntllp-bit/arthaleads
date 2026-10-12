@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show Response;
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
 import 'invoice_pdf.dart';
 
@@ -46,11 +48,57 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     _load();
   }
 
+  // The server pages and filters (like the web): `_total` is how many match
+  // the current filter, `_summary` covers every invoice in the org.
+  static const _pageSize = 50;
+  int _page = 1;
+  int _total = 0;
+  bool _loadingMore = false;
+  Map<String, dynamic> _summary = const {};
+
+  Future<Response> _fetchPage(int page) => _api.dio.get('/invoices', queryParameters: {
+        'limit': _pageSize,
+        'page': page,
+        if (_statusFilter != 'all') 'status': _statusFilter,
+      });
+
+  void _applyPage(Response res, {required bool append}) {
+    final rows = (res.data['data'] as List? ?? []).cast<Map<String, dynamic>>();
+    _invoices = append ? [..._invoices, ...rows] : rows;
+    _total = (res.data['total'] as num?)?.toInt() ?? _invoices.length;
+    _summary = (res.data['summary'] as Map?)?.cast<String, dynamic>() ?? const {};
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || _invoices.length >= _total) return;
+    setState(() => _loadingMore = true);
+    try {
+      final res = await _fetchPage(_page + 1);
+      if (!mounted) return;
+      setState(() {
+        _page++;
+        _applyPage(res, append: true);
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(ApiClient.errorMessage(e, 'Failed to load more invoices')),
+          backgroundColor: AppColors.danger,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final res = await _api.dio.get('/invoices', queryParameters: {'limit': 50});
-      setState(() => _invoices = (res.data['data'] as List? ?? []).cast<Map<String, dynamic>>());
+      final res = await _fetchPage(1);
+      setState(() {
+        _page = 1;
+        _applyPage(res, append: false);
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -98,7 +146,8 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     if (selected == null || selected == inv['status']) return;
     try {
       await _api.dio.patch('/invoices/${inv['_id']}/status', data: {'status': selected});
-      setState(() => inv['status'] = selected);
+      // Reload so the totals and the status filter stay right.
+      await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Invoice marked as "${_statusLabels[selected]}".'),
@@ -180,12 +229,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _statusFilter == 'all' ? _invoices : _invoices.where((i) => i['status'] == _statusFilter).toList();
-    final totalBill = _invoices.fold<num>(0, (s, i) => s + ((i['totalBill'] as num?) ?? 0));
-    final totalRecv = _invoices
-        .where((i) => i['status'] == 'payment_received')
-        .fold<num>(0, (s, i) => s + ((i['totalBill'] as num?) ?? 0));
-    final totalPend = totalBill - totalRecv;
+    final filtered = _invoices;
+    final totalBill = (_summary['totalBill'] as num?) ?? 0;
+    final totalRecv = (_summary['received'] as num?) ?? 0;
+    final totalPend = (_summary['pending'] as num?) ?? 0;
 
     return Column(
       children: [
@@ -238,8 +285,21 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                       onRefresh: _load,
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: filtered.length,
+                        itemCount: filtered.length + (filtered.length < _total ? 1 : 0),
                         itemBuilder: (context, i) {
+                          if (i == filtered.length) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Center(
+                                child: _loadingMore
+                                    ? const AppSpinner(size: 24)
+                                    : SecondaryButton(
+                                        onPressed: _loadMore,
+                                        child: Text('Show more (${_total - filtered.length} left)'),
+                                      ),
+                              ),
+                            );
+                          }
                           final inv = filtered[i];
                           final color = _statusColors[inv['status']] ?? const Color(0xFF6B7280);
                           final number = (inv['customInvoiceNumber'] as String?)?.isNotEmpty == true
@@ -389,7 +449,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       child: ChoiceChip(
         label: Text(label),
         selected: _statusFilter == value,
-        onSelected: (_) => setState(() => _statusFilter = value),
+        onSelected: (_) {
+          if (_statusFilter == value) return;
+          setState(() => _statusFilter = value);
+          _load();
+        },
       ),
     );
   }

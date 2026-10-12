@@ -596,9 +596,9 @@ class _HelpScreenState extends State<HelpScreen> {
 
   Widget _supportTab() {
     final supportCards = [
-      (Icons.phone_outlined, 'Call Support', '+91 80801 97945', 'For urgent CRM access or lead routing issues.', Uri(scheme: 'tel', path: '+918080197945')),
+      (Icons.phone_outlined, 'Call Support', '+91 90670 97779', 'For urgent CRM access or lead routing issues.', Uri(scheme: 'tel', path: '+919067097779')),
       (Icons.email_outlined, 'Email Support', 'support@arthaleads.com', 'Share screenshots or export files for faster debugging.', Uri(scheme: 'mailto', path: 'support@arthaleads.com')),
-      (FontAwesomeIcons.whatsapp.data, 'WhatsApp Help', '+91 80801 97945', 'Quick help for day-to-day sales team questions.', Uri.parse('https://wa.me/918080197945')),
+      (FontAwesomeIcons.whatsapp.data, 'WhatsApp Help', '+91 90670 97779', 'Quick help for day-to-day sales team questions.', Uri.parse('https://wa.me/919067097779')),
     ];
     return RefreshIndicator(
       color: AppColors.primary,

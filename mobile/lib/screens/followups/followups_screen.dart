@@ -281,7 +281,7 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
       children: [
         PageHeader(
           title: 'Follow-ups',
-          subtitle: '$_total scheduled conversations',
+          subtitle: 'Calls and site visits you have planned',
           icon: Icons.event_repeat_rounded,
         ),
         Padding(
@@ -412,7 +412,7 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              '$_total follow-ups',
+              plural(_total, 'follow-up'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),

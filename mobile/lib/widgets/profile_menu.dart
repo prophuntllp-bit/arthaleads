@@ -10,6 +10,7 @@ import '../core/theme.dart';
 import '../core/theme_state.dart';
 import '../screens/attendance/attendance_capture_sheet.dart';
 import 'initials_avatar.dart';
+import '../core/constants.dart';
 
 /// The drawer's bottom profile button — tapping it expands a card upward
 /// with the user's details, clock in/out, live date & time, and quick
@@ -228,7 +229,7 @@ class _ProfileMenuState extends State<ProfileMenu> {
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
-                                auth.role.replaceAll('_', ' '),
+                                roleLabel(auth.role),
                                 style: const TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
@@ -520,7 +521,7 @@ class _ProfileMenuState extends State<ProfileMenu> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          auth.role.replaceAll('_', ' '),
+                          roleLabel(auth.role),
                           style: TextStyle(fontSize: 12, color: t.textSoft),
                           overflow: TextOverflow.ellipsis,
                         ),

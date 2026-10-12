@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/day_divider.dart';
 import '../../widgets/motion.dart';
 import '../leads/lead_detail_sheet.dart';
 import 'project_media_send_sheet.dart';
@@ -813,7 +814,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       final m = _messages[i];
                       final outbound = m['direction'] == 'outbound';
                       final isBot = m['sender'] == 'bot';
-                      return Align(
+                      final bubble = Align(
                         alignment: outbound
                             ? Alignment.centerRight
                             : Alignment.centerLeft,
@@ -949,6 +950,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
                             ],
                           ),
                         ),
+                      );
+                      if (!startsNewDay(_messages, i)) return bubble;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          DayDivider(date: DateTime.parse(m['timestamp'] as String).toLocal()),
+                          bubble,
+                        ],
                       );
                     },
                   ),

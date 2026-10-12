@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
+import '../../core/constants.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
@@ -486,7 +487,7 @@ class _TeamScreenState extends State<TeamScreen> {
           PageHeader(
             title: 'Team Management',
             subtitle: memberLimit >= 999999
-                ? '${_users.length} members'
+                ? plural(_users.length, 'member')
                 : '${_users.length}/$memberLimit members',
             icon: Icons.groups_rounded,
           ),
@@ -574,27 +575,27 @@ class _TeamScreenState extends State<TeamScreen> {
                           ),
                         ),
                         subtitle: Text(
-                          '${u['email'] ?? ''} · ${u['role'] ?? ''}',
+                          '${u['email'] ?? ''} · ${roleLabel(u['role'] as String?)}',
                         ),
-                        trailing: Row(
+                        // Only admins can switch people on/off or remove
+                        // them; everyone else just sees the status.
+                        trailing: !isAdmin
+                            ? _statusPill(active)
+                            : Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Switch(
                               value: active,
                               activeThumbColor: AppColors.success,
-                              onChanged: isAdmin
-                                  ? (_) => _toggleActive(u)
-                                  : null,
+                              onChanged: (_) => _toggleActive(u),
                             ),
                             IconButton(
-                              icon: Icon(
+                              icon: const Icon(
                                 Icons.delete_outline_rounded,
-                                color: isAdmin
-                                    ? AppColors.danger
-                                    : Theme.of(context).disabledColor,
+                                color: AppColors.danger,
                                 size: 20,
                               ),
-                              onPressed: isAdmin ? () => _delete(u) : null,
+                              onPressed: () => _delete(u),
                             ),
                           ],
                         ),
@@ -606,6 +607,21 @@ class _TeamScreenState extends State<TeamScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _statusPill(bool active) {
+    final color = active ? AppColors.success : Colors.grey;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        active ? 'Active' : 'Inactive',
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color),
       ),
     );
   }

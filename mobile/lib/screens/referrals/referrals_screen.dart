@@ -150,6 +150,8 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
         return 'Subscribed';
       case 'reward_pending':
         return 'Reward Pending';
+      case 'reward_due':
+        return 'Reward Processing';
       case 'rewarded':
         return 'Rewarded ✓';
       default:
@@ -163,6 +165,8 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
         return AppColors.primary;
       case 'reward_pending':
         return AppColors.warning;
+      case 'reward_due':
+        return const Color(0xFF3B82F6);
       case 'subscribed':
         return AppColors.success;
       default:

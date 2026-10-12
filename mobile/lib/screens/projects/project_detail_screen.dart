@@ -244,7 +244,10 @@ class _InfoTab extends StatelessWidget {
         _row(
           context,
           'Price Range',
-          '${fmtBudget((project['priceMin'] as num?))} – ${fmtBudget((project['priceMax'] as num?))}',
+          switch (fmtBudgetRange(project['priceMin'] as num?, project['priceMax'] as num?)) {
+            '' => '—',
+            final range => range,
+          },
         ),
         _row(
           context,
@@ -1021,7 +1024,7 @@ class _LeadsTabState extends State<_LeadsTab> {
             child: Row(
               children: [
                 Text(
-                  '$_total leads',
+                  plural(_total, 'lead'),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const Spacer(),

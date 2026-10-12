@@ -967,22 +967,34 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                   spacing: 6,
                   children: [
                     ChoiceChip(
-                      label: const Text(
+                      label: Text(
                         'Contacted',
-                        style: TextStyle(fontSize: 12),
+                        // The theme's selected label is white (for the solid
+                        // orange chips); on this pale fill it needs a dark tone.
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: _contact == 'Contacted' ? FontWeight.w600 : null,
+                          color: _contact == 'Contacted' ? const Color(0xFF15803D) : null,
+                        ),
                       ),
-                      selected:
-                          (lead['remark'] as String? ?? '') == 'Contacted',
+                      selected: _contact == 'Contacted',
+                      checkmarkColor: const Color(0xFF15803D),
                       selectedColor: AppColors.success.withValues(alpha: 0.2),
                       onSelected: (_) => _setContactStatus('Contacted'),
                     ),
                     ChoiceChip(
-                      label: const Text(
+                      label: Text(
                         'Not Contacted',
-                        style: TextStyle(fontSize: 12),
+                        // The theme's selected label is white (for the solid
+                        // orange chips); on this pale fill it needs a dark tone.
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: _contact == 'Not Contacted' ? FontWeight.w600 : null,
+                          color: _contact == 'Not Contacted' ? const Color(0xFFB91C1C) : null,
+                        ),
                       ),
-                      selected:
-                          (lead['remark'] as String? ?? '') == 'Not Contacted',
+                      selected: _contact == 'Not Contacted',
+                      checkmarkColor: const Color(0xFFB91C1C),
                       selectedColor: AppColors.danger.withValues(alpha: 0.2),
                       onSelected: (_) => _setContactStatus('Not Contacted'),
                     ),
@@ -1019,6 +1031,16 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                     icon: Icons.notes,
                   ),
                 ],
+                // The follow-up note, editable like the web's Follow-ups "Note"
+                // column (remarkNote; both lead types accept it).
+                _row(
+                  'Note',
+                  (lead['remarkNote'] as String? ?? '').isEmpty
+                      ? '—'
+                      : lead['remarkNote'] as String,
+                  onTap: () => _editText('remarkNote', 'Note'),
+                  icon: Icons.edit_note_rounded,
+                ),
 
                 // ── Read-only info (plain leads only — LeadDetail.jsx's Info tab) ──
                 if (!_isProject) ...[
@@ -1092,12 +1114,6 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                       'Follow-up Note',
                       lead['followUpNote'] as String,
                       icon: Icons.sticky_note_2_outlined,
-                    ),
-                  if ((lead['remarkNote'] as String? ?? '').isNotEmpty)
-                    _row(
-                      'Remark / Imported Info',
-                      lead['remarkNote'] as String,
-                      icon: Icons.description_outlined,
                     ),
                   if ((lead['formResponses'] as List?)?.isNotEmpty ??
                       false) ...[
@@ -1194,6 +1210,8 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     );
   }
 
+  String get _contact => lead['remark'] as String? ?? '';
+
   Widget _row(
     String label,
     String value, {
@@ -1205,7 +1223,10 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
       dense: true,
       leading: icon != null ? Icon(icon, size: 20) : null,
       title: Text(label, style: Theme.of(context).textTheme.bodySmall),
-      subtitle: Text(value, style: Theme.of(context).textTheme.bodyMedium),
+      subtitle: Text(
+        value.trim().isEmpty ? '—' : value,
+        style: Theme.of(context).textTheme.bodyMedium,
+      ),
       trailing: onTap != null ? const Icon(Icons.edit, size: 16) : null,
       onTap: onTap,
     );
@@ -1353,7 +1374,7 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                   children: [
                     Expanded(
                       child: Text(
-                        '${n['addedByName'] ?? 'Unknown'} · ${_fmtDate(n['createdAt'] as String?)}',
+                        '${orIfBlank(n['addedByName'], 'System')} · ${_fmtDate(n['createdAt'] as String?)}',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
@@ -1455,7 +1476,7 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
               ),
               const SizedBox(height: 4),
               Text(
-                '${item['performedByName'] ?? 'System'} · ${_fmtDate(item['createdAt'] as String?)}',
+                '${orIfBlank(item['performedByName'], 'System')} · ${_fmtDate(item['createdAt'] as String?)}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               if (isCall && (status != null || sentiment != null)) ...[

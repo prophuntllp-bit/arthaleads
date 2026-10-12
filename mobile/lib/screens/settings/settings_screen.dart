@@ -19,6 +19,7 @@ import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/update_gate.dart' show showUpdateDialog;
 import '../login_screen.dart' show ForgotPasswordScreen;
+import '../../core/constants.dart';
 
 /// Force-uppercases input as the user types — matches web's onChange
 /// transform for GST/PAN/CIN/IFSC (frontend/src/pages/Settings.jsx:351-353).
@@ -592,7 +593,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           auth.user?['email'] as String? ?? '',
           style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
-        Container(
+        // A small pill, not a full-width bar (the column stretches its children).
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
           margin: const EdgeInsets.only(top: 6),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
@@ -600,12 +604,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
-            auth.role,
+            roleLabel(auth.role),
             style: const TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
               color: AppColors.primary,
             ),
+          ),
           ),
         ),
         const SizedBox(height: 20),

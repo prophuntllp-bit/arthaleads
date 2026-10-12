@@ -11,7 +11,7 @@ import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/storage_card.dart';
 
-const String _whatsappNumber = '918080197945';
+const String _whatsappNumber = '919067097779';
 const String _upgradeMessage = "Hi, I'd like to upgrade my Arthaleads plan.";
 
 Future<void> _openWhatsApp() => launchUrl(

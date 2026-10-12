@@ -156,7 +156,7 @@ class DashStatusBreakdown extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          dashCardHeader(context, 'Pipeline', 'Leads by Status', pill: '$total leads', scope: scope,
+          dashCardHeader(context, 'Pipeline', 'Leads by Status', pill: plural(total, 'lead'), scope: scope,
               tip: 'Where the leads from these dates are in your pipeline right now. Tap a stage to see those leads.'),
           const SizedBox(height: 10),
           if (total == 0)

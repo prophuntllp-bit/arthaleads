@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show Response;
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
@@ -43,9 +44,13 @@ class _BookingsScreenState extends State<BookingsScreen> {
     'payment_received': 'Paid',
   };
 
-  List<Map<String, dynamic>> get _filtered => _filter == 'all'
-      ? _bookings
-      : _bookings.where((b) => b['status'] == _filter).toList();
+  // The server pages and filters (like the web): `_total` is how many match
+  // the current filter, `_summary` covers every booking in the org.
+  static const _pageSize = 50;
+  int _page = 1;
+  int _total = 0;
+  bool _loadingMore = false;
+  Map<String, dynamic> _summary = const {};
 
   @override
   void initState() {
@@ -53,16 +58,56 @@ class _BookingsScreenState extends State<BookingsScreen> {
     _load();
   }
 
+  Future<Response> _fetchPage(int page) => _api.dio.get(
+    '/bookings',
+    queryParameters: {
+      'limit': _pageSize,
+      'page': page,
+      if (_filter != 'all') 'status': _filter,
+    },
+  );
+
+  void _applyPage(Response res, {required bool append}) {
+    final rows = (res.data['data'] as List? ?? []).cast<Map<String, dynamic>>();
+    _bookings = append ? [..._bookings, ...rows] : rows;
+    _total = (res.data['total'] as num?)?.toInt() ?? _bookings.length;
+    _summary = (res.data['summary'] as Map?)?.cast<String, dynamic>() ?? const {};
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || _bookings.length >= _total) return;
+    setState(() => _loadingMore = true);
+    try {
+      final res = await _fetchPage(_page + 1);
+      if (!mounted) return;
+      setState(() {
+        _page++;
+        _applyPage(res, append: true);
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Failed to load more bookings')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
       final results = await Future.wait([
-        _api.dio.get('/bookings', queryParameters: {'limit': 50}),
+        _fetchPage(1),
         _api.dio.get('/developers'),
       ]);
       setState(() {
-        _bookings = (results[0].data['data'] as List? ?? [])
-            .cast<Map<String, dynamic>>();
+        _page = 1;
+        _applyPage(results[0], append: false);
         _developers = (results[1].data['data'] as List? ?? [])
             .cast<Map<String, dynamic>>();
       });
@@ -163,7 +208,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     if (ok != true) return;
     try {
       await _api.dio.delete('/bookings/${booking['_id']}');
-      setState(() => _bookings.remove(booking));
+      await _load();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -700,14 +745,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final totalBill = _bookings.fold<num>(
-      0,
-      (s, b) => s + ((b['totalBill'] as num?) ?? 0),
-    );
-    final countPending = _bookings.where((b) => b['status'] == 'new').length;
-    final countPaid = _bookings
-        .where((b) => b['status'] == 'payment_received')
-        .length;
+    final byStatus = (_summary['byStatus'] as Map?) ?? const {};
+    int countOf(String s) => ((byStatus[s] as Map?)?['count'] as num?)?.toInt() ?? 0;
+    final totalBill = (_summary['totalBill'] as num?) ?? 0;
+    final countPending = countOf('new');
+    final countPaid = countOf('payment_received');
 
     return Scaffold(
       // Bottom-left: the draggable Artha assistant bubble owns the
@@ -729,7 +771,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
  children: [
                       _statCard(
                         'Total Bookings',
-                        '${_bookings.length}',
+                        '${(_summary['count'] as num?)?.toInt() ?? 0}',
                         const Color(0xFF6366F1),
                       ),
                       _statCard(
@@ -770,24 +812,40 @@ class _BookingsScreenState extends State<BookingsScreen> {
                                 style: const TextStyle(fontSize: 11.5),
                               ),
                               selected: _filter == f[0],
-                              onSelected: (_) => setState(() => _filter = f[0]),
+                              onSelected: (_) {
+                                if (_filter == f[0]) return;
+                                setState(() => _filter = f[0]);
+                                _load();
+                              },
                             ),
                           ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 8),
-                  if (_filtered.isEmpty)
+                  if (_bookings.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 48),
                       child: Center(child: Text('No bookings yet')),
                     )
                   else
-                    for (final (i, b) in _filtered.indexed)
+                    for (final (i, b) in _bookings.indexed)
                       FadeSlideIn(
                         delay: Duration(milliseconds: 20 * (i % 12)),
                         child: _bookingCard(b),
                       ),
+                  if (_bookings.length < _total)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Center(
+                        child: _loadingMore
+                            ? const AppSpinner(size: 24)
+                            : SecondaryButton(
+                                onPressed: _loadMore,
+                                child: Text('Show more (${_total - _bookings.length} left)'),
+                              ),
+                      ),
+                    ),
                 ],
               ),
             ),

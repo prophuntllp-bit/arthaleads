@@ -405,6 +405,7 @@ class _ShellState extends State<Shell> {
       'Developers',
       Icons.apartment_rounded,
       () => const DevelopersScreen(),
+      adminOnly: true,
     ),
     _NavItem('Tasks', Icons.task_alt_rounded, () => const TasksScreen()),
     _NavItem('Calls', Icons.call_rounded, () => const CallsScreen()),
@@ -417,8 +418,14 @@ class _ShellState extends State<Shell> {
       'Bookings',
       Icons.receipt_long_rounded,
       () => const BookingsScreen(),
+      adminOnly: true,
     ),
-    _NavItem('Dump', Icons.delete_sweep_rounded, () => const DumpScreen()),
+    _NavItem(
+      'Dump',
+      Icons.delete_sweep_rounded,
+      () => const DumpScreen(),
+      adminOnly: true,
+    ),
     _NavItem(
       'Team',
       Icons.groups_rounded,

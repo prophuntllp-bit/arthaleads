@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
+import '../../widgets/day_divider.dart';
 import '../inbox/wa_theme.dart';
 
 /// Read-only WhatsApp conversation for a lead, the app's version of the web
@@ -245,7 +246,11 @@ class _LeadChatPanelState extends State<LeadChatPanel> {
               style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.6, color: wa.timeText),
             ),
           ),
-          for (final m in msgs) _bubble(m, wa),
+          for (final (i, m) in msgs.indexed) ...[
+            if (startsNewDay(msgs, i))
+              DayDivider(date: DateTime.parse(m['timestamp'] as String).toLocal()),
+            _bubble(m, wa),
+          ],
         ],
       ),
     );

@@ -157,6 +157,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     return 'Shift: $start - $end · ${buffer}m grace · $half half · $full full';
   }
 
+  /// The record's day ("2026-07-25") as "Sat, 25 Jul 2026".
+  String _fmtDay(Object? date) {
+    final d = DateTime.tryParse(date?.toString() ?? '');
+    return d == null ? (date?.toString() ?? '—') : DateFormat('EEE, d MMM yyyy').format(d);
+  }
+
   Future<void> _clockIn() => _startPunch('/attendance/clockin', true);
   Future<void> _clockOut() => _startPunch('/attendance/clockout', false);
 
@@ -190,6 +196,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         path,
         data: {
           if (proof.selfie != null) 'selfie': proof.selfie,
+          // No photo (camera unavailable): tell the server it was declared, as the web does.
+          if (proof.selfie == null && _requireSelfie) 'proofUnavailable': true,
           if (proof.latitude != null) 'lat': proof.latitude,
           if (proof.longitude != null) 'lng': proof.longitude,
           if (proof.accuracy != null) 'accuracy': proof.accuracy,
@@ -722,11 +730,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   icon: const Icon(Icons.add_circle_outline_rounded),
                   onPressed: _addAttendanceEntry,
                 ),
-                IconButton(
-                  tooltip: 'Shift settings',
-                  icon: const Icon(Icons.settings_outlined),
-                  onPressed: _editShiftSettings,
-                ),
+                // Only admins can save shift settings (PATCH is admin-only).
+                if (auth.isWaAdmin)
+                  IconButton(
+                    tooltip: 'Shift settings',
+                    icon: const Icon(Icons.settings_outlined),
+                    onPressed: _editShiftSettings,
+                  ),
               ],
             ),
           ),
@@ -1305,7 +1315,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     recordsOnly && r['userId'] is Map
                         ? (r['userId'] as Map)['name']?.toString() ??
                               'Team member'
-                        : r['date']?.toString() ?? '—',
+                        : _fmtDay(r['date']),
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   subtitle: Column(
@@ -1313,7 +1323,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     children: [
                       Text(
                         recordsOnly
-                            ? '${r['date'] ?? ''}  ·  ${_fmtTime(inT)} → ${_fmtTime(outT)}'
+                            ? '${_fmtDay(r['date'])}  ·  ${_fmtTime(inT)} → ${_fmtTime(outT)}'
                             : '${_fmtTime(inT)} → ${_fmtTime(outT)}',
                       ),
                       if ((r['note'] as String? ?? '').isNotEmpty)

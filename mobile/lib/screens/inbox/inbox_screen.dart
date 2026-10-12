@@ -60,6 +60,10 @@ class _InboxScreenState extends State<InboxScreen> {
   bool? _connected;
   int _page = 1;
   int _pages = 1;
+  bool _loadingMore = false;
+  // Bumped by every fresh load (filter, search, pull to refresh) so a page
+  // that arrives late from the previous list is not appended to the new one.
+  int _gen = 0;
   String _filter = 'all';
   final _scroll = ScrollController();
   final _searchCtrl = TextEditingController();
@@ -74,15 +78,15 @@ class _InboxScreenState extends State<InboxScreen> {
     _scroll.addListener(() {
       if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 400 &&
           !_loading &&
+          !_loadingMore &&
           _page < _pages) {
-        _page += 1;
-        _load();
+        _loadMore();
       }
     });
-    _poll = Timer.periodic(
-      const Duration(seconds: 4),
-      (_) => _load(reset: true, silent: true),
-    );
+    // Picks up new messages every few seconds. It only refreshes the newest
+    // chats: it used to reload page 1 from scratch, which threw away every
+    // older page the user had scrolled to, so the list never got past ~30.
+    _poll = Timer.periodic(const Duration(seconds: 4), (_) => _refreshTop());
     _searchCtrl.addListener(() => setState(() {}));
   }
 
@@ -112,7 +116,10 @@ class _InboxScreenState extends State<InboxScreen> {
   }
 
   Future<void> _load({bool reset = false, bool silent = false}) async {
-    if (reset) _page = 1;
+    if (reset) {
+      _page = 1;
+      _gen++;
+    }
     if (!silent) setState(() => _loading = true);
     try {
       final params = <String, dynamic>{'page': _page, 'limit': 30};
@@ -151,6 +158,60 @@ class _InboxScreenState extends State<InboxScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Map<String, dynamic> _params(int page) {
+    final params = <String, dynamic>{'page': page, 'limit': 30};
+    if (_filter != 'all') params['status'] = _filter;
+    final query = _searchCtrl.text.trim();
+    if (query.isNotEmpty) params['search'] = query;
+    return params;
+  }
+
+  /// Next page of older chats, appended (skipping any already shown, since
+  /// new messages can shift chats between pages).
+  Future<void> _loadMore() async {
+    _loadingMore = true;
+    final page = _page + 1;
+    final gen = _gen;
+    try {
+      final res = await _api.dio.get('/whatsapp/conversations', queryParameters: _params(page));
+      if (!mounted || gen != _gen) return;
+      final fresh = (res.data['conversations'] as List? ?? []).cast<Map<String, dynamic>>();
+      final total = res.data['total'] as int? ?? 0;
+      setState(() {
+        final have = {for (final c in _conversations) c['_id']};
+        _conversations.addAll(fresh.where((c) => !have.contains(c['_id'])));
+        _page = page;
+        _pages = (total / 30).ceil().clamp(1, 999999);
+      });
+    } catch (_) {
+      // Leave _page as it was so the next scroll tries this page again.
+    } finally {
+      _loadingMore = false;
+    }
+  }
+
+  /// The newest page again, merged on top: updated chats move up, older pages
+  /// the user has already loaded stay in the list.
+  Future<void> _refreshTop() async {
+    if (_loading || _loadingMore) return;
+    try {
+      final gen = _gen;
+      final res = await _api.dio.get('/whatsapp/conversations', queryParameters: _params(1));
+      if (!mounted || _loading || _loadingMore || gen != _gen) return;
+      final fresh = (res.data['conversations'] as List? ?? []).cast<Map<String, dynamic>>();
+      final total = res.data['total'] as int? ?? 0;
+      setState(() {
+        final ids = {for (final c in fresh) c['_id']};
+        final older = _conversations.where((c) => !ids.contains(c['_id'])).toList();
+        _conversations
+          ..clear()
+          ..addAll(fresh)
+          ..addAll(_page > 1 ? older : const []);
+        _pages = (total / 30).ceil().clamp(1, 999999);
+      });
+    } catch (_) {}
   }
 
   String _fmtTime(String? iso) {
@@ -357,7 +418,7 @@ class _InboxScreenState extends State<InboxScreen> {
                                   ),
                                 ),
                               );
-                              _load(reset: true, silent: true);
+                              _refreshTop();
                             },
                             child: Padding(
                               padding: const EdgeInsets.symmetric(

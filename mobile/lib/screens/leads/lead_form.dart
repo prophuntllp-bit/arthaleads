@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -72,12 +74,92 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
 
   bool _saving = false;
 
+  // Same as the web form: once a full number is typed, warn if another lead
+  // already has it. Only a warning, never blocks saving (a repeat inquiry is
+  // legitimate), and silently skipped if the check fails (it is a Growth feature).
+  Map<String, dynamic>? _duplicate;
+  Timer? _dupTimer;
+  String _dupCheckedFor = '';
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_isProjectLead) _phone.addListener(_onPhoneChanged);
+  }
+
+  void _onPhoneChanged() {
+    final phone = _phone.text.trim();
+    if (phone == _dupCheckedFor) return;
+    _dupCheckedFor = phone;
+    _dupTimer?.cancel();
+    if (phone.replaceAll(RegExp(r'\D'), '').length < 10) {
+      if (_duplicate != null) setState(() => _duplicate = null);
+      return;
+    }
+    _dupTimer = Timer(const Duration(milliseconds: 600), () async {
+      try {
+        final res = await ApiClient.instance.dio.get(
+          '/leads/check-duplicate',
+          queryParameters: {
+            'phone': phone,
+            if (widget.lead?['_id'] != null) 'excludeId': widget.lead!['_id'],
+          },
+        );
+        if (!mounted || _phone.text.trim() != phone) return;
+        setState(() => _duplicate = (res.data['duplicate'] as Map?)?.cast<String, dynamic>());
+      } catch (_) {}
+    });
+  }
+
+  Widget _duplicateWarning() {
+    final d = _duplicate!;
+    final added = DateTime.tryParse(d['createdAt']?.toString() ?? '');
+    final details = [
+      d['status'],
+      d['source'],
+    ].whereType<String>().where((v) => v.isNotEmpty).join(', ');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadii.input),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFC2410C)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                style: const TextStyle(fontSize: 12.5, color: Color(0xFFC2410C), height: 1.35),
+                children: [
+                  const TextSpan(text: 'A lead with this phone number already exists: '),
+                  TextSpan(
+                    text: d['name'] as String? ?? 'Unnamed',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  if (details.isNotEmpty) TextSpan(text: ' ($details)'),
+                  if (added != null)
+                    TextSpan(text: ', added ${DateFormat('d MMM yyyy').format(added.toLocal())}'),
+                  const TextSpan(text: '. You can still save this as a new lead.'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   bool get isEdit => widget.lead != null;
   bool get _isProjectLead =>
       widget.lead?['_type'] == 'project' && widget.lead?['projectId'] != null;
 
   @override
   void dispose() {
+    _dupTimer?.cancel();
     for (final c in [
       _name,
       _phone,
@@ -200,6 +282,7 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
               keyboard: TextInputType.phone,
               validator: (v) => v!.trim().isEmpty ? 'Required' : null,
             ),
+            if (_duplicate != null) _duplicateWarning(),
             _field(_email, 'Email', keyboard: TextInputType.emailAddress),
             _dropdown(
               'Source',

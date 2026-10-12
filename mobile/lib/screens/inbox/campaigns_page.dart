@@ -96,7 +96,8 @@ class _CampaignsPageState extends State<CampaignsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final canEdit = context.watch<AuthState>().isWaAdmin;
+    // Same as the web: admins and managers create and send campaigns.
+    final canEdit = context.watch<AuthState>().isAdmin;
     if (_loading && _rows == null) {
       return const Center(child: AppSpinner());
     }

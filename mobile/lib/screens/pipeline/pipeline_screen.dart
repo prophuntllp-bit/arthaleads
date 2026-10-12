@@ -37,6 +37,8 @@ class _PipelineScreenState extends State<PipelineScreen> {
   String _pipelineType = 'all'; // 'all' | 'leads' | 'projects'
   bool _loading = true;
   DateTime? _lastUpdated;
+  // How many leads match in total; the board loads at most 2000 (same as web).
+  int _total = 0;
   Timer? _timer;
 
   @override
@@ -82,6 +84,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
       setState(() {
         _leads = (res.data['leads'] as List? ?? [])
             .cast<Map<String, dynamic>>();
+        _total = (res.data['total'] as num?)?.toInt() ?? _leads.length;
         _lastUpdated = DateTime.now();
       });
     } catch (e) {
@@ -248,8 +251,15 @@ class _PipelineScreenState extends State<PipelineScreen> {
       children: [
         PageHeader(
           title: 'Sales Pipeline',
-          subtitle:
-              '${_leads.length} leads across ${statusOptions.length} stages',
+          // The "Live" time sits here so both filters get the full row and
+          // their labels are not cut off.
+          subtitle: [
+            _total > _leads.length
+                ? 'Showing ${_leads.length} of $_total leads'
+                : '${_leads.length} leads across ${statusOptions.length} stages',
+            if (_lastUpdated != null)
+              'Live ${DateFormat('hh:mm a').format(_lastUpdated!)}',
+          ].join(' · '),
           icon: Icons.view_kanban_rounded,
         ),
         Padding(
@@ -272,7 +282,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 8),
+              if (_agents.isNotEmpty) const SizedBox(width: 8),
               if (_agents.isNotEmpty)
                 Expanded(
                   child: AppSelect<String>(
@@ -292,14 +302,6 @@ class _PipelineScreenState extends State<PipelineScreen> {
                 )
               else
                 const Spacer(),
-              const SizedBox(width: 8),
-              if (_lastUpdated != null)
-                Text(
-                  'Live · ${DateFormat('hh:mm a').format(_lastUpdated!)}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppColors.success),
-                ),
             ],
           ),
         ),

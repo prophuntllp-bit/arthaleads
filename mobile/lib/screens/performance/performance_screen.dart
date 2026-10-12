@@ -6,6 +6,7 @@ import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
+import '../../core/constants.dart';
 import '../../core/auth_state.dart';
 import '../../core/deep_link.dart';
 import '../../core/plan.dart';
@@ -31,6 +32,8 @@ class PerformanceScreen extends StatefulWidget {
 class _PerformanceScreenState extends State<PerformanceScreen> {
   final _api = ApiClient.instance;
   List<Map<String, dynamic>> _members = [];
+  // The server's own team totals (a lead shared by two people counts once).
+  Map<String, dynamic>? _teamTotals;
   List<Map<String, dynamic>> _volumeByDay = [];
   List<Map<String, dynamic>> _durationByAgent = [];
   bool _loading = true;
@@ -123,7 +126,12 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
           (a['closedWon'] as num?) ?? 0,
         ),
       );
-      if (mounted) setState(() => _members = list);
+      if (mounted) {
+        setState(() {
+          _members = list;
+          _teamTotals = (res.data['totals'] as Map?)?.cast<String, dynamic>();
+        });
+      }
       _maybeApplyFocus();
     } catch (e) {
       if (mounted) {
@@ -174,10 +182,16 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
   /// pre-combined top-level totalAssigned/siteVisits/closedWon fields
   /// (pipeline + project already merged server-side), not the PDF's
   /// separate pipeline/project section sums.
-  int _screenTotal(String field) => _displayMembers.fold<int>(
-    0,
-    (sum, member) => sum + ((member[field] as num?)?.toInt() ?? 0),
-  );
+  /// For the whole team it uses the server's `totals`, like the web, because
+  /// adding up members double-counts leads two people share.
+  int _screenTotal(String field) {
+    final team = _teamTotals?[field] as num?;
+    if (_filterMemberId.isEmpty && team != null) return team.toInt();
+    return _displayMembers.fold<int>(
+      0,
+      (sum, member) => sum + ((member[field] as num?)?.toInt() ?? 0),
+    );
+  }
 
   Future<void> _downloadReport() async {
     if (_displayMembers.isEmpty || _exporting) return;
@@ -466,7 +480,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                         ],
                       ),
                       pw.Text(
-                        '${member['role'] ?? ''} · ${member['isActive'] == false ? 'Inactive' : 'Active'}',
+                        '${roleLabel(member['role'] as String?)} · ${member['isActive'] == false ? 'Inactive' : 'Active'}',
                         style: pw.TextStyle(fontSize: 7, color: muted),
                       ),
                     ],
@@ -1098,7 +1112,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        m['role'] as String? ?? '',
+                        roleLabel(m['role'] as String?),
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
@@ -1148,7 +1162,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                         ),
                         const Spacer(),
                         Text(
-                          '${pipeline['totalAssigned'] ?? 0} leads',
+                          plural(pipeline['totalAssigned'] as num?, 'lead'),
                           style: const TextStyle(
                             fontSize: 11,
                             color: Colors.grey,
@@ -1227,7 +1241,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                         ),
                         const Spacer(),
                         Text(
-                          '${project['totalAssigned'] ?? 0} leads',
+                          plural(project['totalAssigned'] as num?, 'lead'),
                           style: const TextStyle(
                             fontSize: 11,
                             color: Colors.grey,

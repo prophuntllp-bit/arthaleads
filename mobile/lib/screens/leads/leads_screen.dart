@@ -811,7 +811,7 @@ class LeadsScreenState extends State<LeadsScreen> {
                             ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       Text(
-                        '$_total active leads',
+                        plural(_total, 'active lead'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall,
@@ -926,7 +926,7 @@ class LeadsScreenState extends State<LeadsScreen> {
             child: Row(
               children: [
                 Text(
-                  '$_total leads',
+                  plural(_total, 'lead'),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const Spacer(),

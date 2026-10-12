@@ -253,7 +253,12 @@ class _TasksScreenState extends State<TasksScreen> {
     String? assignedTo = task?['assignedTo'] is String
         ? task!['assignedTo'] as String
         : (task?['assignedTo'] as Map?)?['_id'] as String?;
-    assignedTo ??= _agents.isNotEmpty ? _agents.first['_id'] as String : null;
+    // A new task starts assigned to you if you are on the list; otherwise
+    // nobody is picked, so it cannot silently go to the first name.
+    if (assignedTo == null) {
+      final me = context.read<AuthState>().user?['_id'] as String?;
+      if (_agents.any((a) => a['_id'] == me)) assignedTo = me;
+    }
     String? projectId = task?['project'] is String
         ? task!['project'] as String
         : (task?['project'] as Map?)?['_id'] as String?;
@@ -310,6 +315,7 @@ class _TasksScreenState extends State<TasksScreen> {
                 if (_agents.isNotEmpty)
                   AppSelect<String?>(
                     label: 'Assign to',
+                    hint: 'Choose a team member',
                     value: assignedTo,
                     options: {
                       for (final a in _agents)

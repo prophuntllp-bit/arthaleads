@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/api_client.dart';
+import '../../core/constants.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/chips.dart';
@@ -479,7 +480,7 @@ class _DumpScreenState extends State<DumpScreen> {
           padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
           child: Row(
             children: [
-              Text('${filtered.length} dump leads', style: Theme.of(context).textTheme.bodySmall),
+              Text(plural(filtered.length, 'dump lead'), style: Theme.of(context).textTheme.bodySmall),
               const Spacer(),
               if (_selected.isNotEmpty && canDelete)
                 TextButton.icon(

@@ -170,13 +170,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                             .join(', ');
                         final priceMin = p['priceMin'] as num?;
                         final priceMax = p['priceMax'] as num?;
-                        final priceLabel =
-                            (priceMin == null && priceMax == null)
-                            ? ''
-                            : [
-                                if (priceMin != null) fmtBudget(priceMin),
-                                if (priceMax != null) fmtBudget(priceMax),
-                              ].join(' – ');
+                        final priceLabel = fmtBudgetRange(priceMin, priceMax);
                         final unitTypes =
                             (((p['unitTypes'] as List?)?.isNotEmpty ?? false)
                                     ? p['unitTypes'] as List

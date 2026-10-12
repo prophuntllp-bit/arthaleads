@@ -405,6 +405,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         '/attendance/${clockedIn ? 'clockout' : 'clockin'}',
         data: {
           if (proof.selfie != null) 'selfie': proof.selfie,
+          // No photo (camera unavailable): tell the server it was declared, as the web does.
+          if (proof.selfie == null && _requireSelfie) 'proofUnavailable': true,
           if (proof.latitude != null) 'lat': proof.latitude,
           if (proof.longitude != null) 'lng': proof.longitude,
           if (proof.accuracy != null) 'accuracy': proof.accuracy,
@@ -852,7 +854,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     subtitle: Text(
-                      '${lead['assignedToName'] ?? 'Unassigned'} · ${_followUpTime(lead['followUpDate'])}',
+                      '${orIfBlank(lead['assignedToName'], 'Unassigned')} · ${_followUpTime(lead['followUpDate'])}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -910,7 +912,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   TextButton(
                     onPressed: () => widget.onNavigate?.call('Follow-ups'),
                     child: Text(
-                      'View all ${overdueLeads.length + todayLeads.length} follow-ups',
+                      'View all ${plural(overdueLeads.length + todayLeads.length, 'follow-up')}',
                     ),
                   ),
               ],
@@ -968,7 +970,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ],
                             ),
                             Text(
-                              '${_hot.length} ranked leads',
+                              plural(_hot.length, 'ranked lead'),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: AppTheme.of(context).textSoft,
@@ -1198,7 +1200,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               subtitle: Text(
-                '${item['followUpDate'] != null ? 'Follow-up' : 'Site visit'} · ${item['assignedToName'] ?? 'Unassigned'}',
+                '${item['followUpDate'] != null ? 'Follow-up' : 'Site visit'} · ${orIfBlank(item['assignedToName'], 'Unassigned')}',
               ),
               trailing: Text(
                 _shortDate(item['followUpDate'] ?? item['siteVisitDate']),
@@ -1463,7 +1465,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ),
                       ),
                       Text(
-                        '$total leads',
+                        plural(total, 'lead'),
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -2165,7 +2167,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             TextSpan(
                               children: [
                                 TextSpan(
-                                  text: '${item['performedByName'] ?? 'System'}',
+                                  text: orIfBlank(item['performedByName'], 'System'),
                                   style: const TextStyle(fontWeight: FontWeight.w700),
                                 ),
                                 TextSpan(

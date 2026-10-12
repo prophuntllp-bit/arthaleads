@@ -113,6 +113,11 @@ Color priorityColor(String? priority) {
 String? str(dynamic v) => v is String ? v : null;
 
 /// Compact budget: 8000000 → "80L", 10000000 → "1Cr" (mirrors fmtBudget in Leads.jsx)
+/// "89L – 1.2Cr", or just the end that is set, like the web's project
+/// cards. '' when neither price is set (fmtBudget treats 0 as unset).
+String fmtBudgetRange(num? min, num? max) =>
+    [fmtBudget(min), fmtBudget(max)].where((v) => v.isNotEmpty).join(' – ');
+
 String fmtBudget(num? val) {
   if (val == null || val == 0) return '';
   if (val >= 10000000) {
@@ -143,3 +148,27 @@ Map<String, dynamic> callTargetPayload(Map<String, dynamic> lead) {
       ? {'projectLeadId': lead['_id']}
       : {'leadId': lead['_id']};
 }
+
+/// [v] as text, or [fallback] when it is null or blank. The server often sends
+/// "" for automatic entries (website forms, the bot), which `??` lets through
+/// and which then shows as a bare "· 10 Oct". Same as the web's `||`.
+String orIfBlank(Object? v, String fallback) {
+  final s = v?.toString().trim() ?? '';
+  return s.isEmpty ? fallback : s;
+}
+
+/// "1 lead", "2 leads": a count with the right word. [many] defaults to
+/// [one] + "s".
+String plural(num? n, String one, [String? many]) {
+  final c = n ?? 0;
+  return '$c ${c == 1 ? one : (many ?? '${one}s')}';
+}
+
+/// A role as people read it: "Admin", "Manager", "Sales agent", "Super admin".
+String roleLabel(String? role) => switch (role) {
+  'super_admin' => 'Super admin',
+  'admin' => 'Admin',
+  'manager' => 'Manager',
+  'agent' || null || '' => 'Sales agent',
+  _ => role[0].toUpperCase() + role.substring(1).replaceAll('_', ' '),
+};

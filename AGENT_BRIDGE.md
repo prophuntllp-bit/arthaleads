@@ -58,10 +58,19 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 
-- [Claude Code] 2026-10-10 IST: mobile app fixes for 1.0.13 (attendance no-camera clock-in, role gating for agents/managers, Bookings/Invoices paging + server totals, project price dash, follow-up note edit, duplicate lead warning, Performance totals, Referrals status, Pipeline filter labels). Files: mobile/lib/** only.
+- [Claude Code] 2026-10-12 IST: long WhatsApp chats: load earlier messages (backend `GET /whatsapp/conversations/:id/messages` gets a `before` cursor + `hasMore`, web Inbox thread, mobile conversation screen). Files: backend/routes/whatsappRoutes.js, frontend/src/pages/Inbox.jsx, mobile/lib/screens/inbox/conversation_screen.dart.
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
+
+### Claude Code, 2026-10-12 IST, mobile fixes for 1.0.13 (not released yet)
+
+- Clock-in/out without a photo sends `proofUnavailable` (was rejected with "A selfie is required"). Agents no longer see Developers, Bookings, Dump in the drawer (403 since 096e1e7). Managers can create/edit WhatsApp templates and campaigns (template delete stays admin); Shift settings gear admin-only.
+- Bookings and Invoices page on the server (50 per page, "Show more"), status filter is server-side, tiles use the server `summary`. Performance team tiles use the server `totals`. Pipeline shows "Showing 2000 of N leads"; filters get the full row.
+- Inbox list: the 4 s poll used to reload page 1 from scratch and wipe older pages, so it never scrolled past ~30 chats; it now merges the newest page on top (`_refreshTop`), with a generation guard for late pages.
+- Chat day dividers (`widgets/day_divider.dart`) in the Inbox thread and the lead Chat tab. Editable "Note" (remarkNote) in lead detail. Duplicate-phone warning in Add Lead (`/leads/check-duplicate`). New task defaults to the current user instead of the first name.
+- Support number +91 90670 97779 on Help and Plans (was the old 80801 number). Readable role labels (`roleLabel`), Contacted chip contrast, "—" for empty rows, "System" for blank authors (`orIfBlank`), "1 lead" plurals (`plural`), project price without stray dash (`fmtBudgetRange`), attendance dates "Sat, 25 Jul 2026", Team shows Active/Inactive pills to non-admins, Referrals "Reward Processing".
+- Verified on the realme RMX2156 (manager account, light and dark) as an in-place install over 1.0.12; flutter analyze clean, 30 tests pass. Not seen on screen: agent-role drawer, no-camera clock-in.
 
 ### Claude Code, 2026-10-12 IST, SECURITY: agent-role data leaks closed, pipeline columns
 

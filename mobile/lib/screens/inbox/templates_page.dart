@@ -101,7 +101,8 @@ class _TemplatesPageState extends State<TemplatesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final canEdit = context.watch<AuthState>().isWaAdmin;
+    // Same as the web: admins and managers create and edit; only admins delete.
+    final canEdit = context.watch<AuthState>().isAdmin;
 
     return DefaultTabController(
       length: 2,
@@ -253,7 +254,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
                   template: t,
                   canEdit: canEdit,
                   onTap: t['id'] != null ? () => _openBuilder(editId: t['id'] as String) : null,
-                  onDelete: () => _delete(t),
+                  onDelete: context.read<AuthState>().isWaAdmin ? () => _delete(t) : null,
                 )),
         ],
       ),
@@ -308,7 +309,7 @@ class _YourTemplateCard extends StatelessWidget {
   final Map<String, dynamic> template;
   final bool canEdit;
   final VoidCallback? onTap;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
   const _YourTemplateCard({required this.template, required this.canEdit, required this.onTap, required this.onDelete});
 
   @override
@@ -367,7 +368,7 @@ class _YourTemplateCard extends StatelessWidget {
                   Expanded(
                     child: Text('ID: ${template['id'] ?? '—'}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
                   ),
-                  if (canEdit)
+                  if (canEdit && onDelete != null)
                     IconButton(
                       icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.danger),
                       onPressed: onDelete,
