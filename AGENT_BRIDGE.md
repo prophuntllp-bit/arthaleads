@@ -62,6 +62,11 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-12 IST, smaller "by Vistrow" credit; plugin page How It Works
+
+- `PublicNav.jsx`: the Vistrow logo next to the Arthaleads lockup was almost the same size (32 vs 36 px) and read as a partnership. Now a quiet maker's credit: 15/17 px, no divider, 60% opacity and greyscale until hover. `PublicFooter.jsx`: footer credit 32 -> 20 px.
+- `WordPressPlugin.jsx`: removed the How It Works "connector line" (it ran across the middle card, visible through the dark-theme cards); first card now says install from WordPress.org or upload the ZIP.
+
 ### Claude Code, 2026-10-12 IST, released Arthaleads Mobile 1.0.13 (build 39)
 
 - `mobile/pubspec.yaml` 1.0.13+2039; universal APK (arm64-v8a, armeabi-v7a, x86_64), versionCode 2039, signed with the Arthaleads key SHA-256 2d9ac02f..., 82,729,307 bytes. GitHub release `mobile-v1.0.13-39` (download link 200, full size).

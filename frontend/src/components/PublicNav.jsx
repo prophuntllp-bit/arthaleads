@@ -235,7 +235,7 @@ function NavInner({ onScrollTo }) {
         <div className="flex items-center justify-between h-16 lg:h-20">
 
           {/* Logo */}
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
               {/* The full lockup, in the variant that suits the theme. The
                   wordmark is near-black in one and white in the other, so a
@@ -251,14 +251,16 @@ function NavInner({ onScrollTo }) {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Arthaleads is a product of Vistrow Technologies"
-              className="flex items-center gap-1.5 sm:gap-2 pl-2 sm:pl-3 transition-opacity hover:opacity-80"
-              style={{ borderLeft: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : "#d1d5db"}` }}
+              // A quiet maker's credit, not a second brand: about half the
+              // height of the Arthaleads lockup, no divider, greyed until hovered.
+              // Side by side at full size the two read as a partnership.
+              className="group flex items-center gap-1 self-end mb-1.5 opacity-60 hover:opacity-100 transition-opacity"
             >
-              <span className="text-[11px] font-medium" style={{ color: textMuted }}>by</span>
+              <span className="text-[10px] font-medium" style={{ color: textMuted }}>by</span>
               <img
                 src={isDark ? "/vistrow-technologies-dark.png" : "/vistrow-technologies.png"}
                 alt="Vistrow Technologies"
-                className="h-6 sm:h-8 w-auto"
+                className="h-[15px] sm:h-[17px] w-auto grayscale group-hover:grayscale-0 transition-[filter]"
                 width="103" height="32"
               />
             </a>

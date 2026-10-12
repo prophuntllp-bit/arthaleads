@@ -130,7 +130,7 @@ export default function PublicFooter() {
             <img
               src={isDark ? "/vistrow-technologies-dark.png" : "/vistrow-technologies.png"}
               alt="Vistrow Technologies"
-              className="h-8 w-auto"
+              className="h-5 w-auto"
               width="103" height="32"
             />
           </a>

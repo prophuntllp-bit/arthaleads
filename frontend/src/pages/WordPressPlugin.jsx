@@ -408,10 +408,8 @@ function WordPressPluginInner() {
             <p className="text-base" style={{ color: soft }}>Three steps. Five minutes. Done.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 relative">
-            {/* Connector line */}
-            <div className="hidden sm:block absolute top-10 left-1/3 right-1/3 h-px" style={{ background: "rgba(255,107,0,0.25)" }} />
             {[
-              { n: "01", icon: Download, title: "Install Plugin", desc: "Download the ZIP and upload it to your WordPress site in 60 seconds." },
+              { n: "01", icon: Download, title: "Install Plugin", desc: "Install it from WordPress.org (search “Arthaleads”) or upload the ZIP. Takes about a minute." },
               { n: "02", icon: PlugZap,  title: "Paste Your Token", desc: "Copy your Arthaleads account token and paste it in the plugin settings." },
               { n: "03", icon: Zap,      title: "Leads Flow In",   desc: "Every form submission arrives in your CRM instantly, assigned to the right agent." },
             ].map(({ n, icon: Icon, title, desc }) => (
