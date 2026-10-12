@@ -67,7 +67,7 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 - Owner report: contact "L" (+918010257968) chatted with the bot from the "1 BHK PRO Homes from ₹45 Lakhs*" ad, finished the flow (Talk to Advisor) but never appeared in Leads. Cause: `Lead.name` minlength 2; WhatsApp profile names like "L", "K", "." failed validation in `autoCaptureWhatsAppLead`, the error was only logged, and every later message retried and failed the same way. Read-only check in prod: 5 such ad conversations since 26 Sep (".", "K", ".", ".", "L"), none has a lead.
 - `routes/whatsappRoutes.js`: `whatsAppLeadName()` keeps the profile name when it has 2+ letters/digits, otherwise "L (+91...)" or just "+91..." (dot/emoji/empty). 7-case memory-DB test.
-- The 5 missed conversations still have no lead; creating them is a production write and needs the owner's yes (pending).
+- Owner approved recovery (12 Oct): the 5 missed conversations now have leads, created by a one-off script WITHOUT emitLeadCreated (no Vistrow auto-call) and without push notifications, dated to when the buyer wrote, linked to their chat, with a "Recovered on 12 Oct 2026" activity. "K" matched the Khopoli ad rule (Sheetal Powar + SP Khopoli Plots project); the four 1 BHK PRO Homes leads are unassigned (no rule for those ads, Prophunt autoAssign off). 0 WhatsApp conversations without a lead remain.
 - Also renamed `BlogPost.authorName` -> `byline` (Sanity byline, not a user mirror): the account-deletion coverage test treats any `<ref>Name` field as a name that must be cleared with its ref and was failing since d6453f4. Backend suite green again (vistrowPicker's Windows exit assertion is pre-existing).
 
 ### Claude Code, 2026-10-12 IST, mobile: agent-role refusals from the endpoint audit (unreleased)
