@@ -62,6 +62,12 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-12 IST, released Arthaleads Mobile 1.0.13 (build 39)
+
+- `mobile/pubspec.yaml` 1.0.13+2039; universal APK (arm64-v8a, armeabi-v7a, x86_64), versionCode 2039, signed with the Arthaleads key SHA-256 2d9ac02f..., 82,729,307 bytes. GitHub release `mobile-v1.0.13-39` (download link 200, full size).
+- `backend/constants/appRelease.js`: fleet `build` 39 / "1.0.13" (dismissible prompt, minBuild stays 19) and the download block, same URL and notes.
+- Contents: everything in the three mobile entries below (6e57fcf, 6f53caf, 452c3b8). In-place install over 2038 on the owner's phone kept the login.
+
 ### Claude Code, 2026-10-12 IST, website plugin download was 1.0.2
 
 - `frontend/public/arthaleads-integration.zip` (the Download button on /wordpress-plugin) was still 1.0.2; source and WordPress.org (slug `arthaleads`) are 1.0.9. Rebuilt from committed source with `git archive` (LF endings, folder `arthaleads-integration/`, same file set as make_zip.py); contents identical to the WordPress.org 1.0.9 release. Also refreshed `wordpress-plugin/arthaleads-integration.zip` (was 1.0.8).

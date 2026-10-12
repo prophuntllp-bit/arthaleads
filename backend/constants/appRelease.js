@@ -87,9 +87,17 @@ module.exports = {
     // chat is found through fromLeadId or the phone number, see
     // routes/projectRoutes.js). Not marked mandatory (minBuild unchanged).
     // Same signing key, versionCode 2038 over 2037.
-    build: 38,
+    //
+    // 12 Oct 2026: 39 fixes the Inbox list stopping at about 30 chats (its
+    // 4 s refresh threw away older pages), adds "Load earlier messages" in long
+    // chats (server cursor in routes/whatsappRoutes.js), loads the Pipeline per
+    // column, and brings role gating, Bookings/Invoices paging, the new support
+    // number and form polish. Not marked mandatory (minBuild unchanged).
+    // Verified on a real phone as an in-place install, versionCode 2039 over
+    // 2038, same signing key, login kept.
+    build: 39,
     // Human-readable, shown in the update prompt.
-    version: "1.0.12",
+    version: "1.0.13",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
     //
@@ -108,9 +116,9 @@ module.exports = {
     // we cannot see who is on a 32-bit device; the download block's own
     // comment already documents why an ABI split is the wrong call for an
     // audience we don't control. Bigger file, installs everywhere.
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.12-38/arthaleads-1.0.12-38.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.13-39/arthaleads-1.0.13-39.apk",
     // Optional short "what's new" line, shown in that prompt.
-    notes: "The WhatsApp chat now shows on leads inside a project, including ones a routing rule filed in. Includes copy name and number, Dump Leads in every project, WhatsApp ad and Facebook form filters, storage meter and plan locks, editable routing rules, a cleaner Dashboard, and layouts that fit every phone size.",
+    notes: "The Inbox now scrolls back through every chat and long chats load earlier messages. Every Pipeline stage shows its own leads and true count. Also: chat date dividers, editable lead note, duplicate number warning, correct Bookings and Invoices totals, clock in without a camera, and a new support number.",
 
     // ── The public download page (new installs) ──────────────────────────────
     // Ahead of the block above by design. Anyone arriving at /download-app has
@@ -123,26 +131,27 @@ module.exports = {
     // 5 Oct 2026: same again for 36, in step with the fleet block above.
     // 8 Oct 2026: same again for 37, in step with the fleet block above.
     // 8 Oct 2026: same again for 38.
+    // 12 Oct 2026: same again for 39.
     download: {
-      version: "1.0.12",
+      version: "1.0.13",
       // The plain build number, not Android's versionCode — the APK is stamped
       // 2035 and the app reports it back as 35 (% 1000). mobile/pubspec.yaml
       // explains why the two differ; the short version is that every install
       // in the field is on versionCode 2024 and cannot be given a lower one.
-      build: 38,
+      build: 39,
       // Universal APK, not the arm64 split: this link is public, we cannot see
       // whose phone is on the other end, and a 32-bit device meeting an arm64
       // APK fails with a bare "App not installed" that the user cannot fix.
       // Bigger file, but it installs everywhere the page claims it will.
-      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.12-38/arthaleads-1.0.12-38.apk",
+      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.13-39/arthaleads-1.0.13-39.apk",
       // Bytes, so the page can format it. 0 hides the figure rather than
       // showing a wrong one.
-      sizeBytes: 82630891,
+      sizeBytes: 82729307,
       // Minimum Android version, for the requirements line on that page. This
       // is the human-readable form of minSdk in mobile/android/app/build.gradle.kts
       // — keep the two in step.
       minAndroid: "7.0",
-      notes: "The WhatsApp chat now shows on leads inside a project, including ones a routing rule filed in. Includes copy name and number, Dump Leads in every project, WhatsApp ad and Facebook form filters, storage meter and plan locks, editable routing rules, a cleaner Dashboard, and layouts that fit every phone size.",
+      notes: "The Inbox now scrolls back through every chat and long chats load earlier messages. Every Pipeline stage shows its own leads and true count. Also: chat date dividers, editable lead note, duplicate number warning, correct Bookings and Invoices totals, clock in without a camera, and a new support number.",
     },
   },
 };
