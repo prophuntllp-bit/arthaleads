@@ -42,10 +42,23 @@ const FORM_PLUGINS = [
   },
 ];
 
+// Keep in step with wordpress-plugin/arthaleads-integration.php and the ZIP in
+// public/ (same release as WordPress.org, see AGENT_BRIDGE.md).
+const PLUGIN_VERSION = "1.0.9";
+const WP_ORG_URL = "https://wordpress.org/plugins/arthaleads/";
+
+// The WordPress "W" mark, drawn inline (no external image).
+function WordPressMark({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" fill="#21759b">
+      <path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10 10-4.49 10-10S17.51 2 12 2zM3.01 12c0-1.3.28-2.54.78-3.66l4.29 11.75A9.002 9.002 0 0 1 3.01 12zM12 20.99c-.88 0-1.73-.13-2.54-.37l2.7-7.84 2.76 7.57c.02.04.04.09.06.13-.93.33-1.93.51-2.98.51zm1.24-13.2c.54-.03 1.03-.09 1.03-.09.48-.06.43-.77-.06-.74 0 0-1.46.11-2.4.11-.88 0-2.37-.11-2.37-.11-.49-.03-.54.71-.06.74 0 0 .46.06.94.09l1.4 3.83-1.96 5.89-3.27-9.72c.54-.03 1.03-.09 1.03-.09.48-.06.43-.77-.06-.74 0 0-1.46.11-2.4.11-.17 0-.37 0-.58-.01A8.99 8.99 0 0 1 12 3.01c2.34 0 4.47.9 6.07 2.36-.04 0-.08-.01-.12-.01-.88 0-1.51.77-1.51 1.6 0 .74.43 1.37.88 2.11.34.6.74 1.37.74 2.48 0 .77-.3 1.66-.68 2.91l-.9 3-3.24-9.67zm3.29 12.03 2.74-7.93c.51-1.28.68-2.3.68-3.21 0-.33-.02-.64-.06-.93A8.99 8.99 0 0 1 20.99 12c0 3.31-1.8 6.21-4.46 7.82z"/>
+    </svg>
+  );
+}
+
 const INSTALL_STEPS = [
-  { title: "Download the Plugin", desc: "Click the Download button above to get the arthaleads-integration.zip file." },
-  { title: "Upload to WordPress", desc: "In your WordPress admin, go to Plugins → Add New → Upload Plugin." },
-  { title: "Install & Activate", desc: "Upload the ZIP file, click Install Now, then Activate Plugin." },
+  { title: "Find It in WordPress", desc: "In your WordPress admin, go to Plugins → Add New Plugin and search for “Arthaleads”. Installing from WordPress.org means you get update notices automatically." },
+  { title: "Install & Activate", desc: "Click Install Now, then Activate. Can't reach WordPress.org from your site? Download the ZIP above and use Upload Plugin instead." },
   { title: "Open Arthaleads Settings", desc: "In the WordPress sidebar, click Arthaleads to open the settings panel." },
   { title: "Copy Your Token", desc: "Log in to arthaleads.com/automation and copy your account token." },
   { title: "Paste Token & Name", desc: "Paste the token in the Account Token field and enter your website name." },
@@ -333,8 +346,15 @@ function WordPressPluginInner() {
             </a>
           </div>
 
-          <p className="text-xs mt-5" style={{ color: soft }}>
-            v1.0.2 &nbsp;·&nbsp; Free forever &nbsp;·&nbsp; 8 form plugins &nbsp;·&nbsp; No credit card
+          <a href={WP_ORG_URL} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 mt-6 text-sm font-semibold hover:underline underline-offset-4"
+            style={{ color: text }}>
+            <WordPressMark />
+            Also on WordPress.org: search “Arthaleads” in Plugins → Add New
+          </a>
+
+          <p className="text-xs mt-3" style={{ color: soft }}>
+            v{PLUGIN_VERSION} &nbsp;·&nbsp; Free forever &nbsp;·&nbsp; 8 form plugins &nbsp;·&nbsp; No credit card
           </p>
         </div>
       </section>
@@ -453,6 +473,11 @@ function WordPressPluginInner() {
               style={{ background: "linear-gradient(135deg,#e05d00,#ff6b00)" }}>
               <Download className="w-5 h-5" />
               Download Plugin ZIP
+            </a>
+            <a href={WP_ORG_URL} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl border transition-all hover:-translate-y-0.5 ml-0 sm:ml-3 mt-3 sm:mt-0"
+              style={{ borderColor: cardBorder, color: text }}>
+              <WordPressMark /> View on WordPress.org
             </a>
           </div>
         </div>

@@ -65,7 +65,8 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 ### Claude Code, 2026-10-12 IST, website plugin download was 1.0.2
 
 - `frontend/public/arthaleads-integration.zip` (the Download button on /wordpress-plugin) was still 1.0.2; source and WordPress.org (slug `arthaleads`) are 1.0.9. Rebuilt from committed source with `git archive` (LF endings, folder `arthaleads-integration/`, same file set as make_zip.py); contents identical to the WordPress.org 1.0.9 release. Also refreshed `wordpress-plugin/arthaleads-integration.zip` (was 1.0.8).
-- Next release: bump the version, publish to WordPress.org, AND copy the new zip to frontend/public, or the site keeps serving the old one.
+- Next release: bump the version, publish to WordPress.org, copy the new zip to frontend/public, AND update `PLUGIN_VERSION` in `frontend/src/pages/WordPressPlugin.jsx` (shown under the hero), or the site falls behind again.
+- /wordpress-plugin now links to https://wordpress.org/plugins/arthaleads/ (hero line, "View on WordPress.org" beside the ZIP button) and the install steps lead with Plugins → Add New → search "Arthaleads" (auto-updates); the hero version line said v1.0.2, now from `PLUGIN_VERSION`.
 
 ### Claude Code, 2026-10-12 IST, mobile form polish (still part of unreleased 1.0.13)
 
