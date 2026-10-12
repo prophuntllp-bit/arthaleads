@@ -52,7 +52,7 @@ function useSEO(post) {
     if (!canon) { canon = document.createElement("link"); canon.setAttribute("rel", "canonical"); document.head.appendChild(canon); }
     canon.setAttribute("href", post.canonicalUrl || url);
 
-    const author = post.authorName || post.author?.name;
+    const author = post.byline || post.author?.name;
     const allKeywords = [...keywords, ...(post.tags || [])];
     document.getElementById("blog-jsonld")?.remove();
     const script = document.createElement("script");

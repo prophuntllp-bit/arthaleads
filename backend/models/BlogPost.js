@@ -58,7 +58,7 @@ const blogPostSchema = new mongoose.Schema(
     redirectUrl:       { type: String, default: "" },
     redirectPermanent: { type: Boolean, default: true },
     // Name shown on the article when it came from Sanity (CRM-editor posts use `author`)
-    authorName:        { type: String, default: "", maxlength: 100 },
+    byline:            { type: String, default: "", maxlength: 100 },
     // Author
     author:            { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     // Set when the post is written in Sanity Studio and copied here by

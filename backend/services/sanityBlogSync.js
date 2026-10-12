@@ -121,7 +121,7 @@ const oneOf = (v, list, fallback) => (list.includes(v) ? v : fallback);
 
 /** Social and advanced SEO fields from the Studio's SEO, Social and Advanced SEO tabs. */
 function applySeo(post, d) {
-  post.authorName = str(d.author, 100);
+  post.byline = str(d.author, 100);
   post.secondaryKeywords = (d.secondaryKeywords || []).map((k) => str(k, 100)).filter(Boolean).slice(0, 8);
   post.breadcrumbTitle = str(d.breadcrumbTitle, 60);
   post.canonicalUrl = httpsUrl(d.canonicalUrl);

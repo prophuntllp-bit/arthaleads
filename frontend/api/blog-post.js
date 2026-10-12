@@ -41,7 +41,7 @@ function setTag(html, pattern, tag) {
 
 function articleLd(post, { url, desc, image }) {
   const keywords = [post.focusKeyword, ...(post.secondaryKeywords || []), ...(post.tags || [])].filter(Boolean);
-  const author = post.authorName || post.author?.name;
+  const author = post.byline || post.author?.name;
   return {
     "@context": "https://schema.org",
     "@type": post.schemaType || "BlogPosting",

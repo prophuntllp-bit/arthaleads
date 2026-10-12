@@ -407,6 +407,17 @@ function campaignLabel(campaignRef) {
 // schema's neutral "N/A"/blank and are only ever filled in later by
 // enrichExistingWhatsAppLead(), which applies the exact same
 // never-overwrite-a-real-value discipline as mapVistrowExtractedFields.
+// WhatsApp profile names can be a single letter or just "." - and Lead.name
+// needs 2+ characters, so such a contact used to fail validation and never
+// became a lead at all (5 ad leads lost between 26 Sep and 12 Oct 2026). Keep
+// whatever name they gave and add the number; with no usable name, use the number.
+function whatsAppLeadName(name, phone) {
+  const cleaned = String(name || "").trim().slice(0, 80);
+  const meaningful = cleaned.replace(/[^\p{L}\p{N}]/gu, "");
+  if (meaningful.length >= 2) return cleaned;
+  return meaningful ? `${cleaned} (+${phone})` : `+${phone}`;
+}
+
 async function autoCaptureWhatsAppLead(org, phone, name, campaignRef) {
   // Rule match (by the ad's ad_id) wins outright, same as every other
   // source; round-robin only runs when nothing matches.
@@ -421,7 +432,7 @@ async function autoCaptureWhatsAppLead(org, phone, name, campaignRef) {
     try { assignee = await getNextAssignee(org._id); } catch { /* no active agents */ }
   }
   const lead = await Lead.create({
-    name: name || phone,
+    name: whatsAppLeadName(name, phone),
     phone,
     source: "WhatsApp",
     status: "New",

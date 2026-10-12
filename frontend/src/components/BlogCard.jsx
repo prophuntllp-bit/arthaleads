@@ -10,7 +10,7 @@ export const fmtDate = (d) =>
 export const sizedImage = (url, width) =>
   url && url.includes("cdn.sanity.io") && !url.includes("?") ? `${url}?w=${width}&fit=max&auto=format&q=75` : url;
 
-export const authorOf = (post) => post.authorName || post.author?.name || "Arthaleads Team";
+export const authorOf = (post) => post.byline || post.author?.name || "Arthaleads Team";
 
 // Theme tokens for blog surfaces, so both pages agree.
 export function blogTheme(isDark) {
