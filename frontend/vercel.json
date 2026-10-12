@@ -13,6 +13,11 @@
       "permanent": true
     },
     {
+      "source": "/product-tour",
+      "destination": "/#tour",
+      "permanent": true
+    },
+    {
       "source": "/robots.txt",
       "has": [
         {
@@ -68,10 +73,6 @@
     {
       "source": "/download-app",
       "destination": "/download-app.html"
-    },
-    {
-      "source": "/product-tour",
-      "destination": "/product-tour.html"
     },
     {
       "source": "/features",

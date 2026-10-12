@@ -26,7 +26,6 @@ import HelpGuide from "./pages/HelpGuide";
 import WordPressPlugin from "./pages/WordPressPlugin";
 import ApiDocs from "./pages/ApiDocs";
 import DownloadApp from "./pages/DownloadApp";
-import ProductTour from "./pages/ProductTour";
 import ReferEarn from "./pages/ReferEarn";
 import Careers from "./pages/Careers";
 import Contact from "./pages/Contact";
@@ -50,7 +49,6 @@ export const PAGES = {
   "/wordpress-plugin": WordPressPlugin,
   "/api-docs": ApiDocs,
   "/download-app": DownloadApp,
-  "/product-tour": ProductTour,
   "/refer": ReferEarn,
   "/careers": Careers,
   "/contact": Contact,

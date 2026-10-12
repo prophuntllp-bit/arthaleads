@@ -72,7 +72,6 @@ export default function PublicFooter() {
             <div className="space-y-2.5">
               {[
                 ["Pricing",            "/pricing"],
-                ["Product Tour",       "/product-tour"],
                 ["WordPress Plugin",   "/wordpress-plugin"],
                 ["API Docs",           "/api-docs"],
                 ["Feature Comparison", "/compare"],
