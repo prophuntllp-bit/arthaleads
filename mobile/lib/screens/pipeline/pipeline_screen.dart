@@ -17,6 +17,7 @@ import '../../widgets/chips.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
 import '../../widgets/whatsapp_send_sheet.dart';
+import '../leads/lead_detail_sheet.dart';
 
 /// Pipeline — kanban-style stage view. Reuses GET /leads/unified (same data
 /// as Leads/Follow-ups) grouped client-side by status, mirroring
@@ -221,6 +222,38 @@ class _PipelineScreenState extends State<PipelineScreen> {
     }
   }
 
+  /// Same as Leads: plain leads are fetched in full first (the board's list
+  /// rows leave out Info-tab fields); project leads are complete already.
+  Future<void> _openDetail(Map<String, dynamic> lead) async {
+    var detail = lead;
+    if (lead['_type'] != 'project') {
+      try {
+        final res = await _api.dio.get('/leads/${lead['_id']}');
+        final fresh = (res.data['data'] as Map?)?.cast<String, dynamic>();
+        if (fresh != null) detail = {...lead, ...fresh};
+      } catch (_) {}
+    }
+    List<Map<String, dynamic>> projects = [];
+    try {
+      final res = await _api.dio.get('/projects');
+      projects = (res.data['data'] as List? ?? []).cast<Map<String, dynamic>>();
+    } catch (_) {}
+    if (!mounted) return;
+    await showModalBottomSheet<dynamic>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => LeadDetailSheet(
+        lead: detail,
+        projects: projects,
+        onUpdated: (updated) {
+          final i = _leads.indexWhere((l) => l['_id'] == updated['_id']);
+          if (i != -1) setState(() => _leads[i] = {..._leads[i], ...updated});
+        },
+      ),
+    );
+  }
+
   Future<void> _showMoveSheet(Map<String, dynamic> lead) async {
     await showModalBottomSheet(
       context: context,
@@ -228,6 +261,17 @@ class _PipelineScreenState extends State<PipelineScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // On a phone the board is where people find a lead, so the card
+            // also opens the full lead, not only the stage picker.
+            ListTile(
+              leading: const Icon(Icons.open_in_new_rounded),
+              title: const Text('Open lead details'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _openDetail(lead);
+              },
+            ),
+            const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(

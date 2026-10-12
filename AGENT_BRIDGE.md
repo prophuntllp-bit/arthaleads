@@ -61,6 +61,11 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-12 IST, mobile: Dump restore asks first; Pipeline card opens the lead
+
+- Dump: Restore now confirms (it restored on a single tap; the web does too). While testing, I restored one real lead by that single tap: "Abhishek Ranjan" (918007851222, Sheetal Powar) went from Dump back to Leads (isDeleted false, deletedAt cleared; it had no deletedFrom, so no project copy was created). Owner told; undo pending their call.
+- Pipeline: tapping a card now offers "Open lead details" above the stage list (full lead fetched like Leads).
+
 ### Claude Code, 2026-10-12 IST, every push tap lands somewhere useful in the app
 
 - Server: the hot-lead push ("🔥 ... is interested") now carries `chatLink()` (was url "/conversations"). New-lead / lead-assigned pushes from Facebook, website forms, Google Ads (webhook + poller) and single-lead assign now include `leadId` (url stays "/leads", so older apps and the web behave as before).

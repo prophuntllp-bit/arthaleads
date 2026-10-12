@@ -85,6 +85,21 @@ class _DumpScreenState extends State<DumpScreen> {
   }
 
   Future<void> _restore(Map<String, dynamic> lead) async {
+    // Ask first, like the per-project Dump: a stray tap used to put a lead
+    // straight back into the live list (and, if it was dumped from a project,
+    // back into that project).
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Restore this lead?'),
+        content: Text('${lead['name'] ?? 'This lead'} goes back to the list it was removed from.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restore')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
     try {
       if (lead['_type'] == 'project') {
         await _api.dio.patch('/projects/${lead['projectId']}/leads/${lead['_id']}', data: {'booking': ''});
