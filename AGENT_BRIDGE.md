@@ -58,7 +58,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 
-- [Claude Code] 2026-10-12 IST: long WhatsApp chats: load earlier messages (backend `GET /whatsapp/conversations/:id/messages` gets a `before` cursor + `hasMore`, web Inbox thread, mobile conversation screen). Files: backend/routes/whatsappRoutes.js, frontend/src/pages/Inbox.jsx, mobile/lib/screens/inbox/conversation_screen.dart.
+- [Claude Code] 2026-10-12 IST: long WhatsApp chats: load earlier messages (backend `GET /whatsapp/conversations/:id/messages` gets a `before` cursor + `hasMore`, web Inbox thread, mobile conversation screen). Also mobile: Pipeline one request per column (like a58301e on web), Credits tab hidden for agents. Files: backend/routes/whatsappRoutes.js, frontend/src/pages/Inbox.jsx, mobile/lib/screens/inbox/*, mobile/lib/screens/pipeline/pipeline_screen.dart.
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
