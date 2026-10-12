@@ -37,6 +37,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
   final List<Map<String, dynamic>> _messages = [];
   // Long chats: the newest 60 come first; "Load earlier messages" pages back.
   bool _hasOlder = false;
+  // Just after a chat opens, images and video previews finish loading and
+  // push the content down, so one jump to the bottom ends up partway up.
+  // Until this time (or the user scrolls) the thread keeps itself pinned.
+  DateTime? _pinToBottomUntil;
   bool _loadingOlder = false;
   final _inputCtrl = TextEditingController();
   final _scroll = ScrollController();
@@ -208,7 +212,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
           ..addAll(kept)
           ..addAll(fresh);
       });
-      if (wasAtBottom) {
+      if (!silent) {
+        _pinToBottomUntil = DateTime.now().add(const Duration(seconds: 3));
+        for (final ms in const [0, 300, 800, 1500, 2500]) {
+          Future.delayed(Duration(milliseconds: ms), _keepPinned);
+        }
+      } else if (wasAtBottom) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scroll.hasClients) {
             _scroll.jumpTo(_scroll.position.maxScrollExtent);
@@ -641,6 +650,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
+  void _keepPinned() {
+    final until = _pinToBottomUntil;
+    if (!mounted || until == null || DateTime.now().isAfter(until)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.hasClients) _scroll.jumpTo(_scroll.position.maxScrollExtent);
+    });
+  }
+
   Future<void> _loadOlder() async {
     if (_loadingOlder || _messages.isEmpty) return;
     final first = _messages.first;
@@ -885,7 +902,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       style: TextStyle(color: wa.timeText),
                     ),
                   )
-                : ListView.builder(
+                : NotificationListener<UserScrollNotification>(
+                    // The user took over: stop pinning to the bottom.
+                    onNotification: (_) {
+                      _pinToBottomUntil = null;
+                      return false;
+                    },
+                    child: ListView.builder(
                     controller: _scroll,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -1057,7 +1080,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                         ],
                       );
                     },
-                  ),
+                  )),
             ),
           ),
           SafeArea(

@@ -61,6 +61,11 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-12 IST, push tap verified end to end; chat opens at the newest message
+
+- Sent one real "AI assistant could not reply" push (owner approved) to the owner's own account via `railway run` (FCM sent 1/1); tapping it on the phone opened that WhatsApp chat in the app. Note: the local backend/.env has no FIREBASE_SERVICE_ACCOUNT, so push tests need `railway run`, and Railway's MONGO_URI (SRV) does not resolve from this PC, so the script read the local .env's MONGO_URI.
+- `conversation_screen.dart`: a chat with images/videos opened partway up because previews loaded after the single jump to the bottom. It now stays pinned to the bottom for 3 s after opening (or until the user scrolls).
+
 ### Claude Code, 2026-10-12 IST, agents can work on the leads they see; push opens the chat/lead; app Leads auto-refresh
 
 - `leadService.js` `agentOwnsLead()`: an agent may update, add/edit notes on, delete and bulk-delete leads assigned to them OR created by them (reads already allowed both; writes checked assignedTo only, so an agent's own new lead that round-robin gave to a colleague was visible but every action said "Access denied"). Transfer in `leadController.js` uses the same rule. Admin/manager unchanged.
