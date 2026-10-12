@@ -59,6 +59,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-12 19:15 IST: owner does not want /product-tour; remove it (redirect to /#tour), keep the VideoObject date fix on the home page. Same files as f8793a8.
+
 
 ## Change log (newest first)
 
