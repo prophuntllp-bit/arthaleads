@@ -805,7 +805,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ),
                             ),
                             Text(
-                              'Across your team',
+                              // Same as the web: an agent only sees their own leads.
+                              context.read<AuthState>().role == 'agent' ? 'Your action list' : 'Across your team',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: AppTheme.of(context).textSoft,

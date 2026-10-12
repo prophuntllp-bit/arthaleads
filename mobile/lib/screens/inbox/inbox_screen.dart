@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
+import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
@@ -108,10 +110,14 @@ class _InboxScreenState extends State<InboxScreen> {
 
   Future<void> _checkConnected() async {
     try {
-      final res = await _api.dio.get('/whatsapp/settings');
+      // /whatsapp/status, not /settings: settings is admin/manager-only, so an
+      // agent got a 403 here and saw "WhatsApp not connected" with no chats
+      // (the web's ConversationsLayout had the same bug and the same fix).
+      final res = await _api.dio.get('/whatsapp/status');
       if (mounted) setState(() => _connected = res.data['connected'] == true);
     } catch (_) {
-      if (mounted) setState(() => _connected = false);
+      // Unknown, not "disconnected": a failed check should not hide the chats
+      // behind a Connect button. _connected stays null and the list shows.
     }
   }
 
@@ -227,6 +233,9 @@ class _InboxScreenState extends State<InboxScreen> {
   @override
   Widget build(BuildContext context) {
     if (_connected == false) {
+      // Only admins can connect WhatsApp (Integrations is admin-only); for
+      // everyone else a Connect button would lead nowhere.
+      final canConnect = context.read<AuthState>().isWaAdmin;
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -252,13 +261,15 @@ class _InboxScreenState extends State<InboxScreen> {
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
               ),
               const SizedBox(height: 6),
-              const Text(
-                'Connect your number to start receiving and sending messages here.',
+              Text(
+                canConnect
+                    ? 'Connect your number to start receiving and sending messages here.'
+                    : 'Ask your admin to connect the WhatsApp number. Chats will show here once it is connected.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: Colors.grey),
               ),
-              const SizedBox(height: 18),
-              GradientButton(
+              if (canConnect) const SizedBox(height: 18),
+              if (canConnect) GradientButton(
                 icon: Icons.link_rounded,
                 onPressed: () async {
                   await Navigator.push(

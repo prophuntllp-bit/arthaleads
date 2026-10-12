@@ -62,6 +62,12 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-12 IST, mobile: agents saw "WhatsApp not connected" in the Inbox (after 1.0.13, not released yet)
+
+- `inbox_screen.dart` checked the connection with `GET /whatsapp/settings`, which is admin/manager-only, so every agent got a 403, was shown "WhatsApp not connected" and could not reach their chats. Now uses `GET /whatsapp/status` (open to all roles), the same fix the web's ConversationsLayout already has. A failed check now leaves the list visible instead of the connect screen, and the Connect button is shown to admins only (others are told to ask their admin).
+- Dashboard overdue card says "Your action list" for agents (was "Across your team"), as on web.
+- Checked on the phone logged in as an agent (Sheetal Powar): drawer has no Developers/Bookings/Dump/Team/Performance/Invoices/Integrations; Inbox has no Credits tab; Calls stats show only her own calls; Pipeline has no member filter; Attendance has no shift gear or manual entry; no task creation (server is admin/manager only). This needs a 1.0.14 release to reach agents.
+
 ### Claude Code, 2026-10-12 IST, smaller "by Vistrow" credit; plugin page How It Works
 
 - `PublicNav.jsx`: the Vistrow logo next to the Arthaleads lockup was almost the same size (32 vs 36 px) and read as a partnership. Now a quiet maker's credit: 15/17 px, no divider, 60% opacity and greyscale until hover. `PublicFooter.jsx`: footer credit 32 -> 20 px.
