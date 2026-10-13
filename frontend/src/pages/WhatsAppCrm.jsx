@@ -13,6 +13,7 @@ import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { PLAN_PRICING } from "../utils/plan";
+import { Reveal, Spotlight, Magnetic } from "../components/motion/Motion";
 
 const STEPS = [
   { title: "A buyer messages you", body: "From a Facebook or Instagram click-to-WhatsApp ad, the button on your website, a hoarding QR code or a number they saved. Every chat arrives in one team inbox, not on one agent's phone." },
@@ -92,6 +93,12 @@ export default function WhatsAppCrm() {
       {/* ── Hero ── */}
       <section className="relative pt-28 pb-16 overflow-hidden"
         style={{ background: isDark ? "#0d0d1a" : "linear-gradient(135deg, #f0fdf4 0%, #fff 55%, #fff7f0 100%)" }}>
+        <div aria-hidden="true" className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-24 -left-24 w-[28rem] h-[28rem] rounded-full blur-3xl motion-safe:animate-[aurora-drift_18s_ease-in-out_infinite]"
+            style={{ background: isDark ? "rgba(34,197,94,0.10)" : "rgba(34,197,94,0.14)" }} />
+          <div className="absolute -bottom-32 right-0 w-[26rem] h-[26rem] rounded-full blur-3xl motion-safe:animate-[aurora-drift_22s_ease-in-out_infinite_reverse]"
+            style={{ background: "rgba(255,107,0,0.10)" }} />
+        </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-12 items-center">
           <div>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-6"
@@ -100,18 +107,31 @@ export default function WhatsAppCrm() {
               <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: green }}>WhatsApp CRM</span>
             </div>
             <h1 className="text-4xl sm:text-5xl font-black leading-[1.08] mb-6" style={{ color: text, textWrap: "balance" }}>
-              The WhatsApp CRM for real estate teams
+              <span className="sr-only">The WhatsApp CRM for real estate teams</span>
+              <span aria-hidden="true">
+                {["The", "WhatsApp", "CRM"].map((w, i) => (
+                  <span key={w} className="word-rise" style={{ animationDelay: `${80 + i * 90}ms` }}>{w}&nbsp;</span>
+                ))}
+                <span className="block">
+                  {["for", "real", "estate", "teams"].map((w, i) => (
+                    <span key={w} className="word-rise text-transparent bg-clip-text bg-gradient-to-r from-[#16a34a] to-[#ff6b00] pb-1"
+                      style={{ animationDelay: `${380 + i * 90}ms` }}>{w}{i < 3 ? "\u00a0" : ""}</span>
+                  ))}
+                </span>
+              </span>
             </h1>
             <p className="text-lg leading-relaxed mb-8 max-w-xl" style={{ color: soft }}>
               Buyers message you on WhatsApp first. ArthaLeads answers them in seconds with an AI agent, saves every chat
               as a lead with the buyer's budget and needs filled in, and gives your whole team one inbox to follow up from.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-                className="inline-flex items-center justify-center gap-2 text-white font-bold px-7 py-3.5 rounded-2xl shadow-xl shadow-orange-500/25 transition-all duration-200 hover:-translate-y-0.5"
-                style={{ background: "linear-gradient(135deg,#e05d00,#ff6b00)" }}>
-                Start 14-day free trial <ArrowRight className="w-4 h-4" />
-              </a>
+              <Magnetic>
+                <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
+                  className="shine-btn w-full inline-flex items-center justify-center gap-2 text-white font-bold px-7 py-3.5 rounded-2xl shadow-xl shadow-orange-500/25 hover:shadow-orange-500/45 transition-shadow duration-200"
+                  style={{ background: "linear-gradient(135deg,#e05d00,#ff6b00)" }}>
+                  Start 14-day free trial <ArrowRight className="w-4 h-4" />
+                </a>
+              </Magnetic>
               <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 font-semibold px-7 py-3.5 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5"
                 style={{ borderColor: cardBorder, color: text, background: cardBg }}>
@@ -120,19 +140,32 @@ export default function WhatsAppCrm() {
             </div>
             <p className="text-sm mt-5" style={{ color: muted }}>No credit card needed. Our team helps you connect your WhatsApp Business number.</p>
           </div>
-          <div className="rounded-3xl overflow-hidden border shadow-2xl" style={{ borderColor: cardBorder }}>
-            <img src="/tour/inbox.webp" width="2000" height="1125" loading="eager" decoding="async"
-              alt="The ArthaLeads WhatsApp inbox: an AI agent replying to a property buyer on phone and web"
-              className="w-full h-auto block" />
-          </div>
+          <Reveal delay={250} y={32} className="relative">
+            <div className="rounded-3xl overflow-hidden border shadow-2xl motion-safe:animate-[float-soft_7s_ease-in-out_infinite]" style={{ borderColor: cardBorder }}>
+              <img src="/tour/inbox.webp" width="2000" height="1125" loading="eager" decoding="async"
+                alt="The ArthaLeads WhatsApp inbox: an AI agent replying to a property buyer on phone and web"
+                className="w-full h-auto block" />
+            </div>
+            {/* What happens behind that chat, as two small status chips */}
+            <div aria-hidden="true" className="hidden sm:flex absolute -top-4 -left-4 items-center gap-2 px-3.5 py-2 rounded-xl border shadow-lg text-xs font-semibold motion-safe:animate-[float-soft_6s_ease-in-out_infinite]"
+              style={{ background: cardBg, borderColor: cardBorder, color: text, animationDelay: "0.8s" }}>
+              <span className="w-2 h-2 rounded-full bg-[#25D366]" /> New lead · Facebook ad
+            </div>
+            <div aria-hidden="true" className="hidden sm:flex absolute -bottom-4 -right-3 items-center gap-2 px-3.5 py-2 rounded-xl border shadow-lg text-xs font-semibold motion-safe:animate-[float-soft_6.5s_ease-in-out_infinite]"
+              style={{ background: cardBg, borderColor: cardBorder, color: text, animationDelay: "1.6s" }}>
+              <Check className="w-3.5 h-3.5" style={{ color: green }} /> Site visit booked
+            </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ── Why ── */}
       <section className="py-16" style={{ background: bg }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-black mb-5" style={{ color: text }}>Why property teams need a WhatsApp CRM</h2>
-          <div className="space-y-4 text-base leading-relaxed" style={{ color: soft }}>
+          <Reveal>
+            <h2 className="text-3xl font-black mb-5" style={{ color: text }}>Why property teams need a WhatsApp CRM</h2>
+          </Reveal>
+          <Reveal delay={120} className="space-y-4 text-base leading-relaxed" style={{ color: soft }}>
             <p>
               In Indian real estate, most enquiries now start on WhatsApp. A buyer taps an ad, messages at 10 PM, and expects an
               answer before they message the next builder. If that chat sits on one agent's phone, it is answered late, the
@@ -145,23 +178,27 @@ export default function WhatsAppCrm() {
               <Link to="/blog/real-estate-lead-management-enquiry-to-site-visit" className="font-semibold underline underline-offset-2" style={{ color: linkClr }}>real estate lead management</Link>,
               applied to the channel your buyers use most.
             </p>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ── How it works ── */}
       <section className="py-16" style={{ background: altBg }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-black mb-3 text-center" style={{ color: text }}>How the WhatsApp CRM works</h2>
-          <p className="text-base text-center max-w-2xl mx-auto mb-10" style={{ color: soft }}>From the first message to a booked site visit, in four steps.</p>
+          <Reveal>
+            <h2 className="text-3xl font-black mb-3 text-center" style={{ color: text }}>How the WhatsApp CRM works</h2>
+            <p className="text-base text-center max-w-2xl mx-auto mb-10" style={{ color: soft }}>From the first message to a booked site visit, in four steps.</p>
+          </Reveal>
           <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {STEPS.map((s, i) => (
-              <li key={s.title} className="rounded-2xl border p-6" style={{ background: cardBg, borderColor: cardBorder }}>
+              <Reveal as="li" key={s.title} delay={i * 110}>
+              <Spotlight className="h-full rounded-2xl border p-6 transition-transform duration-300 hover:-translate-y-1" style={{ background: cardBg, borderColor: cardBorder }} color="rgba(34,197,94,0.12)">
                 <span className="inline-flex w-9 h-9 rounded-full items-center justify-center text-sm font-bold mb-4"
                   style={{ background: isDark ? "rgba(255,107,0,0.15)" : "#fff3ea", color: linkClr }}>{i + 1}</span>
                 <h3 className="font-bold text-lg mb-2" style={{ color: text }}>{s.title}</h3>
                 <p className="text-sm leading-relaxed" style={{ color: soft }}>{s.body}</p>
-              </li>
+              </Spotlight>
+              </Reveal>
             ))}
           </ol>
         </div>
@@ -170,18 +207,25 @@ export default function WhatsAppCrm() {
       {/* ── Features ── */}
       <section className="py-16" style={{ background: bg }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-black mb-3 text-center" style={{ color: text }}>Everything your team needs on WhatsApp</h2>
-          <p className="text-base text-center max-w-2xl mx-auto mb-10" style={{ color: soft }}>
-            Built on the official WhatsApp Business Platform. The plan each feature starts on is shown on its card.
-          </p>
+          <Reveal>
+            <h2 className="text-3xl font-black mb-3 text-center" style={{ color: text }}>Everything your team needs on WhatsApp</h2>
+            <p className="text-base text-center max-w-2xl mx-auto mb-10" style={{ color: soft }}>
+              Built on the official WhatsApp Business Platform. The plan each feature starts on is shown on its card.
+            </p>
+          </Reveal>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {FEATURES.map(({ icon: Icon, title, body, plan }) => (
-              <div key={title} className="rounded-2xl border p-6 flex flex-col" style={{ background: cardBg, borderColor: cardBorder }}>
-                <Icon className="w-6 h-6 mb-4" style={{ color: green }} />
+            {FEATURES.map(({ icon: Icon, title, body, plan }, i) => (
+              <Reveal key={title} delay={(i % 4) * 90 + Math.floor(i / 4) * 60} className="flex">
+              <Spotlight className="group w-full rounded-2xl border p-6 flex flex-col transition-transform duration-300 hover:-translate-y-1" style={{ background: cardBg, borderColor: cardBorder }} color="rgba(34,197,94,0.12)">
+                <span className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110"
+                  style={{ background: isDark ? "rgba(34,197,94,0.12)" : "#f0fdf4" }}>
+                  <Icon className="w-5 h-5" style={{ color: green }} />
+                </span>
                 <h3 className="font-bold mb-2" style={{ color: text }}>{title}</h3>
                 <p className="text-sm leading-relaxed flex-1" style={{ color: soft }}>{body}</p>
                 <span className="mt-4 text-xs font-semibold" style={{ color: muted }}>From the {plan} plan</span>
-              </div>
+              </Spotlight>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -190,14 +234,16 @@ export default function WhatsAppCrm() {
       {/* ── Versus the Business app ── */}
       <section className="py-16" style={{ background: altBg }}>
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-black mb-3" style={{ color: text }}>WhatsApp Business app vs a WhatsApp CRM</h2>
-          <p className="text-base mb-8" style={{ color: soft }}>
-            The free WhatsApp Business app is fine for one person. Once several agents handle enquiries, this is what changes.
-          </p>
+          <Reveal>
+            <h2 className="text-3xl font-black mb-3" style={{ color: text }}>WhatsApp Business app vs a WhatsApp CRM</h2>
+            <p className="text-base mb-8" style={{ color: soft }}>
+              The free WhatsApp Business app is fine for one person. Once several agents handle enquiries, this is what changes.
+            </p>
+          </Reveal>
           {/* Phones: one card per row of the comparison */}
           <div className="sm:hidden space-y-3">
-            {VERSUS.map(([row, app, crm]) => (
-              <div key={row} className="rounded-2xl border p-4" style={{ borderColor: cardBorder, background: cardBg }}>
+            {VERSUS.map(([row, app, crm], i) => (
+              <Reveal key={row} delay={i * 50} y={14} className="rounded-2xl border p-4" style={{ borderColor: cardBorder, background: cardBg }}>
                 <h3 className="font-semibold mb-2" style={{ color: text }}>{row}</h3>
                 <p className="flex gap-2 text-sm mb-1.5" style={{ color: soft }}>
                   <Minus className="w-4 h-4 mt-0.5 shrink-0" style={{ color: muted }} /><span><span className="font-medium">Business app:</span> {app}</span>
@@ -205,10 +251,10 @@ export default function WhatsAppCrm() {
                 <p className="flex gap-2 text-sm" style={{ color: soft }}>
                   <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: green }} /><span><span className="font-medium">ArthaLeads:</span> {crm}</span>
                 </p>
-              </div>
+              </Reveal>
             ))}
           </div>
-          <div className="hidden sm:block rounded-2xl border overflow-x-auto" style={{ borderColor: cardBorder, background: cardBg }}>
+          <Reveal delay={100} className="hidden sm:block rounded-2xl border overflow-x-auto" style={{ borderColor: cardBorder, background: cardBg }}>
             <table className="w-full text-sm min-w-[560px]">
               <thead>
                 <tr style={{ borderBottom: `1px solid ${cardBorder}` }}>
@@ -219,7 +265,7 @@ export default function WhatsAppCrm() {
               </thead>
               <tbody>
                 {VERSUS.map(([row, app, crm]) => (
-                  <tr key={row} style={{ borderBottom: `1px solid ${cardBorder}` }}>
+                  <tr key={row} className="transition-colors duration-200 hover:bg-[#22c55e]/[0.06]" style={{ borderBottom: `1px solid ${cardBorder}` }}>
                     <th scope="row" className="text-left font-semibold p-4 align-top" style={{ color: text }}>{row}</th>
                     <td className="p-4 align-top" style={{ color: soft }}>
                       <span className="inline-flex gap-2"><Minus className="w-4 h-4 mt-0.5 shrink-0" style={{ color: muted }} />{app}</span>
@@ -231,7 +277,7 @@ export default function WhatsAppCrm() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </Reveal>
           <p className="text-sm mt-5" style={{ color: soft }}>
             Want the reply routine behind this? Read{" "}
             <Link to="/blog/reply-to-property-enquiries-on-whatsapp-fast" className="font-semibold underline underline-offset-2" style={{ color: linkClr }}>how to reply to property enquiries on WhatsApp, even at 1 AM</Link>.
@@ -242,13 +288,13 @@ export default function WhatsAppCrm() {
       {/* ── FAQ ── */}
       <section className="py-16" style={{ background: bg }}>
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-black mb-8" style={{ color: text }}>WhatsApp CRM questions</h2>
+          <Reveal><h2 className="text-3xl font-black mb-8" style={{ color: text }}>WhatsApp CRM questions</h2></Reveal>
           <div className="space-y-6">
-            {FAQS.map(([q, a]) => (
-              <div key={q}>
+            {FAQS.map(([q, a], i) => (
+              <Reveal key={q} delay={i * 60} y={16}>
                 <h3 className="font-bold text-lg mb-2" style={{ color: text }}>{q}</h3>
                 <p className="text-base leading-relaxed" style={{ color: soft }}>{a}</p>
-              </div>
+              </Reveal>
             ))}
           </div>
           <p className="text-sm mt-8" style={{ color: soft }}>
@@ -261,24 +307,26 @@ export default function WhatsAppCrm() {
 
       {/* ── Close ── */}
       <section className="py-20 text-center" style={{ background: altBg }}>
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Reveal className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-black mb-4" style={{ color: text }}>Answer every buyer on WhatsApp, day and night</h2>
           <p className="text-base mb-8" style={{ color: soft }}>
             Start the 14-day free trial, or message us on WhatsApp and see the AI agent reply to you.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-              className="inline-flex items-center gap-2 text-white font-bold px-8 py-4 rounded-2xl shadow-xl shadow-orange-500/30 transition-all duration-200 hover:-translate-y-0.5"
-              style={{ background: "linear-gradient(135deg,#e05d00,#ff6b00)" }}>
-              Start free trial <ArrowRight className="w-4 h-4" />
-            </a>
+            <Magnetic>
+              <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
+                className="shine-btn inline-flex items-center gap-2 text-white font-bold px-8 py-4 rounded-2xl shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 transition-shadow duration-200"
+                style={{ background: "linear-gradient(135deg,#e05d00,#ff6b00)" }}>
+                Start free trial <ArrowRight className="w-4 h-4" />
+              </a>
+            </Magnetic>
             <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5"
               style={{ borderColor: cardBorder, color: text }}>
               <MessageCircle className="w-4 h-4" style={{ color: green }} /> Book a demo on WhatsApp
             </a>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       <PublicFooter />
