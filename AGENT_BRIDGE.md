@@ -65,6 +65,11 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-13 IST, blog: old CRM-editor post moved into Sanity (no code change)
+
+- "Real Estate CRM: The Smarter Way to Manage Leads, Follow-Ups, and Sales Growth" (/blog/real-estate-crm-lead-management) was one pasted block with no headings. Recreated in Sanity as blog-real-estate-crm-lead-management: author's wording kept, 8 h2 + 6 h3, real lists, 5 internal links, new excerpt, metaTitle shortened, image re-uploaded with alt text, category CRM Tips (Sanity has no "Real Estate"), original publishedAt 2026-05-23 kept.
+- Owner approved the one production write: BlogPost 6a116c0e71b50480fe07cb3f got sanityId blog-real-estate-crm-lead-management (sanityUpdatedAt unset) so the sync updates that record in place (same URL, views 28 kept) instead of skipping it as a slug clash.
+
 ### Claude Code, 2026-10-13 IST, SEO technical check fixes (d642e5c, 835e731)
 
 - frontend/api/blog-post.js now puts the article itself (h1, excerpt, blocks, breadcrumb, links) into #root as a prerendered copy, hidden behind the splash (data-prerender-hide) until main.jsx swaps in the live page. Before, crawlers that read raw HTML got ~9 words per post. Block HTML is reduced to simple inline tags and safe links (cleanHtml).
