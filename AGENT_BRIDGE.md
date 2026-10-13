@@ -59,11 +59,16 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-13 11:30 IST: SEO, blog: links to our own pages inside Sanity posts open in the same tab (external ones keep a new tab). File: backend/services/sanityBlogSync.js
 
 
 
 ## Change log (newest first)
+
+### Claude Code, 2026-10-13 IST, SEO: 4 blog posts expanded, linked and scheduled (081ae20)
+
+- Owner approved: the 4 Sanity drafts were rewritten to ~1,450 to 1,550 words (from ~600), with internal links (product pages + earlier posts only, so no link points at a post that is not live yet; the page's Related posts widget covers newer ones) and checked external sources (HBR speed-to-lead study, Google lead form assets help, Meta lead ads + Conversions API docs, MahaRERA, TRAI). Product claims verified against the code. Focus keyword density 1 to 1.4%.
+- Published via the Sanity CLI with scheduled dates (sync only shows publishedAt <= now): Lead Management 13 Oct, Follow-Up System 15 Oct, Facebook Lead Ads 17 Oct, Measuring Your Sales Team 20 Oct, all 10:00 IST. Draft backups are in the session scratchpad, not the repo.
+- backend/services/sanityBlogSync.js: links to arthaleads.com pages render without target=_blank; external links keep the new tab.
 
 ### Claude Code, 2026-10-12 IST, SEO: /product-tour removed (751dce3)
 
