@@ -114,7 +114,7 @@ export default function WhatsAppCrm() {
                 ))}
                 <span className="block">
                   {["for", "real", "estate", "teams"].map((w, i) => (
-                    <span key={w} className="word-rise text-transparent bg-clip-text bg-gradient-to-r from-[#16a34a] to-[#ff6b00] pb-1"
+                    <span key={w} className="word-rise text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00] pb-1"
                       style={{ animationDelay: `${380 + i * 90}ms` }}>{w}{i < 3 ? "\u00a0" : ""}</span>
                   ))}
                 </span>

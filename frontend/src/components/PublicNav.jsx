@@ -187,9 +187,13 @@ function NavInner({ onScrollTo }) {
   const mobileBg       = isDark ? "rgba(13,13,26,0.98)" : "rgba(255,255,255,0.98)";
   const catLabel       = isDark ? "rgba(255,255,255,0.30)" : "#6b7280";
 
+  // Checked once on mount too: a page opened part-way down (refresh, back
+  // button, or the live page replacing the prerendered copy after the visitor
+  // scrolled) fires no scroll event, and the bar stayed see-through over the text.
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", fn);
+    fn();
+    window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
   }, []);
 

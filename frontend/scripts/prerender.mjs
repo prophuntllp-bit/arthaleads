@@ -76,11 +76,15 @@ g.innerHeight = 860;
 //    CRM host, which serves the same files for /) keep the splash screen and
 //    never see it; everyone else skips the splash, because the page itself is
 //    already on screen.
+//  - the static copy has no React, so its nav never turns solid on scroll; a
+//    tiny script sets data-scrolled and the CSS gives that nav its scrolled look.
 const HEAD_EXTRA = `    <style id="prerender-css">
       [data-prerendered] [style*="opacity:0;"], [data-prerendered] [style$="opacity:0"] { opacity: 1 !important; transform: none !important; filter: none !important; }
       [data-prerender-hide] [data-prerendered] { visibility: hidden; }
       html:not([data-prerender-hide]) #app-splash { display: none; }
+      [data-scrolled] [data-prerendered] nav { background: rgba(255,255,255,0.97) !important; border-bottom: 1px solid #e5e7eb; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     </style>
+    <script>(function(){var f=function(){document.documentElement.toggleAttribute("data-scrolled",window.scrollY>20)};f();addEventListener("scroll",f,{passive:true})})()</script>
     <script>try{if(location.hostname==="app.arthaleads.com"||localStorage.getItem("public_theme")==="dark")document.documentElement.setAttribute("data-prerender-hide","")}catch(e){}</script>`;
 
 // ── 3b. Render and inject ──────────────────────────────────────────────────
