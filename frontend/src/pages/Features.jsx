@@ -154,6 +154,12 @@ function Workflow({ group, index, isDark, t }) {
               ))}
             </ul>
           )}
+          {group.more && (
+            <Link to={group.more.to} className="inline-flex items-center gap-2 mt-6 font-semibold text-[15px] underline underline-offset-4"
+              style={{ color: isDark ? "#fb923c" : "#c2410c" }}>
+              {group.more.label} <ArrowRight className="w-4 h-4" />
+            </Link>
+          )}
         </div>
         {spec && (
           <div ref={shotRef} style={reveal(shotShown, flip ? "translateX(-24px) scale(0.98)" : "translateX(24px) scale(0.98)")} className={flip ? "lg:order-1" : ""}>

@@ -320,7 +320,9 @@ function Features({ isDark }) {
         <div className="mt-16 lg:mt-20 pt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
           style={{ borderTop: `1px solid ${rule}` }}>
           <p className="text-[15px]" style={{ color: body }}>
-            {FEATURES.length} features in all, including WhatsApp consent and credits, tasks, invoicing and the Meta Conversions API.
+            {FEATURES.length} features in all, including the{" "}
+            <Link to="/whatsapp-crm" className="font-semibold underline underline-offset-2" style={{ color: isDark ? "#fb923c" : "#c2410c" }}>WhatsApp CRM</Link>,
+            tasks, invoicing and the Meta Conversions API.
           </p>
           <Link to="/features"
             className="inline-flex items-center gap-2 font-semibold text-[15px] text-[#ff6b00] hover:gap-3 transition-all duration-200 whitespace-nowrap">
@@ -1551,6 +1553,7 @@ function FAQ({ isDark }) {
                     <div className="overflow-hidden">
                       <p className="px-5 pb-5 text-sm leading-relaxed" style={{ color: body }}>
                         {a}{i === HOME_FAQS.length - 1 && <> <Link to="/security" className="text-[#ff6b00] font-semibold hover:underline">Open Security</Link></>}
+                        {/^Can the WhatsApp AI/.test(q) && <> <Link to="/whatsapp-crm" className="text-[#ff6b00] font-semibold hover:underline">See how the WhatsApp CRM works</Link></>}
                       </p>
                     </div>
                   </div>
