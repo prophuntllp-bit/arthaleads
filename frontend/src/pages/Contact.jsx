@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Mail, Phone, MapPin, MessageCircle, ArrowRight, Check } from "lucide-react";
+import WhatsAppLogo from "../components/WhatsAppLogo";
 import { waLink, WA_MESSAGES } from "../utils/crmLinks";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
@@ -116,7 +117,7 @@ export default function Contact() {
               <a href={waLink(WA_MESSAGES.sales)}
                 target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-3 bg-[#25D366]/10 border border-[#25D366]/20 hover:bg-[#25D366]/20 transition-colors px-5 py-3 rounded-xl">
-                <MessageCircle className="w-5 h-5 text-[#25D366]" />
+                <WhatsAppLogo className="w-5 h-5" />
                 <div>
                   <div className="text-sm font-semibold" style={{ color: heading }}>Chat on WhatsApp</div>
                   <div className="text-xs" style={{ color: body }}>Usually replies within minutes</div>

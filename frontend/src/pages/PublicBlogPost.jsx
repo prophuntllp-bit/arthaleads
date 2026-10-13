@@ -3,7 +3,8 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import DOMPurify from "dompurify";
 import api from "../services/api";
-import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, ChevronRight, Link2, Linkedin, MessageCircle, Search, Tag } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, ChevronRight, Link2, Linkedin, Search, Tag } from "lucide-react";
+import WhatsAppLogo from "../components/WhatsAppLogo";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import BlogCard, { CategoryLabel, authorOf, blogTheme, fmtDate, sizedImage } from "../components/BlogCard";
@@ -299,7 +300,7 @@ function ShareButtons({ post, t }) {
       <a className={base} style={style} aria-label="Share on LinkedIn" target="_blank" rel="noopener noreferrer"
         href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`}><Linkedin className="w-4 h-4" /></a>
       <a className={base} style={style} aria-label="Share on WhatsApp" target="_blank" rel="noopener noreferrer"
-        href={`https://wa.me/?text=${encodeURIComponent(`${post.title} ${url}`)}`}><MessageCircle className="w-4 h-4" /></a>
+        href={`https://wa.me/?text=${encodeURIComponent(`${post.title} ${url}`)}`}><WhatsAppLogo className="w-4 h-4" color="currentColor" /></a>
       <button type="button" className={base} style={style} onClick={copy} aria-label={copied ? "Link copied" : "Copy link"}>
         {copied ? <Check className="w-4 h-4 text-green-600" /> : <Link2 className="w-4 h-4" />}
       </button>

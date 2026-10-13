@@ -6,7 +6,7 @@
 // must stay true to the product and the plan it sits on: plan limits come from
 // data/plans.js, the WhatsApp feature copy from pages/Features.jsx.
 import { Link } from "react-router-dom";
-import { ArrowRight, MessageCircle, Bot, Inbox, UserCheck, Megaphone, ShieldCheck, Clock, Wallet, Sparkles, Check, Minus } from "lucide-react";
+import { ArrowRight, Bot, Inbox, UserCheck, Megaphone, ShieldCheck, Clock, Wallet, Sparkles, Check, Minus } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
@@ -14,6 +14,7 @@ import { useSEO } from "../utils/useSEO";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { PLAN_PRICING } from "../utils/plan";
 import { Reveal, Spotlight, Magnetic } from "../components/motion/Motion";
+import WhatsAppLogo from "../components/WhatsAppLogo";
 
 const STEPS = [
   { title: "A buyer messages you", body: "From a Facebook or Instagram click-to-WhatsApp ad, the button on your website, a hoarding QR code or a number they saved. Every chat arrives in one team inbox, not on one agent's phone." },
@@ -101,11 +102,6 @@ export default function WhatsAppCrm() {
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-6"
-              style={{ borderColor: "rgba(21,128,61,0.35)", background: "rgba(34,197,94,0.10)" }}>
-              <MessageCircle className="w-3.5 h-3.5" style={{ color: green }} />
-              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: green }}>WhatsApp CRM</span>
-            </div>
             <h1 className="text-4xl sm:text-5xl font-black leading-[1.08] mb-6" style={{ color: text, textWrap: "balance" }}>
               <span className="sr-only">The WhatsApp CRM for real estate teams</span>
               <span aria-hidden="true">
@@ -135,7 +131,7 @@ export default function WhatsAppCrm() {
               <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 font-semibold px-7 py-3.5 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5"
                 style={{ borderColor: cardBorder, color: text, background: cardBg }}>
-                <MessageCircle className="w-4 h-4" style={{ color: green }} /> See it on WhatsApp
+                <WhatsAppLogo className="w-[18px] h-[18px]" /> See it on WhatsApp
               </a>
             </div>
             <p className="text-sm mt-5" style={{ color: muted }}>No credit card needed. Our team helps you connect your WhatsApp Business number.</p>
@@ -323,7 +319,7 @@ export default function WhatsAppCrm() {
             <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5"
               style={{ borderColor: cardBorder, color: text }}>
-              <MessageCircle className="w-4 h-4" style={{ color: green }} /> Book a demo on WhatsApp
+              <WhatsAppLogo className="w-[18px] h-[18px]" /> Book a demo on WhatsApp
             </a>
           </div>
         </Reveal>

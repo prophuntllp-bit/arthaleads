@@ -12,6 +12,7 @@ import {
   FileSpreadsheet, UserCheck, Activity,
   QrCode, Sparkles, FileText, Camera, Bot, Headphones
 } from "lucide-react";
+import WhatsAppLogo from "../components/WhatsAppLogo";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
@@ -1155,7 +1156,7 @@ function Pricing({ isDark }) {
             {[
               ["Mobile-friendly access", Shield],
               ["Facebook Lead Ads", Facebook],
-              ["WhatsApp capture", MessageCircle],
+              ["WhatsApp capture", WhatsAppLogo],
               ["Kanban pipeline", Layers],
               ["Push notifications", Bell],
               ["WordPress plugin", Zap],
@@ -1283,7 +1284,7 @@ function Contact({ isDark }) {
               className="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg group"
               style={{ background: "linear-gradient(135deg, rgba(37,211,102,0.12), rgba(37,211,102,0.06))", border: "1px solid rgba(37,211,102,0.25)" }}>
               <div className="w-10 h-10 rounded-xl bg-[#25D366]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[#25D366]/30 transition-colors">
-                <MessageCircle className="w-5 h-5 text-[#25D366]" />
+                <WhatsAppLogo className="w-5 h-5" />
               </div>
               <div>
                 <div className="text-sm font-bold" style={{ color: isDark ? "#ffffff" : "#111827" }}>Chat on WhatsApp</div>
