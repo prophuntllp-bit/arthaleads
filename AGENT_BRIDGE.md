@@ -67,6 +67,10 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-13 IST, /whatsapp-crm motion (a6a6faa)
+
+- Owner asked for the same effects as other pages: uses components/motion/Motion.jsx (Reveal, Spotlight, Magnetic) and the styles.css word-rise / shine-btn / float-soft / aurora-drift classes; all respect reduced motion. Content unchanged.
+
 ### Claude Code, 2026-10-13 IST, links to /whatsapp-crm (17e9195)
 
 - Owner asked: WhatsApp CRM is now the first item in the nav Resources dropdown (PublicNav NAV_RESOURCES), linked from the home features summary line and the home FAQ answer about WhatsApp AI (Landing.jsx), and from the Features page "Talk" section via a new optional `more` link on FEATURE_GROUPS (data/features.js, rendered in Features.jsx Workflow).
