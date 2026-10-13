@@ -192,7 +192,7 @@ function PluginCard({ plugin, isDark }) {
   const cardBg     = isDark ? "rgba(255,255,255,0.04)" : "#ffffff";
   const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
   const text       = isDark ? "#fff" : "#111827";
-  const soft       = isDark ? "rgba(255,255,255,0.4)" : "#9ca3af";
+  const soft       = isDark ? "rgba(255,255,255,0.4)" : "#6b7280";
 
   return (
     <div
@@ -265,7 +265,7 @@ function LiveNotification({ isDark }) {
       </div>
       <div className="min-w-0">
         <p className="text-xs font-bold truncate" style={{ color: isDark ? "#ededed" : "#111" }}>New lead: {lead.name}</p>
-        <p className="text-[11px] truncate" style={{ color: isDark ? "rgba(255,255,255,0.45)" : "#9ca3af" }}>{lead.form} · {lead.site}</p>
+        <p className="text-[11px] truncate" style={{ color: isDark ? "rgba(255,255,255,0.45)" : "#6b7280" }}>{lead.form} · {lead.site}</p>
       </div>
       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: "rgba(34,197,94,0.15)", color: "#16a34a" }}>Live</span>
     </div>
