@@ -20,7 +20,7 @@ export function blogTheme(isDark) {
     heading:   isDark ? "#ffffff" : "#111827",
     body:      isDark ? "rgba(255,255,255,0.62)" : "#5b6170",
     text:      isDark ? "rgba(255,255,255,0.82)" : "#374151",   // long-form reading text
-    muted:     isDark ? "rgba(255,255,255,0.42)" : "#9ca3af",
+    muted:     isDark ? "rgba(255,255,255,0.42)" : "#6b7280",
     rule:      isDark ? "rgba(255,255,255,0.09)" : "#ece8e3",
     card:      isDark ? "rgba(255,255,255,0.035)" : "#ffffff",
     cardBorder:isDark ? "rgba(255,255,255,0.09)" : "#ebe5dd",

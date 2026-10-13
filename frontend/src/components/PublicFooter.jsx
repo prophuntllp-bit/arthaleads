@@ -68,7 +68,7 @@ export default function PublicFooter() {
 
           {/* Product */}
           <div>
-            <h4 style={{ color: heading }} className="font-semibold text-sm mb-4">Product</h4>
+            <h2 style={{ color: heading }} className="font-semibold text-sm mb-4">Product</h2>
             <div className="space-y-2.5">
               {[
                 ["Pricing",            "/pricing"],
@@ -84,7 +84,7 @@ export default function PublicFooter() {
 
           {/* Company */}
           <div>
-            <h4 style={{ color: heading }} className="font-semibold text-sm mb-4">Company</h4>
+            <h2 style={{ color: heading }} className="font-semibold text-sm mb-4">Company</h2>
             <div className="space-y-2.5">
               {[
                 ["About Us",      "/about-us"],
@@ -101,7 +101,7 @@ export default function PublicFooter() {
 
           {/* Legal */}
           <div>
-            <h4 style={{ color: heading }} className="font-semibold text-sm mb-4">Legal</h4>
+            <h2 style={{ color: heading }} className="font-semibold text-sm mb-4">Legal</h2>
             <div className="space-y-2.5">
               {[
                 ["Privacy Policy",   "/privacy"],
@@ -122,7 +122,7 @@ export default function PublicFooter() {
             href="https://www.vistrow.com"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Arthaleads is a product of Vistrow Technologies"
+            title="Arthaleads is a product of Vistrow Technologies"
             style={{ color: text }}
             className="flex items-center gap-2 text-xs transition-opacity hover:opacity-80"
           >

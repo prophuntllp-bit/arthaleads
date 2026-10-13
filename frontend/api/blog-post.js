@@ -159,6 +159,8 @@ export default async function handler(req, res) {
     const twImage = abs(post.twitterImage) || image;
 
     html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(full)}</title>`);
+    // Articles may be pinch-zoomed (the CRM shell this page is built from fixes the zoom).
+    html = html.replace(/<meta name="viewport"[^>]*>/, `<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />`);
     html = setTag(html, /<meta name="description"[^>]*>/, `<meta name="description" content="${esc(desc)}" />`);
     html = setTag(html, /<meta name="robots"[^>]*>/, `<meta name="robots" content="${esc(robotsValue(post.robots))}" />`);
     html = setTag(html, /<link rel="canonical"[^>]*>/, `<link rel="canonical" href="${esc(url)}" />`);

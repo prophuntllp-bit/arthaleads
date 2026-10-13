@@ -395,7 +395,7 @@ function WordPressPluginInner() {
             ))}
           </div>
           <p className="text-center text-xs mt-6" style={{ color: soft }}>
-            More integrations added regularly · <a href="mailto:contact@arthaleads.com" className="text-[#ff6b00] hover:underline">Request a plugin</a>
+            More integrations added regularly · <a href="mailto:contact@arthaleads.com" className="text-[#ff6b00] underline underline-offset-2">Request a plugin</a>
           </p>
         </div>
       </section>

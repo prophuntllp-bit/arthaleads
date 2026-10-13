@@ -200,7 +200,7 @@ function InstallBanner() {
           >
             Get app
           </a>
-          <button onClick={dismiss} className="flex-shrink-0 text-white/40 hover:text-white/70">
+          <button onClick={dismiss} aria-label="Dismiss" className="flex-shrink-0 text-white/40 hover:text-white/70">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -220,7 +220,7 @@ function InstallBanner() {
               </div>
               <p className="text-sm font-semibold text-white">Install Arthaleads</p>
             </div>
-            <button onClick={dismiss} className="text-white/40 hover:text-white/70">
+            <button onClick={dismiss} aria-label="Dismiss" className="text-white/40 hover:text-white/70">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -249,7 +249,7 @@ function InstallBanner() {
           className="flex-shrink-0 rounded-xl bg-orange-500 px-3 py-1.5 text-xs font-bold text-white">
           Install
         </button>
-        <button onClick={dismiss} className="flex-shrink-0 text-white/40 hover:text-white/70">
+        <button onClick={dismiss} aria-label="Dismiss" className="flex-shrink-0 text-white/40 hover:text-white/70">
           <X className="h-4 w-4" />
         </button>
       </div>

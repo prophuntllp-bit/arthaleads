@@ -48,7 +48,7 @@ export default function Contact() {
   const bg        = isDark ? "#080810" : "#f9fafb";
   const heading   = isDark ? "#ffffff" : "#111827";
   const body      = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const infoLabel = isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
+  const infoLabel = isDark ? "rgba(255,255,255,0.35)" : "#6b7280";
   const infoVal   = isDark ? "#ffffff" : "#111827";
   const cardBg    = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
   const cardBdr   = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";

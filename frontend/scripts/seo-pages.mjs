@@ -33,7 +33,7 @@ function readSeo(file) {
   };
   const canonical = pick("canonical");
   if (!canonical || !canonical.startsWith(SITE)) return null;
-  return { file, title: pick("title"), description: pick("description"), canonical };
+  return { file, title: pick("title"), description: pick("description"), canonical, robots: pick("robots") };
 }
 
 const entries = readdirSync(pages).filter((f) => f.endsWith(".jsx")).map(readSeo).filter(Boolean);
@@ -51,7 +51,7 @@ const base = readFileSync(join(dist, "index.html"), "utf8");
 // everything else to /app.html), so they never claim to be the home page.
 writeFileSync(join(dist, "app.html"), base);
 
-function render({ title, description, canonical }) {
+function render({ title, description, canonical, robots }) {
   let html = base
     .replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(title)}</title>`)
     .replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${esc(description)}" />`)
@@ -64,6 +64,8 @@ function render({ title, description, canonical }) {
     // Marketing pages may be zoomed (accessibility); the CRM shell (app.html) keeps its fixed viewport.
     .replace(/<meta name="viewport"[^>]*>/, `<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />`);
   html = html.replace(/(<meta name="description"[^>]*>)/, `$1\n    <link rel="canonical" href="${esc(canonical)}" />`);
+  // A page that asks for it in useSEO({ robots }) (e.g. "noindex, follow") gets the tag in the HTML too.
+  if (robots) html = html.replace(/(<meta name="description"[^>]*>)/, `$1\n    <meta name="robots" content="${esc(robots)}" />`);
   // The blog and contact form talk to the API, blog images come from Sanity's CDN.
   html = html.replace("</head>", `    <link rel="preconnect" href="https://api.arthaleads.com" crossorigin />\n    <link rel="preconnect" href="https://cdn.sanity.io" />\n  </head>`);
   return html;

@@ -58,9 +58,9 @@ export default function Pricing() {
   const cardBg     = isDark ? "rgba(255,255,255,0.025)" : "#ffffff";
   const cardBdr    = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
   const popBg      = isDark ? "rgba(255,107,0,0.05)" : "#fffbf7";
-  const taglineClr = isDark ? "rgba(255,255,255,0.38)" : "#9ca3af";
+  const taglineClr = isDark ? "rgba(255,255,255,0.38)" : "#6b7280";
   const divBdr     = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
-  const grpLabel   = isDark ? "rgba(255,255,255,0.28)" : "#9ca3af";
+  const grpLabel   = isDark ? "rgba(255,255,255,0.28)" : "#6b7280";
   const featClr    = isDark ? "rgba(255,255,255,0.72)" : "#374151";
   const altBtnClr  = isDark ? "rgba(255,255,255,0.70)" : "#374151";
   const altBtnBdr  = isDark ? "rgba(255,255,255,0.10)" : "#d1d5db";
@@ -193,7 +193,7 @@ export default function Pricing() {
               <p className="text-sm font-bold" style={{ color: isDark ? "#4ade80" : "#15803d" }}>
                 14-day free trial - includes all Growth features
               </p>
-              <p className="text-xs" style={{ color: isDark ? "rgba(74,222,128,0.6)" : "#16a34a" }}>
+              <p className="text-xs" style={{ color: isDark ? "rgba(74,222,128,0.6)" : "#15803d" }}>
                 No credit card required. Upgrade or cancel anytime.
               </p>
             </div>

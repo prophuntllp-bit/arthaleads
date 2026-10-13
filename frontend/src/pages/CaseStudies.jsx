@@ -87,6 +87,11 @@ function CaseStudiesInner() {
     title: "Case Studies - How Real Estate Teams Win with Arthaleads CRM",
     description: "How real estate developers, builders and brokers across India use Arthaleads CRM to capture more leads, track site visits and close more deals.",
     canonical: "https://www.arthaleads.com/case-studies",
+    // No case studies are published yet, and an empty page reads to Google as
+    // thin content. When the first one goes live (a blog post in a category
+    // named "Case Studies"), remove this line and add /case-studies back to the
+    // sitemap in backend/controllers/blogController.js.
+    robots: "noindex, follow",
   });
 
   useEffect(() => {
@@ -166,7 +171,7 @@ function CaseStudiesInner() {
           ) : empty ? (
             <div className="text-center py-20">
               <BookOpen className="w-12 h-12 text-orange-200 mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>No case studies published yet.</h3>
+              <h2 className="text-xl font-bold mb-2" style={{ color: textColor }}>No case studies published yet.</h2>
               <p style={{ color: softText }}>Check back soon!</p>
             </div>
           ) : (

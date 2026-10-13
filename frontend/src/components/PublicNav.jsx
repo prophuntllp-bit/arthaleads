@@ -49,7 +49,7 @@ function DropdownPanel({ items, onClose, isDark, width = 268 }) {
     ? "0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)"
     : "0 20px 60px rgba(0,0,0,0.12), 0 0 0 1px #e5e7eb";
   const itemText    = isDark ? "rgba(255,255,255,0.75)" : "#111827";
-  const itemDesc    = isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
+  const itemDesc    = isDark ? "rgba(255,255,255,0.35)" : "#6b7280";
   const iconBase    = isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6";
   const iconColor   = isDark ? "rgba(255,255,255,0.45)" : "#6b7280";
   const hoverBg     = isDark ? "rgba(255,255,255,0.06)" : "#f9fafb";
@@ -184,7 +184,7 @@ function NavInner({ onScrollTo }) {
   const scrolledBg     = isDark ? "rgba(13,13,26,0.97)" : "rgba(255,255,255,0.97)";
   const scrolledBorder = isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #e5e7eb";
   const mobileBg       = isDark ? "rgba(13,13,26,0.98)" : "rgba(255,255,255,0.98)";
-  const catLabel       = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
+  const catLabel       = isDark ? "rgba(255,255,255,0.30)" : "#6b7280";
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20);
@@ -250,7 +250,7 @@ function NavInner({ onScrollTo }) {
               href="https://www.vistrow.com"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Arthaleads is a product of Vistrow Technologies"
+              title="Arthaleads is a product of Vistrow Technologies"
               // A quiet maker's credit, not a second brand: about half the
               // height of the Arthaleads lockup, no divider, greyed until hovered.
               // Side by side at full size the two read as a partnership.

@@ -106,7 +106,7 @@ const blogController = {
         { url: "/compare",          priority: "0.8", changefreq: "monthly" },
         { url: "/blog",             priority: "0.8", changefreq: "weekly"  },
         { url: "/about-us",         priority: "0.7", changefreq: "monthly" },
-        { url: "/case-studies",     priority: "0.7", changefreq: "monthly" },
+        // /case-studies is noindex while it has no case studies (see pages/CaseStudies.jsx).
         { url: "/product-updates",  priority: "0.7", changefreq: "weekly"  },
         { url: "/help-guide",       priority: "0.6", changefreq: "monthly" },
         { url: "/wordpress-plugin", priority: "0.6", changefreq: "monthly" },

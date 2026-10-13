@@ -44,7 +44,7 @@
     },
     {
       "source": "/blog",
-      "destination": "/blog.html"
+      "destination": "/api/blog-index"
     },
     {
       "source": "/careers",

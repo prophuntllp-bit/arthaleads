@@ -76,7 +76,7 @@ function Hero({ isDark }) {
   const heroBg     = isDark ? "#0d0d1a" : "linear-gradient(180deg, #fff7f0 0%, #fffaf6 45%, #ffffff 100%)";
   const headingClr = isDark ? "#ffffff" : "#111827";
   const bodyClr    = isDark ? "rgba(255,255,255,0.6)" : "#6b7280";
-  const softClr    = isDark ? "rgba(255,255,255,0.4)" : "#9ca3af";
+  const softClr    = isDark ? "rgba(255,255,255,0.4)" : "#6b7280";
   const btnBorder  = isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
   const btnText    = isDark ? "rgba(255,255,255,0.70)" : "#374151";
   const btnBg      = isDark ? "transparent" : "rgba(255,255,255,0.7)";
@@ -205,7 +205,7 @@ function SourcesStrip({ isDark }) {
   const [hoveredSource, setHoveredSource] = useState(null);
   const bg       = isDark ? "#0d0d1a" : "#f9fafb";
   const border   = isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb";
-  const label    = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
+  const label    = isDark ? "rgba(255,255,255,0.30)" : "#6b7280";
   const chipBg   = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
   const chipBdr  = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
   const chipText = isDark ? "rgba(255,255,255,0.60)" : "#6b7280";
@@ -393,7 +393,7 @@ function HowItWorks({ isDark }) {
   const cardBg   = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
   const cardBdr  = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
   const listBg   = isDark ? "rgba(255,255,255,0.02)" : "#f3f4f6";
-  const mutedTxt = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
+  const mutedTxt = isDark ? "rgba(255,255,255,0.30)" : "#6b7280";
   const navDisab = isDark ? "rgba(255,255,255,0.15)" : "#d1d5db";
 
   return (
@@ -510,10 +510,10 @@ function HowItWorks({ isDark }) {
                   style={{ color: active === 0 ? navDisab : body }}>
                   <ChevronLeft className="w-4 h-4" /> Prev
                 </button>
-                <div className="flex gap-1.5 items-center">
+                <div className="flex items-center">
                   {HOW_STEPS.map((s, i) => (
                     <button key={i} onClick={() => goTo(i)} aria-label={`Step ${i + 1}: ${s.label}`} aria-current={i === active}
-                      className="cursor-pointer p-2 -m-1 flex items-center">
+                      className="cursor-pointer min-w-[24px] min-h-[24px] px-0.5 flex items-center justify-center">
                       <span className="block rounded-full transition-all duration-300"
                         style={{ width: i === active ? 20 : 6, height: 6, background: i === active ? step.color : (isDark ? "rgba(255,255,255,0.15)" : "#e5e7eb") }} />
                     </button>
@@ -607,7 +607,7 @@ function About({ isDark }) {
   const body    = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
   const cardBg  = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
   const cardBdr = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
-  const cardSub = isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
+  const cardSub = isDark ? "rgba(255,255,255,0.35)" : "#6b7280";
 
   return (
     <section id="about" ref={sectionRef} className="py-10 lg:py-14 overflow-hidden" style={{ background: bg }}>
@@ -782,7 +782,7 @@ function Testimonials({ isDark }) {
   const cardBdrH = isDark ? "rgba(255,107,0,0.35)"   : "#ff6b00";
   const quoteClr = isDark ? "rgba(255,255,255,0.7)"  : "#374151";
   const nameClr  = isDark ? "#ffffff" : "#111827";
-  const roleClr  = isDark ? "rgba(255,255,255,0.38)" : "#9ca3af";
+  const roleClr  = isDark ? "rgba(255,255,255,0.38)" : "#6b7280";
   const metricBg = isDark ? "rgba(255,107,0,0.12)"   : "#fff7ed";
   const dotBg    = isDark ? "rgba(255,255,255,0.12)"  : "#e5e7eb";
 
@@ -935,10 +935,10 @@ function Testimonials({ isDark }) {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             {reviews.map((_, i) => (
               <button key={i} onClick={() => goTo(i)} aria-label={`Show review ${i + 1}`} aria-current={i === active}
-                className="cursor-pointer p-2 -m-2 flex items-center">
+                className="cursor-pointer min-w-[24px] min-h-[24px] px-0.5 flex items-center justify-center">
                 <span className="block transition-all rounded-full" style={{
                   width: i === active ? "24px" : "8px",
                   height: "8px",
@@ -984,13 +984,13 @@ function Pricing({ isDark }) {
   const cardBg     = isDark ? "rgba(255,255,255,0.025)" : "#ffffff";
   const cardBdr    = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
   const popBg      = isDark ? "rgba(255,107,0,0.05)" : "#fffbf7";
-  const taglineClr = isDark ? "rgba(255,255,255,0.38)" : "#9ca3af";
+  const taglineClr = isDark ? "rgba(255,255,255,0.38)" : "#6b7280";
   const divBdr     = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
-  const grpLabel   = isDark ? "rgba(255,255,255,0.28)" : "#9ca3af";
+  const grpLabel   = isDark ? "rgba(255,255,255,0.28)" : "#6b7280";
   const featClr    = isDark ? "rgba(255,255,255,0.72)" : "#374151";
   const altBtnClr  = isDark ? "rgba(255,255,255,0.70)" : "#374151";
   const altBtnBdr  = isDark ? "rgba(255,255,255,0.10)" : "#d1d5db";
-  const noteClr    = isDark ? "rgba(255,255,255,0.28)" : "#9ca3af";
+  const noteClr    = isDark ? "rgba(255,255,255,0.28)" : "#6b7280";
   const trialBg    = isDark ? "rgba(34,197,94,0.1)" : "#f0fdf4";
   const trialBdr   = isDark ? "rgba(34,197,94,0.25)" : "#bbf7d0";
 
@@ -1022,7 +1022,7 @@ function Pricing({ isDark }) {
               <p className="text-sm font-bold" style={{ color: isDark ? "#4ade80" : "#15803d" }}>
                 14-day free trial - includes all Growth features
               </p>
-              <p className="text-xs" style={{ color: isDark ? "rgba(74,222,128,0.6)" : "#16a34a" }}>
+              <p className="text-xs" style={{ color: isDark ? "rgba(74,222,128,0.6)" : "#15803d" }}>
                 No credit card required. Upgrade or cancel anytime.
               </p>
             </div>
@@ -1200,7 +1200,7 @@ function Contact({ isDark }) {
 
   const infoCardBg  = isDark ? "rgba(255,255,255,0.04)" : "#ffffff";
   const infoCardBdr = isDark ? "rgba(255,255,255,0.07)" : "#e5e7eb";
-  const infoLabel   = isDark ? "rgba(255,255,255,0.38)" : "#9ca3af";
+  const infoLabel   = isDark ? "rgba(255,255,255,0.38)" : "#6b7280";
   const infoVal     = isDark ? "#ffffff" : "#111827";
 
   return (
@@ -1285,7 +1285,7 @@ function Contact({ isDark }) {
               </div>
               <div>
                 <div className="text-sm font-bold" style={{ color: isDark ? "#ffffff" : "#111827" }}>Chat on WhatsApp</div>
-                <div className="text-xs" style={{ color: isDark ? "rgba(255,255,255,0.4)" : "#9ca3af" }}>Usually replies within minutes</div>
+                <div className="text-xs" style={{ color: isDark ? "rgba(255,255,255,0.4)" : "#6b7280" }}>Usually replies within minutes</div>
               </div>
               <ArrowRight className="w-4 h-4 ml-auto text-[#25D366] opacity-0 group-hover:opacity-100 transition-opacity" />
             </a>
@@ -1476,7 +1476,7 @@ function ContactForm({ isDark }) {
         )}
       </button>
 
-      <p className="text-center text-[11px]" style={{ color: isDark ? "rgba(255,255,255,0.25)" : "#9ca3af" }}>
+      <p className="text-center text-[11px]" style={{ color: isDark ? "rgba(255,255,255,0.25)" : "#6b7280" }}>
         By sending, you agree to our privacy policy. We never spam.
       </p>
     </form>

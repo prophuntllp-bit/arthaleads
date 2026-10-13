@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { waLink, CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import { Check, X, Search, ArrowRight, Sparkles } from "lucide-react";
 import PublicNav from "../components/PublicNav";
@@ -56,9 +57,30 @@ const CATEGORIES = [
   },
 ];
 
+
+// What to weigh when choosing, written about buyers' needs and what Arthaleads
+// does, so it never makes claims about other products beyond the table above.
+const CHOOSING = [
+  { title: "Every lead source lands on its own",
+    body: "List where your enquiries come from today: Facebook and Instagram lead forms, Google Ads, property portals, your website and WhatsApp. Each one should arrive in the CRM automatically, with its source and campaign attached. Anything that still needs a spreadsheet download will be forgotten on a busy day.",
+    link: { to: "/blog/real-estate-lead-management-enquiry-to-site-visit", label: "How lead management works, step by step" } },
+  { title: "Speed to the first call",
+    body: "Buyers enquire with several projects at once, so the first useful reply often wins. Look for instant assignment to the right person, a push alert on their phone, and a way to answer on WhatsApp at night when nobody is at a desk.",
+    link: { to: "/blog/reply-to-property-enquiries-on-whatsapp-fast", label: "Replying to property enquiries on WhatsApp" } },
+  { title: "Project-wise work for developers",
+    body: "If you sell more than one project, each needs its own pipeline, team and reports, while managers still see everything together. Check that a lead can be moved or copied into a project without losing its history." },
+  { title: "Follow-ups that cannot slip",
+    body: "Every conversation should end with a dated next step, and every person should start the day with a list of overdue and due follow-ups. This one habit decides more bookings than any feature list." },
+  { title: "Numbers a manager can trust",
+    body: "Response time, contact rate, site visits booked and done, and bookings by source, per person and per campaign, without anyone compiling a report by hand. If the numbers need a spreadsheet, they will arrive late and be argued about." },
+  { title: "Clear pricing and a quick start",
+    body: "Published per-user prices, GST shown separately, and a trial you can run on your own leads. A CRM your team is using in the first week is worth more than a more powerful one that takes a month to set up.",
+    link: { to: "/pricing", label: "See Arthaleads plans and pricing" } },
+];
+
 function Cell({ val }) {
   if (val === "y") return <Check className="w-4 h-4 mx-auto" style={{ color: "#22c55e" }} />;
-  if (val === "p") return <span className="text-xs font-medium" style={{ color: "#f59e0b" }}>Partial</span>;
+  if (val === "p") return <span className="text-xs font-medium" style={{ color: "#b45309" }}>Partial</span>;
   return <X className="w-4 h-4 mx-auto" style={{ color: "#ef4444" }} />;
 }
 
@@ -180,7 +202,7 @@ export default function Compare() {
           {/* Legend */}
           <div className="flex items-center justify-center gap-6 mt-5 text-xs" style={{ color: softText }}>
             <span className="flex items-center gap-1.5"><Check className="w-4 h-4" style={{ color: "#22c55e" }} /> Full support</span>
-            <span className="flex items-center gap-1.5"><span style={{ color: "#f59e0b", fontWeight: 600 }}>Partial</span> Limited</span>
+            <span className="flex items-center gap-1.5"><span style={{ color: "#b45309", fontWeight: 600 }}>Partial</span> Limited</span>
             <span className="flex items-center gap-1.5"><X className="w-4 h-4" style={{ color: "#ef4444" }} /> Not available</span>
           </div>
           <p className="text-center text-xs mt-4 max-w-2xl mx-auto" style={{ color: softText }}>
@@ -189,6 +211,30 @@ export default function Compare() {
             <a href={waLink("Hi Arthaleads, something on your CRM comparison page looks out of date: ")} target="_blank" rel="noopener noreferrer"
               className="text-[#ff6b00] font-semibold hover:underline">Let us know</a>.
           </p>
+        </div>
+      </section>
+
+      {/* How to choose */}
+      <section className="py-16 border-t" style={{ borderColor: isDark ? "rgba(255,255,255,0.06)" : "#f1f1f1" }}>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl sm:text-3xl font-black mb-3 text-center" style={{ color: textColor }}>How to choose a real estate CRM</h2>
+          <p className="text-base max-w-2xl mx-auto text-center mb-10" style={{ color: softText }}>
+            A feature table only tells part of the story. These six questions decide whether a CRM actually helps your
+            team close more bookings, whichever product you pick.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-5">
+            {CHOOSING.map((c, i) => (
+              <div key={c.title} className="rounded-2xl border p-6" style={{ background: cardBg, borderColor: isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb" }}>
+                <h3 className="font-bold text-lg mb-2" style={{ color: textColor }}>{i + 1}. {c.title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: softText }}>{c.body}</p>
+                {c.link && (
+                  <Link to={c.link.to} className="inline-flex items-center gap-1.5 mt-3 text-sm font-semibold underline underline-offset-2" style={{ color: isDark ? "#fb923c" : "#c2410c" }}>
+                    {c.link.label} <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

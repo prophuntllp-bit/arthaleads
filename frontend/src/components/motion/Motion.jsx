@@ -97,7 +97,8 @@ export function CountUp({ value, duration = 1400, className, style }) {
   if (!m) return <span className={className} style={style}>{value}</span>;
   const shown = n.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   return (
-    <span ref={ref} className={className} style={style} aria-label={String(value)}>
+    <span ref={ref} className={className} style={style}>
+      <span className="sr-only">{value}</span>
       <span aria-hidden="true">{m[1]}{shown}{m[3]}</span>
     </span>
   );
