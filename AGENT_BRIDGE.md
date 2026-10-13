@@ -59,12 +59,18 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-13 12:30 IST: SEO technical fixes: blog post article HTML in /api/blog-post (crawlers saw 9 words), list items keep bold/links (Sanity sync + PublicBlogPost), sitewide SoftwareApplication/WebSite JSON-LD corrections (index.html), long meta descriptions trimmed. Files: frontend/api/blog-post.js, frontend/index.html, frontend/src/pages/PublicBlogPost.jsx + 7 marketing pages (useSEO description only), backend/services/sanityBlogSync.js, backend/models/BlogPost.js
 
 
 
 
 ## Change log (newest first)
+
+### Claude Code, 2026-10-13 IST, SEO technical check fixes (d642e5c, 835e731)
+
+- frontend/api/blog-post.js now puts the article itself (h1, excerpt, blocks, breadcrumb, links) into #root as a prerendered copy, hidden behind the splash (data-prerender-hide) until main.jsx swaps in the live page. Before, crawlers that read raw HTML got ~9 words per post. Block HTML is reduced to simple inline tags and safe links (cleanHtml).
+- Sanity sync: list items keep inline HTML (bold, links); PublicBlogPost renders them through sanitizeHtml; BlogPost reading time strips tags from items. The two live Sanity posts were re-saved so they re-synced.
+- index.html JSON-LD: SoftwareApplication offers now Starter 599 / Growth 999 INR per user per month (was lowPrice 0, "up to 3 agents"), operatingSystem Web, Android (no iOS app), WebSite SearchAction uses /blog?q= (the param the blog reads).
+- 7 marketing meta descriptions trimmed to under 160 chars (Features, Pricing, AboutUs, CaseStudies, WordPressPlugin, DownloadApp, Careers). WordPress plugin page: Elementor and Forminator icons were 404 (.png), now .gif.
 
 ### Claude Code, 2026-10-13 IST, SEO: 4 blog posts expanded, linked and scheduled (081ae20)
 
