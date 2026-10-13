@@ -1238,7 +1238,7 @@ function Contact({ isDark }) {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-10 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-10 items-start lg:items-stretch">
 
           {/* Left panel — 2 cols */}
           <div className="lg:col-span-2 flex flex-col gap-6">
@@ -1292,7 +1292,7 @@ function Contact({ isDark }) {
           </div>
 
           {/* Right panel — 3 cols — form */}
-          <div className="lg:col-span-3 rounded-3xl overflow-hidden"
+          <div className="lg:col-span-3 rounded-3xl overflow-hidden flex flex-col"
             style={{
               background: cardBg,
               border: `1px solid ${cardBdr}`,
@@ -1302,7 +1302,8 @@ function Contact({ isDark }) {
             }}>
             {/* Top accent strip */}
             <div style={{ height: 3, background: "linear-gradient(to right, #ff6b00, #ffaa00, #ff6b00)" }} />
-            <div className="p-8">
+            {/* Stretches to the left column's height; the message box takes the extra space */}
+            <div className="p-8 flex-1 flex flex-col">
               <ContactForm isDark={isDark} />
             </div>
           </div>
@@ -1380,8 +1381,8 @@ function ContactForm({ isDark }) {
   );
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="mb-6">
+    <form onSubmit={handleSubmit} className="flex-1 flex flex-col gap-5">
+      <div className="mb-1">
         <h3 className="font-black text-xl mb-1" style={{ color: heading }}>Send us a message</h3>
         <p className="text-sm" style={{ color: body }}>Fill in the form and we'll be in touch shortly.</p>
       </div>
@@ -1429,7 +1430,7 @@ function ContactForm({ isDark }) {
       </div>
 
       {/* Message */}
-      <div>
+      <div className="flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-1.5">
           <label className="block text-xs font-semibold" style={{ color: labelClr }}>Message</label>
           <span className="text-[11px]" style={{ color: form.message.length > 1800 ? "#ef4444" : body }}>
@@ -1443,7 +1444,7 @@ function ContactForm({ isDark }) {
           onFocus={() => setFocused("message")}
           onBlur={() => setFocused("")}
           maxLength={2000}
-          className="w-full rounded-xl px-4 py-3 text-sm resize-none"
+          className="w-full flex-1 min-h-[112px] rounded-xl px-4 py-3 text-sm resize-none"
           style={fieldStyle("message")} />
       </div>
 
