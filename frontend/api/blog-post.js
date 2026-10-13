@@ -60,6 +60,72 @@ function articleLd(post, { url, desc, image }) {
   };
 }
 
+// ── The article itself, in the HTML ─────────────────────────────────────────
+// Without it the HTML that crawlers fetch first holds ~9 words: Google has to
+// wait for its rendering pass, and crawlers that never run JavaScript (Bing's
+// first pass, AI search bots, link previews) see no article at all. The copy
+// goes into #root as a prerendered page (see "Prerendered pages" in main.jsx),
+// hidden behind the usual splash until the live page replaces it, so visitors
+// see exactly what they saw before.
+
+// Block HTML comes from our own Sanity sync or the CRM editor. Keep only simple
+// inline/text tags and safe links; everything else is dropped to plain text.
+const KEEP = new Set(["b", "strong", "i", "em", "u", "s", "a", "br", "code", "mark", "div", "span"]);
+function cleanHtml(html) {
+  return String(html || "")
+    .replace(/<(script|style|iframe|object|embed)[\s\S]*?<\/\1>/gi, "")
+    .replace(/<\/?([a-z0-9]+)\b([^>]*)>/gi, (tag, name, attrs) => {
+      name = name.toLowerCase();
+      if (!KEEP.has(name)) return "";
+      if (tag.startsWith("</")) return `</${name}>`;
+      if (name !== "a") return `<${name}>`;
+      const href = (attrs.match(/\bhref\s*=\s*"([^"]*)"/i) || [])[1] || "";
+      if (!/^(https?:|mailto:|tel:|\/(?!\/))/i.test(href)) return "<a>";
+      const internal = /^\/(?!\/)/.test(href) || /^https?:\/\/(www\.)?arthaleads\.com(\/|$)/i.test(href);
+      return internal ? `<a href="${esc(href)}">` : `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">`;
+    });
+}
+
+function blockHtml(b) {
+  switch (b.type) {
+    case "paragraph": return `<p>${cleanHtml(b.content)}</p>`;
+    case "h2": return `<h2>${cleanHtml(b.content)}</h2>`;
+    case "h3": return `<h3>${cleanHtml(b.content)}</h3>`;
+    case "h4": return `<h4>${cleanHtml(b.content)}</h4>`;
+    case "quote": return `<blockquote><p>${cleanHtml(b.content)}</p></blockquote>`;
+    case "bulletList": return `<ul>${(b.items || []).map((i) => `<li>${cleanHtml(i)}</li>`).join("")}</ul>`;
+    case "numberedList": return `<ol>${(b.items || []).map((i) => `<li>${cleanHtml(i)}</li>`).join("")}</ol>`;
+    case "image": return /^https?:/i.test(b.content || "")
+      ? `<figure><img src="${esc(b.content)}" alt="${esc(b.alt || "")}" loading="lazy">${b.caption ? `<figcaption>${esc(b.caption)}</figcaption>` : ""}</figure>`
+      : "";
+    case "code": return `<pre><code>${esc(b.content)}</code></pre>`;
+    case "divider": return "<hr>";
+    default: return "";
+  }
+}
+
+function articleHtml(post) {
+  const author = post.byline || post.author?.name || "Arthaleads Team";
+  const date = post.publishedAt
+    ? new Date(post.publishedAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "long", year: "numeric" })
+    : "";
+  const image = abs(post.featuredImage);
+  return `<main><article>
+<nav aria-label="Breadcrumb"><a href="/">Home</a> › <a href="/blog">Blog</a>${post.category?.name ? ` › ${esc(post.category.name)}` : ""}</nav>
+<h1>${esc(post.title)}</h1>
+${post.excerpt ? `<p>${esc(post.excerpt)}</p>` : ""}
+<p>${esc(author)}${date ? ` · <time datetime="${esc(post.publishedAt)}">${esc(date)}</time>` : ""}${post.readingTime ? ` · ${post.readingTime} min read` : ""}</p>
+${image ? `<img src="${esc(image)}" alt="${esc(post.featuredImageAlt || post.title)}">` : ""}
+${(post.blocks || []).map(blockHtml).join("\n")}
+<p><a href="/blog">More guides on the Arthaleads blog</a> · <a href="/features">Arthaleads features</a> · <a href="/pricing">Pricing</a></p>
+</article></main>`;
+}
+
+// Same switches the prerendered marketing pages use: the copy stays hidden and
+// the splash stays up until the live page takes over.
+const HIDE_UNTIL_LIVE = `    <style id="prerender-css">[data-prerender-hide] [data-prerendered] { visibility: hidden; }</style>
+    <script>document.documentElement.setAttribute("data-prerender-hide","")</script>`;
+
 export default async function handler(req, res) {
   const slug = String(req.query.slug || "").toLowerCase().replace(/[^a-z0-9-]/g, "");
   let html;
@@ -115,6 +181,12 @@ export default async function handler(req, res) {
     // Every "<" is escaped so a title can never close the script tag early.
     const ld = articleLd(post, { url: `${SITE}/blog/${post.slug}`, desc, image });
     html = html.replace("</head>", `    <script type="application/ld+json" id="blog-jsonld">${JSON.stringify(ld).replace(/</g, "\u005Cu003c")}</script>\n  </head>`);
+    if (html.includes('<div id="root"></div>')) {
+      html = html
+        .replace("</head>", `${HIDE_UNTIL_LIVE}
+  </head>`)
+        .replace('<div id="root"></div>', `<div id="root" data-prerendered>${articleHtml(post)}</div>`);
+    }
   } else {
     // Unknown or unreachable: keep the shell, but never claim the home canonical.
     html = html.replace(/<link rel="canonical"[^>]*>\s*/g, "");

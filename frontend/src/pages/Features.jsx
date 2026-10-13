@@ -178,7 +178,7 @@ export default function Features() {
 
   useSEO({
     title: "Features - Arthaleads Real Estate CRM",
-    description: "Every Arthaleads feature: lead capture from ads, portals and WhatsApp, AI lead scoring, WhatsApp campaigns and consent, call intelligence, projects, bookings and invoices, Meta Conversions API, attendance and tasks.",
+    description: "Every Arthaleads feature: lead capture from ads, portals and WhatsApp, AI lead scoring, WhatsApp campaigns, call intelligence, projects and bookings.",
     canonical: "https://www.arthaleads.com/features",
   });
 

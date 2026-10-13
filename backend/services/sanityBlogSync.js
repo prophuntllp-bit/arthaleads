@@ -80,8 +80,8 @@ function toBlocks(body) {
       if (b.listItem) {
         const type = b.listItem === "number" ? "numberedList" : "bulletList";
         if (!list || list.type !== type) { flush(); list = { id: b._key, type, content: "", items: [] }; }
-        const text = plainText(b).trim();
-        if (text) list.items.push(text);
+        // Items keep their inline HTML (bold, links), like paragraphs do.
+        if (plainText(b).trim()) list.items.push(inlineHtml(b));
         continue;
       }
       flush();

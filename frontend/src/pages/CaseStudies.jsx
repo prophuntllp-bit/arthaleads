@@ -85,7 +85,7 @@ function CaseStudiesInner() {
 
   useSEO({
     title: "Case Studies - How Real Estate Teams Win with Arthaleads CRM",
-    description: "Discover how real estate developers, builders, and brokers across India use Arthaleads CRM to capture more leads, track site visits, and close more property deals faster.",
+    description: "How real estate developers, builders and brokers across India use Arthaleads CRM to capture more leads, track site visits and close more deals.",
     canonical: "https://www.arthaleads.com/case-studies",
   });
 

@@ -77,7 +77,7 @@ blogPostSchema.pre("save", function (next) {
   const text = this.blocks
     .filter((b) => ["paragraph", "h2", "h3", "h4", "quote"].includes(b.type))
     .map((b) => (b.content || "").replace(/<[^>]*>/g, ""))
-    .concat(this.blocks.filter((b) => b.type === "bulletList" || b.type === "numberedList").flatMap((b) => b.items || []))
+    .concat(this.blocks.filter((b) => b.type === "bulletList" || b.type === "numberedList").flatMap((b) => (b.items || []).map((i) => String(i).replace(/<[^>]*>/g, ""))))
     .join(" ");
   const words = text.split(/\s+/).filter(Boolean).length;
   this.readingTime = Math.max(1, Math.ceil(words / 200));

@@ -100,7 +100,7 @@ export default function AboutUs() {
 
   useSEO({
     title: "About Arthaleads - Real Estate CRM Built for India",
-    description: "Arthaleads is India’s leading real estate CRM platform built for developers, brokers, and channel partners. Learn our mission to simplify property lead management.",
+    description: "Arthaleads is a real estate CRM built in Pune for developers, brokers and channel partners. Learn our mission to simplify property lead management.",
     canonical: "https://www.arthaleads.com/about-us",
   });
 

@@ -166,7 +166,7 @@ function RenderBlock({ block, t, isDark }) {
           {(block.items || []).map((item, i) => (
             <li key={i} className="flex items-start gap-3 text-[17px] leading-relaxed" style={{ color: t.text }}>
               <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b00] shrink-0 mt-[0.7em]" />
-              <span>{item}</span>
+              <span className={link} dangerouslySetInnerHTML={{ __html: sanitizeHtml(item) }} />
             </li>
           ))}
         </ul>
@@ -177,7 +177,7 @@ function RenderBlock({ block, t, isDark }) {
           {(block.items || []).map((item, i) => (
             <li key={i} className="flex items-start gap-3.5 text-[17px] leading-relaxed" style={{ color: t.text }}>
               <span className="w-7 h-7 rounded-full bg-[#ff6b00]/12 text-[#e85d04] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 tabular-nums">{i + 1}</span>
-              <span>{item}</span>
+              <span className={link} dangerouslySetInnerHTML={{ __html: sanitizeHtml(item) }} />
             </li>
           ))}
         </ol>

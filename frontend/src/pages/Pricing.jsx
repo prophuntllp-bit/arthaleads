@@ -30,7 +30,7 @@ export default function Pricing() {
 
   useSEO({
     title:       "Pricing | Arthaleads Real Estate CRM Plans",
-    description: "Simple, transparent pricing for Arthaleads. Starter, Growth, and Enterprise plans for real estate teams of every size. 14-day free trial, no credit card required.",
+    description: "Simple, transparent Arthaleads pricing. Starter, Growth and Enterprise plans for real estate teams of every size. 14-day free trial, no credit card needed.",
     canonical:   "https://www.arthaleads.com/pricing",
   });
 

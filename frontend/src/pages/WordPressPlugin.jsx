@@ -279,7 +279,7 @@ function WordPressPluginInner() {
 
   useSEO({
     title: "Free WordPress Plugin for Real Estate Leads | Arthaleads",
-    description: "Download the free Arthaleads WordPress plugin to automatically capture leads from Contact Form 7, WPForms, Elementor, Gravity Forms and 5 more form builders directly into your CRM.",
+    description: "Free Arthaleads WordPress plugin: capture leads from Contact Form 7, WPForms, Elementor, Gravity Forms and 5 more form builders straight into your CRM.",
     canonical: "https://www.arthaleads.com/wordpress-plugin",
   });
 
