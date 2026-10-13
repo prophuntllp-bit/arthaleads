@@ -67,6 +67,11 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-13 IST, marketing nav transparent over content (0d98823)
+
+- Owner saw the nav see-through with page text behind it. PublicNav set its solid background only on a scroll event, so a page opened part-way down stayed transparent; it now checks on mount (passive listener). The prerendered static copy (no React) also never turned solid: prerender.mjs HEAD_EXTRA adds a tiny script setting html[data-scrolled] plus a rule giving `[data-prerendered] nav` the scrolled look. Affects every prerendered marketing page.
+- /whatsapp-crm headline second line now uses the home page's orange gradient (owner asked).
+
 ### Claude Code, 2026-10-13 IST, /whatsapp-crm motion (a6a6faa)
 
 - Owner asked for the same effects as other pages: uses components/motion/Motion.jsx (Reveal, Spotlight, Magnetic) and the styles.css word-rise / shine-btn / float-soft / aurora-drift classes; all respect reduced motion. Content unchanged.
