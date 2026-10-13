@@ -59,13 +59,18 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-13 15:00 IST: SEO: /blog served by new api/blog-index.js (real post list in HTML, was "0 articles"), accessibility fixes from Lighthouse on marketing pages, more content on thin pages (Case Studies, Contact, Compare). Files: frontend/api/blog-index.js (new), frontend/vercel.json, marketing pages/components as found.
 
 
 
 
 
 ## Change log (newest first)
+
+### Claude Code, 2026-10-13 IST, SEO: blog index HTML, accessibility, thin pages (1ff8855)
+
+- /blog now goes to frontend/api/blog-index.js (vercel.json): it takes the prerendered blog.html and swaps the skeleton cards and "0 articles" for the real list (BlogCard-style markup, light theme). Edge-cached 5 min.
+- Accessibility (Lighthouse): install-banner dismiss buttons got aria-label (App.jsx); footer column headings h4 -> h2; Vistrow credit links use title instead of an aria-label that hid the visible "by"; CountUp gives screen readers the value as sr-only text (aria-label on a span is not allowed); Landing step/review dots are 24px targets without negative margins; light-theme #9ca3af text -> #6b7280 on marketing pages, small greens #16a34a -> #15803d, Compare "Partial" amber -> #b45309; blog posts' viewport now allows zoom; plugin page mailto link underlined. Brand orange #ff6b00 contrast deliberately NOT changed (owner's call).
+- Compare: new "How to choose a real estate CRM" section (no new competitor claims). Case Studies: useSEO robots "noindex, follow" (seo-pages.mjs now writes useSEO robots into the HTML) and removed from the sitemap while no case studies exist; comment in CaseStudies.jsx says how to undo.
 
 ### Claude Code, 2026-10-13 IST, blog: old CRM-editor post moved into Sanity (no code change)
 
