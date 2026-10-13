@@ -59,6 +59,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-13 12:30 IST: SEO technical fixes: blog post article HTML in /api/blog-post (crawlers saw 9 words), list items keep bold/links (Sanity sync + PublicBlogPost), sitewide SoftwareApplication/WebSite JSON-LD corrections (index.html), long meta descriptions trimmed. Files: frontend/api/blog-post.js, frontend/index.html, frontend/src/pages/PublicBlogPost.jsx + 7 marketing pages (useSEO description only), backend/services/sanityBlogSync.js, backend/models/BlogPost.js
+
 
 
 
