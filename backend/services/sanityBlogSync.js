@@ -56,7 +56,11 @@ function inlineHtml(block) {
       else if (mark === "code") html = `<code>${html}</code>`;
       else if (defs[mark]?._type === "link") {
         const href = safeHref(defs[mark].href);
-        if (href) html = `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${html}</a>`;
+        // Our own pages open in the same tab (normal internal links); other sites open a new one.
+        const internal = /^\/(?!\/)/.test(href) || /^https?:\/\/(www\.)?arthaleads\.com(\/|$)/i.test(href);
+        if (href) html = internal
+          ? `<a href="${esc(href)}">${html}</a>`
+          : `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${html}</a>`;
       }
     }
     return html;
