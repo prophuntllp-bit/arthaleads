@@ -22,7 +22,7 @@ const FORM_PLUGINS = [
   },
   {
     name: "Elementor Pro Forms", users: "9M+", color: "#e2185b",
-    logo: "https://ps.w.org/elementor/assets/icon-256x256.png",
+    logo: "https://ps.w.org/elementor/assets/icon-256x256.gif",
   },
   {
     name: "Fluent Forms", users: "400K+", color: "#18b77e",
@@ -30,7 +30,7 @@ const FORM_PLUGINS = [
   },
   {
     name: "Forminator", users: "500K+", color: "#17a1fa",
-    logo: "https://ps.w.org/forminator/assets/icon-256x256.png",
+    logo: "https://ps.w.org/forminator/assets/icon-256x256.gif",
   },
   {
     name: "MetForm", users: "100K+", color: "#7c3aed",
