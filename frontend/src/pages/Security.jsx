@@ -96,10 +96,6 @@ export default function Security() {
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full blur-3xl" style={{ background: "rgba(255,107,0,0.06)" }} />
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-6" style={{ borderColor: "rgba(255,107,0,0.30)", background: "rgba(255,107,0,0.10)" }}>
-            <Shield className="w-3.5 h-3.5 text-[#ff6b00]" />
-            <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Security & Trust</span>
-          </div>
           <h1 className="text-4xl sm:text-5xl font-black mb-5" style={{ color: textColor }}>
             Your leads are{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">safe with us</span>

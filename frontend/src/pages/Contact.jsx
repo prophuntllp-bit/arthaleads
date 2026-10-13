@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Mail, Phone, MapPin, MessageCircle, ArrowRight, Check } from "lucide-react";
+import { Mail, Phone, MapPin, ArrowRight, Check } from "lucide-react";
 import WhatsAppLogo from "../components/WhatsAppLogo";
 import { waLink, WA_MESSAGES } from "../utils/crmLinks";
 import PublicNav from "../components/PublicNav";
@@ -72,10 +72,6 @@ export default function Contact() {
         {/* Hero */}
         <section className="pt-24 pb-8 px-4" style={{ background: isDark ? "#0d0d1a" : "#fff7f0" }}>
           <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-5">
-              <MessageCircle className="w-3.5 h-3.5 text-[#ff6b00]" />
-              <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Get in Touch</span>
-            </div>
             <h1 className="text-3xl sm:text-4xl font-black mb-3" style={{ color: heading }}>
               We'd love to{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">

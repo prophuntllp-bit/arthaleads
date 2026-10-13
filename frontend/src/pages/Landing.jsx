@@ -4,13 +4,7 @@ import { Link } from "react-router-dom";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { FEATURES, HOME_FEATURES } from "../data/features";
 import {
-  ChevronRight, ChevronLeft, Check, ArrowRight,
-  BarChart3, Users, Zap, Building2, PhoneCall,
-  Bell, Target, TrendingUp, Shield, Star,
-  Facebook, MessageCircle, Mail, Phone, MapPin,
-  ChevronDown, PlayCircle, Layers, Clock, Filter,
-  FileSpreadsheet, UserCheck, Activity,
-  QrCode, Sparkles, FileText, Camera, Bot, Headphones
+  ChevronRight, ChevronLeft, Check, ArrowRight, BarChart3, Users, Zap, Building2, PhoneCall, Bell, TrendingUp, Shield, Facebook, Mail, Phone, MapPin, ChevronDown, PlayCircle, Layers, Clock, Filter, FileSpreadsheet, UserCheck, QrCode, Sparkles, FileText, Camera, Bot, Headphones,
 } from "lucide-react";
 import WhatsAppLogo from "../components/WhatsAppLogo";
 import PublicNav from "../components/PublicNav";
@@ -405,10 +399,6 @@ function HowItWorks({ isDark }) {
 
         {/* Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
-            <Activity className="w-3.5 h-3.5 text-[#ff6b00]" />
-            <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">How It Works</span>
-          </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-3" style={{ color: heading }}>
             Up and running in{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">minutes</span>
@@ -473,8 +463,8 @@ function HowItWorks({ isDark }) {
             <div className="p-6 lg:p-8">
               {/* Step label */}
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-xs font-black px-3 py-1 rounded-full tracking-widest"
-                  style={{ background: `${step.color}15`, color: step.color }}>
+                <span className="text-xs font-black tracking-widest"
+                  style={{ color: step.color }}>
                   STEP {String(step.num).padStart(2, "0")} / {String(HOW_STEPS.length).padStart(2, "0")}
                 </span>
                 <div className="flex-1 h-px" style={{ background: `${step.color}20` }} />
@@ -623,10 +613,6 @@ function About({ isDark }) {
             transform: visible ? "translateX(0)" : "translateX(-40px)",
             transition: "opacity 0.7s ease, transform 0.7s ease",
           }}>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-6">
-              <Building2 className="w-3.5 h-3.5 text-[#ff6b00]" />
-              <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">About Arthaleads</span>
-            </div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-6 leading-tight" style={{ color: heading }}>
               Built by real estate people,{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
@@ -803,10 +789,6 @@ function Testimonials({ isDark }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
-            <Star className="w-3.5 h-3.5 text-[#ff6b00]" />
-            <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Customer Stories</span>
-          </div>
           <h2 className="text-3xl sm:text-4xl font-black mb-3" style={{ color: heading }}>
             Trusted by real estate teams{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">across India</span>
@@ -1003,10 +985,6 @@ function Pricing({ isDark }) {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
-            <Target className="w-3.5 h-3.5 text-[#ff6b00]" />
-            <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Pricing Plans</span>
-          </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-4" style={{ color: heading }}>
             Plans for every{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">team size</span>
@@ -1226,10 +1204,6 @@ function Contact({ isDark }) {
 
         {/* Section header */}
         <div className="text-center mb-14">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-5">
-            <MessageCircle className="w-3.5 h-3.5 text-[#ff6b00]" />
-            <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Get in Touch</span>
-          </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-4" style={{ color: heading }}>
             Ready to transform your{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">

@@ -310,11 +310,6 @@ function WordPressPluginInner() {
         `}</style>
 
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-6 animate-pulse" style={{ borderColor: "rgba(255,107,0,0.35)", background: "rgba(255,107,0,0.10)" }}>
-            <PlugZap className="w-3.5 h-3.5 text-[#ff6b00]" />
-            <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Free WordPress Plugin</span>
-          </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] mb-6" style={{ color: text }}>
             Every Website Enquiry<br />

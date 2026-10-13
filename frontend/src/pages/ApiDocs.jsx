@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Code2, Copy, Check, Terminal, Webhook, KeyRound, ArrowRight, Mail } from "lucide-react";
+import { Copy, Check, Terminal, Webhook, KeyRound, ArrowRight, Mail } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
@@ -201,10 +201,6 @@ export default function ApiDocs() {
       {/* Hero */}
       <section className="relative pt-32 pb-12 overflow-hidden">
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-6" style={{ borderColor: "rgba(255,107,0,0.30)", background: "rgba(255,107,0,0.10)" }}>
-            <Code2 className="w-3.5 h-3.5 text-[#ff6b00]" />
-            <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Developers</span>
-          </div>
           <h1 className="text-4xl sm:text-5xl font-black mb-5" style={{ color: textColor }}>
             Arthaleads{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">API</span>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
-import { Download, ArrowRight, ChevronDown, Smartphone, ShieldCheck, Bell,
-         MapPin, Phone, WifiOff, CheckCircle2, AlertTriangle } from "lucide-react";
+import {
+  Download, ArrowRight, ChevronDown, ShieldCheck, Bell, MapPin, Phone, WifiOff, CheckCircle2, AlertTriangle,
+} from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
@@ -133,11 +134,6 @@ function DownloadAppInner() {
         </div>
 
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-6"
-            style={{ borderColor: "rgba(255,107,0,0.35)", background: "rgba(255,107,0,0.10)" }}>
-            <Smartphone className="w-3.5 h-3.5 text-[#ff6b00]" />
-            <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Android App</span>
-          </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] mb-6" style={{ color: text }}>
             Your Pipeline,<br />

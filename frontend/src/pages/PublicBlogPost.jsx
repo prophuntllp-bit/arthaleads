@@ -399,7 +399,7 @@ function BlogPostInner() {
           <div className="max-w-4xl">
             {post.category && (
               <Link to={`/blog?category=${post.category._id}`}
-                className="inline-block px-3.5 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-[0.14em] bg-[#ff6b00]/10 text-[#e85d04] hover:bg-[#ff6b00]/20 transition-colors mb-5">
+                className="inline-block text-xs font-bold uppercase tracking-[0.14em] text-[#c2410c] hover:underline underline-offset-4 mb-5">
                 {post.category.name}
               </Link>
             )}

@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { Reveal, Spotlight } from "../components/motion/Motion";
-import { Check, Zap, Users, Target, ChevronDown, ArrowRight, Sparkles } from "lucide-react";
+import { Check, Zap, Users, ChevronDown, ArrowRight } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
@@ -90,11 +90,6 @@ export default function Pricing() {
       {/* Hero */}
       <section className="relative pt-32 pb-8 overflow-hidden">
         <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-6"
-            style={{ borderColor: "rgba(255,107,0,0.30)", background: "rgba(255,107,0,0.10)" }}>
-            <Target className="w-3.5 h-3.5 text-[#ff6b00]" />
-            <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Pricing Plans</span>
-          </div>
           <h1 className="text-4xl sm:text-5xl font-black mb-4" style={{ color: heading }}>
             Plans for every{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">team size</span>
@@ -361,11 +356,6 @@ export default function Pricing() {
       <section className="py-14" style={{ background: altBg }}>
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-4"
-              style={{ borderColor: "rgba(255,107,0,0.30)", background: "rgba(255,107,0,0.10)" }}>
-              <Sparkles className="w-3.5 h-3.5 text-[#ff6b00]" />
-              <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">FAQ</span>
-            </div>
             <h2 className="text-2xl sm:text-3xl font-black" style={{ color: heading }}>
               Pricing questions, answered
             </h2>
