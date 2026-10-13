@@ -67,6 +67,10 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-13 IST, all eyebrow pills removed (fad99e1)
+
+- Owner asked to remove every label pill on the website: 17 rounded uppercase badges above headings (ApiDocs, CaseStudies, Compare, Contact, DownloadApp, HelpGuide, Pricing x2, ProductUpdates, ReferEarn, Security, WordPressPlugin, Landing x5). Landing "STEP 01 / 04" and the blog post category are now plain text. Kept: Features section nav and blog filter chips (controls, not labels), and CRM app status chips. Do not add new pills (see owner rule).
+
 ### Claude Code, 2026-10-13 IST, real WhatsApp logo, no eyebrow pills (9a85cce)
 
 - Owner rule: no small rounded label pills above headings (they read as AI-made), and the real WhatsApp logo wherever WhatsApp is shown. New components/WhatsAppLogo.jsx (lucide-style className/style props, brand green by default, `color="currentColor"` for monochrome rows). Used on /whatsapp-crm buttons, PublicNav "WhatsApp CRM" item, Landing "WhatsApp capture" tile + "Chat on WhatsApp" card, Contact card, blog share button. /whatsapp-crm eyebrow pill removed. Older pages' pills left in place pending the owner's decision.
