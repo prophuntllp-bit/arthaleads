@@ -59,6 +59,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-13 15:00 IST: SEO: /blog served by new api/blog-index.js (real post list in HTML, was "0 articles"), accessibility fixes from Lighthouse on marketing pages, more content on thin pages (Case Studies, Contact, Compare). Files: frontend/api/blog-index.js (new), frontend/vercel.json, marketing pages/components as found.
+
 
 
 
