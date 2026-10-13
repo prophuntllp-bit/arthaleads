@@ -59,6 +59,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-13 11:30 IST: SEO, blog: links to our own pages inside Sanity posts open in the same tab (external ones keep a new tab). File: backend/services/sanityBlogSync.js
+
 
 
 ## Change log (newest first)
