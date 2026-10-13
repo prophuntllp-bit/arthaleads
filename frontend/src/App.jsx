@@ -385,6 +385,7 @@ const PendingDeletionScreen = lazy(() => import("./components/PendingDeletionScr
 const VerifyEmail    = lazy(() => import("./pages/VerifyEmail"));
 const DeleteAccount  = lazy(() => import("./pages/DeleteAccount"));
 const DownloadApp    = lazy(() => import("./pages/DownloadApp"));
+const WhatsAppCrm    = lazy(() => import("./pages/WhatsAppCrm"));
 const Projects       = lazy(() => import("./pages/Projects"));
 const ProjectDetail  = lazy(() => import("./pages/ProjectDetail"));
 const DumpLeads      = lazy(() => import("./pages/DumpLeads"));
@@ -776,6 +777,7 @@ export default function App() {
         <Route path="/verify-email"         element={<VerifyEmail />} />
         <Route path="/delete-account"       element={<DeleteAccount />} />
         <Route path="/download-app"         element={<DownloadApp />} />
+        <Route path="/whatsapp-crm"         element={<WhatsAppCrm />} />
         <Route path="/blog"                 element={<PublicBlog />} />
         <Route path="/blog/:slug"           element={<PublicBlogPost />} />
         <Route path="/about-us"             element={<AboutUs />} />

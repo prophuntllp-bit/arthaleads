@@ -72,6 +72,7 @@ export default function PublicFooter() {
             <div className="space-y-2.5">
               {[
                 ["Pricing",            "/pricing"],
+                ["WhatsApp CRM",       "/whatsapp-crm"],
                 ["WordPress Plugin",   "/wordpress-plugin"],
                 ["API Docs",           "/api-docs"],
                 ["Feature Comparison", "/compare"],

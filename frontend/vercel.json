@@ -75,6 +75,10 @@
       "destination": "/download-app.html"
     },
     {
+      "source": "/whatsapp-crm",
+      "destination": "/whatsapp-crm.html"
+    },
+    {
       "source": "/features",
       "destination": "/features.html"
     },
