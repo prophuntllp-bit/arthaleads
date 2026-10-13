@@ -67,6 +67,10 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-13 IST, links to /whatsapp-crm (17e9195)
+
+- Owner asked: WhatsApp CRM is now the first item in the nav Resources dropdown (PublicNav NAV_RESOURCES), linked from the home features summary line and the home FAQ answer about WhatsApp AI (Landing.jsx), and from the Features page "Talk" section via a new optional `more` link on FEATURE_GROUPS (data/features.js, rendered in Features.jsx Workflow).
+
 ### Claude Code, 2026-10-13 IST, SEO: /whatsapp-crm page (c13ba01)
 
 - Owner approved after Keyword Planner research (India: "whatsapp crm", "crm for whatsapp", "crm with whatsapp" 1K-10K/month each). New pages/WhatsAppCrm.jsx: hero with the inbox screenshot, why, 4-step how it works, 8 feature cards each labelled with its starting plan (verified against planGate: AI agent, AI drafts, templates/campaigns = Growth; CTWA button flow = Enterprise), WhatsApp Business app vs CRM comparison (cards on phones), FAQ with FAQPage JSON-LD in the markup. Wired into App routes, prerender, vercel.json rewrite, sitemap (0.9), footer Product list, CustomCursor.
