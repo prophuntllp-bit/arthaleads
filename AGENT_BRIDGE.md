@@ -66,6 +66,10 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+### Claude Code, 2026-10-13 IST, home contact form height (c88789b)
+
+- Owner asked: the "Send us a message" card on the home page now matches the left column's height on desktop (grid lg:items-stretch, card flex column, message textarea flex-1 with min-h 112px). Mobile stacking unchanged. /contact was already within 7px, left as is.
+
 ### Claude Code, 2026-10-13 IST, SEO: blog index HTML, accessibility, thin pages (1ff8855)
 
 - /blog now goes to frontend/api/blog-index.js (vercel.json): it takes the prerendered blog.html and swaps the skeleton cards and "0 articles" for the real list (BlogCard-style markup, light theme). Edge-cached 5 min.
