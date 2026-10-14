@@ -69,6 +69,8 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+- [Claude Code] 2026-10-14 IST, 23c6543: WhatsApp ad-text project match (labelAdlessLead / markAdOrigin / agent pick) now skips placeholder first messages ([Unsupported message] etc.) and also runs on the first inbound with real content. Cause: Khopoli ad lead +918805123260 opened with an unsupported item before the ad's image+text, so it got no label and no project. Meta sent no referral for it (not a dropped-referral bug). router._handleInbound exported for tests. Data fix for that lead (label + assign Sheetal Powar + SP Khopoli campaign project) is pending the owner running it.
+
 ### Claude Code, 2026-10-13 IST, all eyebrow pills removed (fad99e1)
 
 - Owner asked to remove every label pill on the website: 17 rounded uppercase badges above headings (ApiDocs, CaseStudies, Compare, Contact, DownloadApp, HelpGuide, Pricing x2, ProductUpdates, ReferEarn, Security, WordPressPlugin, Landing x5). Landing "STEP 01 / 04" and the blog post category are now plain text. Kept: Features section nav and blog filter chips (controls, not labels), and CRM app status chips. Do not add new pills (see owner rule).
