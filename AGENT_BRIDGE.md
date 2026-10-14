@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-14 IST: Artha copilot rebuild, Phase 0 (owner-approved plan https://claude.ai/artifact/8nQwUJxjEVqC3PG5mYNwHB): one shared visibility module for "my leads" (assigned OR created + project leads of my projects) used by follow-ups/analytics/alerts; arthaleads:refresh listeners; CopilotAction upgrade; OpenAI provider layer (gpt-5-mini); per-org copilot flags; permission tests. Files: backend/utils/visibility.js (new), backend/services/leadService.js, followupService.js, taskService.js, models/CopilotAction.js, models/Organization.js, backend/utils/ai/* (new), backend/tests/*, frontend hooks/pages refresh listeners. Please avoid these files until logged.
 
 
 
@@ -73,6 +72,8 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [Claude Code] 2026-10-14 IST, 3ebcf65 + 33174d9 + 44616fc: Artha copilot Phase 0 (owner-approved plan https://claude.ai/artifact/8nQwUJxjEVqC3PG5mYNwHB). (1) backend/utils/visibility.js is THE rule for who sees which lead / project lead / WhatsApp chat / calls; leadService (getAllUnified, getById, getWhatsAppMessages, agentOwnsLead), enablexRoutes (agentOwns, ownCallsMatch) and whatsappRoutes (canAccessConversation) delegate to it; task listing moved into taskService.list. Use these helpers in any new read path; tests/visibility.db.test.js (in npm test) fails on leaks. Follow-ups/tasks stay "assigned to me" on purpose (to-do lists, not permissions). Only behaviour change: agents can open calls of a project lead assigned to them personally. (2) backend/utils/ai/provider.js is the only way Artha reaches a model: gpt-5-mini, reasoning effort low (won capability test 33/33 vs gpt-4o-mini 24, gpt-5-nano 23), per-company pin Organization.copilot.model, usage/cost in AiUsage artha* (micro-USD, IST month). Organization.copilot {enabled, actions, brief, drafts, model}. CopilotAction gains source/threadId/subjects and clears stale pending claims. Eval: npm run eval:copilot (real API, not in npm test). (3) frontend hooks/useAppRefresh.js: Leads, Follow-ups, Pipeline, Tasks, Project pages reload on arthaleads:refresh.
 
 - [Claude Code] 2026-10-14 IST, 11b38d7: home and Features titles/descriptions/intro copy retuned for 'real estate CRM software (India)' (Keyword Planner 1K-10K). Portal leads are manual import: never describe them as automatic capture.
 
