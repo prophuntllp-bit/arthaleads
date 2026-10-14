@@ -12,8 +12,9 @@ import { useSEO } from "../utils/useSEO";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 const STATS = [
-  { num: 50,    suffix: "+",   label: "Real Estate Teams",  color: "#ff6b00" },
-  { num: 10000, suffix: "+",   label: "Leads Managed",      color: "#22c55e" },
+  // Product facts only. No customer counts until they are real and checkable.
+  { num: 14,    suffix: "-day", label: "Free Trial",        color: "#ff6b00" },
+  { num: 4,     suffix: "",    label: "AI Reply Languages", color: "#22c55e" },
   { num: 8,     suffix: "",    label: "Form Integrations",  color: "#3b82f6" },
   { num: 24,    suffix: "/7",  label: "WhatsApp AI Replies",             color: "#a855f7" },
 ];
@@ -40,18 +41,12 @@ const VALUES = [
 ];
 
 const STORY_POINTS = [
-  { icon: Layers,   text: "Every lead source connected to one inbox: Facebook, Google, WhatsApp, forms, portals." },
+  { icon: Layers,   text: "Every lead source in one inbox: Facebook and Instagram ads, Google, WhatsApp and website forms, with portal leads imported." },
   { icon: Users,    text: "Duplicate prevention so your team never wastes a call." },
   { icon: Shield,   text: "Role-based access so telecallers, managers, and admins each see exactly what they need." },
   { icon: BarChart3,text: "Real-time dashboards built for the pace of property sales campaigns." },
 ];
 
-const TIMELINE = [
-  { year: "2022", title: "The idea",         desc: "Watched real estate teams lose hot leads across WhatsApp groups and spreadsheets. Knew there had to be a better way." },
-  { year: "2023", title: "First version",    desc: "Shipped the first version of Arthaleads to 5 teams in Pune. The teams who tried it stopped going back to Excel." },
-  { year: "2024", title: "Growing fast",     desc: "Expanded to 100+ teams across Maharashtra. Added Facebook Ads integration, pipeline view, and team analytics." },
-  { year: "2025", title: "Scaling up",       desc: "50+ teams and 10,000+ leads. Launched the WordPress plugin, the Android app and deeper Facebook and WhatsApp integrations." },
-];
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 function useVisible(threshold = 0.15) {
@@ -150,12 +145,6 @@ export default function AboutUs() {
         </div>
 
         <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 24px", textAlign: "center", position: "relative" }}>
-          {/* Badge */}
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 16px", borderRadius: 40, border: "1px solid rgba(255,107,0,0.35)", background: "rgba(255,107,0,0.1)", marginBottom: 28, animation: "fadeUp 0.6s ease both" }}>
-            <MapPin style={{ width: 13, height: 13, color: "#ff6b00" }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#ff6b00", textTransform: "uppercase", letterSpacing: "0.1em" }}>Pune, India</span>
-          </div>
-
           <h1 style={{ fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 900, lineHeight: 1.1, color: heading, marginBottom: 20, animation: "fadeUp 0.7s ease 0.1s both" }}>
             Built for Real Estate.{" "}
             <span style={{ background: "linear-gradient(135deg, #ff6b00, #ffaa00)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
@@ -167,14 +156,6 @@ export default function AboutUs() {
             We set out to solve a problem every Indian real estate team knows: leads slipping through the cracks across WhatsApp groups, Facebook campaigns, and forgotten spreadsheets.
           </p>
 
-          {/* Floating chips */}
-          <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", animation: "fadeUp 0.6s ease 0.32s both" }}>
-            {["50+ Teams", "Pune · Mumbai · Maharashtra", "Founded 2022"].map(txt => (
-              <div key={txt} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 30, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)", border: `1px solid ${isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}` }}>
-                <span style={{ fontSize: 12, color: body, fontWeight: 500 }}>{txt}</span>
-              </div>
-            ))}
-          </div>
         </div>
 
         <style>{`
@@ -331,101 +312,6 @@ export default function AboutUs() {
         </div>
       </section>
 
-      {/* ── Timeline ── */}
-      <section style={{ background: isDark ? "#0d0d1a" : "#f1f5f9", padding: "88px 24px" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto" }}>
-          <div ref={timelineRef} style={{ textAlign: "center", marginBottom: 56,
-            opacity: timelineVisible ? 1 : 0, transform: timelineVisible ? "translateY(0)" : "translateY(20px)", transition: "opacity 0.6s ease, transform 0.6s ease",
-          }}>
-            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "#ff6b00", marginBottom: 10 }}>Our Journey</div>
-            <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: heading }}>How we got here</h2>
-          </div>
-
-          <div style={{ position: "relative", paddingLeft: 28 }}>
-            {/* Vertical line — solid with gradient */}
-            <div style={{
-              position: "absolute", left: 19, top: 20, bottom: 20, width: 2,
-              background: "linear-gradient(180deg, #ff6b00 0%, rgba(255,107,0,0.3) 100%)",
-              borderRadius: 2,
-            }} />
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              {TIMELINE.map(({ year, title, desc }, i) => (
-                <div
-                  key={year}
-                  style={{
-                    display: "flex", gap: 24, alignItems: "flex-start",
-                    opacity: timelineVisible ? 1 : 0,
-                    transform: timelineVisible ? "translateX(0)" : "translateX(-30px)",
-                    transition: `opacity 0.6s ease ${i * 0.15}s, transform 0.6s ease ${i * 0.15}s`,
-                  }}
-                >
-                  {/* Dot */}
-                  <div style={{ flexShrink: 0, zIndex: 1, marginLeft: -28 }}>
-                    <div
-                      id={`timeline-dot-${i}`}
-                      style={{
-                        width: 40, height: 40, borderRadius: "50%",
-                        background: sectionBg,
-                        border: "2px solid #ff6b00",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        transition: "background 0.2s, box-shadow 0.2s",
-                      }}
-                    >
-                      <span
-                        id={`timeline-dot-label-${i}`}
-                        style={{ fontSize: 10, fontWeight: 900, color: "#ff6b00", letterSpacing: "-0.5px" }}
-                      >{year.slice(2)}</span>
-                    </div>
-                  </div>
-
-                  {/* Content card */}
-                  <div
-                    style={{
-                      flex: 1,
-                      background: sectionBg,
-                      borderRadius: 16,
-                      border: `1px solid ${sectionBdr}`,
-                      padding: "18px 22px",
-                      transition: "border-color 0.2s, box-shadow 0.2s, transform 0.2s",
-                      cursor: "default",
-                      position: "relative",
-                      overflow: "hidden",
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.borderColor = "rgba(255,107,0,0.35)";
-                      e.currentTarget.style.boxShadow = "0 8px 28px rgba(255,107,0,0.1)";
-                      e.currentTarget.style.transform = "translateY(-2px)";
-                      const dot = document.getElementById(`timeline-dot-${i}`);
-                      const lbl = document.getElementById(`timeline-dot-label-${i}`);
-                      if (dot) { dot.style.background = "#ff6b00"; dot.style.boxShadow = "0 0 14px rgba(255,107,0,0.45)"; }
-                      if (lbl) lbl.style.color = "#ffffff";
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.borderColor = sectionBdr;
-                      e.currentTarget.style.boxShadow = "none";
-                      e.currentTarget.style.transform = "translateY(0)";
-                      const dot = document.getElementById(`timeline-dot-${i}`);
-                      const lbl = document.getElementById(`timeline-dot-label-${i}`);
-                      if (dot) { dot.style.background = sectionBg; dot.style.boxShadow = "none"; }
-                      if (lbl) lbl.style.color = "#ff6b00";
-                    }}
-                  >
-                    {/* Left accent */}
-                    <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: "#ff6b00", borderRadius: "16px 0 0 16px", opacity: 0.5 }} />
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: "#ff6b00", background: "rgba(255,107,0,0.1)", border: "1px solid rgba(255,107,0,0.2)", padding: "2px 10px", borderRadius: 20 }}>{year}</span>
-                      <span style={{ fontSize: 16, fontWeight: 700, color: heading }}>{title}</span>
-                    </div>
-                    <p style={{ fontSize: 14, color: body, lineHeight: 1.7, margin: 0 }}>{desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ── Parent company ── */}
       <section style={{ padding: "0 24px 88px" }}>
         <div style={{
@@ -482,14 +368,6 @@ export default function AboutUs() {
 
           {/* Left — headline + CTA */}
           <div style={{ padding: "52px 48px 52px 52px" }}>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 7,
-              padding: "4px 12px", borderRadius: 20, marginBottom: 20,
-              background: "rgba(255,107,0,0.1)", border: "1px solid rgba(255,107,0,0.2)",
-            }}>
-              <Sparkles style={{ width: 11, height: 11, color: "#ff6b00" }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#ff6b00", textTransform: "uppercase", letterSpacing: "0.1em" }}>50+ Teams Trust Us</span>
-            </div>
             <h2 style={{ fontSize: "clamp(24px, 3.5vw, 36px)", fontWeight: 900, color: heading, lineHeight: 1.2, marginBottom: 14 }}>
               Start managing leads the smarter way
             </h2>

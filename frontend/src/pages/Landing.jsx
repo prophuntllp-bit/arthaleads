@@ -147,9 +147,10 @@ function Hero({ isDark }) {
 
         <div className="flex items-center justify-center gap-8 sm:gap-12 mt-12 lg:mt-14">
             {[
-              { num: "10,000+", label: "Leads Managed" },
-              { num: "50+",     label: "Teams Onboarded" },
-              { num: "3×",      label: "Faster Follow-ups" },
+              // Product facts only: no customer counts or outcome claims until they are real.
+              { num: "14-day",  label: "Free trial" },
+              { num: "24/7",    label: "WhatsApp AI replies" },
+              { num: `₹${PLAN_PRICING.starter.monthly}`, label: "Per user / month" },
             ].map((s) => (
               <div key={s.label} className="text-center">
                 <CountUp value={s.num} className="block text-2xl sm:text-3xl font-black text-[#ff6b00] tabular-nums" />
@@ -543,10 +544,11 @@ function About({ isDark }) {
   const [hoveredCard, setHoveredCard] = useState(null);
 
   const stats = [
-    { num: 50,    suffix: "+",  label: "Real Estate Teams",    sub: "actively using Arthaleads",    color: "#ff6b00" },
-    { num: 10000, suffix: "+",  label: "Leads Managed",sub: "across all organisations",     color: "#22c55e" },
-    { num: 24,    suffix: "/7", label: "WhatsApp AI Replies",  sub: "day and night, in your buyer's language", color: "#3b82f6" },
-    { num: 3,     suffix: "×",  label: "Faster Follow-ups",    sub: "vs. manual spreadsheet teams", color: "#a855f7" },
+    // Product facts only. No customer counts or outcome claims until they are real and checkable.
+    { num: 14,    suffix: "-day", label: "Free Trial",          sub: "every Growth feature, no credit card", color: "#ff6b00" },
+    { num: 8,     suffix: "",     label: "Form Builders",       sub: "connected by the free WordPress plugin", color: "#22c55e" },
+    { num: 24,    suffix: "/7",   label: "WhatsApp AI Replies", sub: "day and night, in your buyer's language", color: "#3b82f6" },
+    { num: 4,     suffix: "",     label: "Languages",           sub: "English, Hinglish, Hindi and Marathi", color: "#a855f7" },
   ];
   // Prerendered HTML (reduced motion on the server) shows the real numbers, not 0.
   const [counts, setCounts] = useState(() => (REDUCED_MOTION() ? stats.map((st) => st.num) : stats.map(() => 0)));
@@ -590,8 +592,7 @@ function About({ isDark }) {
   function fmtCount(i) {
     const n = counts[i];
     const { suffix } = stats[i];
-    if (i === 1) return n.toLocaleString("en-IN") + suffix;
-    return n + suffix;
+    return n.toLocaleString("en-IN") + suffix;
   }
 
   const bg      = isDark ? "#0d0d1a" : "#ffffff";
@@ -672,285 +673,6 @@ function About({ isDark }) {
               </div>
             ))}
           </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ── Testimonials ──────────────────────────────────────────────────────────────
-function Testimonials({ isDark }) {
-  const [active, setActive] = useState(0);
-  const [hovered, setHovered] = useState(null);
-  const isPausedRef = useRef(false);
-  const timerRef = useRef(null);
-
-  const reviews = [
-    {
-      name: "Rajesh Patil",
-      role: "Sales Head, channel partner firm",
-      city: "Pune",
-      quote: "Before Arthaleads our team was managing 500+ Facebook leads in WhatsApp groups. Now everything is centralised and our follow-up rate has tripled.",
-      stars: 5,
-      metric: "3x follow-up rate",
-      avatar: "RP",
-      avatarClr: "#ff6b00",
-    },
-    {
-      name: "Priya Sharma",
-      role: "Founder, residential brokerage",
-      city: "Mumbai",
-      quote: "The project import feature is a game-changer. We imported 2,000 leads in minutes and the duplicate detection saved us from calling the same people twice.",
-      stars: 5,
-      metric: "2,000 leads in minutes",
-      avatar: "PS",
-      avatarClr: "#8b5cf6",
-    },
-    {
-      name: "Amit Deshmukh",
-      role: "Sales Manager, developer team",
-      city: "Pune",
-      quote: "Our conversion rate jumped from 2% to 6% in 3 months. The analytics dashboard gives us clarity we never had before with Excel sheets.",
-      stars: 5,
-      metric: "3x conversion rate",
-      avatar: "AD",
-      avatarClr: "#0ea5e9",
-    },
-    {
-      name: "Sneha Kulkarni",
-      role: "Director, brokerage firm",
-      city: "Nashik",
-      quote: "We were losing track of leads coming from 99acres, Housing, and Facebook. Arthaleads brings everything into one place. Our team saved around 2 hours daily on manual follow-ups.",
-      stars: 4,
-      metric: "2 hrs saved per day",
-      avatar: "SK",
-      avatarClr: "#10b981",
-    },
-    {
-      name: "Vikram Joshi",
-      role: "Co-founder, realty firm",
-      city: "Nagpur",
-      quote: "Honestly wasn't sure about switching from our Excel setup. But after a week the team didn't want to go back. The mobile app makes site visit tracking effortless.",
-      stars: 5,
-      metric: "Zero Excel sheets",
-      avatar: "VJ",
-      avatarClr: "#f59e0b",
-    },
-    {
-      name: "Meena Agarwal",
-      role: "Channel Partner",
-      city: "Thane",
-      quote: "The WhatsApp integration alone was worth it. Leads from our broadcasts now land directly into the CRM with source tagging. No more copy-pasting names into sheets.",
-      stars: 4,
-      metric: "100% source tracking",
-      avatar: "MA",
-      avatarClr: "#ec4899",
-    },
-  ];
-
-  const TOTAL = reviews.length;
-
-  useEffect(() => {
-    if (REDUCED_MOTION()) return undefined;
-    timerRef.current = setInterval(() => {
-      if (!isPausedRef.current) setActive(a => (a + 1) % TOTAL);
-    }, 4000);
-    return () => clearInterval(timerRef.current);
-  }, [TOTAL]);
-
-  const goTo = (i) => setActive(i);
-  const prev = () => setActive(a => (a - 1 + TOTAL) % TOTAL);
-  const next = () => setActive(a => (a + 1) % TOTAL);
-
-  const bg       = isDark ? "#080810" : "#f9fafb";
-  const heading  = isDark ? "#ffffff" : "#111827";
-  const sub      = isDark ? "rgba(255,255,255,0.45)" : "#6b7280";
-  const cardBg   = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
-  const cardBdr  = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-  const cardBdrH = isDark ? "rgba(255,107,0,0.35)"   : "#ff6b00";
-  const quoteClr = isDark ? "rgba(255,255,255,0.7)"  : "#374151";
-  const nameClr  = isDark ? "#ffffff" : "#111827";
-  const roleClr  = isDark ? "rgba(255,255,255,0.38)" : "#6b7280";
-  const metricBg = isDark ? "rgba(255,107,0,0.12)"   : "#fff7ed";
-  const dotBg    = isDark ? "rgba(255,255,255,0.12)"  : "#e5e7eb";
-
-  // visible window: active-1, active, active+1 on desktop; active only on mobile
-  const visible = [-1, 0, 1].map(o => (active + o + reviews.length) % reviews.length);
-
-  return (
-    <section className="py-10 lg:py-14 overflow-hidden" style={{ background: bg }}>
-      <style>{`
-        @keyframes tFade { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-        .t-card { transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
-        .t-card:hover { transform: translateY(-4px); }
-      `}</style>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl font-black mb-3" style={{ color: heading }}>
-            Trusted by real estate teams{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">across India</span>
-          </h2>
-          <p className="text-sm max-w-md mx-auto" style={{ color: sub }}>
-            From solo brokers in Nashik to 30-member developer teams in Mumbai - here's what they say.
-          </p>
-
-        </div>
-
-        {/* Desktop: 3-card window */}
-        <div className="hidden md:grid grid-cols-3 gap-5 mb-8"
-          onMouseEnter={() => { isPausedRef.current = true; }}
-          onMouseLeave={() => { isPausedRef.current = false; }}>
-          {visible.map((ri, col) => {
-            const r = reviews[ri];
-            const isCenter = col === 1;
-            return (
-              <div key={`${col}-${ri}`} className="t-card p-6 rounded-2xl flex flex-col gap-4 cursor-pointer"
-                style={{
-                  background: isCenter
-                    ? isDark ? "linear-gradient(145deg,rgba(255,107,0,0.08),rgba(255,107,0,0.03))" : "#fff"
-                    : cardBg,
-                  border: `1px solid ${isCenter ? cardBdrH : cardBdr}`,
-                  boxShadow: isCenter
-                    ? isDark ? "0 8px 32px rgba(255,107,0,0.12)" : "0 8px 32px rgba(0,0,0,0.08)"
-                    : "none",
-                  opacity: isCenter ? 1 : 0.6,
-                  animation: isCenter ? "tFade 0.4s ease" : "none",
-                  scale: isCenter ? "1" : "0.97",
-                }}
-                onClick={() => goTo(ri)}
-                onMouseEnter={() => setHovered(ri)}
-                onMouseLeave={() => setHovered(null)}>
-
-                {/* Stars */}
-                <div className="flex gap-0.5">
-                  {[1,2,3,4,5].map(i => (
-                    <svg key={i} width="14" height="14" viewBox="0 0 24 24"
-                      fill={i <= r.stars ? "#ff6b00" : "none"}
-                      stroke={i <= r.stars ? "#ff6b00" : isDark ? "rgba(255,255,255,0.2)" : "#d1d5db"}
-                      strokeWidth="1.5">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                    </svg>
-                  ))}
-                  <span className="ml-1 text-xs font-semibold" style={{ color: "#ff6b00" }}>{r.stars}.0</span>
-                </div>
-
-                {/* Quote */}
-                <p className="text-sm leading-relaxed flex-1" style={{ color: quoteClr }}>
-                  <span className="text-2xl leading-none mr-1" style={{ color: "#ff6b00", opacity: 0.5 }}>"</span>
-                  {r.quote}
-                  <span className="text-2xl leading-none ml-1" style={{ color: "#ff6b00", opacity: 0.5 }}>"</span>
-                </p>
-
-                {/* Metric pill */}
-                <div className="inline-flex items-center gap-1.5 self-start px-2.5 py-1 rounded-full text-xs font-semibold"
-                  style={{ background: metricBg, color: "#ff6b00" }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                  {r.metric}
-                </div>
-
-                {/* Author */}
-                <div className="flex items-center gap-3 pt-2" style={{ borderTop: `1px solid ${cardBdr}` }}>
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                    style={{ background: r.avatarClr }}>
-                    {r.avatar}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-sm" style={{ color: nameClr }}>{r.name}</div>
-                    <div className="text-xs" style={{ color: roleClr }}>{r.role} - {r.city}</div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Mobile: single card */}
-        <div className="md:hidden mb-6">
-          {(() => {
-            const r = reviews[active];
-            return (
-              <div className="p-6 rounded-2xl flex flex-col gap-4"
-                key={active}
-                style={{
-                  background: cardBg, border: `1px solid ${cardBdrH}`,
-                  boxShadow: isDark ? "0 8px 32px rgba(255,107,0,0.1)" : "0 8px 32px rgba(0,0,0,0.07)",
-                  animation: "tFade 0.35s ease",
-                }}>
-                <div className="flex gap-0.5">
-                  {[1,2,3,4,5].map(i => (
-                    <svg key={i} width="14" height="14" viewBox="0 0 24 24"
-                      fill={i <= r.stars ? "#ff6b00" : "none"}
-                      stroke={i <= r.stars ? "#ff6b00" : isDark ? "rgba(255,255,255,0.2)" : "#d1d5db"}
-                      strokeWidth="1.5">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                    </svg>
-                  ))}
-                  <span className="ml-1 text-xs font-semibold" style={{ color: "#ff6b00" }}>{r.stars}.0</span>
-                </div>
-                <p className="text-sm leading-relaxed" style={{ color: quoteClr }}>"{r.quote}"</p>
-                <div className="inline-flex items-center gap-1.5 self-start px-2.5 py-1 rounded-full text-xs font-semibold"
-                  style={{ background: metricBg, color: "#ff6b00" }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                  {r.metric}
-                </div>
-                <div className="flex items-center gap-3 pt-2" style={{ borderTop: `1px solid ${cardBdr}` }}>
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                    style={{ background: r.avatarClr }}>
-                    {r.avatar}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-sm" style={{ color: nameClr }}>{r.name}</div>
-                    <div className="text-xs" style={{ color: roleClr }}>{r.role} - {r.city}</div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center justify-center gap-4">
-          <button onClick={prev} aria-label="Previous review" className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-all"
-            style={{ background: cardBg, border: `1px solid ${cardBdr}`, color: sub }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "#ff6b00"; e.currentTarget.style.color = "#ff6b00"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = cardBdr; e.currentTarget.style.color = sub; }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-
-          <div className="flex items-center">
-            {reviews.map((_, i) => (
-              <button key={i} onClick={() => goTo(i)} aria-label={`Show review ${i + 1}`} aria-current={i === active}
-                className="cursor-pointer min-w-[24px] min-h-[24px] px-0.5 flex items-center justify-center">
-                <span className="block transition-all rounded-full" style={{
-                  width: i === active ? "24px" : "8px",
-                  height: "8px",
-                  background: i === active ? "#ff6b00" : dotBg,
-                }} />
-              </button>
-            ))}
-          </div>
-
-          <button onClick={next} aria-label="Next review" className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-all"
-            style={{ background: cardBg, border: `1px solid ${cardBdr}`, color: sub }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "#ff6b00"; e.currentTarget.style.color = "#ff6b00"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = cardBdr; e.currentTarget.style.color = sub; }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-        </div>
-
-        {/* Avatar stack footer */}
-        <div className="flex items-center justify-center gap-3 mt-8">
-          <div className="flex -space-x-2">
-            {reviews.map((r, i) => (
-              <div key={i} className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white ring-2"
-                style={{ background: r.avatarClr, boxShadow: `0 0 0 2px ${bg}`, zIndex: reviews.length - i }}>
-                {r.avatar}
-              </div>
-            ))}
-          </div>
-          <p className="text-xs" style={{ color: sub }}>Join <strong style={{ color: heading }}>50+ teams</strong> already using Arthaleads</p>
         </div>
       </div>
     </section>
@@ -1366,8 +1088,8 @@ function FinalCTA({ isDark }) {
           </span>
         </h2>
         <p className="text-lg mb-10" style={{ color: body }}>
-          Join 50+ real estate teams already closing more deals with Arthaleads.
-          Start your free trial today - no credit card needed.
+          Bring every enquiry into one place and let the WhatsApp AI answer buyers while you sleep.
+          Start your 14-day free trial today - no credit card needed.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Magnetic>
@@ -1446,7 +1168,6 @@ export default function Landing() {
       <IntroVideo isDark={isDark} />
       <HowItWorks isDark={isDark} />
       <About isDark={isDark} />
-      <Testimonials isDark={isDark} />
       <FAQ isDark={isDark} />
       <Contact isDark={isDark} />
       <FinalCTA isDark={isDark} />
