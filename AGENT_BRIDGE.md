@@ -57,8 +57,9 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
-Format: `- [agent] 2026-10-08 14:30 IST: what, files`
+Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-14 18:10 IST: URGENT app not loading after deploys (old /assets/* answered with app.html). Files: frontend/vercel.json (catch-all rewrite), frontend/public/sw.js, frontend/index.html (boot recovery).
 
 
 
