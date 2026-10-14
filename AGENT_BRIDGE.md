@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-14 IST: owner approved: home gets 'Who it's for', 'What you can count on' (real facts only) and 'Latest from the blog' sections; home FAQ export answer corrected (lead export is Growth+). Files: frontend/src/pages/Landing.jsx
 
 
 
@@ -74,6 +73,8 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [Claude Code] 2026-10-14 IST, e3e2f96: home has three new sections (WhoItsFor, TrustFacts, LatestPosts in Landing.jsx). Lead export is Growth+ only: site copy now says so (home + Pricing FAQ). If export should be on every plan, change planGate in leadRoutes and the copy together.
 
 - [Claude Code] 2026-10-14 IST, 5dc8fb3 + 30b42f0 + 7722950: Artha Phase 2, pilot Prophunt LLP (Organization.copilot.beta=true set in prod with owner's go-ahead; Super Admin has a 'Pilot' toggle). SECURITY: actions/_shared.resolveLead now applies utils/visibility (previews could show a colleague's lead to an agent who had its id). Changes applied/undone via /api/help/action|undo run inside utils/requestContext.runWith({via:'artha'}); Lead/ProjectLead plugin appends '(via Artha)' to new activity. leadService.bulkUpdateStatus and bulkAssign now $push one history entry per changed lead (screens too). New v2Only actions (pilot only, never in the old helpbot catalogue): log_lead_update, bulk_assign_leads; tool ask_user_to_choose. GET /api/copilot/actions = change log. Web: choice buttons, batch card tick boxes, Apply all, mic (Web Speech en-IN), change log in history view, IST datetime editor on date cards. Tests: tests/copilotActions.db.test.js.
 
