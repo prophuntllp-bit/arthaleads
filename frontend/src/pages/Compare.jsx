@@ -210,6 +210,27 @@ export default function Compare() {
         </div>
       </section>
 
+      {/* One page per competitor, in depth */}
+      <section className="pb-16">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl sm:text-3xl font-black mb-6 text-center" style={{ color: textColor }}>Detailed comparisons</h2>
+          {/* Add LeadRat and Kylas here as their pages go live (then make this a 2 or 3 column grid). */}
+          <div className="max-w-2xl mx-auto">
+            <Link to="/compare/sell-do-alternative"
+              className="group block rounded-2xl border p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-orange-300"
+              style={{ background: cardBg, borderColor: cardBorder }}>
+              <h3 className="font-bold text-lg mb-2 group-hover:text-[#ff6b00] transition-colors" style={{ color: textColor }}>ArthaLeads vs Sell.Do</h3>
+              <p className="text-sm leading-relaxed mb-3" style={{ color: softText }}>
+                How Sell.Do prices its CRM, what each one includes, and which suits your team, with every Sell.Do detail linked to its source.
+              </p>
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold transition-all group-hover:gap-2.5" style={{ color: isDark ? "#fb923c" : "#c2410c" }}>
+                Read the comparison <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* How to choose */}
       <section className="py-16 border-t" style={{ borderColor: isDark ? "rgba(255,255,255,0.06)" : "#f1f1f1" }}>
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">

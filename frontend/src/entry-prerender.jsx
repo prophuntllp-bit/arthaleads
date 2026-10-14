@@ -27,6 +27,7 @@ import WordPressPlugin from "./pages/WordPressPlugin";
 import ApiDocs from "./pages/ApiDocs";
 import DownloadApp from "./pages/DownloadApp";
 import WhatsAppCrm from "./pages/WhatsAppCrm";
+import SellDoAlternative from "./pages/SellDoAlternative";
 import ReferEarn from "./pages/ReferEarn";
 import Careers from "./pages/Careers";
 import Contact from "./pages/Contact";
@@ -51,6 +52,7 @@ export const PAGES = {
   "/api-docs": ApiDocs,
   "/download-app": DownloadApp,
   "/whatsapp-crm": WhatsAppCrm,
+  "/compare/sell-do-alternative": SellDoAlternative,
   "/refer": ReferEarn,
   "/careers": Careers,
   "/contact": Contact,

@@ -12,7 +12,7 @@
 //
 // The metadata is read straight from each page's useSEO({...}) call, so there
 // is one source of truth: change the title in the page and the HTML follows.
-import { readFileSync, writeFileSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -75,10 +75,11 @@ let written = 0;
 for (const e of entries) {
   const path = new URL(e.canonical).pathname.replace(/\/+$/, "");
   const out = path === "" ? "index.html" : `${path.slice(1)}.html`;
-  if (out.includes("/")) continue; // nested paths are rendered client-side
+  // Nested pages (/compare/sell-do-alternative) go in a subfolder of dist.
+  mkdirSync(dirname(join(dist, out)), { recursive: true });
   writeFileSync(join(dist, out), render(e));
   written++;
-  console.log(`  seo  /${path.slice(1).padEnd(18)} -> ${out}  "${e.title}"`);
+  console.log(`  seo  /${path.slice(1).padEnd(28)} -> ${out}  "${e.title}"`);
 }
 // Every generated page needs an explicit rewrite in vercel.json (/pricing -> /pricing.html),
 // otherwise it is written but never served.

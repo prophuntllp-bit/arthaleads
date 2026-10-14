@@ -104,6 +104,7 @@ const blogController = {
         { url: "/features",         priority: "0.9", changefreq: "monthly" },
         { url: "/pricing",          priority: "0.9", changefreq: "monthly" },
         { url: "/compare",          priority: "0.8", changefreq: "monthly" },
+        { url: "/compare/sell-do-alternative", priority: "0.7", changefreq: "monthly" },
         { url: "/blog",             priority: "0.8", changefreq: "weekly"  },
         { url: "/about-us",         priority: "0.7", changefreq: "monthly" },
         // /case-studies is noindex while it has no case studies (see pages/CaseStudies.jsx).

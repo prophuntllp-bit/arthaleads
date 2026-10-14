@@ -79,6 +79,10 @@
       "destination": "/whatsapp-crm.html"
     },
     {
+      "source": "/compare/sell-do-alternative",
+      "destination": "/compare/sell-do-alternative.html"
+    },
+    {
       "source": "/features",
       "destination": "/features.html"
     },
