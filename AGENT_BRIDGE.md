@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-14 IST: Artha Phase 2 (pilot: Prophunt LLP). Files: backend/actions/* (new logLeadUpdate, bulkAssignLeads), backend/copilot/*, backend/routes/helpRoutes.js, routes/copilotRoutes.js, models/Organization.js (copilot.beta), services/leadService.js + projectService.js (activity attribution via utils/requestContext.js), superAdminController + SuperAdmin.jsx (Artha beta toggle), frontend HelpBot.jsx.
 
 
 
@@ -73,6 +72,8 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [Claude Code] 2026-10-14 IST, 5dc8fb3 + 30b42f0 + 7722950: Artha Phase 2, pilot Prophunt LLP (Organization.copilot.beta=true set in prod with owner's go-ahead; Super Admin has a 'Pilot' toggle). SECURITY: actions/_shared.resolveLead now applies utils/visibility (previews could show a colleague's lead to an agent who had its id). Changes applied/undone via /api/help/action|undo run inside utils/requestContext.runWith({via:'artha'}); Lead/ProjectLead plugin appends '(via Artha)' to new activity. leadService.bulkUpdateStatus and bulkAssign now $push one history entry per changed lead (screens too). New v2Only actions (pilot only, never in the old helpbot catalogue): log_lead_update, bulk_assign_leads; tool ask_user_to_choose. GET /api/copilot/actions = change log. Web: choice buttons, batch card tick boxes, Apply all, mic (Web Speech en-IN), change log in history view, IST datetime editor on date cards. Tests: tests/copilotActions.db.test.js.
 
 - [Claude Code] 2026-10-14 IST, 508cbe2: IST day windows. utils/datetime.js istTodayRange/istRangeStart/istRangeEnd now back Follow-ups (today/past/future, From/To), Leads followUpToday, task list/summary, Performance date ranges and the 9am reminder. Never use setHours on the server (UTC). tests/istDays.db.test.js forces TZ=UTC.
 - [Claude Code] 2026-10-14 IST, 5cfeb6f + ead3ab6: Artha Phase 1. Backend: /api/copilot (routes/copilotRoutes.js) with backend/copilot/{agent,tools,prompt,help,starters}.js, models/CopilotThread.js (90-day TTL, dropped on account deletion), fair-use allowance COPILOT_BUDGET_USD_PER_USER (default $5 x active users / IST month), rate limit COPILOT_RATE_LIMIT. Tools go through services + utils/visibility.js; the 9 action-registry actions are PROPOSE tools applied via the unchanged /api/help preview/action/undo. Web: HelpBot.jsx now streams from /api/copilot (services/arthaStream.js), step lines, record links, history, starters, Stop, ratings, Ctrl+J; CommandMenu 'Ask Artha'; LeadDetail Summarise/Next step. Old /api/help/ask still serves the mobile app and the dashboard insight widget until Phase 4. provider: verbosity low (eval 33/33, avg 5s).
