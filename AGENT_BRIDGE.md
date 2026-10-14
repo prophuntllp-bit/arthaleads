@@ -76,6 +76,8 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+- [Claude Code] 2026-10-14 IST, 0b0dbea: data-coloured small orange labels (hero tour tab, How-it-works tabs and STEP labels) also use --brand-text via smallText() in Landing.jsx.
+
 - [Claude Code] 2026-10-14 IST, 138bed0: small orange text on the marketing site uses text-[color:var(--brand-text)] / color: "var(--brand-text)" (styles.css: #c2410c light, #ff6b00 dark). Use it for any new small orange text; keep #ff6b00 for buttons, icons and large display text.
 
 - [Claude Code] 2026-10-14 IST, a39c7b8: Artha location fields. log_lead_update / update_lead_fields / create_lead accept city + streetAddress (where the buyer lives) alongside preferredLocation (where they want to buy); Joi .description() on each is passed to the model by copilot/tools.joiToSchema; prompt rule added. Owner-reported: 'lives in Pune' went into Preferred location.
