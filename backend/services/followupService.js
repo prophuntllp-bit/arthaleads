@@ -1,11 +1,12 @@
 const Lead = require("../models/Lead");
+const { istTodayRange, istRangeStart, istRangeEnd } = require("../utils/datetime");
 const ProjectLead = require("../models/ProjectLead");
 const mongoose = require("mongoose");
 
 const followupService = {
   async get(user, { section, from, to, page = 1, limit = 50, sort, myOnly = false, search = "" }) {
-    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-    const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
+    // IST, not the server's UTC day (which runs 05:30 to 05:29 IST).
+    const { start: todayStart, end: todayEnd } = istTodayRange();
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Agents always see only their own leads.
@@ -75,10 +76,10 @@ const followupService = {
         ],
       };
     } else if (section === "future") {
-      const fromDate = from ? new Date(from) : new Date(todayEnd.getTime() + 1000);
-      const toDate   = to ? (() => { const d = new Date(to); d.setHours(23, 59, 59, 999); return d; })() : null;
+      const fromDate = from ? istRangeStart(from) : new Date(todayEnd.getTime() + 1);
+      const toDate   = to ? istRangeEnd(to) : null;
       // Future means after today, and not before the chosen From date.
-      const earliest = new Date(Math.max(fromDate.getTime(), todayEnd.getTime() + 1000));
+      const earliest = new Date(Math.max(fromDate.getTime(), todayEnd.getTime() + 1));
       const futureFollowUp = { $gte: earliest, ...(toDate ? { $lte: toDate } : {}) };
       leadFilter = {
         $and: [

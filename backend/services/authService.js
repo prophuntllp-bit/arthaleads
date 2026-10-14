@@ -1,5 +1,6 @@
 ﻿// services/authService.js
 const crypto = require("crypto");
+const { istRangeStart, istRangeEnd } = require("../utils/datetime");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Lead        = require("../models/Lead");
@@ -566,8 +567,8 @@ const authService = {
 
     // Build optional date filter for createdAt
     const dateFilter = {};
-    if (dateFrom) dateFilter.$gte = new Date(dateFrom);
-    if (dateTo)   { const d = new Date(dateTo); d.setHours(23, 59, 59, 999); dateFilter.$lte = d; }
+    if (dateFrom) dateFilter.$gte = istRangeStart(dateFrom);
+    if (dateTo)   dateFilter.$lte = istRangeEnd(dateTo);
     const dateMatch = Object.keys(dateFilter).length ? { createdAt: dateFilter } : {};
 
     // ── Main pipeline (Lead model, keyed by assignedTo) ──────────────────────
@@ -700,8 +701,8 @@ authService.getPerformanceTotals = async function (actor, { dateFrom, dateTo } =
     : { orgId: actor.orgId, role: { $in: ["admin", "manager", "agent"] } };
   const userIds = (await User.find(memberMatch).select("_id").lean()).map((u) => u._id);
   const dateFilter = {};
-  if (dateFrom) dateFilter.$gte = new Date(dateFrom);
-  if (dateTo)   { const d = new Date(dateTo); d.setHours(23, 59, 59, 999); dateFilter.$lte = d; }
+  if (dateFrom) dateFilter.$gte = istRangeStart(dateFrom);
+  if (dateTo)   dateFilter.$lte = istRangeEnd(dateTo);
   const dateMatch = Object.keys(dateFilter).length ? { createdAt: dateFilter } : {};
 
   const [lead] = await Lead.aggregate([
@@ -761,8 +762,8 @@ authService.getPerformanceLeads = async function (actor, { userId, pipeline, met
   }
 
   const dateFilter = {};
-  if (dateFrom) dateFilter.$gte = new Date(dateFrom);
-  if (dateTo)   { const d = new Date(dateTo); d.setHours(23, 59, 59, 999); dateFilter.$lte = d; }
+  if (dateFrom) dateFilter.$gte = istRangeStart(dateFrom);
+  if (dateTo)   dateFilter.$lte = istRangeEnd(dateTo);
   const dateMatch = Object.keys(dateFilter).length ? { createdAt: dateFilter } : {};
 
   const pageInt  = Math.max(1, parseInt(page) || 1);

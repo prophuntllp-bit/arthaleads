@@ -5,6 +5,7 @@
 // able to do things the UI forbids — see helpRoutes.js.
 
 const Task = require("../models/Task");
+const { istTodayRange, istRangeStart, istRangeEnd } = require("../utils/datetime");
 const { AppError } = require("../middlewares/errorHandler");
 
 // An agent works on the tasks assigned to them (that is all the list shows
@@ -33,14 +34,13 @@ const taskService = {
     if (projectId) filter.project  = projectId;
     if (from || to) {
       filter.dueDate = {};
-      if (from) filter.dueDate.$gte = new Date(from);
-      if (to)   filter.dueDate.$lte = new Date(new Date(to).setHours(23, 59, 59, 999));
+      if (from) filter.dueDate.$gte = istRangeStart(from);
+      if (to)   filter.dueDate.$lte = istRangeEnd(to);
     }
 
     const tasks = await Task.find(filter).sort({ dueDate: 1 }).lean();
 
-    const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
-    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const { start: todayStart, end: todayEnd } = istTodayRange();
     const summary = { today: 0, upcoming: 0, overdue: 0, completed: 0, all: tasks.length };
     for (const t of tasks) {
       if (t.status === "completed") { summary.completed++; continue; }

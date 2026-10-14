@@ -1,4 +1,5 @@
 ﻿const cron = require("node-cron");
+const { istTodayRange } = require("./datetime");
 const { runDueDeletions } = require("../services/accountDeletionService");
 const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
@@ -13,12 +14,9 @@ const { runLowCreditSweep } = require("../services/creditAutoRecharge");
 
 const META_GRAPH_VERSION = "v23.0";
 
+// Today in IST. The server runs UTC, where "today" would run 05:30 to 05:29 IST.
 function getTodayRange() {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date();
-  end.setHours(23, 59, 59, 999);
-  return { start, end };
+  return istTodayRange();
 }
 
 

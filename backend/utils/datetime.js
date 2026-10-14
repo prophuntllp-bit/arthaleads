@@ -74,6 +74,31 @@ function startOfISTDay(dateStr) {
   return new Date(`${String(dateStr).slice(0, 10)}T00:00:00+05:30`);
 }
 
+/** Today in IST as UTC instants: { start, end }. Never use setHours on the server, which runs UTC. */
+function istTodayRange(now = new Date()) {
+  const key = istDateKey(now);
+  return { start: startOfISTDay(key), end: endOfISTDay(key) };
+}
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Lower bound of a date filter from user input. "2026-10-14" means from the
+ * start of that IST day; a full timestamp is taken as given.
+ */
+function istRangeStart(value) {
+  return DATE_ONLY.test(String(value).trim()) ? startOfISTDay(value) : new Date(value);
+}
+
+/**
+ * Upper bound of a date filter from user input: the end of that IST day,
+ * whether given as "2026-10-14" or as a timestamp falling on that day in IST.
+ */
+function istRangeEnd(value) {
+  return endOfISTDay(DATE_ONLY.test(String(value).trim()) ? value : istDateKey(new Date(value)));
+}
+
 module.exports = {
   IST, formatISTDate, formatISTDateShort, formatISTDateTime, formatISTTime, istDateKey, endOfISTDay, startOfISTDay,
+  istTodayRange, istRangeStart, istRangeEnd,
 };

@@ -13,7 +13,7 @@ const { AppError } = require("../middlewares/errorHandler");
 const { sendPushToUser } = require("../utils/push");
 const { getNextAssignee } = require("../utils/assignLead");
 const { emitLeadCreated, emitLeadsCreated } = require("../utils/emitLeadCreated");
-const { formatISTDate, istDateKey, startOfISTDay, endOfISTDay } = require("../utils/datetime");
+const { formatISTDate, istDateKey, startOfISTDay, endOfISTDay, istTodayRange } = require("../utils/datetime");
 const OPTS = require("../constants/leadOptions");
 const { projectLeadStage, projectLeadStageCondition } = require("../utils/pipelineStage");
 const visibility = require("../utils/visibility");
@@ -933,8 +933,7 @@ const leadService = {
     // memory. Capped so deep pagination can't force an unbounded scan.
     const fetchCap = Math.min(skip + limitInt, opts.fetchCap || 2000);
 
-    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-    const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
+    const { start: todayStart, end: todayEnd } = istTodayRange();
 
     const createdAtFilter = getDateRangeFilter(dateRange, from, to);
     const consent = query.consent;
