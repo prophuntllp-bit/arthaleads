@@ -114,9 +114,9 @@ function Hero({ isDark }) {
             </span>
           </h1>
           <p className="text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-9" style={{ color: bodyClr, textWrap: "pretty" }}>
-            Arthaleads brings every property enquiry - Facebook ads, Google campaigns, WhatsApp chats
-            and walk-ins - into one workspace, and replies on WhatsApp while your team sleeps.
-            Built for real estate developers and channel partners.
+            Arthaleads is real estate CRM software for builders, developers and channel partners in India.
+            It brings every property enquiry - Facebook ads, Google campaigns, WhatsApp chats and walk-ins -
+            into one workspace, and replies on WhatsApp while your team sleeps.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
             <Magnetic>
@@ -289,8 +289,8 @@ function Features({ isDark }) {
             </span>
           </h2>
           <p className="text-base sm:text-lg leading-relaxed" style={{ color: body }}>
-            Built for the Indian real estate market - from small channel partner offices to
-            large developer sales teams.
+            A real estate CRM built for the Indian market - from small channel partner offices to
+            large builder and developer sales teams.
           </p>
         </Reveal>
 
@@ -1265,7 +1265,7 @@ function ContactForm({ isDark }) {
 // true to the product: plan names and prices come from utils/plan.js.
 const HOME_FAQS = [
   ["What is Arthaleads?",
-   "Arthaleads is a CRM built for real estate sales teams in India. It collects every property enquiry in one place, assigns it to the right person, reminds them to follow up, and tracks each lead from first call to site visit and booking."],
+   "Arthaleads is real estate CRM software built for sales teams in India: builders, developers, channel partners and brokers. It collects every property enquiry in one place, assigns it to the right person, reminds them to follow up, and tracks each lead from first call to site visit and booking."],
   ["Which lead sources can I connect?",
    "Facebook and Instagram lead ads import automatically, WhatsApp chats become leads, and website forms connect through our WordPress plugin or API. Google Ads is available on Enterprise. Portal leads from 99acres, Housing.com and MagicBricks can be added or imported from a sheet."],
   ["Can the WhatsApp AI reply to buyers in Hindi or Marathi?",
@@ -1394,8 +1394,8 @@ export default function Landing() {
   const { isDark } = usePublicTheme();
 
   useSEO({
-    title:       "Arthaleads – Lead Management CRM for Real Estate in India",
-    description: "Real estate CRM for Indian sales teams. Capture leads from Facebook, Google, WhatsApp and your website, and let AI reply to buyers on WhatsApp day and night.",
+    title:       "Real Estate CRM Software in India | Arthaleads",
+    description: "Real estate CRM software for builders, developers and brokers in India. Capture leads from Facebook, Google and WhatsApp, and let AI reply to buyers 24/7.",
     canonical:   "https://www.arthaleads.com/",
   });
 

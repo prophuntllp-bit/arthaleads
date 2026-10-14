@@ -183,8 +183,8 @@ export default function Features() {
   const navRef = useRef(null);
 
   useSEO({
-    title: "Features - Arthaleads Real Estate CRM",
-    description: "Every Arthaleads feature: lead capture from ads, portals and WhatsApp, AI lead scoring, WhatsApp campaigns, call intelligence, projects and bookings.",
+    title: "Real Estate CRM Features for Indian Sales Teams | Arthaleads",
+    description: "Every feature of the Arthaleads real estate CRM: lead capture from ads, WhatsApp and your website, AI lead scoring, campaigns, call intelligence and bookings.",
     canonical: "https://www.arthaleads.com/features",
   });
 
@@ -234,7 +234,7 @@ export default function Features() {
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">paid invoice</span>
           </h1>
           <p className="text-lg leading-relaxed max-w-2xl mx-auto mb-8" style={{ color: t.body }}>
-            Built for Indian real estate teams, from small channel partner offices to large developer sales floors.
+            Real estate CRM software built for Indian sales teams, from small channel partner offices to large builder and developer sales floors.
             Here is everything ArthaLeads does, in the order your team uses it.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
