@@ -49,6 +49,12 @@ const api = axios.create({
   withCredentials: true,      // send httpOnly cookie on every request (XSS-safe auth)
 });
 
+/** The signed-in bearer token, for requests that can't go through axios (streams). */
+export function getAuthToken() {
+  return _memToken || storageGet("_at");
+}
+export const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
 // Bearer token — prefer in-memory copy, fall back to localStorage/sessionStorage.
 // Covers: cross-domain cookie rejection, iOS Private Mode, storage restrictions.
 api.interceptors.request.use((config) => {

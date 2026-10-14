@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowDown, ArrowUp, CornerDownLeft, Search, UserPlus, ListPlus, MessageCircle, CalendarClock, MoonStar, SunMedium, ArrowRight } from "lucide-react";
+import { ArrowDown, ArrowUp, CornerDownLeft, Search, UserPlus, ListPlus, MessageCircle, CalendarClock, MoonStar, SunMedium, ArrowRight, Sparkles } from "lucide-react";
 import api from "../services/api";
 
 // Search everything from one box (Ctrl/Cmd+K): leads, teammates, pages and
@@ -101,6 +101,13 @@ export default function CommandMenu({ open, onClose, pages, user, navigate, loca
     const ac = actions.filter((a) => has(a.label));
     if (ac.length) out.push({ title: "Actions", items: ac.map((a) => ({ ...a, kind: "action" })) });
     if (term.length >= 2) out.push({ title: "", items: [{ id: "all", kind: "all", label: `See all leads matching "${q.trim()}"`, run: () => onSearchAll(q.trim()) }] });
+    // Anything typed can go to Artha. A question or a sentence leads the list;
+    // a short word (probably a name) keeps leads first.
+    if (term.length >= 3) {
+      const ask = { title: "Artha", items: [{ id: "ask-artha", kind: "action", icon: Sparkles, label: `Ask Artha: "${q.trim()}"`,
+        run: () => window.dispatchEvent(new CustomEvent("helpbot:ask", { detail: { question: q.trim() } })) }] };
+      if (/\?$/.test(term) || term.split(/\s+/).length >= 3) out.unshift(ask); else out.push(ask);
+    }
     return out;
   }, [q, leads, loading, people, pages, actions]); // eslint-disable-line react-hooks/exhaustive-deps
 

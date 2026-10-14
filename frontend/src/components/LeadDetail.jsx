@@ -506,6 +506,18 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                     AI Draft
                   </button>
                 )}
+                {/* Artha on this lead: the lead panel already tells Artha which lead is open. */}
+                {[{ label: "Summarise", q: "Summarise this lead in 3 lines: what they want, what has happened so far, and where it stands." },
+                  { label: "Next step", q: "What should I do next with this lead, and why?" }].map((b) => (
+                  <button key={b.label} type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent("helpbot:ask", { detail: { question: b.q } }))}
+                    className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition cursor-pointer"
+                    style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
+                    title={`Ask Artha: ${b.label.toLowerCase()} for this lead`}>
+                    <Sparkles className="h-3.5 w-3.5" style={{ color: "var(--app-primary, #ff6b00)" }} />
+                    {b.label}
+                  </button>
+                ))}
                 {lead.email && <span className="text-sm text-app-soft">{lead.email}</span>}
               </div>
               {aiDraft !== null && (

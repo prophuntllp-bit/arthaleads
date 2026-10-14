@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { X, Send, ArrowRight, Sparkles, MessageCircle, Compass, House, TicketCheck, ChevronDown, Paperclip, Zap, CheckCircle2 } from "lucide-react";
+import { X, Send, ArrowRight, Sparkles, MessageCircle, Compass, House, TicketCheck, ChevronDown, Paperclip, Zap, CheckCircle2, History, Square, ThumbsUp, ThumbsDown, Loader2, Check, AlertCircle, Trash2 } from "lucide-react";
 import api from "../services/api";
+import { streamArtha } from "../services/arthaStream";
 import ReportMessageButton from "./ReportMessageButton";
 import { useAuth } from "../context/AuthContext";
 import { useCopilot } from "../context/CopilotContext";
@@ -180,6 +181,13 @@ export default function HelpBot() {
   const navigate = useNavigate();
   const location = useLocation();
   const [actionLoading, setActionLoading] = useState(null); // messageIndex being confirmed
+  // Artha v2: the saved chat this conversation belongs to, the answer being
+  // streamed, past chats and the page's starter questions.
+  const [threadId, setThreadId] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [threads, setThreads] = useState([]);
+  const [starters, setStarters] = useState([]);
+  const abortRef = useRef(null);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -201,6 +209,23 @@ export default function HelpBot() {
   }, []);
 
   const [showCommonQ, setShowCommonQ] = useState(false);
+
+  // Ctrl/Cmd + J opens or closes Artha from anywhere.
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "j" || e.key === "J")) { e.preventDefault(); setOpen((v) => !v); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Starter questions for this page and role (computed on the server, no AI call).
+  useEffect(() => {
+    if (!open) return;
+    api.get("/copilot/starters", { params: { page: location.pathname } })
+      .then(({ data }) => setStarters(data.starters || []))
+      .catch(() => setStarters([]));
+  }, [open, location.pathname]);
 
   // First-login tour offer
   const welcomeKey = user?._id ? `al_tour_offered_${user._id}` : null;
@@ -252,45 +277,113 @@ export default function HelpBot() {
       : `Hi ${firstName}! I'm Artha, your CRM assistant. How can I help you today?`,
   };
 
+  // Spacing left behind when the server swaps an em dash for a comma mid-stream.
+  const tidy = (t) => cleanText(t).replace(/[ \t]+,/g, ",").replace(/,[ \t]{2,}/g, ", ");
+  const patchMsg = (id, fn) => setMessages((m) => m.map((x) => (x.id === id ? { ...x, ...fn(x) } : x)));
+
   const handleAsk = async (e, overrideText) => {
     e?.preventDefault();
     const q = overrideText || input.trim();
     if (!q || loading) return;
     if (!overrideText) setInput("");
+    setShowHistory(false);
 
-    // Snapshot history from current messages before adding the new user message
-    const historyToSend = messages.slice(-6).map((m) => ({
-      role: m.role === "bot" ? "assistant" : "user",
-      text: m.text || "",
-    }));
-
-    setMessages((m) => [...(m.length === 0 ? [greetingMsg] : []), ...m, { role: "user", text: q }]);
+    const botId = `b${Date.now()}`;
+    setMessages((m) => [...(m.length === 0 ? [greetingMsg] : []), ...m,
+      { role: "user", text: q },
+      { id: botId, role: "bot", text: "", steps: [], records: [], streaming: true, prompt: q }]);
     setLoading(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const focus = focusedLead?._id
+      ? { id: focusedLead._id, kind: focusedLead._type === "project" || focusedLead.projectId ? "projectLead" : "lead", name: focusedLead.name }
+      : null;
     try {
-      const { data } = await api.post("/help/ask", {
-        question: q,
-        page: location.pathname,
-        userName: user?.name,
-        leadId: focusedLead?._id || "",
-        history: historyToSend,
-      });
-      setMessages((m) => [...m, {
-        role: "bot",
-        text: cleanText(data.answer),
-        suggestTicket: data.suggestTicket,
-        comingSoon: data.comingSoon,
-        action: data.action || null,
-        actionDone: false,
-      }]);
+      await streamArtha({ question: q, page: location.pathname, threadId, focus }, (ev) => {
+        if (ev.type === "start") setThreadId(ev.threadId);
+        else if (ev.type === "text") patchMsg(botId, (x) => ({ text: tidy(x.text + ev.delta) }));
+        else if (ev.type === "step") patchMsg(botId, (x) => {
+          const rest = x.steps.filter((st) => st.id !== ev.id);
+          return { steps: [...rest, { id: ev.id, label: ev.label, status: ev.status, count: ev.count }] };
+        });
+        else if (ev.type === "proposal") setMessages((m) => [...m, {
+          id: `p${Date.now()}${Math.random()}`, role: "bot", text: "", isProposal: true,
+          action: ev.proposal, actionDone: false, scopeConfirmed: true, prompt: q,
+        }]);
+        else if (ev.type === "records") patchMsg(botId, () => ({ records: ev.records || [] }));
+        else if (ev.type === "done") patchMsg(botId, (x) => ({ streaming: false, turnId: ev.turnId, text: tidy(ev.text || x.text) }));
+        else if (ev.type === "error") patchMsg(botId, () => ({ streaming: false, text: ev.message, suggestTicket: true }));
+      }, controller.signal);
     } catch (err) {
-      setMessages((m) => [...m, {
-        role: "bot",
-        text: err.response?.data?.message || "Sorry, I couldn't reach the assistant. Try one of the quick questions or raise a support ticket.",
-        suggestTicket: true,
-      }]);
+      const stopped = err.name === "AbortError";
+      patchMsg(botId, (x) => ({
+        streaming: false,
+        text: stopped ? (x.text ? `${x.text}\n\n(Stopped.)` : "Stopped.") : (err.message || "Sorry, I couldn't reach Artha. Try again or raise a support ticket."),
+        suggestTicket: !stopped && err.status !== 429 && err.status !== 403,
+      }));
     } finally {
+      patchMsg(botId, () => ({ streaming: false }));
+      abortRef.current = null;
       setLoading(false);
     }
+  };
+
+  const stopAnswer = () => abortRef.current?.abort();
+
+  const rateTurn = async (msg, rating) => {
+    if (!threadId || !msg.turnId) return;
+    const next = msg.rating === rating ? null : rating;
+    patchMsg(msg.id, () => ({ rating: next }));
+    api.post(`/copilot/threads/${threadId}/turns/${msg.turnId}/rating`, { rating: next }).catch(() => {});
+  };
+
+  const openHistory = async () => {
+    setShowHistory((v) => !v);
+    try { const { data } = await api.get("/copilot/threads"); setThreads(data.threads || []); } catch { setThreads([]); }
+  };
+
+  const loadThread = async (id) => {
+    try {
+      const { data } = await api.get(`/copilot/threads/${id}`);
+      setThreadId(id);
+      setMessages(data.thread.turns.map((t) => (t.role === "user"
+        ? { role: "user", text: t.text }
+        : { id: `h${t.id}`, role: "bot", text: tidy(t.text), turnId: t.id, rating: t.rating, records: t.records || [],
+            steps: (t.steps || []).map((label, k) => ({ id: String(k), label, status: "done" })) })));
+      setShowHistory(false);
+    } catch { /* keep the current chat */ }
+  };
+
+  const deleteThread = async (id) => {
+    setThreads((t) => t.filter((x) => x.id !== id));
+    api.delete(`/copilot/threads/${id}`).catch(() => {});
+    if (id === threadId) { setThreadId(null); setMessages([]); }
+  };
+
+  // Lead and task names in an answer become links to the record.
+  const openRecord = (r) => {
+    if (r.kind === "task") { setOpen(false); navigate("/tasks"); return; }
+    // Artha sits above the lead window (so "Summarise" can answer beside it);
+    // on a narrow screen it would cover the lead, so it steps aside.
+    if (window.innerWidth < 1024) setOpen(false);
+    const stay = ["/leads", "/followups", "/calls"].some((p) => location.pathname.startsWith(p));
+    navigate(stay ? location.pathname : "/leads", { state: { openLeadId: r.id } });
+  };
+  const renderAnswer = (text, records = []) => {
+    const named = (records || []).filter((r) => r.name && r.name.length > 1).sort((a, b) => b.name.length - a.name.length);
+    if (!named.length || !text) return text;
+    const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(${named.map((r) => esc(r.name)).join("|")})`, "g");
+    return text.split(re).map((part, k) => {
+      const r = named.find((x) => x.name === part);
+      return r ? (
+        <button key={k} type="button" onClick={() => openRecord(r)}
+          className="font-semibold underline decoration-dotted underline-offset-2 cursor-pointer"
+          style={{ color: "var(--app-primary, #ff6b00)" }} title={r.kind === "task" ? "Open tasks" : "Open this lead"}>
+          {part}
+        </button>
+      ) : part;
+    });
   };
 
   // Open ticket panel, pre-fill subject from last user message
@@ -348,7 +441,7 @@ export default function HelpBot() {
     }
   };
 
-  const resetChat = () => { setMessages([]); setTicketPanel(false); setShowCommonQ(false); };
+  const resetChat = () => { stopAnswer(); setMessages([]); setThreadId(null); setTicketPanel(false); setShowCommonQ(false); setShowHistory(false); };
 
   // Ask the server what would change, without changing it. Runs the same
   // gates as the write, so a role or page refusal surfaces here — before the
@@ -532,12 +625,12 @@ export default function HelpBot() {
       {/* Chat panel */}
       {open && (
         <div
-          className="fixed z-[998] flex flex-col overflow-hidden shadow-2xl"
+          className="fixed z-[10000] flex flex-col overflow-hidden shadow-2xl"
           style={{
             right: "max(12px, env(safe-area-inset-right))",
             bottom: `calc(12px + env(safe-area-inset-bottom, 0px))`,
-            width: "min(390px, calc(100vw - 24px))",
-            height: "min(580px, calc(100vh - 80px))",
+            width: "min(430px, calc(100vw - 24px))",
+            height: "min(700px, calc(100vh - 40px))",
             background: "var(--app-bg)",
             border: "1px solid var(--app-border)",
             borderRadius: 20,
@@ -555,19 +648,23 @@ export default function HelpBot() {
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 bg-green-500" style={{ borderColor: "var(--app-bg)" }} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-app leading-tight">Artha - Help Assistant</p>
+              <p className="text-sm font-bold text-app leading-tight">Artha</p>
               {pageInfo ? (
                 <p className="text-[11px] leading-tight font-medium flex items-center gap-1" style={{ color: "#6366f1" }}>
                   <Zap className="h-2.5 w-2.5" /> Copilot - {pageInfo.label}
                 </p>
               ) : (
-                <p className="text-[11px] text-green-500 leading-tight font-medium">Online - Ask me anything</p>
+                <p className="text-[11px] text-green-500 leading-tight font-medium">Looks things up and does the work, with your OK</p>
               )}
             </div>
             <div className="flex items-center gap-1">
+              <button type="button" onClick={openHistory} aria-label="Past chats" title="Past chats"
+                className="p-1.5 rounded-lg text-app-soft hover:text-app hover:bg-black/5 transition cursor-pointer">
+                <History className="h-4 w-4" />
+              </button>
               {messages.length > 0 && (
-                <button type="button" onClick={resetChat} aria-label="Back to home"
-                  title="Back to quick answers"
+                <button type="button" onClick={resetChat} aria-label="New chat"
+                  title="New chat"
                   className="p-1.5 rounded-lg text-app-soft hover:text-app hover:bg-black/5 transition cursor-pointer">
                   <House className="h-4 w-4" />
                 </button>
@@ -580,8 +677,32 @@ export default function HelpBot() {
           </div>
 
           {/* Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
-            {messages.length === 0 && (
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-3" role="log" aria-live="polite">
+            {showHistory && (
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--app-border)" }}>
+                <div className="px-3 py-2 text-xs font-semibold" style={{ color: "var(--app-text-soft)", borderBottom: "1px solid var(--app-border)" }}>
+                  Past chats
+                </div>
+                {threads.length === 0 ? (
+                  <p className="px-3 py-3 text-xs text-app-soft">No saved chats yet. Chats are kept for 90 days.</p>
+                ) : threads.map((t) => (
+                  <div key={t.id} className="flex items-center border-b last:border-b-0" style={{ borderColor: "var(--app-border)" }}>
+                    <button type="button" onClick={() => loadThread(t.id)}
+                      className="min-w-0 flex-1 text-left px-3 py-2 text-xs text-app cursor-pointer hover:bg-orange-500/5">
+                      <span className="block truncate font-medium">{t.title}</span>
+                      <span className="block text-[10px] text-app-soft">
+                        {new Date(t.lastMessageAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                      </span>
+                    </button>
+                    <button type="button" onClick={() => deleteThread(t.id)} aria-label="Delete chat" title="Delete chat"
+                      className="p-2 text-app-soft hover:text-red-500 cursor-pointer">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {messages.length === 0 && !showHistory && (
               <div className="space-y-3">
                 {/* Intro bubble */}
                 <div className="flex gap-2 items-start">
@@ -591,11 +712,11 @@ export default function HelpBot() {
                   </div>
                 </div>
 
-                {pageInfo ? (
+                {(starters.length > 0 || pageInfo) ? (
                   /* Copilot mode: chips + collapsible common questions + ticket */
                   <>
                     <div className="space-y-1.5">
-                      {pageInfo.chips.map((chip) => (
+                      {(starters.length ? starters : pageInfo.chips).map((chip) => (
                         <button key={chip} type="button" onClick={() => handleAsk(null, chip)}
                           disabled={loading}
                           className="w-full text-left rounded-xl px-3 py-2 transition cursor-pointer flex items-center gap-2 hover:bg-indigo-500/5 disabled:opacity-50"
@@ -665,7 +786,7 @@ export default function HelpBot() {
               </div>
             )}
 
-            {messages.map((m, i) => (
+            {!showHistory && messages.map((m, i) => (m.isProposal && m.actionDone && !m.text) ? null : (
               <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start gap-2 items-start"}>
                 {m.role === "bot" && (
                   <img src="/ai-avatar2.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
@@ -678,17 +799,53 @@ export default function HelpBot() {
                       <Sparkles className="h-2.5 w-2.5" /> Coming Soon
                     </div>
                   )}
+                  {m.role === "bot" && m.steps?.length > 0 && (
+                    <div className="mb-1.5 space-y-0.5" aria-label="What Artha checked">
+                      {m.steps.map((st) => (
+                        <div key={st.id} className="flex items-center gap-1.5 text-[11px]" style={{ color: "var(--app-text-soft)" }}>
+                          {st.status === "running" ? <Loader2 className="h-3 w-3 animate-spin" style={{ color: "var(--app-primary, #ff6b00)" }} />
+                            : st.status === "error" ? <AlertCircle className="h-3 w-3 text-red-500" />
+                            : <Check className="h-3 w-3 text-green-600" />}
+                          <span>{st.label}{st.count !== undefined && st.count !== null ? ` · ${st.count}` : ""}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {(m.text || m.role === "user" || (m.streaming && !m.steps?.length)) && (
                   <div
                     className={`rounded-2xl px-3 py-2.5 text-sm whitespace-pre-line ${m.role === "bot" ? "rounded-tl-sm" : "rounded-tr-sm"}`}
                     style={m.role === "user"
                       ? { background: "var(--app-primary, #ff6b00)", color: "#fff" }
                       : { background: "var(--app-surface-low)", color: "var(--app-text)" }}
                   >
-                    {m.text}
+                    {m.role === "bot" ? renderAnswer(m.text, m.records) : m.text}
+                    {m.streaming && (
+                      m.text ? <span className="inline-block w-1.5 h-3.5 ml-0.5 align-middle animate-pulse" style={{ background: "var(--app-text-soft)" }} />
+                        : <span className="inline-flex gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-40 animate-bounce" style={{ animationDelay: "0ms" }} />
+                            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-40 animate-bounce" style={{ animationDelay: "150ms" }} />
+                            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-40 animate-bounce" style={{ animationDelay: "300ms" }} />
+                          </span>
+                    )}
                   </div>
+                  )}
                   {/* Required on every AI answer by Play's AI-Generated Content
                       policy: a way to flag output without leaving the app. */}
-                  {m.role === "bot" && m.text && (
+                  {m.role === "bot" && m.turnId && !m.streaming && (
+                    <div className="mt-1 flex items-center gap-1">
+                      <button type="button" onClick={() => rateTurn(m, "up")} aria-label="Helpful" title="Helpful"
+                        className="p-1 rounded cursor-pointer hover:bg-black/5"
+                        style={{ color: m.rating === "up" ? "#059669" : "var(--app-text-soft)" }}>
+                        <ThumbsUp className="h-3 w-3" />
+                      </button>
+                      <button type="button" onClick={() => rateTurn(m, "down")} aria-label="Not helpful" title="Not helpful"
+                        className="p-1 rounded cursor-pointer hover:bg-black/5"
+                        style={{ color: m.rating === "down" ? "#ef4444" : "var(--app-text-soft)" }}>
+                        <ThumbsDown className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+                  {m.role === "bot" && m.text && !m.streaming && (
                     <ReportMessageButton
                       reportedText={m.text}
                       prompt={[...messages.slice(0, i)].reverse().find((x) => x.role === "user")?.text || ""}
@@ -885,7 +1042,7 @@ export default function HelpBot() {
               </div>
             ))}
 
-            {loading && (
+            {loading && !messages.some((x) => x.streaming) && (
               <div className="flex justify-start gap-2 items-start">
                 <img src="/ai-avatar2.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
                 <div className="rounded-2xl rounded-tl-sm px-3 py-2.5" style={{ background: "var(--app-surface-low)" }}>
@@ -990,21 +1147,33 @@ export default function HelpBot() {
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask anything about the CRM..."
+                placeholder="Ask or tell Artha what to do..."
                 className="input flex-1 rounded-full text-sm"
                 disabled={loading}
+                onKeyDown={(e) => { if (e.key === "Escape" && loading) { e.preventDefault(); stopAnswer(); } }}
               />
+              {loading ? (
+                <button type="button" onClick={stopAnswer} aria-label="Stop" title="Stop (Esc)"
+                  className="flex h-9 w-9 items-center justify-center rounded-full shrink-0 cursor-pointer transition hover:opacity-90"
+                  style={{ background: "var(--app-text)", color: "var(--app-bg)" }}>
+                  <Square className="h-3.5 w-3.5" />
+                </button>
+              ) : (
               <button
                 type="submit"
-                disabled={loading || !input.trim()}
+                disabled={!input.trim()}
                 aria-label="Send"
                 className="flex h-9 w-9 items-center justify-center rounded-full shrink-0 cursor-pointer disabled:opacity-50 transition hover:opacity-90"
                 style={{ background: "var(--app-primary, #ff6b00)", color: "#fff" }}
               >
                 <Send className="h-4 w-4" />
               </button>
+              )}
             </form>
           )}
+          <p className="shrink-0 px-3 pb-2 -mt-1 text-[10px] text-center text-app-soft">
+            Artha can make mistakes. Check a change before you apply it. Ctrl+J opens Artha.
+          </p>
         </div>
       )}
 

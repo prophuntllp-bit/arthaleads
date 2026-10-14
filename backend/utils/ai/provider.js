@@ -16,6 +16,8 @@ const AiUsage = require("../../models/AiUsage");
 const DEFAULT_MODEL = process.env.COPILOT_MODEL || "gpt-5-mini";
 const REASONING_EFFORT = process.env.COPILOT_REASONING_EFFORT || "low";
 const TIMEOUT_MS = 30_000;
+// gpt-5 family only. "low" = shorter answers (faster, cheaper); empty = model default.
+const VERBOSITY = process.env.COPILOT_VERBOSITY === undefined ? "low" : process.env.COPILOT_VERBOSITY;
 
 // USD per 1M tokens: [input, cached input, output]. OpenAI pricing page, 14 Oct 2026.
 const PRICES = {
@@ -47,7 +49,11 @@ const isReasoningModel = (model) => /^(gpt-5|gpt-6|o\d)/.test(model);
 function requestFor(model, { messages, tools, maxOutputTokens = 1200 }) {
   const req = { model, messages };
   if (tools && tools.length) { req.tools = tools; req.tool_choice = "auto"; req.parallel_tool_calls = true; }
-  if (isReasoningModel(model)) { req.reasoning_effort = REASONING_EFFORT; req.max_completion_tokens = maxOutputTokens + 2000; }
+  if (isReasoningModel(model)) {
+    req.reasoning_effort = REASONING_EFFORT;
+    req.max_completion_tokens = maxOutputTokens + 2000;
+    if (VERBOSITY) req.verbosity = VERBOSITY;   // shorter answers arrive sooner
+  }
   else { req.temperature = 0.2; req.max_tokens = maxOutputTokens; }
   return req;
 }
