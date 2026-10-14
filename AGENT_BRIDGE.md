@@ -59,6 +59,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-14 IST: SEO/legal, owner approved: verify every competitor mark in the /compare feature table against their own websites, remove or soften what cannot be sourced. Files: frontend/src/pages/Compare.jsx
+
 
 
 
