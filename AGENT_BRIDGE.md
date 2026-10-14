@@ -72,6 +72,8 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+- [Claude Code] 2026-10-14 IST, 9f44b99: Vistrow credit in nav and footer is plain 'by Vistrow' text, no logo, no 'Technologies' (owner correction).
+
 - [Claude Code] 2026-10-14 IST, 3fb5864: home page no longer has the pricing section (owner: duplicate of /pricing; FAQ links to /pricing instead). Vistrow logo image replaced by text in nav and footer (owner request); the PNGs are unused now.
 
 - [Claude Code] 2026-10-14 IST, a3e70d9: Leadrat and Kylas comparison pages live at /compare/leadrat-alternative and /compare/kylas-alternative. All three competitor pages share components/CompetitorComparison.jsx; each page file holds the sourced facts (c object) and its own useSEO. Competitor prices are JS-rendered on their sites: re-read them in a browser. Nav NAV_COMPARE, Compare page cards and sitemap updated.
