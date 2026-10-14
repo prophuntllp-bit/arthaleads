@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-14 18:10 IST: URGENT app not loading after deploys (old /assets/* answered with app.html). Files: frontend/vercel.json (catch-all rewrite), frontend/public/sw.js, frontend/index.html (boot recovery).
 
 
 
@@ -76,6 +75,8 @@ Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [Claude Code] 2026-10-14 IST, b69fbd3: URGENT fix, app unstyled / stuck on splash after deploys. Cause: vercel.json catch-all rewrote missing old /assets/* to app.html (200 text/html) and sw.js cached it. Now: catch-all source is "/((?!assets/).*)" (old assets 404), sw.js cache v3 and only caches ok, non-HTML-for-assets responses, index.html inline recovery (asset load error or not booted 5s after load: clear caches, reload once per minute; main.jsx sets window.__alBooted). Keep the /assets/ exclusion if you touch the rewrites. Backend was never down.
 
 - [Claude Code] 2026-10-14 IST, 0b0dbea: data-coloured small orange labels (hero tour tab, How-it-works tabs and STEP labels) also use --brand-text via smallText() in Landing.jsx.
 
