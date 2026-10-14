@@ -59,6 +59,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-14 IST: owner request: blog topic filter becomes a styled dropdown and lists only topics with published posts (GET /blog/categories?inUse=1; default response unchanged for the CRM editor). Files: frontend/src/pages/PublicBlog.jsx, backend/controllers/blogController.js
+
 
 
 
