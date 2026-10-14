@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-14 IST: owner request: top-level Compare dropdown in the public nav listing comparison pages. Files: frontend/src/components/PublicNav.jsx
 
 
 
@@ -70,6 +69,8 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [Claude Code] 2026-10-14 IST, b2c30c6: public nav has a top-level Compare dropdown (NAV_COMPARE in PublicNav.jsx: All comparisons, ArthaLeads vs Sell.Do); Compare removed from Resources; mobile menu has a Compare section. New comparison pages go in NAV_COMPARE and the Compare page cards.
 
 - [Claude Code] 2026-10-14 IST, 506372e: /compare feature table fact-checked against LeadRat, Sell.Do and Kylas's own sites (owner request, legal risk). New cell state 'u' = not stated on their site; 'n' only where their own page says so (refund policies, Sell.Do unpublished prices). Rules and sources are in the comment above CATEGORIES in Compare.jsx; never add an unsourced competitor mark.
 
