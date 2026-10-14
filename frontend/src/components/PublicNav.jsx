@@ -274,11 +274,7 @@ function NavInner({ onScrollTo }) {
               className="group flex items-center gap-1 self-end mb-1.5 opacity-60 hover:opacity-100 transition-opacity"
             >
               <span className="text-[10px] font-medium" style={{ color: textMuted }}>by</span>
-              {/* The logo's text without the mark: "Vistrow" over a small "Technologies". */}
-              <span className="flex flex-col leading-none" style={{ color: textMuted }}>
-                <span className="text-[12px] sm:text-[13px] font-semibold tracking-tight">Vistrow</span>
-                <span className="text-[6px] sm:text-[7px] font-medium uppercase tracking-[0.12em] mt-[2px]">Technologies</span>
-              </span>
+              <span className="text-[12px] sm:text-[13px] font-semibold tracking-tight leading-none" style={{ color: textMuted }}>Vistrow</span>
             </a>
           </div>
 

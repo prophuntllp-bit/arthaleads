@@ -127,7 +127,7 @@ export default function PublicFooter() {
             style={{ color: text }}
             className="flex items-center gap-2 text-xs transition-opacity hover:opacity-80"
           >
-            by <span className="font-semibold">Vistrow Technologies</span>
+            by <span className="font-semibold">Vistrow</span>
           </a>
         </div>
       </div>
