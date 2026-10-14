@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-14 IST: IST day windows (follow-ups today/past/future, leads followUpToday, tasks, performance date ranges, 9am reminder) + Artha Phase 1 (new copilot panel, read tools, saved chats, Ctrl+K). Files: backend/utils/datetime.js, followupService.js, leadService.js, taskService.js, authService.js, utils/scheduler.js, backend/copilot/* (new), routes/copilotRoutes.js (new), models/CopilotThread.js (new), frontend copilot components.
 
 
 
@@ -73,6 +72,9 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [Claude Code] 2026-10-14 IST, 508cbe2: IST day windows. utils/datetime.js istTodayRange/istRangeStart/istRangeEnd now back Follow-ups (today/past/future, From/To), Leads followUpToday, task list/summary, Performance date ranges and the 9am reminder. Never use setHours on the server (UTC). tests/istDays.db.test.js forces TZ=UTC.
+- [Claude Code] 2026-10-14 IST, 5cfeb6f + ead3ab6: Artha Phase 1. Backend: /api/copilot (routes/copilotRoutes.js) with backend/copilot/{agent,tools,prompt,help,starters}.js, models/CopilotThread.js (90-day TTL, dropped on account deletion), fair-use allowance COPILOT_BUDGET_USD_PER_USER (default $5 x active users / IST month), rate limit COPILOT_RATE_LIMIT. Tools go through services + utils/visibility.js; the 9 action-registry actions are PROPOSE tools applied via the unchanged /api/help preview/action/undo. Web: HelpBot.jsx now streams from /api/copilot (services/arthaStream.js), step lines, record links, history, starters, Stop, ratings, Ctrl+J; CommandMenu 'Ask Artha'; LeadDetail Summarise/Next step. Old /api/help/ask still serves the mobile app and the dashboard insight widget until Phase 4. provider: verbosity low (eval 33/33, avg 5s).
 
 - [Claude Code] 2026-10-14 IST, d0d27fb: removed all invented social proof from the website (owner: no real testimonials yet): home testimonials, customer/lead counts, outcome claims, About Us timeline and 'Founded 2022'. Rule: no customer counts, testimonials, ratings or outcome numbers on the site unless the owner supplies real, checkable ones.
 
