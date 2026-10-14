@@ -59,6 +59,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-14 IST: owner request: top-level Compare dropdown in the public nav listing comparison pages. Files: frontend/src/components/PublicNav.jsx
+
 
 
 
