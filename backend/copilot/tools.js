@@ -48,6 +48,7 @@ function joiToSchema(joiObject) {
     else s = { type: "string" };
     if (d.allow && d.flags?.only) s.enum = d.allow.filter((v) => v !== "" && v !== null);
     if (/Id$/.test(key) && d.type === "string") s.description = "Id from an earlier tool result. Never invent one.";
+    if (d.flags?.description) s.description = d.flags.description;
     if (/Ids$/.test(key)) s.description = "Ids from earlier tool results. Never invent them.";
     properties[key] = s;
     if (d.flags?.presence === "required") required.push(key);
@@ -178,7 +179,7 @@ async function runTool(name, args, ctx) {
         phoneLast4: String(l.phone || "").replace(/\D/g, "").slice(-4) || null,
         priority: l.priority || null, propertyType: l.propertyType || null, bhk: l.bhk || null, purpose: l.purpose || null,
         budget: l.budget && (l.budget.min || l.budget.max) ? l.budget : null,
-        preferredLocation: l.preferredLocation || null, requirements: l.requirements || null,
+        preferredLocation: l.preferredLocation || null, city: l.city || null, address: l.streetAddress || null, requirements: l.requirements || null,
         siteVisit: when(l.siteVisitDate), siteVisitDone: !!l.siteVisitDone, booking: l.booking || null,
         sourceLabel: l.leadSourceLabel || null,
         notes: (l.notes || []).slice(-5).map((n) => ({ text: String(n.text || "").slice(0, 400), by: n.addedByName || null, at: when(n.createdAt) })),
@@ -255,7 +256,9 @@ async function runTool(name, args, ctx) {
     default: {
       const action = actions.byId.get(name);
       if (!action || !action.roles.includes(user.role)) return { result: { error: "That action isn't available to you." } };
-      const { value, error } = action.params.validate(args || {}, { stripUnknown: true });
+      // Text Artha writes into the CRM (notes, addresses) follows the house style: no em dashes.
+      const cleaned = Object.fromEntries(Object.entries(args || {}).map(([k, v]) => [k, typeof v === "string" ? v.replace(/\s*—\s*/g, ", ") : v]));
+      const { value, error } = action.params.validate(cleaned, { stripUnknown: true });
       if (error) return { result: { error: `Not proposed: ${error.details[0].message}` } };
       ctx.proposals.push({ type: name, params: value });
       return { result: { status: "proposed", note: "Shown to the user as a card. Nothing is saved until they tap Apply. Do not say it is done." } };

@@ -18,19 +18,21 @@ module.exports = {
     propertyType: Joi.string().valid(...OPTS.PROPERTY_TYPE),
     bhk: Joi.string().valid(...OPTS.BHK),
     purpose: Joi.string().valid(...OPTS.PURPOSE),
-    preferredLocation: Joi.string().trim().max(120),
+    preferredLocation: Joi.string().trim().max(120).description("Where the buyer wants to buy: the area or locality they are looking in (e.g. Baner, Hinjewadi). NOT where they live."),
+    city: Joi.string().trim().max(80).description("The city the buyer lives in (e.g. 'he lives in Pune' -> Pune). Not where they want to buy."),
+    streetAddress: Joi.string().trim().max(200).description("The buyer's own home address, if they gave it."),
   }),
   describe: {
     summary: "Create a new lead",
-    params: "{ name, phone, and optionally email, source, priority, propertyType, bhk, purpose, preferredLocation }",
+    params: "{ name, phone, and optionally email, source, priority, propertyType, bhk, purpose, preferredLocation, city, streetAddress }",
     when: "Only when the user gives at least a name and a phone number. Never invent a phone number.",
   },
 
   async preview({ params }) {
-    const order = ["phone", "email", "source", "priority", "propertyType", "bhk", "purpose", "preferredLocation"];
+    const order = ["phone", "email", "source", "priority", "propertyType", "bhk", "purpose", "preferredLocation", "city", "streetAddress"];
     const labels = {
       phone: "Phone", email: "Email", source: "Source", priority: "Priority",
-      propertyType: "Property", bhk: "BHK", purpose: "Purpose", preferredLocation: "Location",
+      propertyType: "Property", bhk: "BHK", purpose: "Purpose", preferredLocation: "Preferred location", city: "City", streetAddress: "Address",
     };
     // from is null throughout: nothing exists yet, so there is no "before".
     const fields = order

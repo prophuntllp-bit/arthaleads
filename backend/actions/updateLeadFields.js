@@ -11,7 +11,9 @@ const EDITABLE = {
   propertyType:      { label: "Property",   options: OPTS.PROPERTY_TYPE },
   bhk:               { label: "BHK",        options: OPTS.BHK },
   purpose:           { label: "Purpose",    options: OPTS.PURPOSE },
-  preferredLocation: { label: "Location",   text: true },
+  preferredLocation: { label: "Preferred location", text: true },
+  city:              { label: "City",       text: true },
+  streetAddress:     { label: "Address",    text: true },
 };
 
 module.exports = {
@@ -25,11 +27,13 @@ module.exports = {
     propertyType: Joi.string().valid(...OPTS.PROPERTY_TYPE),
     bhk: Joi.string().valid(...OPTS.BHK),
     purpose: Joi.string().valid(...OPTS.PURPOSE),
-    preferredLocation: Joi.string().trim().max(120),
+    preferredLocation: Joi.string().trim().max(120).description("Where the buyer wants to buy: the area or locality they are looking in (e.g. Baner, Hinjewadi). NOT where they live."),
+    city: Joi.string().trim().max(80).description("The city the buyer lives in (e.g. 'he lives in Pune' -> Pune). Not where they want to buy."),
+    streetAddress: Joi.string().trim().max(200).description("The buyer's own home address, if they gave it."),
   }).min(2), // leadId plus at least one field to change
   describe: {
     summary: "Update a lead's details",
-    params: `{ leadId, and any of: priority (${OPTS.PRIORITY.join("/")}), propertyType, bhk, purpose, preferredLocation }`,
+    params: `{ leadId, and any of: priority (${OPTS.PRIORITY.join("/")}), propertyType, bhk, purpose, preferredLocation (where they want to buy), city and streetAddress (where they live) }`,
     when: "Use for requirement changes — budget bracket, BHK, location preference, priority.",
   },
 

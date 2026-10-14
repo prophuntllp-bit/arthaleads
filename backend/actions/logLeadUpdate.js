@@ -16,7 +16,9 @@ const FIELDS = {
   propertyType:      { label: "Property",   options: OPTS.PROPERTY_TYPE },
   purpose:           { label: "Purpose",    options: OPTS.PURPOSE },
   priority:          { label: "Priority",   options: OPTS.PRIORITY },
-  preferredLocation: { label: "Location",   text: true },
+  preferredLocation: { label: "Preferred location", text: true },
+  city:              { label: "City",       text: true },
+  streetAddress:     { label: "Address",    text: true },
 };
 const show = (key, v) => (v == null || v === "" ? "(none)" : FIELDS[key]?.date ? formatISTDateTime(v) : String(v));
 
@@ -36,11 +38,13 @@ module.exports = {
     propertyType: Joi.string().valid(...OPTS.PROPERTY_TYPE),
     purpose: Joi.string().valid(...OPTS.PURPOSE),
     priority: Joi.string().valid(...OPTS.PRIORITY),
-    preferredLocation: Joi.string().trim().max(120),
+    preferredLocation: Joi.string().trim().max(120).description("Where the buyer wants to buy: the area or locality they are looking in (e.g. Baner, Hinjewadi). NOT where they live."),
+    city: Joi.string().trim().max(80).description("The city the buyer lives in (e.g. 'he lives in Pune' -> Pune). Not where they want to buy."),
+    streetAddress: Joi.string().trim().max(200).description("The buyer's own home address, if they gave it."),
   }).min(2),
   describe: {
     summary: "Log a call or visit on a lead: note plus any of status, follow-up, site visit and requirements, as one change",
-    params: "{ leadId, note?, status?, followUpDate?, siteVisitDate?, bhk?, propertyType?, purpose?, priority?, preferredLocation? }",
+    params: "{ leadId, note?, status?, followUpDate?, siteVisitDate?, bhk?, propertyType?, purpose?, priority?, preferredLocation?, city?, streetAddress? }",
     when: "When the user reports what happened on a call or visit, or asks for several changes to one lead at once. Regular leads only.",
   },
 
