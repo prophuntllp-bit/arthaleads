@@ -344,6 +344,7 @@ app.use("/api/meta-conversions", require("./routes/metaConversionRoutes"));
 app.use("/api/calls",     require("./routes/enablexRoutes"));
 app.use("/api/blog",        blogLimiter, blogRoutes);
 app.use("/api/help",        require("./routes/helpRoutes"));
+app.use("/api/copilot",     require("./routes/copilotRoutes"));   // Artha v2: streamed answers with tools
 app.use("/api/developers",  require("./routes/developerRoutes"));
 app.use("/api/bookings",    require("./routes/bookingRoutes"));
 app.use("/api/invoices",    require("./routes/invoiceRoutes"));

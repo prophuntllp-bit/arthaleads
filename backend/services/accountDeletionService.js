@@ -52,6 +52,7 @@ const DISPOSITION = {
   Attendance:       { drop: "userId" },
   PushSubscription: { drop: "userId" },
   CopilotAction:    { drop: "userId" },
+  CopilotThread:    { drop: "userId" },   // a person's own Artha chats go with them
   Ticket:           { drop: "userId" },
 
   // Organisation records that outlive whoever touched them.

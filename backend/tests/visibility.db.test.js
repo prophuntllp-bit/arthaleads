@@ -16,6 +16,9 @@ const ids = (rows) => rows.map((r) => String(r._id)).sort().join(",");
 (async () => {
   const mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri());
+  // Queries here join or union these collections; create them up front so the
+  // in-memory server never sees one appear mid-query (a known flake).
+  for (const c of ["projects", "projectleads", "leads", "tasks", "users"]) await mongoose.connection.createCollection(c).catch(() => {});
   const Lead = require("../models/Lead");
   const ProjectLead = require("../models/ProjectLead");
   const Project = require("../models/Project");

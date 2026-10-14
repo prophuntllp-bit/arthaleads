@@ -18,9 +18,9 @@ const check = (ok, msg, d = "") => {
 (async () => {
   const mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri());
-  // Follow-ups join projects; create the collection up front so the in-memory
-  // server never sees it appear mid-query.
-  await mongoose.connection.createCollection("projects");
+  // Queries here join or union these collections; create them up front so the
+  // in-memory server never sees one appear mid-query (a known flake).
+  for (const c of ["projects", "projectleads", "leads", "tasks", "users"]) await mongoose.connection.createCollection(c).catch(() => {});
   const Lead = require("../models/Lead");
   const Task = require("../models/Task");
   const followupService = require("../services/followupService");
