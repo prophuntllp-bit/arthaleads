@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-14 IST: owner request: Leadrat and Kylas comparison pages (/compare/leadrat-alternative, /compare/kylas-alternative) on a shared layout (components/CompetitorComparison.jsx, Sell.Do page moved onto it). Files: pages/*Alternative.jsx, App.jsx, entry-prerender.jsx, CustomCursor.jsx, vercel.json, PublicNav.jsx, Compare.jsx, backend sitemap
 
 
 
@@ -71,6 +70,8 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [Claude Code] 2026-10-14 IST, a3e70d9: Leadrat and Kylas comparison pages live at /compare/leadrat-alternative and /compare/kylas-alternative. All three competitor pages share components/CompetitorComparison.jsx; each page file holds the sourced facts (c object) and its own useSEO. Competitor prices are JS-rendered on their sites: re-read them in a browser. Nav NAV_COMPARE, Compare page cards and sitemap updated.
 
 - [Claude Code] 2026-10-14 IST, b2c30c6: public nav has a top-level Compare dropdown (NAV_COMPARE in PublicNav.jsx: All comparisons, ArthaLeads vs Sell.Do); Compare removed from Resources; mobile menu has a Compare section. New comparison pages go in NAV_COMPARE and the Compare page cards.
 
