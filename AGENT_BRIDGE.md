@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-14 IST: Artha copilot rebuild, Phase 0 (owner-approved plan https://claude.ai/artifact/8nQwUJxjEVqC3PG5mYNwHB): one shared visibility module for "my leads" (assigned OR created + project leads of my projects) used by follow-ups/analytics/alerts; arthaleads:refresh listeners; CopilotAction upgrade; OpenAI provider layer (gpt-5-mini); per-org copilot flags; permission tests. Files: backend/utils/visibility.js (new), backend/services/leadService.js, followupService.js, taskService.js, models/CopilotAction.js, models/Organization.js, backend/utils/ai/* (new), backend/tests/*, frontend hooks/pages refresh listeners. Please avoid these files until logged.
 
 
 
