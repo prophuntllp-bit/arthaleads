@@ -59,6 +59,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-14 IST: owner approved: home gets 'Who it's for', 'What you can count on' (real facts only) and 'Latest from the blog' sections; home FAQ export answer corrected (lead export is Growth+). Files: frontend/src/pages/Landing.jsx
+
 
 
 
