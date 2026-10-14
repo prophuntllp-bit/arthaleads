@@ -59,6 +59,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-14 IST: owner request: remove pricing section from home (duplicate of /pricing); Vistrow logo image becomes text in nav and footer. Files: frontend/src/pages/Landing.jsx, components/PublicNav.jsx, components/PublicFooter.jsx
+
 
 
 
