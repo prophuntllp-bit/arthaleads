@@ -1283,6 +1283,7 @@ async function labelAdlessLead(org, conv) {
   if (!conv?.leadId || conv.campaignRef?.adId) return;
   const m = await matchByMessageText(org, conv);
   await labelLeadIfWeaker(conv.leadId, m?.project ? `WhatsApp enquiry · ${m.project.name}` : "");
+  await noteWhyDetailsEmpty(conv, m).catch((err) => console.error("[WhatsApp] empty-details note failed:", err.message));
   // A routing rule only fires for an ad, so a lead who typed the project's name
   // with no ad behind it was never filed in that project. Name the project and
   // it goes in, assigned to whoever the lead already has. Once, at the start of
@@ -1304,6 +1305,30 @@ async function labelAdlessLead(org, conv) {
       }
     }
   }
+}
+
+// A WhatsApp lead with no ad details looks broken in the CRM: no source, no
+// project, every field N/A. The owner asked (14 Oct 2026) that such a lead
+// always says why, in its Notes, so nobody has to dig through the chat.
+// Written once, after the first message with real content has arrived (an
+// opening placeholder alone does not tell us enough yet).
+const EMPTY_DETAILS_NOTE_PREFIX = "Why this lead's details are empty:";
+async function noteWhyDetailsEmpty(conv, match) {
+  const inbound = await WaMessage.find({ conversationId: conv._id, direction: "inbound" }).sort({ timestamp: 1 }).limit(5).select("body").lean();
+  const firstReal = inbound.find((x) => !isPlaceholderBody(x.body));
+  if (!firstReal) return;
+  const lead = await Lead.findOne({ _id: conv.leadId }).select("notes campaignRef").lean();
+  if (!lead || lead.campaignRef?.adId) return;
+  if ((lead.notes || []).some((n) => String(n.text || "").startsWith(EMPTY_DETAILS_NOTE_PREFIX))) return;
+  const opened = isPlaceholderBody(inbound[0]?.body)
+    ? " The first thing they sent was something WhatsApp does not pass on to businesses (for example a view-once photo or a poll), so it could not be shown."
+    : "";
+  const quote = String(firstReal.body || "").replace(/^\[[A-Za-z ]+\]\s*/, "").slice(0, 160);
+  const where = match?.project
+    ? `this buyer messaged us on WhatsApp with "${quote}", the pre-filled message of our ${match.project.name} ad, but Meta did not send the ad details (ad name and ID) with the chat, so the exact ad is not known. The project was identified from that message.`
+    : `this buyer started a WhatsApp chat and Meta did not send any ad details with it, and their message ("${quote}") does not name one of our projects. It may be a direct message rather than an ad click, so the source and project are blank.`;
+  const text = `${EMPTY_DETAILS_NOTE_PREFIX} ${where}${opened} Property type, BHK, budget and location stay blank until the buyer shares them in the chat or an agent fills them in.`;
+  await Lead.updateOne({ _id: conv.leadId }, { $push: { notes: { text, addedBy: null, addedByName: "ArthaLeads (automatic)" } } });
 }
 
 // Among the projects the org's WhatsApp routing rules file leads into, the one
