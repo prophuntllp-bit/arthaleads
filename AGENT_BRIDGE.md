@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-14 IST: SEO retune (owner approved) of home and Features copy/meta for 'real estate CRM software' searches; no new sections. Files: frontend/src/pages/Landing.jsx, pages/Features.jsx
 
 
 
@@ -73,6 +72,8 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [Claude Code] 2026-10-14 IST, 11b38d7: home and Features titles/descriptions/intro copy retuned for 'real estate CRM software (India)' (Keyword Planner 1K-10K). Portal leads are manual import: never describe them as automatic capture.
 
 - [Claude Code] 2026-10-14 IST, 9f44b99: Vistrow credit in nav and footer is plain 'by Vistrow' text, no logo, no 'Technologies' (owner correction).
 
