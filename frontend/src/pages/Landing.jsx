@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { FEATURES, HOME_FEATURES } from "../data/features";
 import {
-  ChevronRight, ChevronLeft, Check, ArrowRight, BarChart3, Users, Zap, Building2, PhoneCall, Bell, TrendingUp, Shield, Facebook, Mail, Phone, MapPin, ChevronDown, PlayCircle, Layers, Clock, Filter, FileSpreadsheet, UserCheck, QrCode, Sparkles, FileText, Camera, Bot, Headphones,
+  ChevronRight, ChevronLeft, Check, ArrowRight, BarChart3, Users, Zap, Building2, PhoneCall, Bell, TrendingUp, Shield, Facebook, Mail, Phone, MapPin, ChevronDown, PlayCircle, Layers, Clock, Filter, FileSpreadsheet, UserCheck, QrCode, Sparkles, FileText, Camera, Bot, Headphones, Handshake, RotateCcw,
 } from "lucide-react";
 import WhatsAppLogo from "../components/WhatsAppLogo";
 import PublicNav from "../components/PublicNav";
@@ -13,6 +13,8 @@ import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
 import { getRecaptchaToken } from "../utils/recaptcha";
 import IntroVideo from "../components/IntroVideo";
+import api from "../services/api";
+import BlogCard from "../components/BlogCard";
 import { HeroTour } from "../components/ProductTour";
 import { PLAN_PRICING, formatINR } from "../utils/plan";
 import { Reveal, CountUp, Spotlight, Magnetic } from "../components/motion/Motion";
@@ -982,6 +984,159 @@ function ContactForm({ isDark }) {
   );
 }
 
+// ── Who it's for ──────────────────────────────────────────────────────────────
+// Every line here must stay true to data/features.js and data/plans.js.
+const AUDIENCES = [
+  { icon: Building2, color: "#ff6b00", title: "Builders and developers",
+    body: "Run every project from one workspace: project-wise pipelines and lead imports, QR codes on site hoardings and brochures, a telecaller workflow for your calling team, and project-wise conversion for your managers.",
+    link: { to: "/features", label: "See project features" } },
+  { icon: Handshake, color: "#22c55e", title: "Channel partners",
+    body: "Sell for several developers at once. Keep each developer's brokerage percentage, turn a closed deal into a booking in one click, and send a branded PDF invoice with GST already worked out.",
+    link: { to: "/features", label: "See booking and invoices" } },
+  { icon: UserCheck, color: "#3b82f6", title: "Brokers and small teams",
+    body: "Every enquiry from Facebook, Instagram, WhatsApp and your website in one list, a shared WhatsApp inbox for the whole team, and follow-up reminders on your phone so no buyer is forgotten.",
+    link: { to: "/whatsapp-crm", label: "See the WhatsApp CRM" } },
+];
+
+function WhoItsFor({ isDark }) {
+  const bg      = isDark ? "#0a0a14" : "#fafafa";
+  const heading = isDark ? "#ffffff" : "#111827";
+  const body    = isDark ? "rgba(255,255,255,0.58)" : "#4b5563";
+  const cardBg  = isDark ? "rgba(255,255,255,0.035)" : "#ffffff";
+  const cardBdr = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
+  const linkClr = isDark ? "#fb923c" : "#c2410c";
+
+  return (
+    <section id="who-its-for" className="py-16 lg:py-24" style={{ background: bg }}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Reveal className="max-w-3xl mx-auto text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-black mb-4 leading-[1.15]" style={{ color: heading }}>
+            One real estate CRM for{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">builders, channel partners and brokers</span>
+          </h2>
+          <p className="text-base sm:text-lg leading-relaxed" style={{ color: body }}>
+            The same workspace fits the way each kind of property sales team works.
+          </p>
+        </Reveal>
+        <div className="grid md:grid-cols-3 gap-6">
+          {AUDIENCES.map(({ icon: Icon, color, title, body: text, link }, i) => (
+            <Reveal key={title} delay={i * 110} className="flex">
+              <Spotlight className="group w-full flex flex-col rounded-3xl border p-7 transition-transform duration-300 hover:-translate-y-1"
+                style={{ background: cardBg, borderColor: cardBdr }} color={`${color}1f`}>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
+                  style={{ background: `${color}14` }}>
+                  <Icon className="w-6 h-6" style={{ color }} />
+                </div>
+                <h3 className="text-xl font-bold mb-3" style={{ color: heading }}>{title}</h3>
+                <p className="text-[15px] leading-relaxed flex-1" style={{ color: body }}>{text}</p>
+                <Link to={link.to} className="inline-flex items-center gap-1.5 mt-5 text-sm font-semibold transition-all group-hover:gap-2.5" style={{ color: linkClr }}>
+                  {link.label} <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </Spotlight>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── What you can count on ─────────────────────────────────────────────────────
+// Facts about the product and the company only: no customer counts, ratings or
+// testimonials until real ones exist. Lead export is a Growth+ feature
+// (planGate in leadRoutes), so it is worded that way.
+const TRUST_FACTS = [
+  { icon: Clock,      title: "14-day free trial",        body: "Every Growth feature on your own leads. No credit card, and you can cancel any time." },
+  { icon: RotateCcw,  title: "7-day money-back",         body: "Changed your mind after paying? New subscriptions get a full refund within 7 days.", link: { to: "/refund", label: "Refund policy" } },
+  { icon: WhatsAppLogo, title: "Official WhatsApp API",  body: "Built on Meta's WhatsApp Business Platform, not a browser extension or an unofficial tool." },
+  { icon: Shield,     title: "Your data kept separate",  body: "Each company's data is isolated, and role-based access shows agents only the leads assigned to them.", link: { to: "/security", label: "How we protect data" } },
+  { icon: FileSpreadsheet, title: "Your leads stay yours", body: "Import from CSV or Excel on every plan, and export your leads to CSV or Excel on Growth and Enterprise." },
+  { icon: MapPin,     title: "Made in Pune",             body: "Built and supported in Pune, India, by Vistrow, for the way Indian property teams sell." },
+];
+
+function TrustFacts({ isDark }) {
+  const bg      = isDark ? "#0d0d1a" : "#ffffff";
+  const heading = isDark ? "#ffffff" : "#111827";
+  const body    = isDark ? "rgba(255,255,255,0.58)" : "#4b5563";
+  const cardBdr = isDark ? "rgba(255,255,255,0.08)" : "#ececec";
+  const iconBg  = isDark ? "rgba(255,107,0,0.12)" : "#fff3ea";
+  const linkClr = isDark ? "#fb923c" : "#c2410c";
+
+  return (
+    <section id="trust" className="py-16 lg:py-24" style={{ background: bg }}>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Reveal className="max-w-2xl mx-auto text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-black mb-4 leading-[1.15]" style={{ color: heading }}>
+            What you can{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">count on</span>
+          </h2>
+          <p className="text-base sm:text-lg leading-relaxed" style={{ color: body }}>
+            Plain promises about how ArthaLeads works, before you hand it your leads.
+          </p>
+        </Reveal>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-10">
+          {TRUST_FACTS.map(({ icon: Icon, title, body: text, link }, i) => (
+            <Reveal key={title} delay={(i % 3) * 90 + Math.floor(i / 3) * 60} className="flex gap-4 pt-6 border-t" style={{ borderColor: cardBdr }}>
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: iconBg }}>
+                {Icon === WhatsAppLogo ? <WhatsAppLogo className="w-5 h-5" /> : <Icon className="w-5 h-5 text-[#ff6b00]" />}
+              </div>
+              <div>
+                <h3 className="font-bold text-[17px] mb-1.5" style={{ color: heading }}>{title}</h3>
+                <p className="text-[15px] leading-relaxed" style={{ color: body }}>
+                  {text}{link && <>{" "}<Link to={link.to} className="font-semibold underline underline-offset-2" style={{ color: linkClr }}>{link.label}</Link></>}
+                </p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Latest from the blog ──────────────────────────────────────────────────────
+// The three newest published posts. Hidden until they load (and if the API is
+// down), so the home page never shows an empty block.
+function LatestPosts({ isDark }) {
+  const [posts, setPosts] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    api.get("/blog/posts?page=1&limit=3")
+      .then((r) => { if (alive) setPosts((r.data.posts || []).slice(0, 3)); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  if (posts.length === 0) return null;
+
+  const bg      = isDark ? "#0a0a14" : "#fafafa";
+  const heading = isDark ? "#ffffff" : "#111827";
+  const body    = isDark ? "rgba(255,255,255,0.58)" : "#4b5563";
+  const linkClr = isDark ? "#fb923c" : "#c2410c";
+
+  return (
+    <section id="latest-posts" className="py-16 lg:py-24" style={{ background: bg }}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Reveal className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-black mb-3 leading-[1.15]" style={{ color: heading }}>Latest from the blog</h2>
+            <p className="text-base leading-relaxed" style={{ color: body }}>Practical guides for property sales teams: leads, follow-ups and WhatsApp.</p>
+          </div>
+          <Link to="/blog" className="inline-flex items-center gap-1.5 text-sm font-semibold hover:gap-2.5 transition-all shrink-0" style={{ color: linkClr }}>
+            All articles <ArrowRight className="w-4 h-4" />
+          </Link>
+        </Reveal>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {posts.map((p, i) => (
+            <Reveal key={p._id || p.slug} delay={i * 100} className="flex">
+              <BlogCard post={p} isDark={isDark} />
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── FAQ ───────────────────────────────────────────────────────────────────────
 // Also published as FAQPage structured data (see Landing below). Keep answers
 // true to the product: plan names and prices come from utils/plan.js.
@@ -997,7 +1152,7 @@ const HOME_FAQS = [
   ["How much does it cost?",
    `Starter is ${formatINR(PLAN_PRICING.starter.monthly)} and Growth is ${formatINR(PLAN_PRICING.growth.monthly)} per user per month, plus 18% GST, with a five-seat minimum. Enterprise is quoted on team size. Every team can start with a 14-day free trial, no credit card needed.`],
   ["Can I take my data with me?",
-   "Always. Export your leads to CSV or Excel whenever you like. Read how we protect your data on our Security page."],
+   "Yes. On Growth and Enterprise you can export your leads to CSV or Excel whenever you like. Read how we protect your data on our Security page."],
 ];
 
 function FAQ({ isDark }) {
@@ -1165,9 +1320,12 @@ export default function Landing() {
       <Hero isDark={isDark} />
       <SourcesStrip isDark={isDark} />
       <Features isDark={isDark} />
+      <WhoItsFor isDark={isDark} />
       <IntroVideo isDark={isDark} />
       <HowItWorks isDark={isDark} />
       <About isDark={isDark} />
+      <TrustFacts isDark={isDark} />
+      <LatestPosts isDark={isDark} />
       <FAQ isDark={isDark} />
       <Contact isDark={isDark} />
       <FinalCTA isDark={isDark} />
