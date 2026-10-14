@@ -47,9 +47,13 @@ module.exports = {
   async preview({ params, user }) {
     const { doc, isProject } = await resolveLead(params.leadId, user);
     if (isProject) throw new AppError("This is a project lead. Use the project lead outcome instead.", 400);
-    const fields = Object.entries(FIELDS).filter(([k]) => k in params).map(([k, meta]) => ({
+    // Only what actually changes: "2BHK -> 2BHK" is noise on a card someone has to read.
+    const differs = (k) => show(k, doc[k]) !== show(k, params[k]);
+    const fields = Object.entries(FIELDS).filter(([k]) => k in params && differs(k)).map(([k, meta]) => ({
       label: meta.label, param: k, from: show(k, doc[k]), to: show(k, params[k]),
-      editor: meta.options ? { type: "select", value: params[k], options: meta.options } : meta.date ? null : { type: "text", value: params[k] },
+      editor: meta.options ? { type: "select", value: params[k], options: meta.options }
+        : meta.date ? { type: "datetime", value: new Date(new Date(params[k]).getTime() + 5.5 * 3600e3).toISOString().slice(0, 16) }
+        : { type: "text", value: params[k] },
     }));
     if (params.note) fields.push({ label: "Note", param: "note", from: null, to: params.note, editor: { type: "text", value: params.note } });
     return { subject: doc.name, fields };

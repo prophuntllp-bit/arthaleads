@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { X, Send, ArrowRight, Sparkles, MessageCircle, Compass, House, TicketCheck, ChevronDown, Paperclip, Zap, CheckCircle2, History, Square, ThumbsUp, ThumbsDown, Loader2, Check, AlertCircle, Trash2 } from "lucide-react";
+import { X, Send, ArrowRight, Sparkles, MessageCircle, Compass, House, TicketCheck, ChevronDown, Paperclip, Zap, CheckCircle2, History, Square, ThumbsUp, ThumbsDown, Loader2, Check, AlertCircle, Trash2, Mic, ListChecks } from "lucide-react";
 import api from "../services/api";
 import { streamArtha } from "../services/arthaStream";
 import ReportMessageButton from "./ReportMessageButton";
@@ -188,6 +188,9 @@ export default function HelpBot() {
   const [threads, setThreads] = useState([]);
   const [starters, setStarters] = useState([]);
   const abortRef = useRef(null);
+  const [changes, setChanges] = useState([]);       // what Artha has applied (history view)
+  const [listening, setListening] = useState(false);
+  const speechRef = useRef(null);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -307,9 +310,10 @@ export default function HelpBot() {
           return { steps: [...rest, { id: ev.id, label: ev.label, status: ev.status, count: ev.count }] };
         });
         else if (ev.type === "proposal") setMessages((m) => [...m, {
-          id: `p${Date.now()}${Math.random()}`, role: "bot", text: "", isProposal: true,
+          id: `p${Date.now()}${Math.random()}`, role: "bot", text: "", isProposal: true, group: botId,
           action: ev.proposal, actionDone: false, scopeConfirmed: true, prompt: q,
         }]);
+        else if (ev.type === "choice") patchMsg(botId, (x) => ({ choices: [...(x.choices || []), ev.choice] }));
         else if (ev.type === "records") patchMsg(botId, () => ({ records: ev.records || [] }));
         else if (ev.type === "done") patchMsg(botId, (x) => ({ streaming: false, turnId: ev.turnId, text: tidy(ev.text || x.text) }));
         else if (ev.type === "error") patchMsg(botId, () => ({ streaming: false, text: ev.message, suggestTicket: true }));
@@ -340,6 +344,7 @@ export default function HelpBot() {
   const openHistory = async () => {
     setShowHistory((v) => !v);
     try { const { data } = await api.get("/copilot/threads"); setThreads(data.threads || []); } catch { setThreads([]); }
+    try { const { data } = await api.get("/copilot/actions", { params: { limit: 30 } }); setChanges(data.actions || []); } catch { setChanges([]); }
   };
 
   const loadThread = async (id) => {
@@ -358,6 +363,28 @@ export default function HelpBot() {
     setThreads((t) => t.filter((x) => x.id !== id));
     api.delete(`/copilot/threads/${id}`).catch(() => {});
     if (id === threadId) { setThreadId(null); setMessages([]); }
+  };
+
+  // Several changes from one answer: apply them one after another.
+  const pendingIn = (groupId) => messages
+    .map((x, i) => (x.group === groupId && x.action && !x.actionDone && x.preview && !x.previewError ? i : -1))
+    .filter((i) => i >= 0);
+  const applyAll = async (groupId) => {
+    for (const i of pendingIn(groupId)) await confirmAction(i); // eslint-disable-line no-await-in-loop
+  };
+
+  // Voice: the browser's own speech recognition (Chrome, Edge, Android). Fills
+  // the box; the person reads it and sends. Indian English also catches most Hinglish.
+  const SpeechRec = typeof window !== "undefined" ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+  const toggleVoice = () => {
+    if (!SpeechRec) return;
+    if (listening) { speechRef.current?.stop(); return; }
+    const rec = new SpeechRec();
+    rec.lang = "en-IN"; rec.interimResults = true; rec.continuous = false;
+    rec.onresult = (e) => setInput(Array.from(e.results).map((r) => r[0].transcript).join(" "));
+    rec.onend = () => { setListening(false); inputRef.current?.focus(); };
+    rec.onerror = () => setListening(false);
+    speechRef.current = rec; setListening(true); rec.start();
   };
 
   // Lead and task names in an answer become links to the record.
@@ -491,6 +518,8 @@ export default function HelpBot() {
         scopeConfirmed: Boolean(msg.scopeConfirmed),
         idempotencyKey: key,
         prompt: msg.prompt || "",
+        source: "artha",
+        threadId,
       });
       setMessages((m) => m.map((x, i) => i === msgIndex ? { ...x, actionDone: true } : x));
       setMessages((m) => [...m, {
@@ -700,6 +729,21 @@ export default function HelpBot() {
                     </button>
                   </div>
                 ))}
+                {changes.length > 0 && (
+                  <>
+                    <div className="px-3 py-2 text-xs font-semibold" style={{ color: "var(--app-text-soft)", borderTop: "1px solid var(--app-border)", borderBottom: "1px solid var(--app-border)" }}>
+                      Changes Artha made {user?.role === "agent" ? "for you" : "for your team"}
+                    </div>
+                    {changes.map((c) => (
+                      <div key={c.id} className="px-3 py-2 text-xs border-b last:border-b-0" style={{ borderColor: "var(--app-border)" }}>
+                        <span className={`block text-app ${c.undone ? "line-through opacity-60" : ""}`}>{c.message || c.what}</span>
+                        <span className="block text-[10px] text-app-soft">
+                          {c.by} · {new Date(c.at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}{c.undone ? " · undone" : ""}
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             )}
             {messages.length === 0 && !showHistory && (
@@ -831,6 +875,26 @@ export default function HelpBot() {
                   )}
                   {/* Required on every AI answer by Play's AI-Generated Content
                       policy: a way to flag output without leaving the app. */}
+                  {m.role === "bot" && m.choices?.length > 0 && m.choices.map((ch, ci) => (
+                    <div key={ci} className="mt-1.5 flex flex-wrap gap-1.5" role="group" aria-label={ch.question}>
+                      {ch.options.map((o) => (
+                        <button key={o.id} type="button" disabled={loading}
+                          onClick={() => handleAsk(null, `${o.name} (${o.detail})`)}
+                          className="text-left rounded-xl px-2.5 py-1.5 text-xs cursor-pointer transition hover:bg-orange-500/5 disabled:opacity-50"
+                          style={{ border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
+                          <span className="block font-semibold">{o.name}</span>
+                          <span className="block text-[10px] text-app-soft">{o.detail}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                  {m.role === "bot" && m.id && pendingIn(m.id).length >= 2 && (
+                    <button type="button" onClick={() => applyAll(m.id)} disabled={actionLoading !== null}
+                      className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer disabled:opacity-60"
+                      style={{ background: "rgba(99,102,241,0.12)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.3)" }}>
+                      <ListChecks className="h-3.5 w-3.5" /> Apply all {pendingIn(m.id).length} changes
+                    </button>
+                  )}
                   {m.role === "bot" && m.turnId && !m.streaming && (
                     <div className="mt-1 flex items-center gap-1">
                       <button type="button" onClick={() => rateTurn(m, "up")} aria-label="Helpful" title="Helpful"
@@ -950,6 +1014,26 @@ export default function HelpBot() {
                               </div>
                             )}
 
+                            {Array.isArray(m.preview.rows) && m.preview.rows.length > 0 && (() => {
+                              const chosen = new Set(m.action.params.leadIds || []);
+                              return (
+                                <div className="px-2.5 pt-2 max-h-48 overflow-y-auto space-y-1" role="group" aria-label="Leads in this change">
+                                  {m.preview.rows.map((r) => (
+                                    <label key={r.id} className={`flex items-center gap-2 text-xs ${r.skip ? "opacity-60" : "cursor-pointer"}`}>
+                                      <input type="checkbox" disabled={!!r.skip || busy} checked={!r.skip && chosen.has(r.id)}
+                                        onChange={(e) => {
+                                          const next = new Set(chosen);
+                                          if (e.target.checked) next.add(r.id); else next.delete(r.id);
+                                          editField(idx, "leadIds", [...next]);
+                                        }} />
+                                      <span className="min-w-0 flex-1 truncate" style={{ color: "var(--app-text)" }}>{r.name}</span>
+                                      <span className="shrink-0 text-[10px]" style={{ color: "var(--app-soft)" }}>{r.skip || `from ${r.from}`}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              );
+                            })()}
+
                             <div className="px-2.5 py-1.5">
                               {fields.map((f, fi) => (
                                 <div key={fi} className="py-1 text-xs">
@@ -969,6 +1053,14 @@ export default function HelpBot() {
                                           return <option key={val} value={val}>{lab}</option>;
                                         })}
                                       </select>
+                                    ) : f.editor.type === "datetime" ? (
+                                      // IST wall-clock time; sent back with an explicit +05:30 so it never shifts.
+                                      <input
+                                        type="datetime-local"
+                                        defaultValue={f.editor.value || ""}
+                                        onChange={(e) => e.target.value && editField(idx, f.param, `${e.target.value}:00+05:30`)}
+                                        className="w-full rounded-lg px-2 py-1 text-xs"
+                                        style={{ background: "var(--app-bg)", color: "var(--app-text)", border: "1px solid var(--app-border)" }} />
                                     ) : (
                                       <input
                                         type={f.editor.type === "date" ? "date" : "text"}
@@ -1015,7 +1107,9 @@ export default function HelpBot() {
                                     ) : (
                                       <CheckCircle2 className="h-3 w-3" />
                                     )}
-                                    {busy ? "Applying..." : "Apply"}
+                                    {busy ? "Applying..." : (Array.isArray(m.preview.rows)
+                                      ? `Apply to ${m.preview.rows.filter((r) => !r.skip && (m.action.params.leadIds || []).includes(r.id)).length}`
+                                      : "Apply")}
                                   </button>
                                   {editable && (
                                     <button type="button" disabled={busy}
@@ -1152,6 +1246,13 @@ export default function HelpBot() {
                 disabled={loading}
                 onKeyDown={(e) => { if (e.key === "Escape" && loading) { e.preventDefault(); stopAnswer(); } }}
               />
+              {SpeechRec && !loading && (
+                <button type="button" onClick={toggleVoice} aria-label={listening ? "Stop listening" : "Speak"} title={listening ? "Listening… tap to stop" : "Speak (English or Hinglish)"}
+                  className={`flex h-9 w-9 items-center justify-center rounded-full shrink-0 cursor-pointer transition ${listening ? "animate-pulse" : ""}`}
+                  style={{ background: listening ? "rgba(239,68,68,0.12)" : "var(--app-surface-low)", color: listening ? "#ef4444" : "var(--app-text-soft)", border: "1px solid var(--app-border)" }}>
+                  <Mic className="h-4 w-4" />
+                </button>
+              )}
               {loading ? (
                 <button type="button" onClick={stopAnswer} aria-label="Stop" title="Stop (Esc)"
                   className="flex h-9 w-9 items-center justify-center rounded-full shrink-0 cursor-pointer transition hover:opacity-90"

@@ -1,7 +1,7 @@
 const { objectId, resolveLead, Joi } = require("./_shared");
 const leadService = require("../services/leadService");
 const projectService = require("../services/projectService");
-const { formatISTDateShort } = require("../utils/datetime");
+const { formatISTDateShort, formatISTDateTime } = require("../utils/datetime");
 
 module.exports = {
   id: "set_followup",
@@ -25,10 +25,10 @@ module.exports = {
       subject: doc.name,
       fields: [{
         label: "Follow-up", param: "date",
-        from: current ? formatISTDateShort(current) : "(none)",
-        to: formatISTDateShort(params.date),
-        // The editor needs the raw value; the label above is for reading.
-        editor: { type: "date", value: new Date(params.date).toISOString().slice(0, 10) },
+        from: current ? formatISTDateTime(current) : "(none)",
+        to: formatISTDateTime(params.date),
+        // IST wall-clock value for a date-and-time picker; the label above is for reading.
+        editor: { type: "datetime", value: new Date(new Date(params.date).getTime() + 5.5 * 3600e3).toISOString().slice(0, 16) },
       }],
     };
   },

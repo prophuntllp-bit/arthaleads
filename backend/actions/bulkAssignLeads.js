@@ -33,9 +33,13 @@ module.exports = {
     ]);
     if (!agent) throw new AppError("That team member was not found.", 404);
     const moving = leads.filter((l) => String(l.assignedTo || "") !== String(agent._id));
+    // assignedToName is not always filled in (imports, older records); the owner's
+    // own name is what the person approving needs to see.
+    const ownerIds = [...new Set(leads.map((l) => l.assignedTo).filter(Boolean).map(String))];
+    const owners = new Map((await User.find({ _id: { $in: ownerIds }, orgId: user.orgId }).select("name").lean()).map((u) => [String(u._id), u.name]));
     return {
       subject: `${moving.length} lead${moving.length === 1 ? "" : "s"} to ${agent.name}`,
-      rows: leads.map((l) => ({ id: String(l._id), name: l.name, from: l.assignedToName || "Unassigned", skip: String(l.assignedTo || "") === String(agent._id) ? `Already with ${agent.name}` : null })),
+      rows: leads.map((l) => ({ id: String(l._id), name: l.name, from: (l.assignedTo && owners.get(String(l.assignedTo))) || l.assignedToName || "Unassigned", skip: String(l.assignedTo || "") === String(agent._id) ? `Already with ${agent.name}` : null })),
       fields: [{ label: "Assign to", param: null, from: null, to: agent.name }],
     };
   },
