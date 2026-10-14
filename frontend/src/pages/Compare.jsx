@@ -182,7 +182,7 @@ export default function Compare() {
 
             {filtered.map((cat) => (
               <div key={cat.name}>
-                <div className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest" style={{ color: "#ff6b00", background: isDark ? "rgba(255,107,0,0.04)" : "#fff7f0", borderBottom: `1px solid ${cardBorder}` }}>
+                <div className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest" style={{ color: "var(--brand-text)", background: isDark ? "rgba(255,107,0,0.04)" : "#fff7f0", borderBottom: `1px solid ${cardBorder}` }}>
                   {cat.name}
                 </div>
                 {cat.rows.map(([label, vals], ri) => (
@@ -243,7 +243,7 @@ export default function Compare() {
               <Link key={to} to={to}
                 className="group flex flex-col rounded-2xl border p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-orange-300"
                 style={{ background: cardBg, borderColor: cardBorder }}>
-                <h3 className="font-bold text-lg mb-2 group-hover:text-[#ff6b00] transition-colors" style={{ color: textColor }}>ArthaLeads vs {name}</h3>
+                <h3 className="font-bold text-lg mb-2 group-hover:text-[color:var(--brand-text)] transition-colors" style={{ color: textColor }}>ArthaLeads vs {name}</h3>
                 <p className="text-sm leading-relaxed mb-3 flex-1" style={{ color: softText }}>{body}</p>
                 <span className="inline-flex items-center gap-1.5 text-sm font-semibold transition-all group-hover:gap-2.5" style={{ color: isDark ? "#fb923c" : "#c2410c" }}>
                   Read the comparison <ArrowRight className="w-3.5 h-3.5" />

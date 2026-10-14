@@ -194,7 +194,7 @@ function ProductUpdatesInner() {
                     className="hidden sm:block absolute left-0 top-1.5 w-3.5 h-3.5 rounded-full border-2 shadow-lg shadow-orange-500/30"
                     style={{ background: "#ff6b00", borderColor: bg }}
                   />
-                  <div className="text-[#ff6b00] text-xs font-semibold uppercase tracking-widest mb-2">{date}</div>
+                  <div className="text-[color:var(--brand-text)] text-xs font-semibold uppercase tracking-widest mb-2">{date}</div>
                   <div className="p-6 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
                     <h2 className="font-bold text-lg mb-3 leading-snug" style={{ color: textColor }}>{title}</h2>
                     <p className="text-sm leading-relaxed mb-4" style={{ color: softText }}>{desc}</p>

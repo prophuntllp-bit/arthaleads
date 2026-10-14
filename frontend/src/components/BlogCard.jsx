@@ -40,7 +40,7 @@ export function CoverFallback({ isDark }) {
 
 export function CategoryLabel({ post, className = "" }) {
   if (!post.category?.name) return null;
-  return <span className={`text-[11px] font-bold uppercase tracking-[0.14em] text-[#ff6b00] ${className}`}>{post.category.name}</span>;
+  return <span className={`text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--brand-text)] ${className}`}>{post.category.name}</span>;
 }
 
 /** One article in the grid: cover, category + read time, title, summary, date and author. */
@@ -62,7 +62,7 @@ export default function BlogCard({ post, isDark, eager = false }) {
           <CategoryLabel post={post} />
           <span className="text-xs shrink-0" style={{ color: t.muted }}>{post.readingTime || 1} min read</span>
         </div>
-        <h2 className="font-extrabold text-[1.2rem] leading-snug tracking-tight mb-3 line-clamp-3 transition-colors group-hover:text-[#ff6b00]"
+        <h2 className="font-extrabold text-[1.2rem] leading-snug tracking-tight mb-3 line-clamp-3 transition-colors group-hover:text-[color:var(--brand-text)]"
           style={{ color: t.heading, textWrap: "balance" }}>
           {post.title}
         </h2>
@@ -86,11 +86,11 @@ export function FeaturedCard({ post, isDark }) {
       <div className="flex flex-col justify-between p-7 sm:p-10 lg:p-12 order-2 lg:order-1">
         <div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6">
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#ff6b00]/10 text-[#ff6b00]">Latest</span>
+            <span className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--brand-text)]">Latest</span>
             <CategoryLabel post={post} />
             <span className="text-xs" style={{ color: t.muted }}>· {post.readingTime || 1} min read</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl xl:text-[2.75rem] font-black leading-[1.08] tracking-tight mb-5 transition-colors group-hover:text-[#ff6b00]"
+          <h2 className="text-3xl sm:text-4xl xl:text-[2.75rem] font-black leading-[1.08] tracking-tight mb-5 transition-colors group-hover:text-[color:var(--brand-text)]"
             style={{ color: t.heading, textWrap: "balance" }}>
             {post.title}
           </h2>
@@ -101,7 +101,7 @@ export function FeaturedCard({ post, isDark }) {
             <div className="text-sm font-semibold" style={{ color: t.heading }}>{authorOf(post)}</div>
             <div className="text-xs" style={{ color: t.muted }}>{fmtDate(post.publishedAt)}</div>
           </div>
-          <span className="inline-flex items-center gap-2 text-sm font-bold text-[#ff6b00] transition-all group-hover:gap-3">
+          <span className="inline-flex items-center gap-2 text-sm font-bold text-[color:var(--brand-text)] transition-all group-hover:gap-3">
             Read the article <ArrowRight className="w-4 h-4" />
           </span>
         </div>

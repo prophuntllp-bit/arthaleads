@@ -190,7 +190,7 @@ export default function AboutUs() {
         <div ref={storyRef} className="about-story-grid" style={{ maxWidth: 1100, margin: "0 auto" }}>
           {/* Left */}
           <div style={{ opacity: storyVisible ? 1 : 0, transform: storyVisible ? "translateX(0)" : "translateX(-40px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}>
-            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "#ff6b00", marginBottom: 12 }}>Our Story</div>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--brand-text)", marginBottom: 12 }}>Our Story</div>
             <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 900, color: heading, lineHeight: 1.15, marginBottom: 20 }}>
               Why we built{" "}
               <span style={{ color: "#ff6b00" }}>Arthaleads</span>
@@ -242,7 +242,7 @@ export default function AboutUs() {
         <div style={{ maxWidth: 760, margin: "0 auto", textAlign: "center", position: "relative" }}>
           <div style={{
             fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em",
-            color: "#ff6b00", marginBottom: 16,
+            color: "var(--brand-text)", marginBottom: 16,
             opacity: missionVisible ? 1 : 0,
             transform: missionVisible ? "translateY(0)" : "translateY(12px)",
             transition: "opacity 0.6s ease, transform 0.6s ease",
@@ -278,7 +278,7 @@ export default function AboutUs() {
             transform: valuesVisible ? "translateY(0)" : "translateY(20px)",
             transition: "opacity 0.6s ease, transform 0.6s ease",
           }}>
-            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "#ff6b00", marginBottom: 10 }}>What We Stand For</div>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--brand-text)", marginBottom: 10 }}>What We Stand For</div>
             <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: heading, marginBottom: 12 }}>Three values we never compromise</h2>
             <p style={{ fontSize: 15, color: body, maxWidth: 460, margin: "0 auto" }}>
               Every decision, every feature, every customer interaction is shaped by these.
@@ -321,7 +321,7 @@ export default function AboutUs() {
           flexWrap: "wrap", gap: 20,
         }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "#ff6b00", marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--brand-text)", marginBottom: 8 }}>
               Parent Company
             </div>
             <p style={{ fontSize: 15, lineHeight: 1.7, color: body, maxWidth: 560 }}>
@@ -335,7 +335,7 @@ export default function AboutUs() {
             style={{
               display: "inline-flex", alignItems: "center", gap: 8,
               padding: "12px 22px", borderRadius: 12, fontSize: 14, fontWeight: 700,
-              color: "#ff6b00", border: "1px solid rgba(255,107,0,0.35)",
+              color: "var(--brand-text)", border: "1px solid rgba(255,107,0,0.35)",
               background: "rgba(255,107,0,0.08)", textDecoration: "none",
               transition: "background 0.18s, transform 0.18s", flexShrink: 0,
             }}

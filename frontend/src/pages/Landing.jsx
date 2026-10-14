@@ -282,7 +282,7 @@ function Features({ isDark }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <Reveal className="max-w-3xl mb-14 lg:mb-20">
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--brand-text)]">
             Powerful Features
           </span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mt-4 mb-4 leading-[1.12]" style={{ color: heading }}>
@@ -322,7 +322,7 @@ function Features({ isDark }) {
             tasks, invoicing and the Meta Conversions API.
           </p>
           <Link to="/features"
-            className="inline-flex items-center gap-2 font-semibold text-[15px] text-[#ff6b00] hover:gap-3 transition-all duration-200 whitespace-nowrap">
+            className="inline-flex items-center gap-2 font-semibold text-[15px] text-[color:var(--brand-text)] hover:gap-3 transition-all duration-200 whitespace-nowrap">
             Explore all features <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -745,7 +745,7 @@ function Contact({ isDark }) {
 
             {/* Perks */}
             <div className="rounded-2xl p-6 space-y-4" style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
-              <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: "#ff6b00" }}>Why reach out?</p>
+              <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: "var(--brand-text)" }}>Why reach out?</p>
               {perks.map(({ icon: Icon, text }) => (
                 <div key={text} className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-[#ff6b00]/10 flex items-center justify-center flex-shrink-0">
@@ -768,7 +768,7 @@ function Contact({ isDark }) {
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: infoLabel }}>{label}</div>
                     {href
-                      ? <a href={href} className="text-sm font-semibold hover:text-[#ff6b00] transition-colors" style={{ color: infoVal }}>{val}</a>
+                      ? <a href={href} className="text-sm font-semibold hover:text-[color:var(--brand-text)] transition-colors" style={{ color: infoVal }}>{val}</a>
                       : <div className="text-sm font-semibold" style={{ color: infoVal }}>{val}</div>}
                   </div>
                 </div>
@@ -870,11 +870,11 @@ function ContactForm({ isDark }) {
       </div>
       <h3 className="font-black text-2xl mb-2" style={{ color: heading }}>Message Sent!</h3>
       <p className="text-sm mb-1" style={{ color: body }}>We'll get back to you at</p>
-      <p className="text-sm font-bold mb-6" style={{ color: "#ff6b00" }}>{form.email}</p>
+      <p className="text-sm font-bold mb-6" style={{ color: "var(--brand-text)" }}>{form.email}</p>
       <p className="text-xs px-6" style={{ color: body }}>Our team typically responds within 2 hours during business hours.</p>
       <button onClick={() => { setSent(false); setForm({ name: "", email: "", phone: "", company: "", message: "" }); }}
-        className="mt-8 px-6 py-2.5 rounded-xl border text-sm font-semibold transition-all hover:bg-[#ff6b00] hover:text-white hover:border-[#ff6b00]"
-        style={{ color: "#ff6b00", borderColor: "#ff6b00" }}>
+        className="mt-8 px-6 py-2.5 rounded-xl border text-sm font-semibold transition-all text-[color:var(--brand-text)] hover:bg-[#ff6b00] hover:text-white hover:border-[#ff6b00]"
+        style={{ borderColor: "#ff6b00" }}>
         Send another message
       </button>
     </div>
@@ -895,7 +895,7 @@ function ContactForm({ isDark }) {
         ].map(({ id, label, type, ph, req }) => (
           <div key={id}>
             <label className="block text-xs font-semibold mb-1.5" style={{ color: labelClr }}>
-              {label}{req && <span className="text-[#ff6b00] ml-0.5">*</span>}
+              {label}{req && <span className="text-[color:var(--brand-text)] ml-0.5">*</span>}
             </label>
             <input type={type} placeholder={ph} required={req}
               value={form[id]}
@@ -1169,7 +1169,7 @@ function FAQ({ isDark }) {
     <section id="faq" className="py-16 lg:py-24" style={{ background: bg }}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-[1fr_1.4fr] gap-10 lg:gap-16">
         <Reveal className="lg:sticky lg:top-28 self-start">
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">Questions</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--brand-text)]">Questions</span>
           <h2 className="text-3xl sm:text-4xl font-black mt-4 mb-4 leading-[1.12]" style={{ color: heading }}>
             Everything you are{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">wondering about</span>
@@ -1205,9 +1205,9 @@ function FAQ({ isDark }) {
                     style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}>
                     <div className="overflow-hidden">
                       <p className="px-5 pb-5 text-sm leading-relaxed" style={{ color: body }}>
-                        {a}{i === HOME_FAQS.length - 1 && <> <Link to="/security" className="text-[#ff6b00] font-semibold hover:underline">Open Security</Link></>}
-                        {/^Can the WhatsApp AI/.test(q) && <> <Link to="/whatsapp-crm" className="text-[#ff6b00] font-semibold hover:underline">See how the WhatsApp CRM works</Link></>}
-                        {/^How much does it cost/.test(q) && <> <Link to="/pricing" className="text-[#ff6b00] font-semibold hover:underline">See plans and pricing</Link></>}
+                        {a}{i === HOME_FAQS.length - 1 && <> <Link to="/security" className="text-[color:var(--brand-text)] font-semibold hover:underline">Open Security</Link></>}
+                        {/^Can the WhatsApp AI/.test(q) && <> <Link to="/whatsapp-crm" className="text-[color:var(--brand-text)] font-semibold hover:underline">See how the WhatsApp CRM works</Link></>}
+                        {/^How much does it cost/.test(q) && <> <Link to="/pricing" className="text-[color:var(--brand-text)] font-semibold hover:underline">See plans and pricing</Link></>}
                       </p>
                     </div>
                   </div>

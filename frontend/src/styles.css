@@ -770,3 +770,10 @@ html.is-native .top-scroll-mirror::-webkit-scrollbar { display: block !important
   .word-rise { opacity: 1; }
   .spotlight-card::before { display: none; }
 }
+
+/* Small brand-orange text on the marketing site. #ff6b00 is only 2.9:1 on white,
+   below the 4.5:1 WCAG AA needs for small text, so light mode uses the darker
+   #c2410c (5.2:1). Dark mode keeps the brand orange, which passes there (6.8:1).
+   Buttons, icons, big numbers and gradient headings keep #ff6b00. */
+:root { --brand-text: #c2410c; }
+html[data-public-theme="dark"] { --brand-text: #ff6b00; }

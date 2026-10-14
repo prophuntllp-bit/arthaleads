@@ -101,7 +101,7 @@ export default function Contact() {
                     <div>
                       <div className="text-xs font-medium mb-0.5" style={{ color: infoLabel }}>{label}</div>
                       {href ? (
-                        <a href={href} className="text-sm font-semibold hover:text-[#ff6b00] transition-colors" style={{ color: infoVal }}>{val}</a>
+                        <a href={href} className="text-sm font-semibold hover:text-[color:var(--brand-text)] transition-colors" style={{ color: infoVal }}>{val}</a>
                       ) : (
                         <div className="text-sm font-semibold" style={{ color: infoVal }}>{val}</div>
                       )}
@@ -149,7 +149,7 @@ export default function Contact() {
                     Thanks for reaching out. We'll get back to you at <strong>{form.email}</strong> within 24 hours.
                   </p>
                   <button onClick={() => { setSent(false); setForm({ name: "", email: "", phone: "", company: "", message: "" }); }}
-                    className="mt-6 text-[#ff6b00] text-sm font-medium hover:underline">
+                    className="mt-6 text-[color:var(--brand-text)] text-sm font-medium hover:underline">
                     Send another message
                   </button>
                 </div>
@@ -164,7 +164,7 @@ export default function Contact() {
                   ].map(({ id, label, type, ph, req }) => (
                     <div key={id}>
                       <label className="block text-xs font-medium mb-1.5" style={{ color: labelClr }}>
-                        {label}{req && <span className="text-[#ff6b00] ml-0.5">*</span>}
+                        {label}{req && <span className="text-[color:var(--brand-text)] ml-0.5">*</span>}
                       </label>
                       <input
                         type={type} placeholder={ph} required={req}

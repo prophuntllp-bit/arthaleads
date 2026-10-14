@@ -158,7 +158,7 @@ export default function Pricing() {
                 <p className="text-sm mt-1.5" style={{ color: heading }}>
                   Teams this size get a custom Enterprise quote.{" "}
                   <a href={waLink("Hi Arthaleads! I'd like an Enterprise quote for a team of " + (members >= 50 ? "50+" : members) + " people.")}
-                    target="_blank" rel="noopener noreferrer" className="font-semibold text-[#ff6b00] hover:underline">Ask on WhatsApp</a>
+                    target="_blank" rel="noopener noreferrer" className="font-semibold text-[color:var(--brand-text)] hover:underline">Ask on WhatsApp</a>
                 </p>
               )}
             </div>
@@ -346,7 +346,7 @@ export default function Pricing() {
 
         {/* Compare link */}
         <div className="text-center mt-8">
-          <Link to="/compare" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#ff6b00] hover:underline">
+          <Link to="/compare" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[color:var(--brand-text)] hover:underline">
             See how we compare to other CRMs <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

@@ -229,7 +229,7 @@ function Contents({ headings, t }) {
                 onClick={(e) => { e.preventDefault(); document.getElementById(h.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
                 className="flex gap-3 py-1.5 text-sm leading-snug transition-colors"
                 style={{ color: on ? "#e85d04" : t.body, fontWeight: on ? 600 : 400 }}>
-                <span className="font-bold tabular-nums text-[#ff6b00] shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                <span className="font-bold tabular-nums text-[color:var(--brand-text)] shrink-0">{String(i + 1).padStart(2, "0")}</span>
                 <span>{h.text}</span>
               </a>
             </li>
@@ -246,7 +246,7 @@ function Sidebar({ post, headings, related, categories, t }) {
   return (
     <aside className="lg:sticky lg:top-28 self-start rounded-[26px] border p-6 space-y-6" style={{ background: t.card, borderColor: t.cardBorder }}>
       <div>
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#ff6b00] mb-3">Explore the blog</h3>
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-[color:var(--brand-text)] mb-3">Explore the blog</h3>
         <form onSubmit={(e) => { e.preventDefault(); navigate(`/blog${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ""}`); }} className="relative">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: t.muted }} />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search articles" aria-label="Search articles"
@@ -275,7 +275,7 @@ function Sidebar({ post, headings, related, categories, t }) {
               <li key={p._id}>
                 <Link to={`/blog/${p.slug}`} className="group block">
                   <CategoryLabel post={p} className="!text-[10px]" />
-                  <span className="block text-sm font-semibold leading-snug mt-1 group-hover:text-[#ff6b00] transition-colors" style={{ color: t.heading }}>{p.title}</span>
+                  <span className="block text-sm font-semibold leading-snug mt-1 group-hover:text-[color:var(--brand-text)] transition-colors" style={{ color: t.heading }}>{p.title}</span>
                   <span className="block text-xs mt-1" style={{ color: t.muted }}>{p.readingTime || 1} min read</span>
                 </Link>
               </li>
@@ -389,9 +389,9 @@ function BlogPostInner() {
       <header className="pt-28 lg:pt-36" style={{ background: isDark ? "#0d0d1a" : "linear-gradient(180deg,#fff7f0 0%,#ffffff 100%)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm mb-6" style={{ color: t.muted }}>
-            <Link to="/" className="hover:text-[#ff6b00] transition-colors">Home</Link>
+            <Link to="/" className="hover:text-[color:var(--brand-text)] transition-colors">Home</Link>
             <ChevronRight className="w-3.5 h-3.5" />
-            <Link to="/blog" className="hover:text-[#ff6b00] transition-colors">Blog</Link>
+            <Link to="/blog" className="hover:text-[color:var(--brand-text)] transition-colors">Blog</Link>
             <ChevronRight className="w-3.5 h-3.5" />
             <span className="truncate max-w-[60ch]" style={{ color: t.body }} aria-current="page">{post.title}</span>
           </nav>
@@ -476,7 +476,7 @@ function BlogPostInner() {
       {related.length > 0 && (
         <section aria-label="Suggested articles" className="py-14 lg:py-20" style={{ background: t.soft, borderTop: `1px solid ${t.rule}` }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">Keep reading</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--brand-text)]">Keep reading</span>
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight mt-3 mb-8" style={{ color: t.heading }}>Suggested articles for you</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">
               {related.map((p) => <BlogCard key={p._id} post={p} isDark={isDark} />)}

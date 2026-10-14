@@ -256,7 +256,7 @@ function DownloadAppInner() {
             <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: soft }} />
             <p className="text-sm leading-relaxed" style={{ color: soft }}>
               iPhone users can run the full CRM in Safari at{" "}
-              <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} style={{ color: "#ff6b00" }}>app.arthaleads.com</a>.
+              <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} style={{ color: "var(--brand-text)" }}>app.arthaleads.com</a>.
               Everything works except push notifications and call logging, which need the native app.
             </p>
           </div>

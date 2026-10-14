@@ -49,7 +49,7 @@ function PostCard({ post, isDark }) {
           </span>
         )}
         <h2
-          className="font-bold text-base leading-snug mb-2 group-hover:text-orange-500 transition-colors line-clamp-2"
+          className="font-bold text-base leading-snug mb-2 group-hover:text-[color:var(--brand-text)] transition-colors line-clamp-2"
           style={{ color: titleColor }}
         >
           {post.title}
@@ -69,7 +69,7 @@ function PostCard({ post, isDark }) {
         </div>
       </div>
       <div className="px-5 pb-4">
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-500 group-hover:gap-2.5 transition-all">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[color:var(--brand-text)] group-hover:gap-2.5 transition-all">
           Read more <ArrowRight className="w-3.5 h-3.5" />
         </span>
       </div>

@@ -390,7 +390,7 @@ function WordPressPluginInner() {
             ))}
           </div>
           <p className="text-center text-xs mt-6" style={{ color: soft }}>
-            More integrations added regularly · <a href="mailto:contact@arthaleads.com" className="text-[#ff6b00] underline underline-offset-2">Request a plugin</a>
+            More integrations added regularly · <a href="mailto:contact@arthaleads.com" className="text-[color:var(--brand-text)] underline underline-offset-2">Request a plugin</a>
           </p>
         </div>
       </section>
@@ -517,7 +517,7 @@ function WordPressPluginInner() {
           </div>
           <p className="text-center text-sm mt-8" style={{ color: soft }}>
             Still have questions? &nbsp;
-            <a href="mailto:contact@arthaleads.com" className="text-[#ff6b00] font-semibold hover:underline">
+            <a href="mailto:contact@arthaleads.com" className="text-[color:var(--brand-text)] font-semibold hover:underline">
               Email us →
             </a>
           </p>
@@ -548,7 +548,7 @@ function WordPressPluginInner() {
             </a>
             <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
               className="inline-flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl border transition-all hover:-translate-y-0.5"
-              style={{ borderColor: "rgba(255,107,0,0.35)", color: "#ff6b00" }}>
+              style={{ borderColor: "rgba(255,107,0,0.35)", color: "var(--brand-text)" }}>
               Create Free Account
               <ArrowRight className="w-4 h-4" />
             </a>

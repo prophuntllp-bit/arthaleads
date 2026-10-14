@@ -138,7 +138,7 @@ function Workflow({ group, index, isDark, t }) {
         <div ref={textRef} style={reveal(textShown, flip ? "translateX(24px)" : "translateX(-24px)")} className={flip ? "lg:order-2" : ""}>
           <div className={`flex items-center gap-3 mb-4 ${spec ? "" : "justify-center"}`}>
             <span className="w-9 h-9 rounded-full bg-[#ff6b00] text-white text-sm font-bold flex items-center justify-center tabular-nums">{index + 1}</span>
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">{group.label}</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--brand-text)]">{group.label}</span>
           </div>
           <h2 id={`group-${group.id}-title`} className="text-3xl sm:text-4xl lg:text-[2.6rem] font-black leading-[1.1] tracking-tight mb-4" style={{ color: t.heading, textWrap: "balance" }}>
             {group.title}
@@ -228,7 +228,7 @@ export default function Features() {
       <header className="relative overflow-hidden pt-28 pb-12 lg:pt-36 lg:pb-16" style={{ background: isDark ? "#0d0d1a" : "linear-gradient(180deg,#fff7f0 0%,#ffffff 100%)" }}>
         <div className="absolute -top-28 right-[-8%] w-[560px] h-[560px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(255,107,0,0.14), transparent 65%)" }} />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">{FEATURES.length} features, one workspace</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--brand-text)]">{FEATURES.length} features, one workspace</span>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.07] tracking-tight mt-4 mb-5 max-w-4xl mx-auto" style={{ color: t.heading, textWrap: "balance" }}>
             From the first enquiry to the{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">paid invoice</span>

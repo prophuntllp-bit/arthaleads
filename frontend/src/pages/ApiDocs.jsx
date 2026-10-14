@@ -223,8 +223,8 @@ export default function ApiDocs() {
               <h3 className="font-semibold text-sm mb-1" style={{ color: textColor }}>Authentication</h3>
               <p className="text-sm leading-relaxed" style={{ color: softText }}>
                 Lead capture endpoints (website form, Google, custom source) use the token of the connection you created. Find it under{" "}
-                <strong style={{ color: textColor }}>Integrations</strong> in your CRM, on that connection's card, and send it in the request body as <code className="px-1.5 py-0.5 rounded text-xs" style={{ background: isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6", color: "#ff6b00" }}>token</code>. The CRM endpoints below (leads and so on) take a Bearer token: sign in with POST /api/auth/login and use the token it returns as YOUR_API_TOKEN. It acts as that user, with that user's role and access.
-                Base URL: <code className="px-1.5 py-0.5 rounded text-xs" style={{ background: isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6", color: "#ff6b00" }}>https://api.arthaleads.com</code>
+                <strong style={{ color: textColor }}>Integrations</strong> in your CRM, on that connection's card, and send it in the request body as <code className="px-1.5 py-0.5 rounded text-xs" style={{ background: isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6", color: "var(--brand-text)" }}>token</code>. The CRM endpoints below (leads and so on) take a Bearer token: sign in with POST /api/auth/login and use the token it returns as YOUR_API_TOKEN. It acts as that user, with that user's role and access.
+                Base URL: <code className="px-1.5 py-0.5 rounded text-xs" style={{ background: isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6", color: "var(--brand-text)" }}>https://api.arthaleads.com</code>
               </p>
             </div>
           </div>
@@ -284,7 +284,7 @@ export default function ApiDocs() {
             get you set up.
           </p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
-            <a href="mailto:contact@arthaleads.com?subject=API%20Integration" className="inline-flex items-center gap-2 font-semibold px-6 py-3 rounded-xl" style={{ background: "rgba(255,107,0,0.10)", color: "#ff6b00", border: "1px solid rgba(255,107,0,0.40)" }}>
+            <a href="mailto:contact@arthaleads.com?subject=API%20Integration" className="inline-flex items-center gap-2 font-semibold px-6 py-3 rounded-xl" style={{ background: "rgba(255,107,0,0.10)", color: "var(--brand-text)", border: "1px solid rgba(255,107,0,0.40)" }}>
               <Mail className="w-4 h-4" /> contact@arthaleads.com
             </a>
             <Link to="/wordpress-plugin" className="inline-flex items-center gap-2 font-semibold px-6 py-3 rounded-xl text-white bg-[#ff6b00] hover:bg-[#e05f00] transition-colors">

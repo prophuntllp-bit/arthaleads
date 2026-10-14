@@ -745,7 +745,7 @@ export default function Careers() {
             animation: "fadeUp 0.6s ease both",
           }}>
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", animation: "pulse 2s infinite" }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#ff6b00", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--brand-text)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
               We're Actively Hiring
             </span>
           </div>
@@ -914,7 +914,7 @@ export default function Careers() {
         `}</style>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "#ff6b00", marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--brand-text)", marginBottom: 10 }}>
               Life at Arthaleads
             </div>
             <h2 style={{ fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 900, color: heading, marginBottom: 10 }}>
@@ -975,7 +975,7 @@ export default function Careers() {
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <div style={{
               fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em",
-              color: "#ff6b00", marginBottom: 10,
+              color: "var(--brand-text)", marginBottom: 10,
             }}>Why join us</div>
             <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: heading, marginBottom: 12 }}>
               Built for people who want to{" "}
@@ -1047,7 +1047,7 @@ export default function Careers() {
                 background: "rgba(255,107,0,0.1)", border: "1px solid rgba(255,107,0,0.2)",
               }}>
                 <Send style={{ width: 11, height: 11, color: "#ff6b00" }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#ff6b00", textTransform: "uppercase", letterSpacing: "0.1em" }}>Open Application</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--brand-text)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Open Application</span>
               </div>
               <h3 style={{ fontSize: "clamp(22px, 3vw, 30px)", fontWeight: 900, color: heading, marginBottom: 10, lineHeight: 1.2 }}>
                 Don't see the right role?
@@ -1072,7 +1072,7 @@ export default function Careers() {
                   <Mail style={{ width: 14, height: 14 }} />
                   Send us a note
                 </a>
-                <span style={{ fontSize: 13, color: body }}>or email <a href="mailto:hr@arthaleads.com" style={{ color: "#ff6b00", textDecoration: "none", fontWeight: 600 }}>hr@arthaleads.com</a></span>
+                <span style={{ fontSize: 13, color: body }}>or email <a href="mailto:hr@arthaleads.com" style={{ color: "var(--brand-text)", textDecoration: "none", fontWeight: 600 }}>hr@arthaleads.com</a></span>
               </div>
             </div>
 

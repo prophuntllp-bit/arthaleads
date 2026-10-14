@@ -30,11 +30,11 @@ export default function PublicFooter() {
             <a
               href="mailto:contact@arthaleads.com"
               style={{ color: text }}
-              className="block text-sm mt-4 hover:text-[#ff6b00] transition-colors"
+              className="block text-sm mt-4 hover:text-[color:var(--brand-text)] transition-colors"
             >
               contact@arthaleads.com
             </a>
-            <a href={PHONE_TEL} style={{ color: text }} className="block text-sm mt-2 hover:text-[#ff6b00] transition-colors">
+            <a href={PHONE_TEL} style={{ color: text }} className="block text-sm mt-2 hover:text-[color:var(--brand-text)] transition-colors">
               {PHONE_DISPLAY}
             </a>
             <a href={waLink(WA_MESSAGES.sales)} target="_blank" rel="noopener noreferrer"
@@ -78,7 +78,7 @@ export default function PublicFooter() {
                 ["Feature Comparison", "/compare"],
                 ["Refer & Earn",       "/refer"],
               ].map(([label, href]) => (
-                <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[#ff6b00] transition-colors">{label}</Link>
+                <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
               ))}
             </div>
           </div>
@@ -95,7 +95,7 @@ export default function PublicFooter() {
                 ["Security",      "/security"],
                 ["Contact Us",    "/contact"],
               ].map(([label, href]) => (
-                <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[#ff6b00] transition-colors">{label}</Link>
+                <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
               ))}
             </div>
           </div>
@@ -110,7 +110,7 @@ export default function PublicFooter() {
                 ["Refund Policy",    "/refund"],
                 ["Cookie Policy",    "/cookie-policy"],
               ].map(([label, href]) => (
-                <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[#ff6b00] transition-colors">{label}</Link>
+                <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
               ))}
             </div>
           </div>

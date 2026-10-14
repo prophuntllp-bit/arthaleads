@@ -133,7 +133,7 @@ function DropdownPanel({ items, onClose, isDark, width = 268 }) {
                 {l.badge && (
                   <span style={{
                     fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 20,
-                    background: "rgba(255,107,0,0.12)", color: "#ff6b00",
+                    background: "rgba(255,107,0,0.12)", color: "var(--brand-text)",
                     textTransform: "uppercase", letterSpacing: "0.06em",
                   }}>
                     {l.badge}
@@ -437,7 +437,7 @@ function NavInner({ onScrollTo }) {
                 <l.icon style={{ width: 14, height: 14, flexShrink: 0, opacity: 0.6 }} />
                 {l.label}
                 {l.badge && (
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 20, background: "rgba(255,107,0,0.12)", color: "#ff6b00", marginLeft: 2 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 20, background: "rgba(255,107,0,0.12)", color: "var(--brand-text)", marginLeft: 2 }}>
                     {l.badge}
                   </span>
                 )}

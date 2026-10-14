@@ -124,7 +124,7 @@ function BlogPageInner() {
           style={{ background: "radial-gradient(circle, rgba(255,107,0,0.13), transparent 65%)" }} />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-[1.4fr_1fr] gap-8 lg:gap-16 items-end">
           <div>
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">The Arthaleads Journal</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--brand-text)]">The Arthaleads Journal</span>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.05] tracking-tight mt-4" style={{ color: t.heading, textWrap: "balance" }}>
               How real estate teams{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">win more leads</span>

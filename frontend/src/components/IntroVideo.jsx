@@ -117,7 +117,7 @@ export default function IntroVideo({ isDark, id = "tour" }) {
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8 lg:mb-10">
           <div className="max-w-2xl">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">Watch the tour</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--brand-text)]">Watch the tour</span>
             <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-black mt-3 leading-[1.1]" style={{ color: heading, textWrap: "balance" }}>
               A buyer messages at 1 AM. Here is what happens next.
             </h2>
