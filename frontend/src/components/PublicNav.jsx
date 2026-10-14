@@ -5,7 +5,7 @@ import {
   BookOpen, BarChart2, Zap, HelpCircle,
   Building2, Briefcase, Puzzle,
   Code2, GitCompare, Shield, Gift,
-  Smartphone,
+  Smartphone, Scale,
 } from "lucide-react";
 import WhatsAppLogo from "./WhatsAppLogo";
 import { usePublicTheme } from "../context/PublicThemeContext";
@@ -34,7 +34,13 @@ const NAV_RESOURCES = [
   { label: "Download App",    href: "/download-app",     desc: "Arthaleads on your Android phone", icon: Smartphone },
   { label: "WordPress Plugin", href: "/wordpress-plugin", desc: "Capture leads from any WP form",    icon: Puzzle },
   { label: "API Docs",         href: "/api-docs",         desc: "Integrate with the REST API",       icon: Code2 },
-  { label: "Compare",          href: "/compare",          desc: "Arthaleads vs other CRMs",          icon: GitCompare },
+];
+
+// One entry per comparison page. Add LeadRat, Kylas, ... here as they go live
+// (and as a card in the "Detailed comparisons" section of pages/Compare.jsx).
+const NAV_COMPARE = [
+  { label: "All comparisons",       href: "/compare",                     desc: "Feature table: LeadRat, Sell.Do, Kylas", icon: GitCompare },
+  { label: "ArthaLeads vs Sell.Do", href: "/compare/sell-do-alternative", desc: "Sell.Do pricing and features compared",  icon: Scale },
 ];
 
 const NAV_COMPANY = [
@@ -175,8 +181,10 @@ function NavInner({ onScrollTo }) {
   const [scrolled, setScrolled]     = useState(false);
   const [resOpen, setResOpen]       = useState(false);
   const [compOpen, setCompOpen]     = useState(false);
+  const [cmpOpen, setCmpOpen]       = useState(false);
   const resRef  = useRef(null);
   const compRef = useRef(null);
+  const cmpRef  = useRef(null);
   const location = useLocation();
   const isHome   = location.pathname === "/";
 
@@ -203,12 +211,13 @@ function NavInner({ onScrollTo }) {
     const handler = (e) => {
       if (resRef.current  && !resRef.current.contains(e.target))  setResOpen(false);
       if (compRef.current && !compRef.current.contains(e.target)) setCompOpen(false);
+      if (cmpRef.current  && !cmpRef.current.contains(e.target))  setCmpOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  function closeAll() { setResOpen(false); setCompOpen(false); }
+  function closeAll() { setResOpen(false); setCompOpen(false); setCmpOpen(false); }
 
   function NavLink({ id, label, href }) {
     const style = { fontSize: 14, fontWeight: 500, color: textMuted, transition: "color 0.2s", whiteSpace: "nowrap" };
@@ -279,12 +288,31 @@ function NavInner({ onScrollTo }) {
             <NavLink href="/about-us" label="About Us" />
             <NavLink href="/pricing"  label="Pricing" />
 
+            {/* Compare dropdown */}
+            <div className="relative" ref={cmpRef}>
+              <DropdownTrigger
+                label="Compare"
+                isOpen={cmpOpen}
+                onClick={() => { setCmpOpen(o => !o); setResOpen(false); setCompOpen(false); }}
+                textMuted={textMuted}
+                textActive={textActive}
+              />
+              {cmpOpen && (
+                <DropdownPanel
+                  items={NAV_COMPARE}
+                  onClose={() => setCmpOpen(false)}
+                  isDark={isDark}
+                  width={276}
+                />
+              )}
+            </div>
+
             {/* Resources dropdown */}
             <div className="relative" ref={resRef}>
               <DropdownTrigger
                 label="Resources"
                 isOpen={resOpen}
-                onClick={() => { setResOpen(o => !o); setCompOpen(false); }}
+                onClick={() => { setResOpen(o => !o); setCompOpen(false); setCmpOpen(false); }}
                 textMuted={textMuted}
                 textActive={textActive}
               />
@@ -303,7 +331,7 @@ function NavInner({ onScrollTo }) {
               <DropdownTrigger
                 label="Company"
                 isOpen={compOpen}
-                onClick={() => { setCompOpen(o => !o); setResOpen(false); }}
+                onClick={() => { setCompOpen(o => !o); setResOpen(false); setCmpOpen(false); }}
                 textMuted={textMuted}
                 textActive={textActive}
               />
@@ -374,6 +402,19 @@ function NavInner({ onScrollTo }) {
             <Link to="/features" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>Features</Link>
             <Link to="/about-us" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>About Us</Link>
             <Link to="/pricing" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>Pricing</Link>
+
+            {/* Compare section */}
+            <p className="px-4 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: catLabel }}>
+              Compare
+            </p>
+            {NAV_COMPARE.map(l => (
+              <Link key={l.href} to={l.href} onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium"
+                style={{ color: textMuted, textDecoration: "none" }}>
+                <l.icon style={{ width: 14, height: 14, flexShrink: 0, opacity: 0.6 }} />
+                {l.label}
+              </Link>
+            ))}
 
             {/* Resources section */}
             <p className="px-4 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: catLabel }}>
