@@ -69,7 +69,9 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
-- [Claude Code] 2026-10-14 IST, 23c6543: WhatsApp ad-text project match (labelAdlessLead / markAdOrigin / agent pick) now skips placeholder first messages ([Unsupported message] etc.) and also runs on the first inbound with real content. Cause: Khopoli ad lead +918805123260 opened with an unsupported item before the ad's image+text, so it got no label and no project. Meta sent no referral for it (not a dropped-referral bug). router._handleInbound exported for tests. Data fix for that lead (label + assign Sheetal Powar + SP Khopoli campaign project) is pending the owner running it.
+- [Claude Code] 2026-10-14 IST, 79ed8b7: WhatsApp leads that arrive without ad details get one automatic note ("Why this lead's details are empty: ...", addedByName "ArthaLeads (automatic)") from labelAdlessLead/noteWhyDetailsEmpty, after the first real message. Owner request. Data: lead +918805123260 labelled "Facebook Ad · Shapoorji Pallonji Khopoli (ad not identified)", note added, assigned Sheetal Powar, filed in CTWA Meta Campaign | SP- Khopoli Plots (owner approved, no Vistrow call, no push).
+
+- [Claude Code] 2026-10-14 IST, 23c6543: WhatsApp ad-text project match (labelAdlessLead / markAdOrigin / agent pick) now skips placeholder first messages ([Unsupported message] etc.) and also runs on the first inbound with real content. Cause: Khopoli ad lead +918805123260 opened with an unsupported item before the ad's image+text, so it got no label and no project. Meta sent no referral for it (not a dropped-referral bug). router._handleInbound exported for tests. Data fix for that lead (label + assign Sheetal Powar + SP Khopoli campaign project) was applied later the same day (owner approved): label, note, Sheetal Powar, SP Khopoli campaign project.
 
 ### Claude Code, 2026-10-13 IST, all eyebrow pills removed (fad99e1)
 
