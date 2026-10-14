@@ -7,52 +7,64 @@ import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
 
-const COMPETITORS = ["Arthaleads", "LeadRat", "Sell.do", "Kylas"];
+const COMPETITORS = ["Arthaleads", "LeadRat", "Sell.Do", "Kylas"];
 
-// y = yes, n = no, p = partial
+// Every competitor mark was checked against that company's OWN website and
+// help docs on 14 Oct 2026 (sources below the table, SOURCES). Rules:
+//   y = their site says they have it, p = their site shows a limited version,
+//   n = ONLY when their own page says they don't (e.g. a refund policy),
+//   u = not stated on their site (never write "n" for "we couldn't find it").
+// Re-check before changing a mark, and update CHECKED.
+const CHECKED = "14 October 2026";
+const SOURCES = [
+  ["LeadRat", "https://leadrat.com/"],
+  ["Sell.Do", "https://www.sell.do/"],
+  ["Kylas", "https://kylas.io/"],
+];
 const CATEGORIES = [
   {
     name: "Lead Management",
     rows: [
       ["Facebook Lead Ads auto-import",      ["y", "y", "y", "y"]],
-      ["Kanban lead pipeline",               ["y", "y", "y", "y"]],
+      ["Kanban lead pipeline",               ["y", "u", "u", "p"]],   // Kylas: kanban for deals
       ["Follow-up reminders",                ["y", "y", "y", "y"]],
-      ["Duplicate lead detection",           ["y", "y", "y", "p"]],
-      ["Bulk CSV import & export",           ["y", "y", "y", "y"]],
+      ["Duplicate lead detection",           ["y", "y", "y", "y"]],
+      ["Bulk import & export",               ["y", "y", "y", "y"]],
       ["Lead activity timeline",             ["y", "y", "y", "y"]],
-      ["Project-wise pipelines",             ["y", "p", "y", "p"]],
+      ["Project-wise lead management",       ["y", "y", "y", "p"]],   // Kylas: custom pipelines, no project module
     ],
   },
   {
     name: "Automation & Integrations",
     rows: [
-      ["WhatsApp lead capture",              ["y", "y", "y", "p"]],
-      ["WordPress / website forms",          ["y", "p", "p", "p"]],
-      ["Google Ads integration",             ["y", "y", "y", "y"]],
-      ["Auto round-robin assignment",        ["y", "y", "y", "y"]],
-      ["REST API access",                    ["y", "p", "y", "y"]],
-      ["Webhook (signed/secure)",            ["y", "p", "p", "p"]],
+      ["WhatsApp Business API integration",  ["y", "y", "y", "y"]],
+      ["Website form capture",               ["y", "y", "y", "y"]],
+      ["Free WordPress plugin",              ["y", "u", "u", "u"]],
+      ["Google Ads lead capture",            ["y", "y", "y", "y"]],
+      ["Automatic lead assignment",          ["y", "y", "y", "p"]],   // Kylas: round-robin via a workflow webhook
+      ["REST API & webhooks",                ["y", "y", "y", "y"]],
     ],
   },
   {
     name: "Team & Analytics",
     rows: [
       ["Role-based access control",          ["y", "y", "y", "y"]],
-      ["Attendance tracking",                ["y", "n", "p", "n"]],
+      ["Attendance tracking",                ["y", "y", "y", "y"]],   // Kylas: Field Sales add-on
       ["Team performance dashboard",         ["y", "y", "y", "y"]],
-      ["Conversion & booking analytics",     ["y", "y", "y", "y"]],
-      ["Audit log",                          ["y", "p", "y", "y"]],
+      ["Conversion & booking analytics",     ["y", "y", "y", "p"]],   // Kylas: general reports, no booking analytics
+      ["Audit log",                          ["y", "p", "y", "u"]],   // LeadRat: activity log for assignment
     ],
   },
   {
     name: "Platform & Value",
     rows: [
-      ["Built for Indian real estate",       ["y", "y", "y", "p"]],
-      ["Mobile PWA (add to home screen)",    ["y", "p", "p", "y"]],
-      ["Push notifications",                 ["y", "y", "p", "y"]],
-      ["Refer & earn program",               ["y", "n", "n", "p"]],
-      ["7-day money-back guarantee",         ["y", "n", "n", "n"]],
-      ["Transparent, fast setup (instant)",  ["y", "p", "p", "p"]],
+      ["Built for Indian real estate",       ["y", "y", "y", "p"]],   // Kylas: general CRM with Indian portal connectors
+      ["Mobile app",                         ["y", "y", "y", "y"]],
+      ["Push notifications",                 ["y", "y", "y", "y"]],
+      ["Prices published on the website",    ["y", "y", "n", "y"]],   // Sell.Do: "not a rate card", custom quote
+      ["Free trial, no sales call",          ["y", "u", "u", "y"]],
+      ["Refer & earn program",               ["y", "u", "u", "y"]],
+      ["7-day money-back guarantee",         ["y", "n", "u", "n"]],   // LeadRat and Kylas refund policies
     ],
   },
 ];
@@ -81,6 +93,7 @@ const CHOOSING = [
 function Cell({ val }) {
   if (val === "y") return <Check className="w-4 h-4 mx-auto" style={{ color: "#22c55e" }} />;
   if (val === "p") return <span className="text-xs font-medium" style={{ color: "#b45309" }}>Partial</span>;
+  if (val === "u") return <span className="text-sm" style={{ color: "#6b7280" }} title="Not stated on their website"><span aria-hidden="true">–</span><span className="sr-only">Not stated</span></span>;
   return <X className="w-4 h-4 mx-auto" style={{ color: "#ef4444" }} />;
 }
 
@@ -89,8 +102,8 @@ export default function Compare() {
   const [query, setQuery] = useState("");
 
   useSEO({
-    title:       "Arthaleads vs LeadRat, Sell.do & Kylas: CRM Comparison",
-    description: "Compare Arthaleads with LeadRat, Sell.do, and Kylas. See how India’s real estate CRMs stack up on lead management, automation, analytics, and value.",
+    title:       "Arthaleads vs LeadRat, Sell.Do & Kylas: CRM Comparison",
+    description: "Compare Arthaleads with LeadRat, Sell.Do, and Kylas. See how India’s real estate CRMs stack up on lead management, automation, analytics, and value.",
     canonical:   "https://www.arthaleads.com/compare",
   });
 
@@ -196,16 +209,23 @@ export default function Compare() {
           </div>
 
           {/* Legend */}
-          <div className="flex items-center justify-center gap-6 mt-5 text-xs" style={{ color: softText }}>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-5 text-xs" style={{ color: softText }}>
             <span className="flex items-center gap-1.5"><Check className="w-4 h-4" style={{ color: "#22c55e" }} /> Full support</span>
             <span className="flex items-center gap-1.5"><span style={{ color: "#b45309", fontWeight: 600 }}>Partial</span> Limited</span>
-            <span className="flex items-center gap-1.5"><X className="w-4 h-4" style={{ color: "#ef4444" }} /> Not available</span>
+            <span className="flex items-center gap-1.5"><X className="w-4 h-4" style={{ color: "#ef4444" }} /> Not offered, per their website</span>
+            <span className="flex items-center gap-1.5"><span className="text-sm" style={{ color: "#6b7280" }}>–</span> Not stated on their website</span>
           </div>
-          <p className="text-center text-xs mt-4 max-w-2xl mx-auto" style={{ color: softText }}>
-            Comparison based on publicly available information as of May 2026. Competitor features may change —
-            we keep this page updated. Spotted something out of date?{" "}
+          <p className="text-center text-xs mt-4 max-w-2xl mx-auto leading-relaxed" style={{ color: softText }}>
+            Each competitor is marked from its own website and help pages as checked on {CHECKED}:{" "}
+            {SOURCES.map(([n, u], i) => (
+              <span key={n}>
+                <a href={u} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{n}</a>{i < SOURCES.length - 1 ? ", " : ". "}
+              </span>
+            ))}
+            Products change, and some features sit on higher plans or add-ons. Spotted something out of date?{" "}
             <a href={waLink("Hi Arthaleads, something on your CRM comparison page looks out of date: ")} target="_blank" rel="noopener noreferrer"
-              className="text-[#ff6b00] font-semibold hover:underline">Let us know</a>.
+              className="font-semibold hover:underline" style={{ color: isDark ? "#fb923c" : "#c2410c" }}>Let us know</a> and we will correct it.
+            {" "}LeadRat, Sell.Do and Kylas are trademarks of their owners; Arthaleads is not affiliated with them.
           </p>
         </div>
       </section>
