@@ -59,6 +59,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-14 IST: owner request: Leadrat and Kylas comparison pages (/compare/leadrat-alternative, /compare/kylas-alternative) on a shared layout (components/CompetitorComparison.jsx, Sell.Do page moved onto it). Files: pages/*Alternative.jsx, App.jsx, entry-prerender.jsx, CustomCursor.jsx, vercel.json, PublicNav.jsx, Compare.jsx, backend sitemap
+
 
 
 
