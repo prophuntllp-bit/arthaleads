@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import api from "../services/api";
-import { Search, ChevronLeft, ChevronRight, ChevronDown, BookOpen, X, ArrowRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ChevronDown, BookOpen, X, ArrowRight, Check } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import BlogCard, { FeaturedCard, blogTheme } from "../components/BlogCard";
@@ -81,7 +81,7 @@ function BlogPageInner() {
   });
 
   useEffect(() => {
-    api.get("/blog/categories").then((r) => setCategories(r.data.categories || [])).catch(() => {});
+    api.get("/blog/categories?inUse=1").then((r) => setCategories(r.data.categories || [])).catch(() => {});
   }, []);
 
   const fetchPosts = useCallback(async () => {
@@ -156,16 +156,7 @@ function BlogPageInner() {
             {hasFilters && <button onClick={clearFilters} className="text-xs underline underline-offset-2 ml-1" style={{ color: t.muted }}>Clear all</button>}
           </div>
           {categories.length > 0 && (
-            <label className="relative inline-flex items-center">
-              <span className="sr-only">Topic</span>
-              <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)}
-                className="appearance-none rounded-xl border py-2.5 pl-4 pr-10 text-sm font-medium outline-none cursor-pointer focus:border-[#ff6b00]"
-                style={{ background: t.field, borderColor: t.cardBorder, color: t.heading }}>
-                <option value="">All topics</option>
-                {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
-              </select>
-              <ChevronDown className="w-4 h-4 absolute right-3 pointer-events-none" style={{ color: t.muted }} />
-            </label>
+            <TopicMenu categories={categories} value={catFilter} onChange={setCatFilter} t={t} isDark={isDark} />
           )}
         </div>
       </div>
@@ -251,6 +242,54 @@ function Chip({ children, onClear, isDark }) {
       {children}
       <button onClick={onClear} aria-label="Remove filter" className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-[#ff6b00]/20"><X className="w-3 h-3" /></button>
     </span>
+  );
+}
+
+// Topic filter: a styled menu instead of the browser's native <select>, whose
+// open list ignores the site's look (blue highlight, square corners).
+function TopicMenu({ categories, value, onChange, t, isDark }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc); };
+  }, [open]);
+  const options = [{ _id: "", name: "All topics" }, ...categories];
+  const current = options.find((c) => c._id === value) || options[0];
+  const pick = (id) => { onChange(id); setOpen(false); };
+
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}
+        className="inline-flex items-center gap-3 rounded-xl border py-2.5 pl-4 pr-3 text-sm font-medium transition-colors hover:border-[#ff6b00]/60"
+        style={{ background: t.field, borderColor: open ? "#ff6b00" : t.cardBorder, color: t.heading, minWidth: 190 }}>
+        <span className="flex-1 text-left">{current.name}</span>
+        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`} style={{ color: t.muted }} />
+      </button>
+      {open && (
+        <ul role="listbox" aria-label="Topic"
+          className="absolute right-0 z-30 mt-2 w-60 rounded-2xl border p-1.5 shadow-xl"
+          style={{ background: isDark ? "#16162a" : "#ffffff", borderColor: t.cardBorder, boxShadow: isDark ? "0 20px 50px rgba(0,0,0,0.5)" : "0 20px 50px rgba(17,24,39,0.12)" }}>
+          {options.map((c) => {
+            const on = c._id === value;
+            return (
+              <li key={c._id || "all"} role="option" aria-selected={on}>
+                <button type="button" onClick={() => pick(c._id)}
+                  className={`w-full flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm text-left transition-colors ${on ? "font-semibold" : "font-medium"} ${isDark ? "hover:bg-white/5" : "hover:bg-[#fff7f0]"}`}
+                  style={{ color: on ? "var(--brand-text)" : t.heading, background: on ? (isDark ? "rgba(255,107,0,0.12)" : "#fff3ea") : undefined }}>
+                  {c.name}
+                  {on && <Check className="w-4 h-4 shrink-0" />}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 

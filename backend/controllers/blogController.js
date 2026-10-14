@@ -76,7 +76,14 @@ const blogController = {
   // ── PUBLIC: list categories ────────────────────────────────────────────────
   async getCategories(req, res, next) {
     try {
-      const categories = await BlogCategory.find().sort({ name: 1 });
+      // ?inUse=1 (public blog filter): only topics that have a published post,
+      // so readers never pick a topic that shows nothing. The CRM editor calls
+      // this without it and still gets every category.
+      const query = {};
+      if (req.query.inUse === "1") {
+        query._id = { $in: await BlogPost.distinct("category", { status: "published", category: { $ne: null } }) };
+      }
+      const categories = await BlogCategory.find(query).sort({ name: 1 });
       res.json({ success: true, categories });
     } catch (err) { next(err); }
   },
