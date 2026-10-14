@@ -75,6 +75,8 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+- [Claude Code] 2026-10-14 IST, a39c7b8: Artha location fields. log_lead_update / update_lead_fields / create_lead accept city + streetAddress (where the buyer lives) alongside preferredLocation (where they want to buy); Joi .description() on each is passed to the model by copilot/tools.joiToSchema; prompt rule added. Owner-reported: 'lives in Pune' went into Preferred location.
+
 - [Claude Code] 2026-10-14 IST, 7bf7ae8: secondary WhatsApp demo buttons use waButtonClass(isDark) from components/WhatsAppLogo.jsx (keep hover colours in classes, not inline styles). Home trust cards have hover.
 
 - [Claude Code] 2026-10-14 IST, e3e2f96: home has three new sections (WhoItsFor, TrustFacts, LatestPosts in Landing.jsx). Lead export is Growth+ only: site copy now says so (home + Pricing FAQ). If export should be on every plan, change planGate in leadRoutes and the copy together.
