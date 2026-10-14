@@ -9,3 +9,13 @@ export default function WhatsAppLogo({ className = "w-4 h-4", style, color = "#2
     </svg>
   );
 }
+
+// The secondary "Book a demo on WhatsApp" button next to an orange CTA: solid
+// enough to read on tinted sections, with a WhatsApp-green hover. Hover colours
+// live in classes (not inline styles) so the hover can override them.
+export function waButtonClass(isDark, extra = "") {
+  const theme = isDark
+    ? "bg-white/[0.06] border-white/20 text-white hover:bg-white/10"
+    : "bg-white border-gray-300 text-gray-800 shadow-sm";
+  return `inline-flex items-center justify-center gap-2 font-semibold px-8 py-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 hover:border-[#25D366] hover:shadow-lg hover:shadow-green-500/15 ${theme} ${extra}`;
+}

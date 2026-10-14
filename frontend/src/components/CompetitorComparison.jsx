@@ -10,7 +10,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Check, ChevronRight, Receipt, FileText } from "lucide-react";
 import PublicNav from "./PublicNav";
 import PublicFooter from "./PublicFooter";
-import WhatsAppLogo from "./WhatsAppLogo";
+import WhatsAppLogo, { waButtonClass } from "./WhatsAppLogo";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { PLAN_PRICING } from "../utils/plan";
@@ -368,8 +368,7 @@ export default function CompetitorComparison({ c }) {
               </a>
             </Magnetic>
             <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5"
-              style={{ borderColor: cardBorder, color: text }}>
+              className={waButtonClass(isDark)}>
               <WhatsAppLogo className="w-[18px] h-[18px]" /> Book a demo on WhatsApp
             </a>
           </div>

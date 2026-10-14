@@ -14,7 +14,7 @@ import { useSEO } from "../utils/useSEO";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { PLAN_PRICING } from "../utils/plan";
 import { Reveal, Spotlight, Magnetic } from "../components/motion/Motion";
-import WhatsAppLogo from "../components/WhatsAppLogo";
+import WhatsAppLogo, { waButtonClass } from "../components/WhatsAppLogo";
 
 const STEPS = [
   { title: "A buyer messages you", body: "From a Facebook or Instagram click-to-WhatsApp ad, the button on your website, a hoarding QR code or a number they saved. Every chat arrives in one team inbox, not on one agent's phone." },
@@ -317,8 +317,7 @@ export default function WhatsAppCrm() {
               </a>
             </Magnetic>
             <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5"
-              style={{ borderColor: cardBorder, color: text }}>
+              className={waButtonClass(isDark)}>
               <WhatsAppLogo className="w-[18px] h-[18px]" /> Book a demo on WhatsApp
             </a>
           </div>

@@ -6,7 +6,7 @@ import { FEATURES, HOME_FEATURES } from "../data/features";
 import {
   ChevronRight, ChevronLeft, Check, ArrowRight, BarChart3, Users, Zap, Building2, PhoneCall, Bell, TrendingUp, Shield, Facebook, Mail, Phone, MapPin, ChevronDown, PlayCircle, Layers, Clock, Filter, FileSpreadsheet, UserCheck, QrCode, Sparkles, FileText, Camera, Bot, Headphones, Handshake, RotateCcw,
 } from "lucide-react";
-import WhatsAppLogo from "../components/WhatsAppLogo";
+import WhatsAppLogo, { waButtonClass } from "../components/WhatsAppLogo";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
@@ -1076,8 +1076,9 @@ function TrustFacts({ isDark }) {
         </Reveal>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-10">
           {TRUST_FACTS.map(({ icon: Icon, title, body: text, link }, i) => (
-            <Reveal key={title} delay={(i % 3) * 90 + Math.floor(i / 3) * 60} className="flex gap-4 pt-6 border-t" style={{ borderColor: cardBdr }}>
-              <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: iconBg }}>
+            <Reveal key={title} delay={(i % 3) * 90 + Math.floor(i / 3) * 60} className="pt-6 border-t" style={{ borderColor: cardBdr }}>
+              <Spotlight className="group flex gap-4 -m-4 p-4 rounded-3xl transition-transform duration-300 hover:-translate-y-1" color="rgba(255,107,0,0.12)">
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" style={{ background: iconBg }}>
                 {Icon === WhatsAppLogo ? <WhatsAppLogo className="w-5 h-5" /> : <Icon className="w-5 h-5 text-[#ff6b00]" />}
               </div>
               <div>
@@ -1086,6 +1087,7 @@ function TrustFacts({ isDark }) {
                   {text}{link && <>{" "}<Link to={link.to} className="font-semibold underline underline-offset-2" style={{ color: linkClr }}>{link.label}</Link></>}
                 </p>
               </div>
+              </Spotlight>
             </Reveal>
           ))}
         </div>
@@ -1224,8 +1226,6 @@ function FinalCTA({ isDark }) {
   const bg      = isDark ? "#0d0d1a" : "#fff7f0";
   const heading = isDark ? "#ffffff" : "#111827";
   const body    = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
-  const btnBdr  = isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
-  const btnText = isDark ? "rgba(255,255,255,0.70)" : "#374151";
 
   return (
     <section className="py-12 relative overflow-hidden" style={{ background: bg }}>
@@ -1255,8 +1255,7 @@ function FinalCTA({ isDark }) {
             </a>
           </Magnetic>
           <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 px-8 py-4 rounded-2xl transition-all duration-200 font-medium border hover:-translate-y-0.5"
-            style={{ color: btnText, borderColor: btnBdr }}>
+            className={waButtonClass(isDark)}>
             <WaLogo size={18} /> Book a demo on WhatsApp
           </a>
         </div>
