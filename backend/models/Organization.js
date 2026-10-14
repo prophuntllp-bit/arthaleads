@@ -87,6 +87,10 @@ const orgSchema = new mongoose.Schema(
       brief:   { type: Boolean, default: true },
       drafts:  { type: Boolean, default: true },
       model:   { type: String, default: "", trim: true, maxlength: 60 },
+      // Pilot companies get Artha's newest abilities first (Phase 2 from 14 Oct
+      // 2026: log a call in one card, bulk reassignment, tap-to-choose,
+      // apply all). Switched in Super Admin.
+      beta:    { type: Boolean, default: false },
     },
     // ── Trial approval gate ───────────────────────────────────────────────────
     // Self-serve signups land as "pending" and cannot access the CRM until a

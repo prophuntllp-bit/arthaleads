@@ -40,14 +40,14 @@ function countOf(result) {
 }
 
 async function runTurn({ user, org, turns, question, page, focus, send, signal }) {
-  const tools = toolsFor(user);
+  const tools = toolsFor(user, org);
   const messages = [
     { role: "system", content: SYSTEM },
     ...historyMessages(turns),
     { role: "system", content: contextMessage({ user, page, focus }) },
     { role: "user", content: question },
   ];
-  const ctx = { user, org, proposals: [] };
+  const ctx = { user, org, proposals: [], choices: [] };
   const steps = []; const records = new Map(); let finalText = "";
   const deadline = Date.now() + TURN_DEADLINE_MS;
 
@@ -88,6 +88,7 @@ async function runTurn({ user, org, turns, question, page, focus, send, signal }
         steps.push(n === undefined ? label : `${label} · ${n}`);
         send({ type: "step", id, label, status: result?.error ? "error" : "done", count: n });
         if (ctx.proposals.length && result?.status === "proposed") send({ type: "proposal", proposal: ctx.proposals[ctx.proposals.length - 1] });
+        if (c.name === "ask_user_to_choose" && result?.status === "shown") send({ type: "choice", choice: ctx.choices[ctx.choices.length - 1] });
         return { c, result };
       } catch (err) {
         send({ type: "step", id, label, status: "error" });
@@ -104,7 +105,7 @@ async function runTurn({ user, org, turns, question, page, focus, send, signal }
 
   const shown = [...records.values()];
   send({ type: "records", records: shown });
-  return { text: tidy(finalText).trim(), steps, records: shown, proposals: ctx.proposals };
+  return { text: tidy(finalText).trim(), steps, records: shown, proposals: ctx.proposals, choices: ctx.choices };
 }
 
 module.exports = { runTurn, historyMessages };

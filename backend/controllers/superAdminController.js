@@ -163,6 +163,8 @@ const superAdminController = {
       const allowed = ["plan", "isActive", "name", "brandColor", "paidUntil", "seats", "billingCycle", "copilotWritesDisabled"];
       const update  = {};
       allowed.forEach((k) => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+      // Artha pilot: newest copilot abilities for this company first.
+      if (req.body.copilotBeta !== undefined) update["copilot.beta"] = Boolean(req.body.copilotBeta);
 
       if (update.paidUntil !== undefined) {
         if (update.paidUntil === null || update.paidUntil === "") {

@@ -1,5 +1,6 @@
 // routes/helpRoutes.js — in-app help copilot
 const express = require("express");
+const mongoose = require("mongoose");
 const router  = express.Router();
 const { protect } = require("../middlewares/auth");
 const { planGate } = require("../middlewares/planGate");
@@ -13,6 +14,7 @@ const logger = require("../config/logger");
 const { AppError } = require("../middlewares/errorHandler");
 const AiUsage  = require("../models/AiUsage");
 const ContentReport = require("../models/ContentReport");
+const { runWith } = require("../utils/requestContext");
 
 router.use(protect);
 
@@ -201,6 +203,8 @@ router.post("/action", async (req, res, next) => {
             page: String(page || "").slice(0, 80),
             prompt: String(req.body.prompt || "").slice(0, 500),
             status: "pending",
+            source: req.body.source === "artha" ? "artha" : "helpbot",
+            ...(mongoose.Types.ObjectId.isValid(String(req.body.threadId || "")) ? { threadId: req.body.threadId } : {}),
           },
         },
         { upsert: true, new: false }
@@ -234,7 +238,8 @@ router.post("/action", async (req, res, next) => {
 
     let result;
     try {
-      result = await action.execute({ params: clean, user: req.user });
+      // Everything this action writes is marked as Artha's, on this person's behalf.
+      result = await runWith({ via: "artha" }, () => action.execute({ params: clean, user: req.user }));
     } catch (err) {
       // Release the claim so the user can retry the same proposal.
       if (claim) await CopilotAction.deleteOne({ idempotencyKey: claim }).catch(() => {});
@@ -341,12 +346,12 @@ router.post("/undo", async (req, res, next) => {
     if (!claimed) return res.status(409).json({ success: false, message: "That change was already undone." });
 
     try {
-      const out = await action.undo({
+      const out = await runWith({ via: "artha" }, () => action.undo({
         before: row.before,
         result: row.result,
         params: row.params,
         user: req.user,
-      });
+      }));
       return res.json({ success: true, ...out });
     } catch (err) {
       // Release so the user can try again — a permission error here is real

@@ -23,6 +23,8 @@ const ENTRIES = [
   require("./createLead"),
   require("./updateProjectLeadBooking"),
   require("./bulkUpdateStatus"),
+  require("./logLeadUpdate"),
+  require("./bulkAssignLeads"),
 ];
 
 const byId = new Map(ENTRIES.map((a) => [a.id, a]));
@@ -42,7 +44,9 @@ const allowsPage = (action, page) =>
  * catalogue — filtered so it cannot propose something that would be refused.
  */
 function availableFor({ role, page }) {
-  return ENTRIES.filter((a) => allowsRole(a, role) && allowsPage(a, page));
+  // v2Only actions need Artha v2's cards (one card with many fields, a batch
+  // list); the old helpbot surfaces (mobile app) never offer them.
+  return ENTRIES.filter((a) => !a.v2Only && allowsRole(a, role) && allowsPage(a, page));
 }
 
 /**

@@ -82,7 +82,7 @@ const check = (ok, msg, d = "") => {
   // Help and starters
   check(searchHelp("how do I export leads")[0]?.title === "EXPORT LEADS", "search_help finds the right guide section");
   check(startersFor({ role: "agent", page: "/followups" }).length >= 3 && startersFor({ role: "manager", page: "/unknown" }).length >= 3, "starters exist for every page and role");
-  check(actions.ENTRIES.length === 9, "all 9 existing actions are offered as tools");
+  check(actions.ENTRIES.filter((a) => !a.v2Only).length === 9, "all 9 original actions are offered as tools");
 
   console.log(failures ? `\n  ${failures} FAILED\n` : "\n  all Artha tool checks passed\n");
   await mongoose.disconnect(); await mongod.stop();

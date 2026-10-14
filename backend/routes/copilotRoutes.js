@@ -95,7 +95,7 @@ router.post("/chat", chatLimiter, async (req, res) => {
     if (thread.turns.length > 200) thread.turns = thread.turns.slice(-200);
     await thread.save();
     const saved = thread.turns[thread.turns.length - 1];
-    send({ type: "done", threadId: String(thread._id), turnId: String(saved._id), text: out.text, records: out.records, proposals: out.proposals, writesDisabled: !!org?.copilotWritesDisabled || org?.copilot?.actions === false });
+    send({ type: "done", threadId: String(thread._id), turnId: String(saved._id), text: out.text, records: out.records, proposals: out.proposals, choices: out.choices, writesDisabled: !!org?.copilotWritesDisabled || org?.copilot?.actions === false });
   } catch (err) {
     if (!abort.signal.aborted) {
       logger.error(`[artha] turn failed for user ${req.user._id}: ${err.message}`);
@@ -135,6 +135,23 @@ router.post("/threads/:id/turns/:turnId/rating", async (req, res, next) => {
     if (!isId(req.params.id) || !isId(req.params.turnId)) return res.status(404).json({ success: false });
     await CopilotThread.updateOne({ _id: req.params.id, userId: req.user._id, "turns._id": req.params.turnId }, { $set: { "turns.$.rating": rating } });
     res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+// Changes Artha applied: managers and admins see the company's, agents their own.
+// Newest first; the message is what the person saw after Apply.
+router.get("/actions", async (req, res, next) => {
+  try {
+    const CopilotAction = require("../models/CopilotAction");
+    const actions = require("../actions");
+    const match = { orgId: req.orgId, status: "done" };
+    if (req.user.role === "agent") match.userId = req.user._id;
+    const rows = await CopilotAction.find(match).sort({ createdAt: -1 }).limit(Math.min(100, parseInt(req.query.limit) || 50))
+      .select("userName actionId result createdAt undoneAt source").lean();
+    res.json({ success: true, actions: rows.map((r) => ({
+      id: String(r._id), by: r.userName, what: actions.byId.get(r.actionId)?.describe.summary || r.actionId,
+      message: r.result?.message || "", at: r.createdAt, undone: !!r.undoneAt,
+    })) });
   } catch (err) { next(err); }
 });
 

@@ -16,6 +16,12 @@ const objectId = Joi.string().hex().length(24);
 async function resolveLead(leadId, user) {
   const found = await findLeadById(leadId, user.orgId);
   if (!found.doc || found.doc.isDeleted === true) throw new AppError("Lead not found.", 404);
+  // Same rule as every screen (utils/visibility.js). Without it a preview card
+  // could show a colleague's lead to an agent who only had its id; the write
+  // itself was already refused by the lead service. "Not found", so ids can't be probed.
+  const visibility = require("../utils/visibility");
+  const visible = found.isProject ? await visibility.canSeeProjectLead(user, found.doc) : visibility.canSeeLead(user, found.doc);
+  if (!visible) throw new AppError("Lead not found.", 404);
   return found;
 }
 

@@ -159,4 +159,7 @@ projectLeadSchema.index({ orgId: 1, followUp: 1 });
 projectLeadSchema.index({ orgId: 1, followUp2: 1 });
 projectLeadSchema.index({ orgId: 1, sourceDomain: 1 });
 
+// Activity added while Artha acts on someone's behalf is marked "(via Artha)".
+projectLeadSchema.plugin(require("../utils/requestContext").attributionPlugin);
+
 module.exports = mongoose.model("ProjectLead", projectLeadSchema);

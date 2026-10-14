@@ -317,5 +317,8 @@ leadSchema.index(
   { unique: true, partialFilterExpression: { "voiceCalls.externalCallId": { $exists: true } } }
 );
 
+// Activity added while Artha acts on someone's behalf is marked "(via Artha)".
+leadSchema.plugin(require("../utils/requestContext").attributionPlugin);
+
 const Lead = mongoose.model("Lead", leadSchema);
 module.exports = Lead;

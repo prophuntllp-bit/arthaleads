@@ -102,9 +102,12 @@ const READ_TOOLS = [
   }, ["query"]),
 ];
 
-function writeTools(user) {
+// Pilot companies (Organization.copilot.beta) also get the newest actions.
+const isPilot = (org) => !!org?.copilot?.beta;
+
+function writeTools(user, org) {
   return actions.ENTRIES
-    .filter((a) => a.roles.includes(user.role))
+    .filter((a) => a.roles.includes(user.role) && (!a.v2Only || isPilot(org)))
     .map((a) => ({ type: "function", function: {
       name: a.id,
       description: `PROPOSE: ${a.describe.summary}. Nothing changes until the user taps Apply on the card. Use ids from earlier results.`,
@@ -112,8 +115,14 @@ function writeTools(user) {
     } }));
 }
 
-function toolsFor(user) {
-  return [...READ_TOOLS, ...writeTools(user)];
+const CHOOSE_TOOL = tool("ask_user_to_choose",
+  "When a name matches several leads, show them as buttons for the user to tap instead of guessing. Then stop and wait for their answer.", {
+    question: { type: "string", description: "Short question, in the user's language" },
+    lead_ids: { type: "array", items: { type: "string" }, description: "Ids of the matching leads from earlier results (2 to 6)" },
+  }, ["question", "lead_ids"]);
+
+function toolsFor(user, org) {
+  return [...READ_TOOLS, ...(isPilot(org) ? [CHOOSE_TOOL] : []), ...writeTools(user, org)];
 }
 
 // Plain-language step shown while a tool runs.
@@ -128,6 +137,7 @@ function stepLabel(name, args = {}) {
     case "list_team": return "Checking the team";
     case "list_projects": return "Checking projects";
     case "search_help": return "Looking it up in the guide";
+    case "ask_user_to_choose": return "Asking which one you mean";
     default: return actions.byId.get(name) ? `Preparing: ${actions.byId.get(name).describe.summary.toLowerCase()}` : "Working";
   }
 }
@@ -223,6 +233,24 @@ async function runTool(name, args, ctx) {
     }
 
     case "search_help": return { result: { sections: searchHelp(args.query, 3) } };
+
+    case "ask_user_to_choose": {
+      const ids = (args.lead_ids || []).filter(isId).slice(0, 6);
+      const options = [];
+      for (const id of ids) {
+        const { doc, Model } = await findLeadById(id, user.orgId);
+        const ok = doc && !doc.isDeleted && (Model === Lead ? visibility.canSeeLead(user, doc) : await visibility.canSeeProjectLead(user, doc));
+        if (!ok) continue;
+        const kind = Model === Lead ? "lead" : "projectLead";
+        const status = Model === ProjectLead ? projectLeadStage(doc) : doc.status;
+        const last4 = String(doc.phone || "").replace(/\D/g, "").slice(-4);
+        options.push({ id: String(doc._id), kind, name: doc.name, detail: [status, last4 && `…${last4}`, doc.source].filter(Boolean).join(" · ") });
+      }
+      if (options.length < 2) return { result: { error: "Fewer than two of those leads are visible; answer directly instead." } };
+      ctx.choices.push({ question: String(args.question || "Which one?").slice(0, 160), options });
+      remember(options.map((o) => ({ id: o.id, kind: o.kind, name: o.name })));
+      return { result: { status: "shown", note: "Buttons are shown. Stop here and wait for the user's choice; do not propose any change yet." }, records };
+    }
 
     default: {
       const action = actions.byId.get(name);

@@ -636,9 +636,15 @@ const leadService = {
     if (!Array.isArray(ids) || ids.length === 0) throw new AppError("No leads selected", 400);
     if (!OPTS.STATUS.includes(status)) throw new AppError("Invalid status value", 400);
 
+    // One history entry per lead that actually changes, so a bulk change is as
+    // traceable as a single one (it used to leave no trace at all).
+    const entry = require("../utils/requestContext").stampActivity({
+      type: "status_changed", description: `Status changed to "${status}" (bulk) by ${user.name}`,
+      performedBy: user._id, performedByName: user.name, meta: { to: status, bulk: true }, createdAt: new Date(),
+    });
     const result = await Lead.updateMany(
-      { _id: { $in: ids }, orgId: user.orgId },
-      { $set: { status } }
+      { _id: { $in: ids }, orgId: user.orgId, status: { $ne: status } },
+      { $set: { status }, $push: { activities: entry } }
     );
     const touched = await Lead.find({ _id: { $in: ids }, orgId: user.orgId }).select("phone orgId status").lean();
     for (const l of touched) await mirrorLeadEdit(l, { fields: ["status"] }, user);
@@ -726,9 +732,14 @@ const leadService = {
     const agent = await User.findOne({ _id: agentId, orgId: user.orgId });
     if (!agent) throw new AppError("Agent not found", 404);
 
+    // A history entry on each lead that actually moves (bulk assign used to leave none).
+    const entry = require("../utils/requestContext").stampActivity({
+      type: "assigned", description: `Assigned to ${agent.name} (bulk) by ${user.name}`,
+      performedBy: user._id, performedByName: user.name, meta: { agentId: agent._id, agentName: agent.name, bulk: true }, createdAt: new Date(),
+    });
     const result = await Lead.updateMany(
-      { _id: { $in: ids }, orgId: user.orgId },
-      { $set: { assignedTo: agent._id, assignedToName: agent.name } }
+      { _id: { $in: ids }, orgId: user.orgId, assignedTo: { $ne: agent._id } },
+      { $set: { assignedTo: agent._id, assignedToName: agent.name }, $push: { activities: entry } }
     );
     return { modifiedCount: result.modifiedCount, agent };
   },

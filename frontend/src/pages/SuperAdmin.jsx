@@ -1587,6 +1587,18 @@ export default function SuperAdmin() {
     }
   };
 
+  // Artha pilot: this company gets the newest copilot abilities first.
+  const toggleArthaBeta = async (org) => {
+    const on = !org.copilot?.beta;
+    try {
+      const { data } = await api.patch(`/super-admin/orgs/${org._id}`, { copilotBeta: on });
+      handleOrgUpdated(data.org);
+      toast.success(on ? `${data.org.name} now gets Artha pilot features` : `${data.org.name} is back on standard Artha`);
+    } catch {
+      toast.error("Update failed");
+    }
+  };
+
   const filtered = orgs.filter((o) =>
     !search || o.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -1749,6 +1761,16 @@ export default function SuperAdmin() {
                             {org.copilotWritesDisabled
                               ? <><XCircle className="w-3 h-3" /> Off</>
                               : <><Sparkles className="w-3 h-3" /> On</>}
+                          </button>
+                          {" "}
+                          <button
+                            onClick={() => toggleArthaBeta(org)}
+                            className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border transition ${
+                              org.copilot?.beta ? "bg-indigo-500/10 text-indigo-500 border-indigo-500/25" : "text-app-soft border-transparent hover:border-indigo-500/25"
+                            }`}
+                            title={org.copilot?.beta ? "Pilot: gets Artha's newest abilities first. Click to remove." : "Click to make this company an Artha pilot."}
+                          >
+                            {org.copilot?.beta ? "Pilot" : "+ Pilot"}
                           </button>
                         ) : (
                           <span className="text-[10px] text-app-soft">&mdash;</span>
