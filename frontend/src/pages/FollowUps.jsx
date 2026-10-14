@@ -5,6 +5,7 @@ import CustomSelect from "../components/CustomSelect";
 import LeadDetail from "../components/LeadDetail";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import useAppRefresh from "../hooks/useAppRefresh";
 import { CalendarClock, ChevronLeft, ChevronRight, Clock, CalendarCheck, CalendarDays, ArrowUp, ArrowDown, CheckCircle2, User, Search, X as XIcon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useColumnResize, RTh } from "../hooks/useColumnResize";
@@ -258,6 +259,7 @@ export default function FollowUps() {
       setLoading(false);
     }
   }, [section, page, from, to, sort, myOnly, isAdmin, searchQ]);
+  useAppRefresh(fetchLeads, ["leads"]);
 
   // Sync ?q= URL param → searchQ (handles navigation from sidebar)
   useEffect(() => {

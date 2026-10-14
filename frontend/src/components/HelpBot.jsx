@@ -407,7 +407,7 @@ export default function HelpBot() {
         // knows its own inverse.
         undoKey: data.undoable ? data.undoKey : null,
       }]);
-      window.dispatchEvent(new CustomEvent("arthaleads:refresh", { detail: { resource: "leads" } }));
+      window.dispatchEvent(new CustomEvent("arthaleads:refresh", { detail: {} })); // every page showing CRM data reloads (hooks/useAppRefresh.js)
     } catch (err) {
       const body = err.response?.data;
       if (body?.needsScopeChange) {
@@ -428,7 +428,7 @@ export default function HelpBot() {
       const { data } = await api.post("/help/undo", { undoKey: msg.undoKey });
       setMessages((m) => m.map((x, i) => i === msgIndex ? { ...x, undoKey: null, undone: true } : x));
       setMessages((m) => [...m, { role: "bot", text: data.message || "Put back." }]);
-      window.dispatchEvent(new CustomEvent("arthaleads:refresh", { detail: { resource: "leads" } }));
+      window.dispatchEvent(new CustomEvent("arthaleads:refresh", { detail: {} })); // every page showing CRM data reloads (hooks/useAppRefresh.js)
     } catch (err) {
       setMessages((m) => [...m, { role: "bot", text: err.response?.data?.message || "Could not undo that." }]);
     } finally {

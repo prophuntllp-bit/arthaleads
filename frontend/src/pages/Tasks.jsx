@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import useAppRefresh from "../hooks/useAppRefresh";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
@@ -188,6 +189,7 @@ export default function Tasks() {
   }, [myOnly, priorityFilter, activeCard]);
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
+  useAppRefresh(fetchTasks, ["tasks"]);
 
   // Auto-open Add Task modal when navigated via sidebar "Add Task" link
   useEffect(() => {

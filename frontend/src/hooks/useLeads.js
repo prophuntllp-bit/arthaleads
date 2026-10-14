@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import useAppRefresh from "./useAppRefresh";
 import api from "../services/api";
 
 export function useLeads(mode = "normal", initialFilters = {}) {
@@ -73,6 +74,7 @@ export function useLeads(mode = "normal", initialFilters = {}) {
   }, []);
 
   const refetch = () => setRefreshKey((k) => k + 1);
+  useAppRefresh(refetch, ["leads"]);
 
   const setFilter = (key, value) => {
     setPage(1);

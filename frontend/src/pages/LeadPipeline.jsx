@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import toast from "react-hot-toast";
+import useAppRefresh from "../hooks/useAppRefresh";
 import { ArrowLeftRight, ChevronDown, Clock3, MapPinned, PhoneCall, RefreshCw, Trophy, XCircle } from "lucide-react";
 import api from "../services/api";
 import { STATUS_OPTIONS } from "../utils/constants";
@@ -102,6 +103,7 @@ export default function LeadPipeline() {
       setRefreshing(false);
     }
   }, [selectedUserId, pipelineType]);
+  useAppRefresh(() => fetchLeads(true), ["leads"]);
 
   // Fetch team members for the member picker (admin/manager only)
   useEffect(() => {

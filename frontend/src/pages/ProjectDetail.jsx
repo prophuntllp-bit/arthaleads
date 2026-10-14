@@ -1,5 +1,6 @@
 ﻿// pages/ProjectDetail.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
+import useAppRefresh from "../hooks/useAppRefresh";
 import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppLink, AppDatePicker, SmartImage, ImportResultModal } from "../components/UI";
@@ -444,6 +445,7 @@ export default function ProjectDetail() {
   // Transfer modal
   const [transferTarget, setTransferTarget] = useState(null); // lead object to transfer
   const [refreshKey, setRefreshKey] = useState(0);
+  useAppRefresh(() => setRefreshKey((k) => k + 1), ["leads", "projects"]);
   const [showDump, setShowDump] = useState(false);
   const [dumpCount, setDumpCount] = useState(null);
   // Count for the Dump Leads button; refreshed when leads change or the panel closes.
