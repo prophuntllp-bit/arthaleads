@@ -22,6 +22,14 @@ const schema = new mongoose.Schema(
     botReplyTokens:    { type: Number, default: 0 },
     botEnrichCalls:    { type: Number, default: 0 },
     botEnrichTokens:   { type: Number, default: 0 },
+
+    // Artha v2 (utils/ai/provider.js). Cost is kept in millionths of a US
+    // dollar so the monthly allowance can be checked without float drift.
+    arthaCalls:        { type: Number, default: 0 },
+    arthaInputTokens:  { type: Number, default: 0 },
+    arthaCachedTokens: { type: Number, default: 0 },
+    arthaOutputTokens: { type: Number, default: 0 },
+    arthaCostMicroUsd: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

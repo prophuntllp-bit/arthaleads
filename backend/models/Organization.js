@@ -76,6 +76,18 @@ const orgSchema = new mongoose.Schema(
     // answers working. A switch rather than a deploy, for when something is
     // going wrong at an inconvenient hour.
     copilotWritesDisabled: { type: Boolean, default: false },
+    // Artha v2 switches per company (Phase 0, Oct 2026), each one off without a
+    // deploy. copilotWritesDisabled above still wins for writes; these let an
+    // admin keep answers on while turning a newer capability off. "model" pins a
+    // company to a specific model during a pilot; empty means the default
+    // (utils/ai/provider.js).
+    copilot: {
+      enabled: { type: Boolean, default: true },
+      actions: { type: Boolean, default: true },
+      brief:   { type: Boolean, default: true },
+      drafts:  { type: Boolean, default: true },
+      model:   { type: String, default: "", trim: true, maxlength: 60 },
+    },
     // ── Trial approval gate ───────────────────────────────────────────────────
     // Self-serve signups land as "pending" and cannot access the CRM until a
     // super admin approves them (see superAdminController.approveOrg). Defaults

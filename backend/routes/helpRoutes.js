@@ -210,6 +210,11 @@ router.post("/action", async (req, res, next) => {
         return res.json({ success: true, replayed: true, ...(existing.result || {}) });
       }
       if (existing && existing.status === "pending") {
+        // A claim left behind by a request that died never finishes on its own.
+        const cleared = await CopilotAction.clearStalePending(key);
+        if (cleared.deletedCount) {
+          return res.status(409).json({ success: false, retry: true, message: "The last attempt did not finish. Check the record, then tap Apply again if the change is still needed." });
+        }
         return res.status(409).json({ success: false, message: "That change is already being applied." });
       }
       claim = key;
