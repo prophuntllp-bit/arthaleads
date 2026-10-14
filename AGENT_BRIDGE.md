@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-14 IST: IST day windows (follow-ups today/past/future, leads followUpToday, tasks, performance date ranges, 9am reminder) + Artha Phase 1 (new copilot panel, read tools, saved chats, Ctrl+K). Files: backend/utils/datetime.js, followupService.js, leadService.js, taskService.js, authService.js, utils/scheduler.js, backend/copilot/* (new), routes/copilotRoutes.js (new), models/CopilotThread.js (new), frontend copilot components.
 
 
 
