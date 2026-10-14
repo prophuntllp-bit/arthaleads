@@ -32,45 +32,10 @@ async function checkTaskRefs(body, orgId) {
 
 const taskController = {
   // GET /api/tasks  — all roles; agents see only tasks assigned to them
+  // (taskService.list, shared with the Artha copilot)
   async list(req, res, next) {
     try {
-      const { status, priority, assignedTo, projectId, from, to, myOnly } = req.query;
-      const user = req.user;
-
-      const filter = { orgId: user.orgId };
-
-      // Agents can only see their own tasks
-      if (user.role === "agent" || myOnly === "true") {
-        filter.assignedTo = user._id;
-      } else if (assignedTo) {
-        filter.assignedTo = assignedTo;
-      }
-
-      if (status)    filter.status   = status;
-      if (priority)  filter.priority = priority;
-      if (projectId) filter.project  = projectId;
-
-      if (from || to) {
-        filter.dueDate = {};
-        if (from) filter.dueDate.$gte = new Date(from);
-        if (to)   filter.dueDate.$lte = new Date(new Date(to).setHours(23, 59, 59, 999));
-      }
-
-      const tasks = await Task.find(filter).sort({ dueDate: 1 }).lean();
-
-      const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
-      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-
-      const summary = { today: 0, upcoming: 0, overdue: 0, completed: 0, all: tasks.length };
-
-      for (const t of tasks) {
-        if (t.status === "completed") { summary.completed++; continue; }
-        const due = new Date(t.dueDate);
-        if (due < todayStart)       summary.overdue++;
-        else if (due <= todayEnd)   summary.today++;
-        else                        summary.upcoming++;
-      }
-
+      const { tasks, summary } = await taskService.list(req.user, req.query);
       res.json({ success: true, tasks, summary });
     } catch (err) { next(err); }
   },

@@ -17,6 +17,42 @@ function assertCanAct(task, user) {
 
 const taskService = {
   /**
+   * The task list as GET /api/tasks shows it, with the summary counts. Agents
+   * see only tasks assigned to them; managers and admins see the organisation
+   * (optionally one person's, or their own with myOnly).
+   */
+  async list(user, { status, priority, assignedTo, projectId, from, to, myOnly } = {}) {
+    const filter = { orgId: user.orgId };
+    if (user.role === "agent" || myOnly === "true" || myOnly === true) {
+      filter.assignedTo = user._id;
+    } else if (assignedTo) {
+      filter.assignedTo = assignedTo;
+    }
+    if (status)    filter.status   = status;
+    if (priority)  filter.priority = priority;
+    if (projectId) filter.project  = projectId;
+    if (from || to) {
+      filter.dueDate = {};
+      if (from) filter.dueDate.$gte = new Date(from);
+      if (to)   filter.dueDate.$lte = new Date(new Date(to).setHours(23, 59, 59, 999));
+    }
+
+    const tasks = await Task.find(filter).sort({ dueDate: 1 }).lean();
+
+    const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const summary = { today: 0, upcoming: 0, overdue: 0, completed: 0, all: tasks.length };
+    for (const t of tasks) {
+      if (t.status === "completed") { summary.completed++; continue; }
+      const due = new Date(t.dueDate);
+      if (due < todayStart)       summary.overdue++;
+      else if (due <= todayEnd)   summary.today++;
+      else                        summary.upcoming++;
+    }
+    return { tasks, summary };
+  },
+
+  /**
    * Mark a task completed. Any role may complete a task they can see, which
    * matches PATCH /api/tasks/:id/complete.
    */

@@ -3092,13 +3092,12 @@ router.post("/embedded-signup/exchange", authorize("admin", "manager", "super_ad
 // every route below only scoped by orgId, so any agent could open, message,
 // or reassign literally any conversation in the org regardless of who it was
 // assigned to.
+// Strict "mine only", matching the list route above: an unassigned
+// conversation (including a brand-new campaign lead nobody's claimed yet)
+// isn't visible to an agent just because no one owns it yet. The rule lives
+// in utils/visibility.js, shared with every screen and Artha.
 function canAccessConversation(user, conv) {
-  if (user.role !== "agent") return true;
-  // Strict "mine only", matching the list route above — an unassigned
-  // conversation (including a brand-new campaign lead nobody's claimed yet)
-  // isn't visible to an agent just because no one owns it yet.
-  if (!conv.assignedTo) return false;
-  return String(conv.assignedTo._id || conv.assignedTo) === String(user._id);
+  return require("../utils/visibility").canSeeConversation(user, conv);
 }
 
 router.get("/conversations", async (req, res) => {

@@ -16,15 +16,15 @@ const { emitLeadCreated, emitLeadsCreated } = require("../utils/emitLeadCreated"
 const { formatISTDate, istDateKey, startOfISTDay, endOfISTDay } = require("../utils/datetime");
 const OPTS = require("../constants/leadOptions");
 const { projectLeadStage, projectLeadStageCondition } = require("../utils/pipelineStage");
+const visibility = require("../utils/visibility");
 
 // An agent works on the leads they can see: those assigned to them and those
 // they created themselves (an agent's new lead is often round-robined to a
 // colleague but stays in their list). Reads already used this rule; writes
 // checked assignedTo only, so agents got "Access denied" on leads they could see.
+// The rule itself lives in utils/visibility.js, shared with every screen and Artha.
 function agentOwnsLead(lead, user) {
-  const me = String(user._id);
-  const id = (v) => (v && v._id ? String(v._id) : v ? String(v) : "");
-  return id(lead.assignedTo) === me || id(lead.createdBy) === me;
+  return visibility.ownsLead(user._id, lead);
 }
 
 // ── Analytics cache (in-memory, 60-second TTL per org+range) ─────────────────
@@ -521,13 +521,7 @@ const leadService = {
     if (!lead) throw new AppError("Lead not found", 404);
 
     // Agents can only view leads assigned to or created by them
-    if (
-      user.role === "agent" &&
-      lead.createdBy?._id.toString() !== user._id.toString() &&
-      lead.assignedTo?._id?.toString() !== user._id.toString()
-    ) {
-      throw new AppError("Access denied", 403);
-    }
+    if (!visibility.canSeeLead(user, lead)) throw new AppError("Access denied", 403);
 
     return lead;
   },
@@ -540,13 +534,7 @@ const leadService = {
     const lead = await Lead.findOne({ _id: id, orgId: user.orgId }).select("assignedTo createdBy").lean();
     if (!lead) throw new AppError("Lead not found", 404);
 
-    if (
-      user.role === "agent" &&
-      lead.createdBy?.toString() !== user._id.toString() &&
-      lead.assignedTo?.toString() !== user._id.toString()
-    ) {
-      throw new AppError("Access denied", 403);
-    }
+    if (!visibility.canSeeLead(user, lead)) throw new AppError("Access denied", 403);
 
     const conversation = await WaConversation.findOne({ orgId: user.orgId, leadId: id })
       .select("_id contactPhone status botEnabled assignedToName lastMessageAt")
@@ -967,9 +955,9 @@ const leadService = {
       // and call it purely because nobody had assigned it yet. An admin or
       // manager assigning it explicitly is now the only way an agent sees a
       // previously-unassigned lead.
-      andConditions.push({ $or: [{ assignedTo: user._id }, { createdBy: user._id }] });
+      andConditions.push(visibility.leadCondition(user, user._id));
     } else if (agentId && (user.role === "admin" || user.role === "manager")) {
-      andConditions.push({ $or: [{ assignedTo: agentId }, { createdBy: agentId }] });
+      andConditions.push(visibility.leadCondition(user, agentId));
     }
     if (status)   leadFilter.status   = status;
     if (source)   leadFilter.source   = source;
@@ -1056,8 +1044,7 @@ const leadService = {
         ? user._id
         : (agentId && (user.role === "admin" || user.role === "manager") ? agentId : null);
       if (scopeAgentId) {
-        const scoped = await Project.find({ orgId: user.orgId, assignedTo: scopeAgentId }).select("_id").lean();
-        projAndConditions.push({ $or: [{ project: { $in: scoped.map((p) => p._id) } }, { assignedTo: scopeAgentId }] });
+        projAndConditions.push(await visibility.projectLeadCondition(user, scopeAgentId));
         projFilter.$and = projAndConditions;
       }
       if (projectId) projFilter.project = projectId;

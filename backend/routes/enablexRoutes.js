@@ -70,11 +70,11 @@ async function findLeadOrProjectLead(id, orgId, { lean = false, user = null } = 
   return { doc, Model };
 }
 
+// The rule lives in utils/visibility.js (shared with Leads and Artha). A project
+// lead assigned to the agent personally now counts too, as it does on Leads.
 async function agentOwns(user, doc, Model) {
-  const me = String(user._id);
-  if (Model === Lead) return String(doc.assignedTo) === me || String(doc.createdBy) === me;
-  const project = await require("../models/Project").findOne({ _id: doc.project, orgId: doc.orgId }).select("assignedTo").lean();
-  return !!project?.assignedTo?.map(String).includes(me);
+  const visibility = require("../utils/visibility");
+  return Model === Lead ? visibility.canSeeLead(user, doc) : visibility.canSeeProjectLead(user, doc);
 }
 
 // ── Public: inbound call answer URL ──────────────────────────────────────────
@@ -640,9 +640,7 @@ router.get("/", async (req, res, next) => {
 // Agents only ever see their own calls: counts and charts are limited to
 // activities they performed. Managers and admins see the whole organisation.
 function ownCallsMatch(user) {
-  if (user.role !== "agent") return {};
-  const mongoose = require("mongoose");
-  return { "activities.performedBy": new mongoose.Types.ObjectId(String(user._id)) };
+  return require("../utils/visibility").ownCallsMatch(user);
 }
 
 // GET /api/calls/stats — call counts by status (for dashboard stats row)
