@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-14 IST: owner request: blog topic filter becomes a styled dropdown and lists only topics with published posts (GET /blog/categories?inUse=1; default response unchanged for the CRM editor). Files: frontend/src/pages/PublicBlog.jsx, backend/controllers/blogController.js
 
 
 
@@ -77,6 +76,8 @@ Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [Claude Code] 2026-10-14 IST, 283c2fb: /blog topic filter is TopicMenu (styled, not a native select) and asks GET /blog/categories?inUse=1 (only categories with a published post). Default /blog/categories response unchanged (CRM editor, CaseStudies).
 
 - [Claude Code] 2026-10-14 IST, Sanity content (no repo change): 8 blog posts created in Sanity, scheduled 10:00 IST on 22, 24, 27, 29, 31 Oct and 3, 5, 7 Nov (best real estate CRM software India, CRM for builders, WhatsApp CRM integration, real estate leads channels, free vs paid CRM, site visit management, property portal leads, channel partners). They appear on the site automatically via the publishedAt filter; request indexing on each date. Featured images: product screenshots (project.webp and booking.webp uploaded to Sanity).
 
