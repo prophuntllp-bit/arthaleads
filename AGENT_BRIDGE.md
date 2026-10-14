@@ -59,6 +59,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-14 IST: owner request: visible 'Book a demo on WhatsApp' button (shared style) and hover on home trust cards. Files: components/WhatsAppLogo.jsx, pages/Landing.jsx, components/CompetitorComparison.jsx, pages/WhatsAppCrm.jsx
+
 
 
 
