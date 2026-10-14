@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-14 IST: owner request: visible 'Book a demo on WhatsApp' button (shared style) and hover on home trust cards. Files: components/WhatsAppLogo.jsx, pages/Landing.jsx, components/CompetitorComparison.jsx, pages/WhatsAppCrm.jsx
 
 
 
@@ -75,6 +74,8 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [Claude Code] 2026-10-14 IST, 7bf7ae8: secondary WhatsApp demo buttons use waButtonClass(isDark) from components/WhatsAppLogo.jsx (keep hover colours in classes, not inline styles). Home trust cards have hover.
 
 - [Claude Code] 2026-10-14 IST, e3e2f96: home has three new sections (WhoItsFor, TrustFacts, LatestPosts in Landing.jsx). Lead export is Growth+ only: site copy now says so (home + Pricing FAQ). If export should be on every plan, change planGate in leadRoutes and the copy together.
 
