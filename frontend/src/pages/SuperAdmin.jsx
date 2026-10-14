@@ -1745,6 +1745,7 @@ export default function SuperAdmin() {
                             for anyone else the switch would be describing a
                             feature they do not have. */}
                         {["growth", "pro", "enterprise", "trial"].includes(org.plan) ? (
+                          <>
                           <button
                             onClick={() => toggleCopilot(org)}
                             className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold border transition ${
@@ -1772,6 +1773,7 @@ export default function SuperAdmin() {
                           >
                             {org.copilot?.beta ? "Pilot" : "+ Pilot"}
                           </button>
+                          </>
                         ) : (
                           <span className="text-[10px] text-app-soft">&mdash;</span>
                         )}
