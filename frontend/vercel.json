@@ -83,6 +83,14 @@
       "destination": "/compare/sell-do-alternative.html"
     },
     {
+      "source": "/compare/leadrat-alternative",
+      "destination": "/compare/leadrat-alternative.html"
+    },
+    {
+      "source": "/compare/kylas-alternative",
+      "destination": "/compare/kylas-alternative.html"
+    },
+    {
       "source": "/features",
       "destination": "/features.html"
     },

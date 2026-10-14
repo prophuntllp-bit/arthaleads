@@ -7,7 +7,7 @@ import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
 
-const COMPETITORS = ["Arthaleads", "LeadRat", "Sell.Do", "Kylas"];
+const COMPETITORS = ["Arthaleads", "Leadrat", "Sell.Do", "Kylas"];
 
 // Every competitor mark was checked against that company's OWN website and
 // help docs on 14 Oct 2026 (sources below the table, SOURCES). Rules:
@@ -17,7 +17,7 @@ const COMPETITORS = ["Arthaleads", "LeadRat", "Sell.Do", "Kylas"];
 // Re-check before changing a mark, and update CHECKED.
 const CHECKED = "14 October 2026";
 const SOURCES = [
-  ["LeadRat", "https://leadrat.com/"],
+  ["Leadrat", "https://leadrat.com/"],
   ["Sell.Do", "https://www.sell.do/"],
   ["Kylas", "https://kylas.io/"],
 ];
@@ -52,7 +52,7 @@ const CATEGORIES = [
       ["Attendance tracking",                ["y", "y", "y", "y"]],   // Kylas: Field Sales add-on
       ["Team performance dashboard",         ["y", "y", "y", "y"]],
       ["Conversion & booking analytics",     ["y", "y", "y", "p"]],   // Kylas: general reports, no booking analytics
-      ["Audit log",                          ["y", "p", "y", "u"]],   // LeadRat: activity log for assignment
+      ["Audit log",                          ["y", "p", "y", "u"]],   // Leadrat: activity log for assignment
     ],
   },
   {
@@ -64,7 +64,7 @@ const CATEGORIES = [
       ["Prices published on the website",    ["y", "y", "n", "y"]],   // Sell.Do: "not a rate card", custom quote
       ["Free trial, no sales call",          ["y", "u", "u", "y"]],
       ["Refer & earn program",               ["y", "u", "u", "y"]],
-      ["7-day money-back guarantee",         ["y", "n", "u", "n"]],   // LeadRat and Kylas refund policies
+      ["7-day money-back guarantee",         ["y", "n", "u", "u"]],   // Leadrat: "Zero Refund Policy"; Kylas: refunds only in set windows, no guarantee stated
     ],
   },
 ];
@@ -102,8 +102,8 @@ export default function Compare() {
   const [query, setQuery] = useState("");
 
   useSEO({
-    title:       "Arthaleads vs LeadRat, Sell.Do & Kylas: CRM Comparison",
-    description: "Compare Arthaleads with LeadRat, Sell.Do, and Kylas. See how India’s real estate CRMs stack up on lead management, automation, analytics, and value.",
+    title:       "Arthaleads vs Leadrat, Sell.Do & Kylas: CRM Comparison",
+    description: "Compare Arthaleads with Leadrat, Sell.Do, and Kylas. See how India’s real estate CRMs stack up on lead management, automation, analytics, and value.",
     canonical:   "https://www.arthaleads.com/compare",
   });
 
@@ -225,7 +225,7 @@ export default function Compare() {
             Products change, and some features sit on higher plans or add-ons. Spotted something out of date?{" "}
             <a href={waLink("Hi Arthaleads, something on your CRM comparison page looks out of date: ")} target="_blank" rel="noopener noreferrer"
               className="font-semibold hover:underline" style={{ color: isDark ? "#fb923c" : "#c2410c" }}>Let us know</a> and we will correct it.
-            {" "}LeadRat, Sell.Do and Kylas are trademarks of their owners; Arthaleads is not affiliated with them.
+            {" "}Leadrat, Sell.Do and Kylas are trademarks of their owners; Arthaleads is not affiliated with them.
           </p>
         </div>
       </section>
@@ -234,19 +234,22 @@ export default function Compare() {
       <section className="pb-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl sm:text-3xl font-black mb-6 text-center" style={{ color: textColor }}>Detailed comparisons</h2>
-          {/* Add LeadRat and Kylas here as their pages go live (then make this a 2 or 3 column grid). */}
-          <div className="max-w-2xl mx-auto">
-            <Link to="/compare/sell-do-alternative"
-              className="group block rounded-2xl border p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-orange-300"
-              style={{ background: cardBg, borderColor: cardBorder }}>
-              <h3 className="font-bold text-lg mb-2 group-hover:text-[#ff6b00] transition-colors" style={{ color: textColor }}>ArthaLeads vs Sell.Do</h3>
-              <p className="text-sm leading-relaxed mb-3" style={{ color: softText }}>
-                How Sell.Do prices its CRM, what each one includes, and which suits your team, with every Sell.Do detail linked to its source.
-              </p>
-              <span className="inline-flex items-center gap-1.5 text-sm font-semibold transition-all group-hover:gap-2.5" style={{ color: isDark ? "#fb923c" : "#c2410c" }}>
-                Read the comparison <ArrowRight className="w-3.5 h-3.5" />
-              </span>
-            </Link>
+          <div className="grid sm:grid-cols-3 gap-5">
+            {[
+              ["Sell.Do", "/compare/sell-do-alternative", "Sell.Do does not publish prices. How it quotes, what each includes, and which suits your team."],
+              ["Leadrat", "/compare/leadrat-alternative", "Leadrat's per-user prices from 10 users, billing, refunds, and which suits your team."],
+              ["Kylas", "/compare/kylas-alternative", "Kylas's flat fee against per-user pricing, its free plan, and which suits your team."],
+            ].map(([name, to, body]) => (
+              <Link key={to} to={to}
+                className="group flex flex-col rounded-2xl border p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-orange-300"
+                style={{ background: cardBg, borderColor: cardBorder }}>
+                <h3 className="font-bold text-lg mb-2 group-hover:text-[#ff6b00] transition-colors" style={{ color: textColor }}>ArthaLeads vs {name}</h3>
+                <p className="text-sm leading-relaxed mb-3 flex-1" style={{ color: softText }}>{body}</p>
+                <span className="inline-flex items-center gap-1.5 text-sm font-semibold transition-all group-hover:gap-2.5" style={{ color: isDark ? "#fb923c" : "#c2410c" }}>
+                  Read the comparison <ArrowRight className="w-3.5 h-3.5" />
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

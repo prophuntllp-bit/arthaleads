@@ -39,8 +39,10 @@ const NAV_RESOURCES = [
 // One entry per comparison page. Add LeadRat, Kylas, ... here as they go live
 // (and as a card in the "Detailed comparisons" section of pages/Compare.jsx).
 const NAV_COMPARE = [
-  { label: "All comparisons",       href: "/compare",                     desc: "Feature table: LeadRat, Sell.Do, Kylas", icon: GitCompare },
+  { label: "All comparisons",       href: "/compare",                     desc: "Feature table: Leadrat, Sell.Do, Kylas", icon: GitCompare },
   { label: "ArthaLeads vs Sell.Do", href: "/compare/sell-do-alternative", desc: "Sell.Do pricing and features compared",  icon: Scale },
+  { label: "ArthaLeads vs Leadrat", href: "/compare/leadrat-alternative", desc: "Leadrat pricing and features compared",  icon: Scale },
+  { label: "ArthaLeads vs Kylas",   href: "/compare/kylas-alternative",   desc: "Kylas pricing and features compared",    icon: Scale },
 ];
 
 const NAV_COMPANY = [

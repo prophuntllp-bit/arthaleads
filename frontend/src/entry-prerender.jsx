@@ -28,6 +28,8 @@ import ApiDocs from "./pages/ApiDocs";
 import DownloadApp from "./pages/DownloadApp";
 import WhatsAppCrm from "./pages/WhatsAppCrm";
 import SellDoAlternative from "./pages/SellDoAlternative";
+import LeadratAlternative from "./pages/LeadratAlternative";
+import KylasAlternative from "./pages/KylasAlternative";
 import ReferEarn from "./pages/ReferEarn";
 import Careers from "./pages/Careers";
 import Contact from "./pages/Contact";
@@ -53,6 +55,8 @@ export const PAGES = {
   "/download-app": DownloadApp,
   "/whatsapp-crm": WhatsAppCrm,
   "/compare/sell-do-alternative": SellDoAlternative,
+  "/compare/leadrat-alternative": LeadratAlternative,
+  "/compare/kylas-alternative": KylasAlternative,
   "/refer": ReferEarn,
   "/careers": Careers,
   "/contact": Contact,
