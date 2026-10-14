@@ -14,7 +14,6 @@ import { useSEO } from "../utils/useSEO";
 import { getRecaptchaToken } from "../utils/recaptcha";
 import IntroVideo from "../components/IntroVideo";
 import { HeroTour } from "../components/ProductTour";
-import { PLANS } from "../data/plans";
 import { PLAN_PRICING, formatINR } from "../utils/plan";
 import { Reveal, CountUp, Spotlight, Magnetic } from "../components/motion/Motion";
 
@@ -958,206 +957,6 @@ function Testimonials({ isDark }) {
   );
 }
 
-// ── Pricing ───────────────────────────────────────────────────────────────────
-function Pricing({ isDark }) {
-  const [hoveredPlan, setHoveredPlan] = useState(null);
-  const plans = PLANS;
-
-  const bg         = isDark ? "#0d0d1a" : "#f9fafb";
-  const heading    = isDark ? "#ffffff" : "#111827";
-  const body       = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
-  const cardBg     = isDark ? "rgba(255,255,255,0.025)" : "#ffffff";
-  const cardBdr    = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
-  const popBg      = isDark ? "rgba(255,107,0,0.05)" : "#fffbf7";
-  const taglineClr = isDark ? "rgba(255,255,255,0.38)" : "#6b7280";
-  const divBdr     = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
-  const grpLabel   = isDark ? "rgba(255,255,255,0.28)" : "#6b7280";
-  const featClr    = isDark ? "rgba(255,255,255,0.72)" : "#374151";
-  const altBtnClr  = isDark ? "rgba(255,255,255,0.70)" : "#374151";
-  const altBtnBdr  = isDark ? "rgba(255,255,255,0.10)" : "#d1d5db";
-  const noteClr    = isDark ? "rgba(255,255,255,0.28)" : "#6b7280";
-  const trialBg    = isDark ? "rgba(34,197,94,0.1)" : "#f0fdf4";
-  const trialBdr   = isDark ? "rgba(34,197,94,0.25)" : "#bbf7d0";
-
-  return (
-    <section id="pricing" className="py-10 lg:py-14" style={{ background: bg }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-4" style={{ color: heading }}>
-            Plans for every{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">team size</span>
-          </h2>
-          <p className="text-base max-w-lg mx-auto mb-6" style={{ color: body }}>
-            Simple per-seat pricing from {formatINR(PLAN_PRICING.starter.monthly)} per user per month. No setup fee, no hidden charges.
-          </p>
-
-          {/* Free trial banner */}
-          <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl border"
-            style={{ background: trialBg, borderColor: trialBdr }}>
-            <div className="w-7 h-7 rounded-full bg-[#22c55e] flex items-center justify-center flex-shrink-0">
-              <Check className="w-3.5 h-3.5 text-white" />
-            </div>
-            <div className="text-left">
-              <p className="text-sm font-bold" style={{ color: isDark ? "#4ade80" : "#15803d" }}>
-                14-day free trial - includes all Growth features
-              </p>
-              <p className="text-xs" style={{ color: isDark ? "rgba(74,222,128,0.6)" : "#15803d" }}>
-                No credit card required. Upgrade or cancel anytime.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Plan cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
-          {plans.map((plan, idx) => {
-            const isHovered = hoveredPlan === plan.id;
-            const isPopular = plan.popular;
-            return (
-              <Reveal key={plan.id} delay={idx * 110} className="flex">
-              <Spotlight color={`${plan.color}1a`}
-                className="relative flex flex-col flex-1 rounded-2xl transition-all duration-300 cursor-default overflow-hidden"
-                style={{
-                  background: isPopular ? popBg : cardBg,
-                  border: isPopular
-                    ? "1.5px solid rgba(255,107,0,0.4)"
-                    : `1px solid ${isHovered ? plan.color + "60" : cardBdr}`,
-                  boxShadow: isPopular
-                    ? "0 20px 60px rgba(255,107,0,0.12)"
-                    : isHovered ? `0 8px 30px ${plan.color}18` : "none",
-                  transform: isPopular ? "translateY(-6px)" : isHovered ? "translateY(-3px)" : "none",
-                }}
-                onMouseEnter={() => setHoveredPlan(plan.id)}
-                onMouseLeave={() => setHoveredPlan(null)}>
-
-                {/* Top color bar */}
-                <div className="h-1 w-full rounded-t-2xl" style={{ background: `linear-gradient(90deg, ${plan.color}, ${plan.color}88)` }} />
-
-                {/* Popular badge */}
-                {isPopular && (
-                  <div className="absolute top-4 right-4">
-                    <span className="px-2.5 py-1 rounded-full bg-[#ff6b00] text-white text-[10px] font-bold uppercase tracking-wide shadow">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-
-                <div className="p-6 flex flex-col flex-1">
-                  {/* Plan header */}
-                  <div className="mb-5">
-                    <div className="flex items-center gap-2.5 mb-1.5">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${plan.color}18` }}>
-                        <Zap className="w-4 h-4" style={{ color: plan.color }} />
-                      </div>
-                      <h3 className="font-black text-xl" style={{ color: heading }}>{plan.name}</h3>
-                    </div>
-                    <p className="text-xs leading-relaxed mt-1" style={{ color: taglineClr }}>{plan.tagline}</p>
-                  </div>
-
-                  {/* User limit pill */}
-                  <div className="inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-lg mb-5"
-                    style={{ background: `${plan.color}12`, border: `1px solid ${plan.color}25` }}>
-                    <Users className="w-3 h-3" style={{ color: plan.color }} />
-                    <span className="text-xs font-semibold" style={{ color: plan.color }}>{plan.userLimit}</span>
-                  </div>
-
-                  {/* Price, from the same table /pricing and billing use */}
-                  <div className="mb-5 pb-5" style={{ borderBottom: `1px solid ${divBdr}` }}>
-                    {PLAN_PRICING[plan.id]?.custom ? (
-                      <>
-                        <div className="text-3xl font-black" style={{ color: heading }}>Custom quote</div>
-                        <p className="text-xs mt-1.5" style={{ color: body }}>From {PLAN_PRICING[plan.id].minSeats} seats, priced on team size and rollout.</p>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-4xl font-black tracking-tight" style={{ color: heading }}>{formatINR(PLAN_PRICING[plan.id].monthly)}</span>
-                          <span className="text-xs font-medium" style={{ color: body }}>/ user / month</span>
-                        </div>
-                        <p className="text-xs mt-1.5" style={{ color: body }}>Plus 18% GST · minimum {PLAN_PRICING[plan.id].minSeats} seats</p>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Feature groups */}
-                  <div className="flex flex-col gap-4 flex-1 mb-6">
-                    {plan.groups.map((group) => (
-                      <div key={group.label}>
-                        <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: grpLabel }}>
-                          {group.label}
-                        </p>
-                        <ul className="space-y-1.5">
-                          {group.items.map((item) => (
-                            <li key={item} className="flex items-start gap-2">
-                              <div className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center mt-0.5"
-                                style={{ background: `${plan.color}18` }}>
-                                <Check className="w-2.5 h-2.5" style={{ color: plan.color }} />
-                              </div>
-                              <span className="text-xs leading-relaxed" style={{ color: featClr }}>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* CTA */}
-                  <a
-                    {...(plan.ctaAction === "signup"
-                      ? { href: CRM_SIGNUP_URL, ...CRM_LINK_PROPS }
-                      : { href: waLink(`Hi Arthaleads! I'd like a quote for the ${plan.name} plan for my real estate team.`), target: "_blank", rel: "noopener noreferrer" })}
-                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-center block ${isPopular ? "shine-btn" : ""}`}
-                    style={isPopular
-                      ? { background: "#ff6b00", color: "#fff", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }
-                      : { border: `1px solid ${altBtnBdr}`, color: altBtnClr, background: "transparent" }
-                    }
-                    onMouseEnter={e => { if (!isPopular) { e.currentTarget.style.borderColor = plan.color; e.currentTarget.style.color = plan.color; } }}
-                    onMouseLeave={e => { if (!isPopular) { e.currentTarget.style.borderColor = altBtnBdr; e.currentTarget.style.color = altBtnClr; } }}>
-                    {plan.cta}{isPopular && " →"}
-                  </a>
-                </div>
-              </Spotlight>
-              </Reveal>
-            );
-          })}
-        </div>
-
-        {/* Shared features row */}
-        <div className="mt-10 p-5 rounded-2xl" style={{ background: cardBg, border: `1px solid ${divBdr}` }}>
-          <p className="text-center text-xs font-bold uppercase tracking-widest mb-4" style={{ color: grpLabel }}>
-            Included in all plans
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {[
-              ["Mobile-friendly access", Shield],
-              ["Facebook Lead Ads", Facebook],
-              ["WhatsApp capture", WhatsAppLogo],
-              ["Kanban pipeline", Layers],
-              ["Push notifications", Bell],
-              ["WordPress plugin", Zap],
-            ].map(([label, Icon]) => (
-              <div key={label} className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: isDark ? "rgba(255,107,0,0.1)" : "#fff7ed" }}>
-                  <Icon className="w-3.5 h-3.5 text-[#ff6b00]" />
-                </div>
-                <span className="text-xs" style={{ color: featClr }}>{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <p className="text-center text-xs mt-6" style={{ color: noteClr }}>
-          Need a custom plan for your network? <button onClick={() => scrollTo("contact")} className="text-[#ff6b00] font-semibold cursor-pointer hover:underline">Talk to us</button>
-        </p>
-      </div>
-    </section>
-  );
-}
-
 // ── Contact ───────────────────────────────────────────────────────────────────
 function Contact({ isDark }) {
   const bg      = isDark ? "#080810" : "#f4f0eb";
@@ -1529,6 +1328,7 @@ function FAQ({ isDark }) {
                       <p className="px-5 pb-5 text-sm leading-relaxed" style={{ color: body }}>
                         {a}{i === HOME_FAQS.length - 1 && <> <Link to="/security" className="text-[#ff6b00] font-semibold hover:underline">Open Security</Link></>}
                         {/^Can the WhatsApp AI/.test(q) && <> <Link to="/whatsapp-crm" className="text-[#ff6b00] font-semibold hover:underline">See how the WhatsApp CRM works</Link></>}
+                        {/^How much does it cost/.test(q) && <> <Link to="/pricing" className="text-[#ff6b00] font-semibold hover:underline">See plans and pricing</Link></>}
                       </p>
                     </div>
                   </div>
@@ -1647,7 +1447,6 @@ export default function Landing() {
       <HowItWorks isDark={isDark} />
       <About isDark={isDark} />
       <Testimonials isDark={isDark} />
-      <Pricing isDark={isDark} />
       <FAQ isDark={isDark} />
       <Contact isDark={isDark} />
       <FinalCTA isDark={isDark} />

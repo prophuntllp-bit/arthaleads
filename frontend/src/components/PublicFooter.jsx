@@ -127,13 +127,7 @@ export default function PublicFooter() {
             style={{ color: text }}
             className="flex items-center gap-2 text-xs transition-opacity hover:opacity-80"
           >
-            by
-            <img
-              src={isDark ? "/vistrow-technologies-dark.png" : "/vistrow-technologies.png"}
-              alt="Vistrow Technologies"
-              className="h-5 w-auto"
-              width="103" height="32"
-            />
+            by <span className="font-semibold">Vistrow Technologies</span>
           </a>
         </div>
       </div>
