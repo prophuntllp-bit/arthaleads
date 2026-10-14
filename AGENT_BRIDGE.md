@@ -68,6 +68,8 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+- [Claude Code] 2026-10-14 IST: owner-approved backfill: "Why this lead's details are empty" note added to 11 older Prophunt WhatsApp leads without ad details (notes only, nothing else changed; 1 skipped, its chat has only an unsupported item). whatsappRoutes exports _noteWhyDetailsEmpty/_matchByMessageText for backfills.
+
 - [Claude Code] 2026-10-14 IST, 0c9409c: SEO, owner approved: Sell.Do pricing & alternative page at /compare/sell-do-alternative (pages/SellDoAlternative.jsx). Every Sell.Do statement is sourced from sell.do or sell.do/pricing and dated; re-check before editing, never add unsourced claims about competitors. Linked from /compare ("Detailed comparisons"), in sitemap. seo-pages.mjs now supports nested pages (writes dist/compare/*.html; each still needs a vercel.json rewrite). LeadRat and Kylas pages can follow the same pattern.
 
 - [Claude Code] 2026-10-14 IST, 79ed8b7: WhatsApp leads that arrive without ad details get one automatic note ("Why this lead's details are empty: ...", addedByName "ArthaLeads (automatic)") from labelAdlessLead/noteWhyDetailsEmpty, after the first real message. Owner request. Data: lead +918805123260 labelled "Facebook Ad · Shapoorji Pallonji Khopoli (ad not identified)", note added, assigned Sheetal Powar, filed in CTWA Meta Campaign | SP- Khopoli Plots (owner approved, no Vistrow call, no push).

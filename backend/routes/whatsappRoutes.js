@@ -3996,6 +3996,8 @@ router._mediaPlan = mediaPlan;
 router._personaFor = personaFor;
 router._maybeSwitchAgent = maybeSwitchAgent;
 router._handleInbound = handleInbound;
+router._noteWhyDetailsEmpty = noteWhyDetailsEmpty;   // also used by one-off backfills
+router._matchByMessageText = matchByMessageText;
 router._triggerBotReply = triggerBotReply;
 router._resolveAgentForConversation = resolveAgentForConversation;
 
