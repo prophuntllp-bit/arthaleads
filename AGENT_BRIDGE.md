@@ -59,6 +59,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-14 IST: SEO retune (owner approved) of home and Features copy/meta for 'real estate CRM software' searches; no new sections. Files: frontend/src/pages/Landing.jsx, pages/Features.jsx
+
 
 
 
