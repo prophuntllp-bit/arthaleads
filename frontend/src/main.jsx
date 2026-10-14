@@ -2,6 +2,10 @@
 import ReactDOM from "react-dom/client";
 import UpdateBanner from "./components/UpdateBanner";
 
+// The app's code loaded and is running: tells the stale-page recovery in
+// index.html not to reload.
+window.__alBooted = true;
+
 // ── Service Worker: periodic sync + message handling ─────────────────────────
 // SW is registered in index.html so PWABuilder/crawlers can detect it.
 // Here we set up periodic sync tags and listen for SW messages.

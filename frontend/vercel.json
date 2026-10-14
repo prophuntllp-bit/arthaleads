@@ -135,7 +135,7 @@
       "destination": "/api/blog-post?slug=:slug"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/).*)",
       "destination": "/app.html"
     }
   ],

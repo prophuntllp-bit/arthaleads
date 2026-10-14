@@ -2,7 +2,10 @@
 // v2: v1 had cached opaque cross-origin responses, which are padded against
 // the storage quota and can never be read back usefully. Renaming the cache
 // makes the activate handler above delete the old one on next load.
-const CACHE_NAME = "arthaleads-v2";
+// v3 (14 Oct 2026): v2 could store the app page under an old /assets/ URL
+// (the host answered missing assets with the app page), which kept a tab
+// unstyled or stuck on the splash after a deploy. The new name drops it.
+const CACHE_NAME = "arthaleads-v3";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json", "/offline.html"];
 
 // ── Install ───────────────────────────────────────────────────────────────────
@@ -50,8 +53,14 @@ self.addEventListener("fetch", (e) => {
   e.respondWith(
     fetch(e.request)
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy)).catch(() => {});
+        // Keep only good copies: a failed response, or a web page answering for a
+        // script or stylesheet, must never become the offline fallback.
+        const type = res.headers.get("content-type") || "";
+        const isAsset = new URL(e.request.url).pathname.startsWith("/assets/");
+        if (res.ok && !(isAsset && type.includes("text/html"))) {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy)).catch(() => {});
+        }
         return res;
       })
       .catch(async () => {

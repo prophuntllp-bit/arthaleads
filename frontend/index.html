@@ -136,6 +136,36 @@
     <!-- Sitemap autodiscovery -->
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
 
+    <!-- Recovery from a page left over from the previous deploy: if a script or
+         stylesheet from /assets/ fails, or the app never starts, clear cached
+         copies and reload once (at most once a minute). main.jsx sets __alBooted. -->
+    <script>
+      (function () {
+        var KEY = 'al_stale_reload_at';
+        function recover() {
+          try {
+            var last = +sessionStorage.getItem(KEY) || 0;
+            if (Date.now() - last < 60000) return;
+            sessionStorage.setItem(KEY, String(Date.now()));
+          } catch (e) { return; }
+          var go = function () { location.reload(); };
+          if (window.caches && caches.keys) {
+            caches.keys().then(function (k) { return Promise.all(k.map(function (n) { return caches.delete(n); })); }).then(go, go);
+          } else { go(); }
+        }
+        window.addEventListener('error', function (e) {
+          var t = e.target;
+          if (!t || t === window || !t.tagName) return;
+          var url = t.src || t.href || '';
+          if ((t.tagName === 'SCRIPT' || t.tagName === 'LINK') && url.indexOf('/assets/') !== -1) recover();
+        }, true);
+        window.addEventListener('vite:preloadError', function () { recover(); });
+        window.addEventListener('load', function () {
+          setTimeout(function () { if (!window.__alBooted) recover(); }, 5000);
+        });
+      })();
+    </script>
+
     <!-- Service Worker - registered here so PWABuilder / crawlers can detect it -->
     <script>
       if ('serviceWorker' in navigator) {
