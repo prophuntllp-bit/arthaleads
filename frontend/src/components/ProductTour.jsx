@@ -171,7 +171,7 @@ export function HeroTour({ isDark }) {
               style={{
                 background: on ? (isDark ? "rgba(255,107,0,0.14)" : "#fff3e8") : chipBg,
                 border: `1px solid ${on ? "rgba(255,107,0,0.45)" : chipBd}`,
-                color: on ? "#ff6b00" : body,
+                color: on ? "var(--brand-text)" : body,
                 backdropFilter: "blur(8px)",
               }}>
               <span className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: on ? "#ff6b00" : track }}>

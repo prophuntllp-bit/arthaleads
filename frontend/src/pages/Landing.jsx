@@ -19,6 +19,9 @@ import { HeroTour } from "../components/ProductTour";
 import { PLAN_PRICING, formatINR } from "../utils/plan";
 import { Reveal, CountUp, Spotlight, Magnetic } from "../components/motion/Motion";
 
+// Small text in the brand orange uses the darker accessible shade (see --brand-text in styles.css).
+const smallText = (c) => (c === "#ff6b00" ? "var(--brand-text)" : c);
+
 // ── Smooth scroll helper ──────────────────────────────────────────────────────
 const REDUCED_MOTION = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
@@ -419,7 +422,7 @@ function HowItWorks({ isDark }) {
                 style={{ background: i === active ? s.color : (isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb") }}>
                 <s.icon className="w-3.5 h-3.5" style={{ color: i === active ? "#fff" : mutedTxt }} />
               </div>
-              <span className="text-xs font-bold whitespace-nowrap" style={{ color: i === active ? s.color : mutedTxt }}>{s.label}</span>
+              <span className="text-xs font-bold whitespace-nowrap" style={{ color: i === active ? smallText(s.color) : mutedTxt }}>{s.label}</span>
             </button>
           ))}
         </div>
@@ -466,7 +469,7 @@ function HowItWorks({ isDark }) {
               {/* Step label */}
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-xs font-black tracking-widest"
-                  style={{ color: step.color }}>
+                  style={{ color: smallText(step.color) }}>
                   STEP {String(step.num).padStart(2, "0")} / {String(HOW_STEPS.length).padStart(2, "0")}
                 </span>
                 <div className="flex-1 h-px" style={{ background: `${step.color}20` }} />
@@ -495,7 +498,7 @@ function HowItWorks({ isDark }) {
                   style={{ background: `${step.color}20` }}>
                   <Check className="w-3 h-3" style={{ color: step.color }} />
                 </div>
-                <span className="text-sm font-semibold" style={{ color: step.color }}>{step.highlight}</span>
+                <span className="text-sm font-semibold" style={{ color: smallText(step.color) }}>{step.highlight}</span>
               </div>
 
               {/* Nav */}
