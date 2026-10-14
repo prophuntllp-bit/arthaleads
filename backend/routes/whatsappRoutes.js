@@ -791,7 +791,10 @@ async function handleInbound(org, parsed) {
 
   // A lead that arrived with no ad details still names its project in the
   // ad's prefilled message, so give it a source rather than leaving it blank.
-  if (isNewConversation && !conv.campaignRef?.adId) {
+  // Meta can open the thread with a placeholder instead (an "unsupported" item
+  // arrived just before the ad's own image + text on 13 Oct 2026), so the
+  // first message with real content gets this pass too, not only the first one.
+  if (!conv.campaignRef?.adId && (isNewConversation || (!isPlaceholderBody(msgText) && await isFirstRealInbound(conv, msgId)))) {
     labelAdlessLead(org, conv).catch(() => {});
   }
 
@@ -1330,9 +1333,21 @@ const GENERIC_PROJECT_WORDS = new Set(["project", "projects", "plots", "plot", "
 // Which agent, and which of its projects, the conversation's first message
 // names. Only an unambiguous single-agent match counts.
 async function matchByMessageText(org, conversation) {
-  const first = await WaMessage.findOne({ conversationId: conversation._id, direction: "inbound" })
-    .sort({ timestamp: 1 }).select("body").lean();
-  return matchProjectsInText(org, first?.body);
+  const firsts = await WaMessage.find({ conversationId: conversation._id, direction: "inbound" })
+    .sort({ timestamp: 1 }).limit(5).select("body").lean();
+  return matchProjectsInText(org, firsts.find((m) => !isPlaceholderBody(m.body))?.body);
+}
+
+// Inbound entries we store in place of content WhatsApp never handed over
+// (see parseMetaMessages). They name no project, so text matching skips them.
+const PLACEHOLDER_BODY_RE = /^\[(Unsupported message|[a-z_]+ message)\]/;
+function isPlaceholderBody(body) { return PLACEHOLDER_BODY_RE.test(String(body || "")); }
+
+// True when every inbound message before this one in the thread is a placeholder.
+async function isFirstRealInbound(conv, msgId) {
+  const earlier = await WaMessage.find({ conversationId: conv._id, direction: "inbound", ...(msgId ? { waMsgId: { $ne: msgId } } : {}) })
+    .sort({ timestamp: 1 }).limit(5).select("body").lean();
+  return earlier.length > 0 && earlier.length < 5 && earlier.every((m) => isPlaceholderBody(m.body));
 }
 
 // Which active agent's project a piece of text names. Null unless exactly one
@@ -3955,6 +3970,7 @@ router._detectMediaAsk = detectMediaAsk;
 router._mediaPlan = mediaPlan;
 router._personaFor = personaFor;
 router._maybeSwitchAgent = maybeSwitchAgent;
+router._handleInbound = handleInbound;
 router._triggerBotReply = triggerBotReply;
 router._resolveAgentForConversation = resolveAgentForConversation;
 
