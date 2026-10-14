@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-14 IST: SEO/legal, owner approved: verify every competitor mark in the /compare feature table against their own websites, remove or soften what cannot be sourced. Files: frontend/src/pages/Compare.jsx
 
 
 
@@ -69,6 +68,8 @@ Format: `- [agent] 2026-10-08 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [Claude Code] 2026-10-14 IST, 506372e: /compare feature table fact-checked against LeadRat, Sell.Do and Kylas's own sites (owner request, legal risk). New cell state 'u' = not stated on their site; 'n' only where their own page says so (refund policies, Sell.Do unpublished prices). Rules and sources are in the comment above CATEGORIES in Compare.jsx; never add an unsourced competitor mark.
 
 - [Claude Code] 2026-10-14 IST: owner-approved backfill: "Why this lead's details are empty" note added to 11 older Prophunt WhatsApp leads without ad details (notes only, nothing else changed; 1 skipped, its chat has only an unsupported item). whatsappRoutes exports _noteWhyDetailsEmpty/_matchByMessageText for backfills.
 
