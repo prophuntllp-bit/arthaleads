@@ -89,6 +89,7 @@ const mongoStore = {
     }).select("_id").lean();
   },
 
+  // Live since 5162774 (its Railway deploy was cancelled; redeployed 15 Oct 2026).
   // routingInputs (select:false) must come back with the job: the send-time
   // recheck re-resolves the call from it, and without it every call was
   // withdrawn as "changed_before_send" (found 15 Oct 2026).
