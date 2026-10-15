@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
+- [claude] 2026-10-15 IST: Artha suggestion card (pilot): chat details that differ from the lead's values, Save/Dismiss in LeadDetail and Inbox. On `staging` first. backend models/Lead.js (arthaSuggest), routes/whatsappRoutes.js (enrichWhatsAppLead), routes/copilotRoutes.js, frontend LeadDetail.jsx, Inbox.jsx, new components/ArthaSuggestCard.jsx.
+
 
 
 
