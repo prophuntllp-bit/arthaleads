@@ -39,6 +39,9 @@ to `main`; merge it back into `staging` right after.
   refresh, Google Ads polling, blog sync) and no outbound worker.
 - `AUTH_COOKIE_NAME=crm_token_staging`: staging logins never overwrite or read
   the live `crm_token` cookie (both are on `.arthaleads.com`).
+- Vercel Deployment Protection is OFF (owner, 15 Oct 2026: the Vercel login
+  kept asking for 2FA), so staging opens directly; it holds only fake test
+  data and is kept out of search by the next point.
 - Both staging hosts send `X-Robots-Tag: noindex` (frontend/vercel.json), so
   search engines never index staging.
 - No real WhatsApp, Meta, Razorpay, email or AI keys: staging uses fake or
