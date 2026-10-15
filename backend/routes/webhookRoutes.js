@@ -14,6 +14,7 @@ const Organization    = require("../models/Organization");
 const { mapGoogleLeadFields, fromWebhookColumns } = require("../utils/googleLeadFields");
 const { mapCustomFieldsToLead } = require("../utils/formFieldMapper");
 const OPTS = require("../constants/leadOptions");
+const { planOutcome, phoneFilter, cleanEmail, cleanName } = require("../utils/vistrowCallResult");
 
 const router = express.Router();
 
@@ -1048,6 +1049,9 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       // see the branching below. Unknown/future fields are simply never
       // destructured here, so they're silently ignored rather than rejected.
       call_id, recording_url, recording_mime_type, page_path,
+      // Vistrow bridge (2026-10-15): the lead this call was placed for, the
+      // call direction, and the call's result in this CRM's vocabulary.
+      arthaleads_lead_id, crm_outcome, direction,
     } = req.body || {};
 
     if (!token) return res.status(400).json({ success: false, message: "Missing token" });
@@ -1186,8 +1190,11 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       // 1) Re-send of a call we already have — update that call in place.
       //    Nothing else on the lead changes; only the imported call's own
       //    data can change on a re-send.
+      // Any source: a call appended to a Facebook/Website lead keeps that
+      // lead's source, and looking only at "Vistrow Voice" leads made every
+      // re-send of such a call append it again.
       const existingByCallId = await Lead.findOne({
-        orgId, source: leadSource, "voiceCalls.externalCallId": callIdNum,
+        orgId, "voiceCalls.externalCallId": callIdNum,
       }).select("_id").lean();
 
       if (existingByCallId) {
@@ -1217,12 +1224,49 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       // 2) New call, existing lead (matched by phone) — append as a new call.
       //    Deliberately never touches the lead's other top-level fields (name,
       //    propertyType, etc.) - only ever appends new call history.
-      const existingByPhone = await Lead.findOne({ orgId, phone: cleanPhone }).select("_id").lean();
+      //    The lead is the one Vistrow called for (arthaleads_lead_id, same
+      //    org), else the newest lead with the same last 10 digits - the CRM's
+      //    own duplicate rule; an exact string match turned "+919812345678"
+      //    and "9812345678" into two leads.
+      const TARGET_FIELDS = "_id status booking followUpDate siteVisitDate assignedTo name";
+      let existingByPhone = null;
+      if (arthaleads_lead_id && mongoose.Types.ObjectId.isValid(String(arthaleads_lead_id))) {
+        existingByPhone = await Lead.findOne({ _id: String(arthaleads_lead_id), orgId, isDeleted: { $ne: true } })
+          .select(TARGET_FIELDS).lean();
+      }
+      if (!existingByPhone) {
+        existingByPhone = await Lead.findOne(phoneFilter(orgId, cleanPhone)).sort({ createdAt: -1 })
+          .select(TARGET_FIELDS).lean();
+      }
       const newCallEntry = { _id: new mongoose.Types.ObjectId(), ...voiceCall, createdAt: new Date(), updatedAt: new Date() };
 
       if (existingByPhone) {
+        // The call's result on the lead: forward-only status, booking,
+        // follow-up / site visit, plus a note, activity and a push, so a
+        // returning caller no longer looks "not synced".
+        const plan = planOutcome(existingByPhone, crm_outcome);
+        const { noteText } = buildVoiceNote(voiceCall);
+        const callActivity = {
+          type: "called",
+          description: `${direction === "outbound" ? "Outbound" : "Inbound"} Vistrow Voice call${voiceCall.durationSeconds ? ` (${Math.round(voiceCall.durationSeconds)}s)` : ""}`,
+          performedByName: "Vistrow Voice",
+          meta: { callId: callIdNum, direction: direction || "" },
+        };
+        let pushed;
         try {
-          await Lead.updateOne({ _id: existingByPhone._id }, { $push: { voiceCalls: newCallEntry } });
+          // The $ne guard makes the append idempotent inside one document,
+          // which the unique index (across documents) cannot.
+          pushed = await Lead.updateOne(
+            { _id: existingByPhone._id, "voiceCalls.externalCallId": { $ne: callIdNum } },
+            {
+              $push: {
+                voiceCalls: newCallEntry,
+                notes: { text: [noteText, ...plan.lines].join("\n"), addedByName: "Vistrow Voice" },
+                activities: { $each: [callActivity, ...plan.activities] },
+              },
+              ...(Object.keys(plan.set).length ? { $set: plan.set } : {}),
+            }
+          );
         } catch (pushErr) {
           // Same unique partial index as branch 3's create/create race
           // (orgId, source, voiceCalls.externalCallId) - here it's a
@@ -1232,7 +1276,7 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
           // and re-trigger the same race).
           if (pushErr?.code === 11000) {
             const winner = await Lead.findOne({
-              orgId, source: leadSource, "voiceCalls.externalCallId": callIdNum,
+              orgId, "voiceCalls.externalCallId": callIdNum,
             }).select("_id").lean();
             if (winner) {
               logger.info(`[custom webhook] push/push race resolved for call ${callIdNum} - lead ${winner._id} already has it`);
@@ -1241,9 +1285,21 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
           }
           throw pushErr;
         }
+        if (pushed && pushed.matchedCount === 0) {
+          // This lead already has this call (a re-send that raced the lookup).
+          return res.status(200).json({ success: true, message: "Call updated", leadId: existingByPhone._id });
+        }
         automation.status = "connected";
         automation.lastSyncAt = new Date();
         await automation.save();
+        if (existingByPhone.assignedTo) {
+          sendPushToUser(existingByPhone.assignedTo, {
+            type: "lead_assigned",
+            title: `Vistrow Voice call: ${existingByPhone.name || cleanName(name)}`,
+            body: plan.lines.length ? plan.lines.join(" · ") : "New call on this lead",
+            data: { url: "/leads", leadId: String(existingByPhone._id) },
+          }).catch(() => {});
+        }
         logger.info(`[custom webhook] Vistrow call ${callIdNum} appended to existing lead ${existingByPhone._id}`);
         return res.status(200).json({ success: true, message: "Call added to existing lead", leadId: existingByPhone._id });
       }
@@ -1255,15 +1311,19 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       }
       const { noteText, reqText } = buildVoiceNote(voiceCall);
       const mapped = mapVistrowExtractedFields(hasExtracted ? extracted_data : null);
+      const plan = planOutcome({ status: "New", booking: "" }, crm_outcome);
 
       let lead;
       try {
         lead = await Lead.create({
-          name: String(name).trim(),
+          // Cleaned so a mis-heard email or an over-long name can't fail
+          // the whole delivery with a 500 (the email field has a format check).
+          name: cleanName(name),
           phone: cleanPhone,
-          email: (email && String(email).trim()) || "",
+          email: cleanEmail(email),
           source: leadSource,
           status: "New",
+          ...plan.set,
           requirements: reqText,
           orgId,
           createdBy: assignee?._id || automation.createdBy || null,
@@ -1281,7 +1341,7 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
           bhk: mapped.bhk || "N/A",
           budget: mapped.budget || { min: null, max: null, currency: "INR" },
           preferredLocation: mapped.preferredLocation || "",
-          notes: [{ text: noteText, addedBy: assignee?._id || null, addedByName: assignee?.name || "" }],
+          notes: [{ text: [noteText, ...plan.lines].join("\n"), addedBy: assignee?._id || null, addedByName: assignee?.name || "" }],
           activities: [{
             type: "created",
             description: assignee
@@ -1290,7 +1350,7 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
             performedBy: assignee?._id || null,
             performedByName: assignee?.name || "",
             meta: { automationId: automation._id?.toString(), sourceName: source_name || "" },
-          }],
+          }, ...plan.activities],
         });
       } catch (createErr) {
         // Two near-simultaneous deliveries of the same brand-new call_id can
@@ -1302,7 +1362,7 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
         // retry, re-triggering the exact same race).
         if (createErr?.code === 11000) {
           const winner = await Lead.findOne({
-            orgId, source: leadSource, "voiceCalls.externalCallId": callIdNum,
+            orgId, "voiceCalls.externalCallId": callIdNum,
           }).select("_id").lean();
           if (winner) {
             logger.info(`[custom webhook] create/create race resolved for call ${callIdNum} - lead ${winner._id} already has it`);
