@@ -47,7 +47,7 @@ export default function MorningBrief() {
   };
 
   const open = (it) => {
-    if (it.kind === "chat") { navigate("/inbox", { state: { openConversationId: it.conversationId } }); return; }
+    if (it.tag === "chat" && it.conversationId) { navigate("/conversations", { state: { openConversationId: it.conversationId } }); return; }
     navigate("/leads", { state: { openLeadId: it.id, openLeadKind: it.kind } });
   };
   const askArtha = () => window.dispatchEvent(new CustomEvent("helpbot:ask", { detail: { question: "Who should I call first today?" } }));

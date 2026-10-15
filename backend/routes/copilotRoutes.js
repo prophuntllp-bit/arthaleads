@@ -7,6 +7,8 @@
 //   POST   /api/copilot/threads/:id/turns/:turnId/rating   thumbs up/down
 //   GET    /api/copilot/starters?page=  page + role starter buttons (no AI call)
 //   GET    /api/copilot/brief           morning brief, worked out by code (no AI call)
+//   GET    /api/copilot/features        which Artha extras this company has
+//   POST   /api/copilot/draft-reply     WhatsApp reply draft from the chat (never sent)
 //
 // Changes Artha proposes are applied through the existing /api/help/preview,
 // /api/help/action and /api/help/undo (same gates, idempotency and undo).
@@ -23,6 +25,9 @@ const provider = require("../utils/ai/provider");
 const { runTurn } = require("../copilot/agent");
 const { startersFor } = require("../copilot/starters");
 const { buildBrief } = require("../copilot/brief");
+const { draftReply } = require("../copilot/drafts");
+const WaConversation = require("../models/WaConversation");
+const visibility = require("../utils/visibility");
 const logger = require("../config/logger");
 
 const router = express.Router();
@@ -167,6 +172,44 @@ router.get("/brief", async (req, res, next) => {
     if (!on) return res.json({ success: true, brief: null });
     res.json({ success: true, brief: await buildBrief(req.user) });
   } catch (err) { next(err); }
+});
+
+// GET /api/copilot/features - which Artha extras this company has, so the
+// screens only show buttons that will work.
+router.get("/features", async (req, res, next) => {
+  try {
+    const org = await loadOrg(req);
+    const on = !!org?.copilot?.beta && org.copilot.enabled !== false;
+    res.json({ success: true, features: { brief: on && org.copilot.brief !== false, drafts: on && org.copilot.drafts !== false && !!process.env.OPENAI_API_KEY } });
+  } catch (err) { next(err); }
+});
+
+// POST /api/copilot/draft-reply { conversationId } - Artha writes the next
+// WhatsApp reply from the chat so far. Returned as text for the composer; the
+// agent edits and sends it. Same visibility as the Inbox.
+router.post("/draft-reply", chatLimiter, async (req, res, next) => {
+  try {
+    if (!isId(req.body?.conversationId)) return res.status(400).json({ success: false, message: "Open a chat first." });
+    const org = await loadOrg(req);
+    if (!org?.copilot?.beta || org.copilot.enabled === false || org.copilot.drafts === false) {
+      return res.status(403).json({ success: false, message: "Reply drafts are not turned on for your company." });
+    }
+    if (!process.env.OPENAI_API_KEY) return res.status(503).json({ success: false, message: "Artha isn't available right now." });
+    if ((await allowanceLeft(req.orgId)) <= 0) {
+      return res.status(429).json({ success: false, code: "ALLOWANCE", message: "Your company has used this month's Artha allowance. An admin can ask us to raise it." });
+    }
+    const conversation = await WaConversation.findOne({ _id: req.body.conversationId, orgId: req.orgId })
+      .select("orgId assignedTo leadId contactName campaignRef").lean();
+    if (!conversation || !visibility.canSeeConversation(req.user, conversation)) {
+      return res.status(404).json({ success: false, message: "Chat not found." });
+    }
+    const { text, reason } = await draftReply({ user: req.user, org, conversation });
+    if (!text) return res.status(422).json({ success: false, message: reason === "empty" ? "There's nothing in this chat to reply to yet." : "Artha couldn't write a reply this time. Try again." });
+    res.json({ success: true, text });
+  } catch (err) {
+    logger.error(`[copilot] draft-reply failed: ${err.message}`);
+    res.status(502).json({ success: false, message: "Artha couldn't write a reply right now. Try again in a moment." });
+  }
 });
 
 router.get("/starters", (req, res) => {
