@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
-- [claude] 2026-10-15 IST: Artha Phase 3b WhatsApp reply drafts ON STAGING (b519777, plus staging-artha-demo.js), waiting for the owner to try it on staging before merging to main. backend/copilot/drafts.js, routes/copilotRoutes.js (/draft-reply, /features), frontend Inbox.jsx. NOTE for whoever owns seed-staging.js: tests/vistrow guard 'every Lead-creating site is accounted for' fails because scripts/seed-staging.js creates leads and is not in the manifest (fails on main too).
 
 
 
@@ -84,6 +83,8 @@ Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-15 IST (staging b519777..8d93c3e, merged to main 29b6e03): Artha Phase 3b WhatsApp reply drafts, checked on staging first. POST /api/copilot/draft-reply, GET /api/copilot/features, backend/copilot/drafts.js, Inbox 'Draft reply' (pilot, 24h window, empty box; never sends). Brief: WhatsApp items open the chat (/conversations). scripts/staging-artha-demo.js turns on pilot + fake WhatsApp + sample chat on staging only. Staging now has a real OpenAI key (owner). NOTE for whoever owns seed-staging.js: tests/vistrow guard 'every Lead-creating site is accounted for' fails because scripts/seed-staging.js creates leads and is not in the manifest (fails on main too).
 
 - [Claude Code] 2026-10-15 IST, 9f40a33: CSP connect-src now includes https://api-staging.arthaleads.com (staging CRM login showed 'Connecting to server...' because the browser blocked the staging API). Staging-first: verified on staging, then merged. Staging test logins' password was reset in the staging DB (owner has it).
 
