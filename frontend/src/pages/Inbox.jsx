@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useLocation, useNavigate, useParams, useOutletContext } from "react-router-dom";
 import {
   AlertTriangle, Bot, Check, CheckCheck, ChevronDown, Clock, ExternalLink,
-  FileText, ListChecks, Paperclip, Plus, RefreshCw, Search, Send, Settings, User, UserCheck, Wallet, X, Zap,
+  FileText, ListChecks, Loader2, Paperclip, Plus, RefreshCw, Search, Send, Settings, Sparkles, User, UserCheck, Wallet, X, Zap,
 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -270,6 +270,12 @@ export default function Inbox() {
   const [lastInboundAt, setLastInbound] = useState(undefined);
   const [msgInput, setMsgInput]         = useState("");
   const [sending, setSending]           = useState(false);
+  // Artha reply drafts (pilot companies): text for the box, never sent by itself.
+  const [canDraft, setCanDraft]         = useState(false);
+  const [drafting, setDrafting]         = useState(false);
+  const composerRef = useRef(null);
+  const activeIdRef = useRef(null);
+  activeIdRef.current = activeId;
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs]   = useState(false);
   // Long chats: only the newest 60 messages come first; "Load earlier" pages back.
@@ -471,6 +477,29 @@ export default function Inbox() {
     toast.error("Out of WhatsApp credits — top up to keep sending.");
     setShowTopUp(true);
     refreshCredits();
+  };
+
+  useEffect(() => {
+    api.get("/copilot/features").then(({ data }) => setCanDraft(!!data.features?.drafts)).catch(() => setCanDraft(false));
+  }, []);
+
+  const draftReply = async () => {
+    if (!activeId || drafting || msgInput.trim()) return;
+    setDrafting(true);
+    const forId = activeId;
+    try {
+      const { data } = await api.post("/copilot/draft-reply", { conversationId: forId });
+      if (forId !== activeIdRef.current) return; // moved to another chat meanwhile
+      setMsgInput(data.text || "");
+      requestAnimationFrame(() => {
+        const el = composerRef.current;
+        if (!el) return;
+        el.style.height = "auto"; el.style.height = el.scrollHeight + "px";
+        el.focus(); el.setSelectionRange(el.value.length, el.value.length);
+      });
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Artha couldn't write a reply right now.");
+    } finally { setDrafting(false); }
   };
 
   const sendMessage = async () => {
@@ -829,7 +858,18 @@ export default function Inbox() {
                       <Paperclip className="w-4 h-4 text-app-soft" />
                     </button>
                   )}
+                  {canDraft && windowOpen && (
+                    <button onClick={draftReply} disabled={drafting || !!msgInput.trim()}
+                      title={msgInput.trim() ? "Clear the box to get a draft from Artha" : "Draft a reply with Artha (you check it and press Send)"}
+                      aria-label="Draft a reply with Artha"
+                      className="h-10 rounded-full px-3 flex items-center gap-1.5 shrink-0 text-xs font-semibold transition hover:opacity-80 disabled:opacity-45 cursor-pointer disabled:cursor-default"
+                      style={{ background: "rgba(249,115,22,0.10)", border: "1px solid rgba(249,115,22,0.3)", color: "#ea580c" }}>
+                      {drafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      <span className="hidden sm:inline">{drafting ? "Drafting…" : "Draft reply"}</span>
+                    </button>
+                  )}
                   <textarea
+                    ref={composerRef}
                     rows={1}
                     className="flex-1 resize-none rounded-2xl px-4 py-2.5 text-sm text-app outline-none"
                     style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", maxHeight: 120, minHeight: 42 }}
