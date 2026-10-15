@@ -59,6 +59,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
+- [claude] 2026-10-15 IST: Artha fixes: open lead refreshes after Artha changes/undo, project-lead links open, create_lead records lead id for undo. backend/actions/createLead.js, frontend LeadDetail.jsx, HelpBot.jsx, Leads.jsx, copilot tools records
+
 
 
 
