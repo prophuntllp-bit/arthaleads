@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
+- [claude] 2026-10-15 17:46 IST: Vistrow Voice call-result receiver fixes (POST /webhook/lead, Vistrow branch): match lead by arthaleads_lead_id then last-10-digit phone, call re-send dedupe across sources, apply crm_outcome (booking/status forward-only/followUpDate/siteVisitDate) with note+activity+push on existing leads, sanitize email/name (500s). Files: backend/routes/webhookRoutes.js, new backend/tests/vistrowCallResult.db.test.js, backend/package.json (test:vistrow).
+
 
 
 
