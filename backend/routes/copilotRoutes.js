@@ -180,8 +180,63 @@ router.get("/features", async (req, res, next) => {
   try {
     const org = await loadOrg(req);
     const on = !!org?.copilot?.beta && org.copilot.enabled !== false;
-    res.json({ success: true, features: { brief: on && org.copilot.brief !== false, drafts: on && org.copilot.drafts !== false && !!process.env.OPENAI_API_KEY } });
+    res.json({ success: true, features: { brief: on && org.copilot.brief !== false, drafts: on && org.copilot.drafts !== false && !!process.env.OPENAI_API_KEY, suggestions: on && org.copilot.actions !== false } });
   } catch (err) { next(err); }
+});
+
+// POST /api/copilot/suggestions/:leadId { action: "save" | "dismiss", fields: [...] }
+// The Artha card on a lead: details the customer stated on WhatsApp that
+// differ from the lead's values. "save" applies the chosen ones through the
+// normal lead update (history entry signed "(via Artha)"); "dismiss" drops
+// them and remembers not to suggest those values again. Same visibility as
+// the lead itself.
+const SUGGEST_KEYS = ["propertyType", "purpose", "bhk", "preferredLocation", "budget"];
+const lakhs = (n) => (n >= 1e7 ? `${+(n / 1e7).toFixed(2)} Cr` : `${+(n / 1e5).toFixed(1)} L`);
+function budgetLine(b) {
+  if (!b || (!b.min && !b.max)) return "empty";
+  if (b.min && b.max && b.min !== b.max) return `Rs ${lakhs(b.min)} to ${lakhs(b.max)}`;
+  return `Rs ${lakhs(b.max || b.min)}`;
+}
+router.post("/suggestions/:leadId", async (req, res) => {
+  try {
+    if (!isId(req.params.leadId)) return res.status(404).json({ success: false, message: "Lead not found." });
+    const org = await loadOrg(req);
+    if (!org?.copilot?.beta || org.copilot.enabled === false || org.copilot.actions === false || org.copilotWritesDisabled) {
+      return res.status(403).json({ success: false, message: "Artha suggestions are not turned on for your company." });
+    }
+    const Lead = require("../models/Lead");
+    const lead = await Lead.findOne({ _id: req.params.leadId, orgId: req.orgId }).select("assignedTo createdBy orgId arthaSuggest propertyType purpose bhk preferredLocation budget").lean();
+    if (!lead || !visibility.canSeeLead(req.user, lead)) return res.status(404).json({ success: false, message: "Lead not found." });
+    const pending = lead.arthaSuggest?.fields || {};
+    const action = req.body?.action === "dismiss" ? "dismiss" : "save";
+    const wanted = (Array.isArray(req.body?.fields) ? req.body.fields : Object.keys(pending)).filter((k) => SUGGEST_KEYS.includes(k) && k in pending);
+    if (!wanted.length) return res.json({ success: true, applied: [], message: "Nothing to change." });
+
+    const unset = Object.fromEntries(wanted.map((k) => [`arthaSuggest.fields.${k}`, ""]));
+    if (action === "dismiss") {
+      const push = Object.fromEntries(wanted.map((k) => [`arthaSuggest.dismissed.${k}`, pending[k]]));
+      await Lead.updateOne({ _id: lead._id }, { $unset: unset, $push: push });
+      return res.json({ success: true, dismissed: wanted });
+    }
+    const updates = {};
+    for (const k of wanted) updates[k] = k === "budget" ? { min: pending.budget.min || 0, max: pending.budget.max || 0, currency: "INR" } : pending[k];
+    const leadService = require("../services/leadService");
+    const { runWith } = require("../utils/requestContext");
+    const LABEL = { propertyType: "Property type", purpose: "Purpose", bhk: "BHK", preferredLocation: "Preferred location", budget: "Budget" };
+    const show = (k, v) => k === "budget" ? budgetLine(v) : (v && v !== "N/A" ? String(v) : "empty");
+    const changes = wanted.map((k) => `${LABEL[k]}: ${show(k, lead[k])} to ${show(k, updates[k])}`).join("; ");
+    const updated = await runWith({ via: "artha" }, async () => {
+      const u = await leadService.update(String(lead._id), { ...updates }, req.user);
+      // Field edits leave no history of their own, so the note is the record.
+      await leadService.addNote(String(lead._id), `Updated from the customer's WhatsApp messages. ${changes}.`, req.user);
+      return u;
+    });
+    await Lead.updateOne({ _id: lead._id }, { $unset: unset });
+    res.json({ success: true, applied: wanted, lead: updated });
+  } catch (err) {
+    logger.error(`[copilot] suggestion failed: ${err.message}`);
+    res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : "Couldn't save that right now. Try again." });
+  }
 });
 
 // POST /api/copilot/draft-reply { conversationId } - Artha writes the next

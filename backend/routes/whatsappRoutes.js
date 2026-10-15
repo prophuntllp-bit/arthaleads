@@ -626,7 +626,7 @@ async function maybeSendAwayMessage(org, agent, conversation) {
 // (booking, siteVisitDone, activities, notes, followUpDate, firstContactedAt).
 // One shared field list rather than a separate one per route, so the two
 // views can never quietly drift into scoring a lead on incomplete data.
-const LEAD_SCORE_FIELDS = "name status priority propertyType bhk preferredLocation budget source phone "
+const LEAD_SCORE_FIELDS = "name status priority propertyType bhk preferredLocation budget source phone arthaSuggest "
   + "booking siteVisitDone activities notes followUpDate firstContactedAt";
 
 // Attaches the same rule-based hotness score the Dashboard's "Hot Today"
@@ -1776,18 +1776,36 @@ function scheduleLeadEnrich(org, conversationId) {
   enrichTimers.set(id, timer);
 }
 
+// Fields the customer stated that differ from a real value already on the
+// lead, minus anything the team dismissed before.
+const SUGGESTABLE = ["propertyType", "purpose", "bhk", "preferredLocation", "budget"];
+const sameValue = (a, b) => (a && typeof a === "object")
+  ? (a.min || 0) === (b?.min || 0) && (a.max || 0) === (b?.max || 0)
+  : String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+const isBlank = (k, v) => k === "budget" ? !(v?.min || v?.max) : (!v || v === "N/A");
+function suggestionsFrom(lead, mapped, setOps) {
+  const out = {};
+  const dismissed = lead.arthaSuggest?.dismissed || {};
+  for (const k of SUGGESTABLE) {
+    const said = mapped[k];
+    if (said === undefined || isBlank(k, said) || k in setOps) continue;
+    if (isBlank(k, lead[k]) || sameValue(said, lead[k])) continue;
+    if ((dismissed[k] || []).some((d) => sameValue(said, d))) continue;
+    out[k] = k === "budget" ? { min: said.min || 0, max: said.max || 0 } : said;
+  }
+  return out;
+}
+
 async function enrichWhatsAppLead(conversation, recentMsgs, { org } = {}) {
   if (!conversation.leadId || !process.env.OPENAI_API_KEY) return;
   try {
     const lead = await Lead.findById(conversation.leadId)
-      .select("name source propertyType purpose bhk budget preferredLocation leadSourceLabel").lean();
+      .select("name source propertyType purpose bhk budget preferredLocation leadSourceLabel arthaSuggest").lean();
     if (!lead || lead.source !== "WhatsApp") return;
     const project = org ? await projectForChat(org, conversation, lead) : null;
     const projectType = OPTS.PROPERTY_TYPE.includes(project?.propertyType) && project.propertyType !== "N/A" ? project.propertyType : null;
-    const needsName = !looksLikeRealName(lead.name) || !looksLikeRealName(conversation.contactName);
-    const alreadyComplete = !needsName && lead.propertyType !== "N/A" && lead.purpose !== "N/A" && lead.bhk !== "N/A"
-      && lead.preferredLocation && (lead.budget?.min || lead.budget?.max);
-    if (alreadyComplete) return;
+    // No "already complete" shortcut any more: a filled-in lead can still have
+    // a customer who now says something different (see arthaSuggest below).
 
     // The first message of an ad chat is the ad's pre-written text, not the
     // customer's own words: label it so, and never take a location from it.
@@ -1812,6 +1830,7 @@ async function enrichWhatsAppLead(conversation, recentMsgs, { org } = {}) {
             '"budget_min": number, "budget_max": number, "location": string, ' +
             '"customer_name": the customer\'s own name, ONLY if it\'s clearly them stating their own name — introducing themselves, signing off, a direct "my name is...", or even just a bare name typed alone with nothing else that could explain it as an answer to something else you asked. Never a name mentioned about someone else, and never something that plausibly answers your last question instead (a place, a budget word, a yes/no).}. ' +
             "Never take the location from the pre-written ad message; only from what the customer typed themselves. " +
+            "If the customer changed their mind during the chat, give their latest answer. " +
             "If nothing is clearly stated, return {}." },
           { role: "user", content: transcript },
         ],
@@ -1842,8 +1861,17 @@ async function enrichWhatsAppLead(conversation, recentMsgs, { org } = {}) {
     const statedName = String(parsed.customer_name || "").trim().slice(0, 80);
     if (statedName && looksLikeRealName(statedName) && !looksLikeRealName(lead.name)) setOps.name = statedName;
 
-    if (Object.keys(setOps).length) {
-      await Lead.updateOne({ _id: conversation.leadId }, { $set: setOps });
+    // What the customer said that differs from a value the lead already holds
+    // goes to the Artha card for a person to confirm, never straight in.
+    const suggest = suggestionsFrom(lead, mapped, setOps);
+    const suggestOps = Object.keys(suggest).length
+      ? { "arthaSuggest.fields": suggest, "arthaSuggest.at": new Date() }
+      : null;
+    const update = {};
+    if (Object.keys(setOps).length || suggestOps) update.$set = { ...setOps, ...(suggestOps || {}) };
+    if (!suggestOps && lead.arthaSuggest?.fields) update.$unset = { "arthaSuggest.fields": "" };
+    if (Object.keys(update).length) {
+      await Lead.updateOne({ _id: conversation.leadId }, update);
     }
     // A separate collection (and a display name most of the Inbox reads
     // straight off the conversation, not the lead) — the same "their own
@@ -4061,5 +4089,5 @@ router._triggerBotReply = triggerBotReply;
 router._resolveAgentForConversation = resolveAgentForConversation;
 
 // For tests only (tests/whatsappLeadCapture.db.test.js).
-router._leadCapture = { enrichWhatsAppLead, typedByCustomer };
+router._leadCapture = { enrichWhatsAppLead, typedByCustomer, suggestionsFrom };
 module.exports = router;
