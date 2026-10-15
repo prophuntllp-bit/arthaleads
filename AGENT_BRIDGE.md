@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
-- [claude] 2026-10-15 IST: Artha fixes: open lead refreshes after Artha changes/undo, project-lead links open, create_lead records lead id for undo. backend/actions/createLead.js, frontend LeadDetail.jsx, HelpBot.jsx, Leads.jsx, copilot tools records
 
 
 
@@ -78,6 +77,8 @@ Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-15 IST (68645ec): Artha fixes. Open lead window reloads after Artha apply/undo (LeadDetail + useAppRefresh). New GET /api/projects/lead/:leadId (visibility-checked) so Artha links to project leads open; Follow-ups/Calls now handle openLeadId while mounted. create_lead now records leadId so Undo removes the lead.
 
 - [Claude Code] 2026-10-14 IST, 283c2fb: /blog topic filter is TopicMenu (styled, not a native select) and asks GET /blog/categories?inUse=1 (only categories with a published post). Default /blog/categories response unchanged (CRM editor, CaseStudies).
 
