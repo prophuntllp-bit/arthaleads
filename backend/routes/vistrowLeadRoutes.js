@@ -1,4 +1,5 @@
 // Lead-level view of the Vistrow Voice integration, for the lead page.
+// Live since 06c0327 (its Railway deploy was cancelled; redeployed 15 Oct 2026).
 // Mounted at /api/integrations/vistrow-outbound/leads (before the admin-only
 // owner controls, which never touch leads).
 //
