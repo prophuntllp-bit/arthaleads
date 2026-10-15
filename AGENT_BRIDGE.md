@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-15 IST: Vistrow outbound owner decisions (WhatsApp emit after enrichment or 60 s with first message, pause WhatsApp bot during the Vistrow call + internal note/resume on result, Google leads callable, repeat enquiries re-emitted, recovered Facebook leads emitted, faster first retry + outbound worker on staging). Files: backend/services/vistrowOutbound/*, utils/emitLeadCreated.js, routes/whatsappRoutes.js, routes/webhookRoutes.js, utils/googleAdsPoller.js, utils/vistrowCallResult.js, models (Lead/WaConversation), server.js/jobs boot, frontend VistrowOutboundSection.jsx, new tests.
+
 
 
 
