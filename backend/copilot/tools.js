@@ -124,7 +124,7 @@ const CHOOSE_TOOL = tool("ask_user_to_choose",
   }, ["question", "lead_ids"]);
 
 const BRIEF_TOOL = tool("morning_brief",
-  "The user's day, ranked: site visits today, unread WhatsApp chats, missed follow-ups, new leads not contacted, follow-ups due today, each with the reason. Managers also get a per-person team summary. Use for 'who should I call first', 'plan my day', 'what's pending'.");
+  "The user's day, ranked. needsAttention: deals slipping (hot leads gone quiet, visits with no follow-up, missed visits, new leads waiting, WhatsApp chats about to lose the reply window; managers see the whole team with owners). callFirst: site visits today, unread WhatsApp chats, missed follow-ups, new leads not contacted, follow-ups due today, each with the reason. Managers also get a per-person team summary. Use for 'who should I call first', 'plan my day', 'what's pending', 'what's at risk', 'which deals are slipping'.");
 
 const briefOn = (org) => isPilot(org) && org?.copilot?.brief !== false;
 
@@ -245,7 +245,7 @@ async function runTool(name, args, ctx) {
     case "morning_brief": {
       if (!briefOn(ctx.org)) return { result: { error: "Not available." }, records };
       const brief = briefForModel(await buildBrief(user));
-      remember(brief.callFirst.filter((x) => x.kind !== "chat"));
+      remember([...brief.needsAttention, ...brief.callFirst].filter((x) => x.kind !== "chat"));
       return { result: brief, records };
     }
     case "ask_user_to_choose": {

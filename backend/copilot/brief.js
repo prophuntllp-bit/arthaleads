@@ -12,6 +12,7 @@ const Project = require("../models/Project");
 const User = require("../models/User");
 const WaConversation = require("../models/WaConversation");
 const { istTodayRange, istDateKey } = require("../utils/datetime");
+const { buildRisks } = require("./risks");
 
 const CLOSED = ["Closed Won", "Closed Lost"];
 const NEW_WINDOW_DAYS = 7;
@@ -53,6 +54,11 @@ async function buildBrief(user, now = new Date()) {
   const fields = "name phone status followUpDate followUp followUp2 siteVisitDate createdAt project";
   const projSelect = (q) => ProjectLead.find(q).select(fields).populate("project", "name");
 
+  // Risks and the team table don't depend on the lists below: start them now
+  // so the whole brief takes as long as its slowest part, not the sum.
+  const lead = user.role === "admin" || user.role === "manager";
+  const risksP = buildRisks(user, now);
+  const teamP = lead ? teamSummary(user, { start, end, newSince }) : null;
   const [visits, pVisits, overdue, pOverdue, dueToday, pDueToday, fresh, pFresh, chats, counts] = await Promise.all([
     Lead.find({ ...leadBase, siteVisitDate: today, siteVisitDone: { $ne: true } }).select(fields).sort({ siteVisitDate: 1 }).limit(10).lean(),
     projSelect({ ...projBase, siteVisitDate: today, siteVisitDone: { $ne: true } }).sort({ siteVisitDate: 1 }).limit(10).lean(),
@@ -102,14 +108,20 @@ async function buildBrief(user, now = new Date()) {
   for (const { l, kind, at } of dt) add(leadItem(l, kind, "today", `Follow-up due today at ${timeIST(at)}.`, at));
 
   const [ovL, ovP, tdL, tdP, nwL, nwP, chatN] = counts;
+  // Deals slipping (copilot/risks.js) go in their own "Needs attention" list;
+  // a lead shown there is not repeated in "who to call first".
+  const risks = await risksP;
+  const risky = new Set(risks.list.map((r) => `${r.kind}:${r.id}`));
+  const callFirst = items.filter((it) => !risky.has(`${it.kind}:${it.id}`));
   const brief = {
     date: istDateKey(now),
     counts: { visits: visits.length + pVisits.length, chats: chatN, overdue: ovL + ovP, today: tdL + tdP, fresh: nwL + nwP },
-    items: items.slice(0, MAX_ITEMS),
-    more: Math.max(0, items.length - MAX_ITEMS),
+    risks: { total: risks.total, counts: risks.counts, list: risks.list },
+    items: callFirst.slice(0, MAX_ITEMS),
+    more: Math.max(0, callFirst.length - MAX_ITEMS),
     team: null,
   };
-  if (user.role === "admin" || user.role === "manager") brief.team = await teamSummary(user, { start, end, newSince });
+  if (lead) brief.team = withRisks(await teamP, risks.byOwner);
   return brief;
 }
 
@@ -129,9 +141,16 @@ async function teamSummary(user, { start, end, newSince }) {
   const users = await User.find({ orgId: user.orgId, isActive: true }).select("name role").lean();
   const byId = new Map(rows.map((r) => [String(r._id), r]));
   return users
-    .map((u) => { const r = byId.get(String(u._id)) || {}; return { id: String(u._id), name: u.name, overdue: r.overdue || 0, today: r.today || 0, fresh: r.fresh || 0, visits: r.visits || 0 }; })
-    .filter((r) => r.overdue || r.today || r.fresh || r.visits)
-    .sort((a, b) => (b.overdue + b.fresh) - (a.overdue + a.fresh) || a.name.localeCompare(b.name))
+    .map((u) => { const r = byId.get(String(u._id)) || {}; return { id: String(u._id), name: u.name, overdue: r.overdue || 0, today: r.today || 0, fresh: r.fresh || 0, visits: r.visits || 0 }; });
+}
+
+// Adds each person's at-risk count (copilot/risks.js), keeps the people with
+// something to do, busiest first.
+function withRisks(rows, riskBy = {}) {
+  return rows
+    .map((r) => ({ ...r, atRisk: riskBy[r.id] || 0 }))
+    .filter((r) => r.overdue || r.today || r.fresh || r.visits || r.atRisk)
+    .sort((a, b) => (b.atRisk + b.overdue + b.fresh) - (a.atRisk + a.overdue + a.fresh) || a.name.localeCompare(b.name))
     .slice(0, 12);
 }
 
@@ -141,6 +160,8 @@ function briefForModel(brief) {
   return {
     date: brief.date,
     counts: brief.counts,
+    needsAttention: (brief.risks?.list || []).map(({ id, kind, name, type, reason, owner }) => ({ id, kind, name, type, reason, owner })),
+    atRiskTotal: brief.risks?.total || 0,
     callFirst: brief.items.map(({ id, kind, name, tag, reason, status, projectName }) => ({ id, kind, name, tag, reason, status, project: projectName || undefined })),
     more: brief.more,
     team: brief.team,

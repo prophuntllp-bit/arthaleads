@@ -37,6 +37,16 @@ if (!isStaging) {
   const lead = await Lead.findOne({ orgId: org._id, name: "Test Lead 1" });
   await Lead.updateOne({ _id: lead._id }, { $set: { bhk: "2BHK", preferredLocation: "Kharghar", "budget.max": 9000000, followUpDate: new Date(Date.now() - 26 * 3600e3) } });
 
+  // Sample deals slipping, one per risk alert (copilot/risks.js).
+  const D = 24 * 3600e3, at = (ms) => new Date(Date.now() - ms);
+  // Straight to the collection: Mongoose treats createdAt as fixed and would drop it.
+  const setLead = (name, fields) => Lead.collection.updateOne({ orgId: org._id, name }, { $set: fields });
+  await setLead("Test Lead 2", { priority: "Hot", status: "Contacted", createdAt: at(4 * D) });
+  await setLead("Test Lead 3", { status: "Site Visit", siteVisitDate: at(2 * D), siteVisitDone: false });
+  await setLead("Test Lead 4", { status: "Site Visit", siteVisitDate: at(5 * D), siteVisitDone: true, createdAt: at(10 * D) });
+  await setLead("Test Lead 5", { createdAt: at(2 * D) });
+  await setLead("Test Lead 6", { createdAt: at(3 * D), assignedTo: null, assignedToName: "" });
+
   const phone = `91${String(lead.phone).replace(/\D/g, "").slice(-10)}`;
   let conv = await WaConversation.findOne({ orgId: org._id, contactPhone: phone });
   if (!conv) {
@@ -60,7 +70,7 @@ if (!isStaging) {
   await WaConversation.updateOne({ _id: conv._id }, { $set: { lastMessageAt: new Date(now - 30 * 60e3), lastMessagePreview: lines[2][2], unreadCount: 1 } });
 
   await mongoose.disconnect();
-  console.log("[staging-artha-demo] Artha pilot is on for Staging Demo Realty.");
+  console.log("[staging-artha-demo] Artha pilot is on for Staging Demo Realty (Test Leads 2-6 now show risk alerts).");
   console.log(`[staging-artha-demo] WhatsApp chat with ${lead.name} is ready in ${agent.name}'s Inbox (sign in as staging-agent@example.com).`);
   process.exit(0); // some models start timers on load; don't leave the console hanging
 })().catch((e) => { console.error("[staging-artha-demo] failed:", e.message); process.exit(1); });

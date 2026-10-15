@@ -5,7 +5,7 @@ import StatusBreakdown from "../components/dashboard/StatusBreakdown";
 import SourceDonut from "../components/dashboard/SourceDonut";
 import SourcePerformance from "../components/dashboard/SourcePerformance";
 import AutomationHealth from "../components/dashboard/AutomationHealth";
-import MorningBrief from "../components/dashboard/MorningBrief";
+import MorningBrief, { prefetchBrief } from "../components/dashboard/MorningBrief";
 import { InfoTip } from "../components/Tooltip";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
@@ -477,6 +477,7 @@ function describeRange(range) {
 export default function Dashboard() {
   useEffect(() => { document.title = "Dashboard - Arthaleads CRM"; }, []);
   const { user } = useAuth();
+  useEffect(() => { prefetchBrief(user?._id || user?.id || "").catch(() => {}); }, []); // eslint-disable-line react-hooks/exhaustive-deps -- in parallel with the other cards
   const [greeting, setGreeting] = useState(getGreeting());
 
   useEffect(() => {
