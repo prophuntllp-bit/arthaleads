@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
-- [claude] 2026-10-15 IST: Vistrow outbound owner decisions (WhatsApp emit after enrichment or 60 s with first message, pause WhatsApp bot during the Vistrow call + internal note/resume on result, Google leads callable, repeat enquiries re-emitted, recovered Facebook leads emitted, faster first retry + outbound worker on staging). Files: backend/services/vistrowOutbound/*, utils/emitLeadCreated.js, routes/whatsappRoutes.js, routes/webhookRoutes.js, utils/googleAdsPoller.js, utils/vistrowCallResult.js, models (Lead/WaConversation), server.js/jobs boot, frontend VistrowOutboundSection.jsx, new tests.
 
 
 
@@ -90,6 +89,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-15 IST (staging f8626f6, NOT on main): Vistrow hand-off owner decisions. (1) WhatsApp/CTWA leads are sent once after the chat's first AI read or 60 s (Lead.vistrowEmit + 15 s sweep in routes/whatsappRoutes.js, survives restarts), with read details, ad-less project match, custom_fields.whatsapp_first_message. (2) Vistrow queued:true on a WhatsApp lead pauses that chat's bot (WaConversation.botPausedReason 'vistrow_call', utils/vistrowBotPause.js); the /webhook/lead call result adds a team-only note (WaConversation.internalNotes, Inbox shows it, never sent) and resumes the bot only if still paused by us; 15 min safety resume; PATCH/muteNonBuyer clear the reason. (3) Google webhook + poller callable: routing source 'google' (campaign_id / project rules), off by default, UI rows in VistrowOutboundSection; origins may only route as their own source. (4) Known number starting a new WhatsApp chat = repeat enquiry (evt_re_<lead>_<ms>, enquiry_id, Idempotency-Key with it, 24 h rule kept). Website/Facebook/Google already create a new lead after the 2-min retry window. (5) Facebook 'N/A' leads are sent after the 45 s self-heal (revives the never-sent invalid_phone row). (6) First retry also runs in-process; outbound worker + sweep now start regardless of BACKGROUND_JOBS (VISTROW_OUTBOUND_WORKER=off stops them; docs/STAGING.md). BUG FIXED on the way (also on main!): store.mongo claim never selected routingInputs (select:false), so EVERY auto-call was downgraded to auto_call:false 'changed_before_send' at send time. VISTROW SIDE still needed: its receiver keys ArthaLeads leads on org:lead_id (must use enquiry_id for repeats) and only knows website/facebook/whatsapp (Google leads get no route). Test: tests/vistrowOwnerDecisions.db.test.js (15; all fail on old code), added to test:vistrow; seed-staging.js added to the paths guard manifest (no longer failing). npm test all green.
 
 - [claude] 2026-10-15 IST (staging c23affe7, cherry-picked to main f427f9e8): frontend/index.html Organization JSON-LD: sameAs adds the G2 profile (g2.com/products/arthaleads/reviews); parentOrganization = Vistrow Technologies (vistrow.com, linkedin.com/company/133104029). Verified on staging (home + /pricing carry it, JSON parses). Blog categories checked: no "CRM Guides" exists; only CRM Tips, Real Estate Sales, WhatsApp Marketing are in use; empty "Real Estate" and "Real Estate Tips" stay hidden (inUse=1 menu, not in sitemap), left untouched.
 
