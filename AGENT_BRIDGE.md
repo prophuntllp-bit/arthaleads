@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
-- [claude] 2026-10-15 IST: WhatsApp lead details read from every chat (bot, button flow, person), location only from customer-typed words, property type from the chat's project while empty. On `staging` first. backend/routes/whatsappRoutes.js (enrichWhatsAppLead, scheduleLeadEnrich), tests/whatsappLeadCapture.db.test.js.
 
 
 
@@ -86,6 +85,8 @@ Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-15 IST (staging bf7a21a, merged to main 8e5ebbd): WhatsApp lead details are read from every chat (scheduleLeadEnrich, debounced 20 s after any customer text/tap), not only AI-bot replies. Location saved only if the customer typed it (the ad's pre-written opener is labelled and excluded); property type from the chat's project only while empty, and the customer's words replace that guess (never a person's value). routes/whatsappRoutes.js exposes router._leadCapture for tests/whatsappLeadCapture.db.test.js. Seen in live logs after deploy, unrelated: [enablex webhook] VersionError on concurrent lead.save of call activities.
 
 - [claude] 2026-10-15 IST (staging 6f2dc39, 6f72c0f, cf0f2cb; merged to main 0be586c): Artha Phase 3c risk alerts. backend/copilot/risks.js (code only): hot_cold, visit_silent, visit_missed, new_waiting, chat_closing, unassigned_waiting (managers, one summary line). 'Needs attention' box + 'At risk' team column in MorningBrief; morning_brief tool returns needsAttention. Brief speed: Dashboard prefetches /copilot/brief on open (prefetchBrief, keyed by user), sessionStorage cache per user, placeholder, risks/team computed in parallel. Verified on staging and live. Test: tests/copilotRisks.db.test.js.
 
