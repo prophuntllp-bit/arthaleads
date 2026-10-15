@@ -83,6 +83,8 @@ Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+- [Claude Code] 2026-10-15 IST, 9f40a33: CSP connect-src now includes https://api-staging.arthaleads.com (staging CRM login showed 'Connecting to server...' because the browser blocked the staging API). Staging-first: verified on staging, then merged. Staging test logins' password was reset in the staging DB (owner has it).
+
 - [Claude Code] 2026-10-15 IST: Vercel Deployment Protection turned off for the project (owner request): staging.arthaleads.com and app-staging.arthaleads.com open without a Vercel login; noindex headers verified. Never put real customer data on staging.
 
 - [Claude Code] 2026-10-15 IST, b85a381: STAGING IS LIVE. staging.arthaleads.com / app-staging.arthaleads.com (Vercel, branch staging, protected by Vercel login) and api-staging.arthaleads.com (Railway env staging, service arthaleads-staging, MongoDB mongo:7.0). Hostinger DNS records added. Staging DB seeded with backend/scripts/seed-staging.js (demo company, 3 users, 2 projects, 12 fake leads; guarded to staging only). First change shipped staging-first: committed on staging (worktree E:/PROPHUNT CRM-staging), deployed and run on staging, then fast-forwarded to main.
