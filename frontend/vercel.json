@@ -27,6 +27,28 @@
       ],
       "destination": "/robots-app.txt",
       "permanent": false
+    },
+    {
+      "source": "/robots.txt",
+      "has": [
+        {
+          "type": "host",
+          "value": "staging.arthaleads.com"
+        }
+      ],
+      "destination": "/robots-app.txt",
+      "permanent": false
+    },
+    {
+      "source": "/robots.txt",
+      "has": [
+        {
+          "type": "host",
+          "value": "app-staging.arthaleads.com"
+        }
+      ],
+      "destination": "/robots-app.txt",
+      "permanent": false
     }
   ],
   "rewrites": [
@@ -146,6 +168,36 @@
         {
           "type": "host",
           "value": "app.arthaleads.com"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "app-staging.arthaleads.com"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "staging.arthaleads.com"
         }
       ],
       "headers": [

@@ -24,6 +24,7 @@ if (process.env.NODE_ENV === "production" && !/^[0-9a-f]{64}$/i.test(process.env
     "Set CRYPTO_KEY in this service's environment variables — see backend/.env.example.");
 }
 console.log("[BOOT] Loading modules...");
+const { COOKIE_NAME, COOKIE_DOMAIN } = require("./utils/authCookie");
 const express    = require("express");
 const cors       = require("cors");
 const helmet     = require("helmet");
@@ -45,7 +46,12 @@ const orgRoutes = require("./routes/orgRoutes");
 const pushRoutes = require("./routes/pushRoutes");
 const blogRoutes = require("./routes/blogRoutes");
 const blogController = require("./controllers/blogController");
-require("./utils/scheduler");
+// Staging sets BACKGROUND_JOBS=off: no cron jobs (reminders, push, backups,
+// Facebook token refresh, Google Ads polling, blog sync) and no outbound
+// worker, so a test environment can never message, charge or back up anything.
+const BACKGROUND_JOBS = process.env.BACKGROUND_JOBS !== "off";
+if (BACKGROUND_JOBS) require("./utils/scheduler");
+else console.log("[BOOT] BACKGROUND_JOBS=off: scheduler and outbound worker disabled");
 
 console.log("[BOOT] Modules loaded, creating app...");
 const app = express();
@@ -68,7 +74,7 @@ connectDB().then(async () => {
   console.log("[BOOT] DB connected");
   // Retries/recovery for outbound lead deliveries. Idles unless an org has
   // enabled the Vistrow outbound integration (nothing is ever queued otherwise).
-  require("./services/vistrowOutbound").startWorker();
+  if (BACKGROUND_JOBS) require("./services/vistrowOutbound").startWorker();
   // One-time migration: clear auto-defaulted "Not Contacted" remarks (never manually set)
   try {
     const mongoose = require("mongoose");
@@ -242,7 +248,7 @@ app.use(cors({
 // decoded: an unverified token would let anyone mint a fresh bucket per request
 // and skip the limit entirely.
 function rateLimitKey(req) {
-  const token = req.cookies?.crm_token
+  const token = req.cookies?.[COOKIE_NAME]
     || (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7) : null);
   if (token) {
     try {

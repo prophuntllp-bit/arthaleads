@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import api, { setAuthInProgress, setToken } from "../services/api";
 import axios from "axios";
+import { isMarketingHost } from "../utils/hosts";
 
 const AuthContext = createContext(null);
 
@@ -67,7 +68,7 @@ export function AuthProvider({ children }) {
     // The marketing site (www) never uses the session: every CRM route there
     // redirects to app.arthaleads.com (RequireAppHost in App.jsx). Checking it
     // anyway cost every visitor a request and a 401 console error.
-    if (["www.arthaleads.com", "arthaleads.com"].includes(window.location.hostname)) {
+    if (isMarketingHost()) {
       setLoading(false);
       return undefined;
     }

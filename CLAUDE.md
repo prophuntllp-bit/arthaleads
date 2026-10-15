@@ -48,7 +48,7 @@ This clips each cell's content at the column boundary so long text goes hidden b
 
 ## Git Workflow
 
-Always commit and push directly to the `main` branch. Do not use feature branches unless the user explicitly asks for one.
+Staging first (owner rule, 15 Oct 2026): commit and push every change to the `staging` branch, check it on staging.arthaleads.com / app-staging.arthaleads.com, and only then merge `staging` into `main` (which deploys live). Full flow and setup: docs/STAGING.md. Only an urgent live fix the owner explicitly approves may go straight to `main` (merge it back into `staging` after). Do not create other branches unless the user explicitly asks. If staging is not reachable, tell the owner instead of skipping it.
 
 ## graphify
 

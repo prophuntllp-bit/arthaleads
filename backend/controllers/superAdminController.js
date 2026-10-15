@@ -1,4 +1,5 @@
 ﻿// controllers/superAdminController.js
+const { COOKIE_NAME, COOKIE_DOMAIN } = require("../utils/authCookie");
 const mongoose    = require("mongoose");
 const jwt         = require("jsonwebtoken");
 const Organization = require("../models/Organization");
@@ -756,7 +757,7 @@ const superAdminController = {
       // frontend before it gets overwritten below - "Exit Impersonation"
       // restores it via /auth/restore-admin-session instead of forcing a
       // fresh login.
-      const superAdminToken = req.cookies?.crm_token || null;
+      const superAdminToken = req.cookies?.[COOKIE_NAME] || null;
 
       await logAudit("impersonate", req, {
         targetOrg:      org._id || req.params.id,
@@ -768,11 +769,11 @@ const superAdminController = {
 
       const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, { expiresIn: "2h" });
 
-      res.cookie("crm_token", token, {
+      res.cookie(COOKIE_NAME, token, {
         httpOnly: true,
         secure:   process.env.NODE_ENV === "production",
         sameSite: "lax",
-        domain:   process.env.NODE_ENV === "production" ? ".arthaleads.com" : undefined,
+        domain:   COOKIE_DOMAIN,
         maxAge:   2 * 60 * 60 * 1000,
       });
 

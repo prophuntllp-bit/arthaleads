@@ -4,7 +4,9 @@
 // split. Every "Sign In" / "Get Started" CTA on a marketing page must be a
 // plain cross-origin <a>, not a React Router <Link>, since the target is a
 // different origin the SPA router can't navigate to client-side.
-export const CRM_URL = "https://app.arthaleads.com";
+import { APP_ORIGIN } from "./hosts";
+// app.arthaleads.com on live, app-staging.arthaleads.com on staging (utils/hosts.js).
+export const CRM_URL = APP_ORIGIN;
 export const CRM_LOGIN_URL  = `${CRM_URL}/login`;
 export const CRM_SIGNUP_URL = `${CRM_URL}/signup`;
 

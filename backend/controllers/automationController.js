@@ -21,6 +21,7 @@ function renderPopupScript(payload, targetOrigin) {
 </html>`;
 }
 
+const { COOKIE_NAME, COOKIE_DOMAIN } = require("../utils/authCookie");
 const crypto = require("crypto");
 const Automation = require("../models/Automation");
 const { AppError } = require("../middlewares/errorHandler");
@@ -459,7 +460,7 @@ const automationController = {
     try {
       // Cookie is sent automatically by browser for same-origin popup navigation;
       // fall back to query param for backward compatibility
-      const rawToken = req.cookies?.crm_token || req.query.token || "";
+      const rawToken = req.cookies?.[COOKIE_NAME] || req.query.token || "";
       const user = await automationService.verifyPopupToken(rawToken);
       // Pass only userId - never embed the session token in the OAuth state (URL-visible)
       const origin = req.query.origin || "";
@@ -554,7 +555,7 @@ const automationController = {
   async googleConnect(req, res, next) {
     res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
     try {
-      const rawToken = req.cookies?.crm_token || req.query.token || "";
+      const rawToken = req.cookies?.[COOKIE_NAME] || req.query.token || "";
       const user = await automationService.verifyPopupToken(rawToken);
       const origin = req.query.origin || "";
       const state = automationService.createGoogleState({

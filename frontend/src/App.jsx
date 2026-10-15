@@ -21,6 +21,7 @@ import { isCapacitorNative, setupCapacitorPush } from "./utils/capacitorPush";
 import api from "./services/api";
 import { hydrateLeadOptions } from "./utils/constants";
 import { CRM_URL, waLink, WA_MESSAGES } from "./utils/crmLinks";
+import { isAppHost, isMarketingHost } from "./utils/hosts";
 import toast from "react-hot-toast";
 
 // ── Marketing / CRM subdomain split ───────────────────────────────────────────
@@ -28,13 +29,7 @@ import toast from "react-hot-toast";
 // lives on www.arthaleads.com / arthaleads.com. Gating checks exact production
 // hostnames only — localhost and *.vercel.app previews are never gated, so
 // local dev and PR previews keep the full router available.
-const MARKETING_HOSTS = ["www.arthaleads.com", "arthaleads.com"];
-function isAppHost() {
-  return window.location.hostname === "app.arthaleads.com";
-}
-function isMarketingHost() {
-  return MARKETING_HOSTS.includes(window.location.hostname);
-}
+// Hostnames (production and staging) live in utils/hosts.js.
 
 // Refresh the lead dropdown options from the backend once per page load, so the
 // client always offers exactly what the API accepts. Falls back silently to the

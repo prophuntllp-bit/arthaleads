@@ -78,11 +78,12 @@ import "@fontsource/inter/500.css";
 import "@fontsource/inter/600.css";
 import "@fontsource/inter/700.css";
 import "./styles.css";
+import { isAppHost, isMarketingHost } from "./utils/hosts";
 
 // Google sign-in is only used on /login and /signup, which live on
 // app.arthaleads.com. On the marketing site the provider would still load
 // Google's ~100 KB client script on every page for nothing.
-const IS_MARKETING_HOST = ["www.arthaleads.com", "arthaleads.com"].includes(window.location.hostname);
+const IS_MARKETING_HOST = isMarketingHost();
 const GoogleAuth = ({ children }) => IS_MARKETING_HOST
   ? children
   : <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>{children}</GoogleOAuthProvider>;
@@ -96,7 +97,7 @@ const GoogleAuth = ({ children }) => IS_MARKETING_HOST
 // page has rendered its footer. Until then, the pages' own "scroll to top on
 // mount" must not yank a visitor who has already started reading.
 const rootEl = document.getElementById("root");
-if (rootEl.hasAttribute("data-prerendered") && window.location.hostname === "app.arthaleads.com") {
+if (rootEl.hasAttribute("data-prerendered") && isAppHost()) {
   // The CRM host serves the same files for / and the marketing paths (they
   // redirect to /login or the marketing site): never show marketing copy there.
   rootEl.removeAttribute("data-prerendered");
@@ -168,12 +169,12 @@ const reactReady = new Promise((resolve) => {
   requestAnimationFrame(() => requestAnimationFrame(resolve));
   // Hidden tabs and some crawlers never run animation frames; don't let the
   // splash cover the marketing site forever because of that.
-  if (window.location.hostname !== "app.arthaleads.com") setTimeout(resolve, 400);
+  if (!isAppHost()) setTimeout(resolve, 400);
 });
 // The marketing site skips the 1.8s minimum: visitors (and Google's page-speed
 // measurement) should see the page the moment it has content. It waits only
 // until the routed page has painted a heading or nav, capped at 1.5s.
-const isCrmHost = window.location.hostname === "app.arthaleads.com";
+const isCrmHost = isAppHost();
 const minDisplay = isCrmHost
   ? new Promise((resolve) => setTimeout(resolve, 1800))
   : new Promise((resolve) => {

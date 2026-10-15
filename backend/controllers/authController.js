@@ -1,4 +1,5 @@
 ﻿const crypto      = require("crypto");
+const { COOKIE_NAME, COOKIE_DOMAIN } = require("../utils/authCookie");
 const jwt         = require("jsonwebtoken");
 const authService = require("../services/authService");
 const accountDeletion = require("../services/accountDeletionService");
@@ -51,13 +52,13 @@ const cookieOptions = () => ({
   httpOnly: true,
   secure:   process.env.NODE_ENV === "production",
   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  domain:   process.env.NODE_ENV === "production" ? ".arthaleads.com" : undefined,
+  domain:   COOKIE_DOMAIN,
   maxAge:   30 * 24 * 60 * 60 * 1000, // 30 days in ms
 });
 
 // Helper: set auth cookie + respond
 function sendAuthResponse(res, statusCode, data) {
-  res.cookie("crm_token", data.token, cookieOptions());
+  res.cookie(COOKIE_NAME, data.token, cookieOptions());
   res.status(statusCode).json({ success: true, ...data });
 }
 
@@ -222,15 +223,15 @@ const authController = {
   async logout(req, res) {
     const isProd = process.env.NODE_ENV === "production";
     // Clear cookie matching exactly how it was SET (domain + sameSite must match)
-    res.clearCookie("crm_token", {
+    res.clearCookie(COOKIE_NAME, {
       httpOnly: true,
       secure:   isProd,
       sameSite: isProd ? "none" : "lax",
-      domain:   isProd ? ".arthaleads.com" : undefined,
+      domain:   COOKIE_DOMAIN,
       expires:  new Date(0),
     });
     // Safety net: also clear without domain in case browser stored it on the exact host
-    res.clearCookie("crm_token", {
+    res.clearCookie(COOKIE_NAME, {
       httpOnly: true,
       secure:   isProd,
       sameSite: isProd ? "none" : "lax",
@@ -265,7 +266,7 @@ const authController = {
         return next(new AppError("Invalid session", 401));
       }
 
-      res.cookie("crm_token", token, cookieOptions());
+      res.cookie(COOKIE_NAME, token, cookieOptions());
       res.json({ success: true });
     } catch (err) {
       next(err);
@@ -290,11 +291,11 @@ const authController = {
       if (!target.isActive) return next(new AppError(`${target.name}'s account is deactivated.`, 400));
       if (target.role === "super_admin") return next(new AppError("You can't switch to that account.", 403));
 
-      const originalToken = req.cookies?.crm_token
+      const originalToken = req.cookies?.[COOKIE_NAME]
         || (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.split(" ")[1] : null);
 
       const token = jwt.sign({ id: target._id, actBy: req.user._id }, process.env.JWT_SECRET, { expiresIn: "2h" });
-      res.cookie("crm_token", token, { ...cookieOptions(), maxAge: 2 * 60 * 60 * 1000 });
+      res.cookie(COOKIE_NAME, token, { ...cookieOptions(), maxAge: 2 * 60 * 60 * 1000 });
 
       _auditLog(req, "user_switched", {
         targetUser: target._id, targetUserName: target.name,
@@ -323,7 +324,7 @@ const authController = {
       // hand the browser a fresh one and the person is not signed out of their own change.
       if (req.body?.newPassword) {
         const token = authService.signToken(req.user._id);
-        res.cookie("crm_token", token, cookieOptions());
+        res.cookie(COOKIE_NAME, token, cookieOptions());
         return res.json({ success: true, user, token });
       }
       res.json({ success: true, user });
