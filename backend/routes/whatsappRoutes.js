@@ -789,6 +789,10 @@ async function handleInbound(org, parsed) {
     $inc: { unreadCount: 1 },
   });
 
+  // Lead details (BHK, budget, location...) are read from every chat, not
+  // only the ones the AI bot answers.
+  if (["text", "button", "interactive"].includes(msgType) && conv.leadId) scheduleLeadEnrich(org, conv._id);
+
   // A lead that arrived with no ad details still names its project in the
   // ad's prefilled message, so give it a source rather than leaving it blank.
   // Meta can open the thread with a placeholder instead (an "unsupported" item
@@ -1729,19 +1733,69 @@ function looksLikeRealName(name) {
   return /[a-zA-Zऀ-ॿ]/.test(String(name || ""));
 }
 
-async function enrichWhatsAppLead(conversation, recentMsgs) {
+// The project a chat is about, for its property type: the assistant's only
+// project, else the one its ad or source label names (resolveSourceProject).
+async function projectForChat(org, conversation, lead) {
+  try {
+    const agent = conversation.agentId ? await WaAgent.findById(conversation.agentId).select("projectIds").lean() : null;
+    if (agent?.projectIds?.length === 1) {
+      return await Project.findOne({ _id: agent.projectIds[0], orgId: org._id }).select("name propertyType").lean();
+    }
+    const p = await resolveSourceProject(org, agent, conversation.campaignRef, lead);
+    return p ? await Project.findById(p._id).select("name propertyType").lean() : null;
+  } catch { return null; }
+}
+
+// Location must come from words the customer typed, not from the ad's
+// pre-written opening message ("details of the plots near Khopoli"): people
+// clicking a Khopoli ad often want somewhere else, and say so later.
+function typedByCustomer(location, laterInbound) {
+  const words = String(location || "").toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 4);
+  const text = laterInbound.join(" ").toLowerCase();
+  return words.length > 0 && words.some((w) => text.includes(w));
+}
+
+// Read the chat for lead details whoever is answering it: the AI bot, the
+// button flow or a person. Debounced, so a burst of messages costs one read.
+const ENRICH_DELAY_MS = 20 * 1000;
+const enrichTimers = new Map(); // conversationId -> timeout
+function scheduleLeadEnrich(org, conversationId) {
+  const id = String(conversationId);
+  clearTimeout(enrichTimers.get(id));
+  const timer = setTimeout(async () => {
+    enrichTimers.delete(id);
+    try {
+      const conversation = await WaConversation.findById(id).lean();
+      if (!conversation?.leadId) return;
+      const recent = await WaMessage.find({ conversationId: id }).sort({ timestamp: -1 }).limit(20)
+        .select("direction sender body timestamp").lean();
+      await enrichWhatsAppLead(conversation, recent.reverse(), { org });
+    } catch (err) { console.error("[WhatsApp Lead Capture] scheduled read failed:", err.message); }
+  }, ENRICH_DELAY_MS);
+  if (timer.unref) timer.unref();
+  enrichTimers.set(id, timer);
+}
+
+async function enrichWhatsAppLead(conversation, recentMsgs, { org } = {}) {
   if (!conversation.leadId || !process.env.OPENAI_API_KEY) return;
   try {
     const lead = await Lead.findById(conversation.leadId)
-      .select("name source propertyType purpose bhk budget preferredLocation").lean();
+      .select("name source propertyType purpose bhk budget preferredLocation leadSourceLabel").lean();
     if (!lead || lead.source !== "WhatsApp") return;
+    const project = org ? await projectForChat(org, conversation, lead) : null;
+    const projectType = OPTS.PROPERTY_TYPE.includes(project?.propertyType) && project.propertyType !== "N/A" ? project.propertyType : null;
     const needsName = !looksLikeRealName(lead.name) || !looksLikeRealName(conversation.contactName);
     const alreadyComplete = !needsName && lead.propertyType !== "N/A" && lead.purpose !== "N/A" && lead.bhk !== "N/A"
       && lead.preferredLocation && (lead.budget?.min || lead.budget?.max);
     if (alreadyComplete) return;
 
+    // The first message of an ad chat is the ad's pre-written text, not the
+    // customer's own words: label it so, and never take a location from it.
+    const first = await WaMessage.findOne({ conversationId: conversation._id, direction: "inbound" }).sort({ timestamp: 1 }).select("_id").lean();
+    const isPrefill = (m) => !!first && String(m._id) === String(first._id);
+    const laterInbound = recentMsgs.filter((m) => m.direction === "inbound" && !isPrefill(m)).map((m) => m.body || "");
     const transcript = recentMsgs
-      .map((m) => `${m.direction === "inbound" ? "Customer" : "Assistant"}: ${m.body}`)
+      .map((m) => `${m.direction === "inbound" ? (isPrefill(m) ? "Customer (pre-written ad message, not their own words)" : "Customer") : "Assistant"}: ${m.body}`)
       .join("\n").slice(0, 4000);
     if (!transcript.trim()) return;
 
@@ -1757,6 +1811,7 @@ async function enrichWhatsAppLead(conversation, recentMsgs) {
             '"purpose": one of Buy/Rent/Invest, "bhk": one of 1BHK/2BHK/3BHK/4BHK/5BHK+/Studio, ' +
             '"budget_min": number, "budget_max": number, "location": string, ' +
             '"customer_name": the customer\'s own name, ONLY if it\'s clearly them stating their own name — introducing themselves, signing off, a direct "my name is...", or even just a bare name typed alone with nothing else that could explain it as an answer to something else you asked. Never a name mentioned about someone else, and never something that plausibly answers your last question instead (a place, a budget word, a yes/no).}. ' +
+            "Never take the location from the pre-written ad message; only from what the customer typed themselves. " +
             "If nothing is clearly stated, return {}." },
           { role: "user", content: transcript },
         ],
@@ -1773,7 +1828,12 @@ async function enrichWhatsAppLead(conversation, recentMsgs) {
     // Only fill fields still at their neutral default — never overwrite a
     // real value, whichever earlier message or agent edit put it there.
     const setOps = {};
-    if (mapped.propertyType && lead.propertyType === "N/A")     setOps.propertyType = mapped.propertyType;
+    // The customer's own words win over the project's type (which only ever
+    // fills an empty field), so "I want a flat" after a plot ad corrects it.
+    const typeWasGuessed = lead.propertyType === "N/A" || (projectType && lead.propertyType === projectType);
+    if (mapped.propertyType && typeWasGuessed && mapped.propertyType !== lead.propertyType) setOps.propertyType = mapped.propertyType;
+    else if (!mapped.propertyType && lead.propertyType === "N/A" && projectType) setOps.propertyType = projectType;
+    if (mapped.preferredLocation && !typedByCustomer(mapped.preferredLocation, laterInbound)) delete mapped.preferredLocation;
     if (mapped.purpose && lead.purpose === "N/A")               setOps.purpose = mapped.purpose;
     if (mapped.bhk && lead.bhk === "N/A")                       setOps.bhk = mapped.bhk;
     if (mapped.preferredLocation && !lead.preferredLocation)    setOps.preferredLocation = mapped.preferredLocation;
@@ -1984,8 +2044,8 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     const listNames = (keys) => keys.map((k) => MEDIA_NAMES[k]).join(" and ");
     const systemPrompt = await buildProjectGroundedPrompt(org, agent, leadContext, conversation.campaignRef, { isFirstBotReply, sourceProjectId: sourceProject?._id });
 
-    // Fire-and-forget: never let enrichment delay or fail the actual reply.
-    enrichWhatsAppLead(conversation, recentMsgs).catch(() => {});
+    // Lead details are read from the chat by scheduleLeadEnrich (handleInbound),
+    // for bot, button-flow and person-handled chats alike.
 
     const messages = [
       { role: "system", content: systemPrompt },
@@ -4000,4 +4060,6 @@ router._matchByMessageText = matchByMessageText;
 router._triggerBotReply = triggerBotReply;
 router._resolveAgentForConversation = resolveAgentForConversation;
 
+// For tests only (tests/whatsappLeadCapture.db.test.js).
+router._leadCapture = { enrichWhatsAppLead, typedByCustomer };
 module.exports = router;
