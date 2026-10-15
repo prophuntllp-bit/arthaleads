@@ -4,7 +4,7 @@
 // Turns on Artha's pilot features (morning brief, reply drafts, newest actions)
 // for the staging demo company, and adds one fake WhatsApp chat with "Test
 // Lead 1", assigned to the staging agent, so "Draft reply" can be tried in the
-// Inbox. Run it again to bring the chat back inside WhatsApp's 24-hour reply
+// Inbox (with a fake, non-working WhatsApp connection so the Inbox opens). Run it again to bring the chat back inside WhatsApp's 24-hour reply
 // window. Same staging-only guard as seed-staging.js.
 const env = process.env;
 const isStaging = env.BACKGROUND_JOBS === "off"
@@ -27,6 +27,11 @@ if (!isStaging) {
   const org = await Organization.findOne({ slug: "staging-demo" });
   if (!org) { console.error("[staging-artha-demo] run scripts/seed-staging.js first."); process.exit(1); }
   await Organization.updateOne({ _id: org._id }, { $set: { "copilot.beta": true, "copilot.enabled": true, "copilot.brief": true, "copilot.drafts": true } });
+  // A fake WhatsApp connection so the Inbox opens on staging. The key is not
+  // real: anything actually sent fails at Meta, and no customer exists here.
+  if (!org.whatsapp?.apiKey) {
+    await Organization.updateOne({ _id: org._id }, { $set: { "whatsapp.enabled": true, "whatsapp.provider": "meta", "whatsapp.apiKey": "staging-not-real", "whatsapp.displayPhoneNumber": "+91 90000 00000" } });
+  }
 
   const agent = await User.findOne({ orgId: org._id, role: "agent" }).select("name").lean();
   const lead = await Lead.findOne({ orgId: org._id, name: "Test Lead 1" });
