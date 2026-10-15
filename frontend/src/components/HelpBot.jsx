@@ -394,7 +394,7 @@ export default function HelpBot() {
     // on a narrow screen it would cover the lead, so it steps aside.
     if (window.innerWidth < 1024) setOpen(false);
     const stay = ["/leads", "/followups", "/calls"].some((p) => location.pathname.startsWith(p));
-    navigate(stay ? location.pathname : "/leads", { state: { openLeadId: r.id } });
+    navigate(stay ? location.pathname : "/leads", { state: { openLeadId: r.id, openLeadKind: r.kind } });
   };
   const renderAnswer = (text, records = []) => {
     const named = (records || []).filter((r) => r.name && r.name.length > 1).sort((a, b) => b.name.length - a.name.length);

@@ -86,6 +86,14 @@ const check = (ok, msg, d = "") => {
   check(String((await Lead.findById(k1._id).lean()).assignedTo) === String(A._id) && String((await Lead.findById(k3._id).lean()).assignedTo) === String(B._id), "undo returns each lead to its previous owner");
   check(!actions.availableFor({ role: "admin", page: "/leads" }).some((x) => x.v2Only), "the old helpbot (mobile) never offers the new card types");
 
+  // ── create_lead records the new id, so Undo can remove it ─────────────────
+  const cl = actions.byId.get("create_lead");
+  const cres = await runWith({ via: "artha" }, () => cl.execute({ params: { name: "Test Abhi", phone: "919800005555", source: "Manual" }, user: A }));
+  check(!!cres.data.leadId && !!(await Lead.findById(cres.data.leadId).lean()), "create_lead returns the new lead's id", JSON.stringify(cres));
+  await cl.undo({ result: cres, user: A });
+  const gone = await Lead.findById(cres.data.leadId).lean();
+  check(!gone || gone.isDeleted, "undo of create_lead removes the lead");
+
   // ── pilot gating and tap-to-choose ────────────────────────────────────────
   const names = (u, o) => toolsFor(u, o).map((t) => t.function.name);
   const pilot = { _id: org, copilot: { beta: true } }, standard = { _id: org, copilot: { beta: false } };

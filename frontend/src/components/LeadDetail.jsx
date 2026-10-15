@@ -3,6 +3,8 @@ import toast from "react-hot-toast";
 import { useCopilot } from "../context/CopilotContext";
 import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText, Clock, Headphones, PhoneIncoming, PhoneOutgoing, Trash2, Check, X, MapPin, AlertCircle, ChevronDown, Bot, MessageCircle } from "lucide-react";
 import api from "../services/api";
+import useAppRefresh from "../hooks/useAppRefresh";
+import fetchLeadToOpen from "../utils/fetchLeadToOpen";
 import { ConfirmDialog, Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
 import { useSoftPhone } from "../context/SoftPhoneContext";
 import CustomSelect from "./CustomSelect";
@@ -249,6 +251,20 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     setWaMessages(null);
     setWaConversation(null);
   }, [lead?._id, open]);
+
+  // Artha (or a background sync) changed data while this window is open:
+  // reload this lead so its notes, status and dates are current, not stale.
+  useAppRefresh(() => {
+    if (!open || !lead?._id) return;
+    const kind = lead._type === "project" ? "projectLead" : "lead";
+    fetchLeadToOpen(lead._id, kind)
+      .then((fresh) => {
+        if (!fresh?._id) return;
+        setStatus(fresh.status || "New");
+        onUpdated?.({ ...lead, ...fresh });
+      })
+      .catch(() => {}); // removed or no longer visible: keep what is shown
+  }, ["leads", "projects"]);
 
   // Newest first. The tab counts every note, so the list has to show every
   // note -- it previously showed only the most recent one, and showed it

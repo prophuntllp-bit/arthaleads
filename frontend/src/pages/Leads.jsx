@@ -18,6 +18,7 @@ import QrModal from "../components/QrModal";
 import { useLeads } from "../hooks/useLeads";
 import { useColumnResize, RTh } from "../hooks/useColumnResize";
 import api from "../services/api";
+import fetchLeadToOpen from "../utils/fetchLeadToOpen";
 import toast from "react-hot-toast";
 import { fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
 
@@ -427,12 +428,15 @@ export default function Leads() {
       return;
     }
 
-    api.get(`/leads/${openLeadId}`)
-      .then(({ data }) => {
-        setDetailLead(data.data);
+    fetchLeadToOpen(openLeadId, location.state?.openLeadKind)
+      .then((lead) => {
+        setDetailLead(lead);
         navigate(location.pathname, { replace: true, state: {} });
       })
-      .catch(() => toast.error("Unable to open that lead"));
+      .catch(() => {
+        navigate(location.pathname, { replace: true, state: {} });
+        toast.error("Unable to open that lead");
+      });
   }, [leads, loading, location.pathname, location.state, navigate]);
 
   // Export menu is closed via the backdrop div in the portal (onClick={() => setShowExportMenu(false)})

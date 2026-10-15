@@ -280,6 +280,23 @@ router.get("/:id/leads/:leadId/whatsapp-messages", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/projects/lead/:leadId - one project lead by its own id, shaped like
+// the unified Leads list (_type "project", projectId, projectName). Artha's
+// answers link to project leads by id alone, and an open lead window reloads
+// through this after Artha changes it. Same visibility as everywhere else.
+router.get("/lead/:leadId", async (req, res, next) => {
+  try {
+    const visibility = require("../utils/visibility");
+    if (!require("mongoose").isValidObjectId(req.params.leadId)) return res.status(404).json({ success: false, message: "Lead not found" });
+    const pl = await ProjectLead.findOne({ _id: req.params.leadId, orgId: req.user.orgId })
+      .populate("project", "name assignedTo")
+      .lean();
+    if (!pl || !(await visibility.canSeeProjectLead(req.user, pl))) return res.status(404).json({ success: false, message: "Lead not found" });
+    const project = pl.project || {};
+    res.json({ success: true, data: { ...pl, project: project._id || pl.project, _type: "project", projectId: project._id || pl.project, projectName: project.name || "" } });
+  } catch (err) { next(err); }
+});
+
 // Project leads - specific paths before :leadId
 router.post("/:id/leads/import", authorize("admin", "manager"), projectController.importLeads);
 router.get("/:id/leads",          projectController.getLeads);

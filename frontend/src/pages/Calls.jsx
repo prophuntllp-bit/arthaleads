@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
+import fetchLeadToOpen from "../utils/fetchLeadToOpen";
 import { fmtDateTime } from "../utils/constants";
 import CustomSelect from "../components/CustomSelect";
 import { useAuth } from "../context/AuthContext";
@@ -701,14 +702,17 @@ export default function Calls() {
   // Lead detail panel — opened from global search suggestion
   const [detailLead, setDetailLead] = useState(null);
 
+  // Runs again when a link (Artha, search) opens a lead while this page is up.
   useEffect(() => {
     const openId = location.state?.openLeadId;
     if (!openId) return;
+    const kind = location.state?.openLeadKind;
+    // Clear the state so back-navigation doesn't re-open
     navigate(location.pathname, { replace: true, state: {} });
-    api.get(`/leads/${openId}`)
-      .then(({ data }) => setDetailLead(data.lead || data))
+    fetchLeadToOpen(openId, kind)
+      .then(setDetailLead)
       .catch(() => toast.error("Could not load lead details"));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [calls,     setCalls]     = useState([]);
   const [loading,   setLoading]   = useState(true);

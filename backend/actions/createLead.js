@@ -62,8 +62,10 @@ module.exports = {
   async execute({ params, user }) {
     // create() round-robins the assignee when the org has autoAssign on, and
     // writes the "created" timeline entry.
-    const lead = await leadService.create(params, user);
+    // create() returns { lead, duplicate }; the id is what Undo removes later.
+    const { lead, duplicate } = await leadService.create(params, user);
     const owner = lead?.assignedToName ? ` and assigned to ${lead.assignedToName}` : "";
-    return { message: `Created lead ${params.name}${owner}.`, data: { leadId: lead?._id } };
+    const dupe = duplicate ? ` Same phone as the existing lead ${duplicate.name}.` : "";
+    return { message: `Created lead ${params.name}${owner}.${dupe}`, data: { leadId: lead?._id } };
   },
 };
