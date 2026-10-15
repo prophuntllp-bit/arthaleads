@@ -17,7 +17,8 @@ overwriting or contradicting each other. It lives in git, so every checkout
    work (same commit is fine).
 4. Never rewrite or delete another agent's entries. Add a correction below
    theirs.
-5. Small commits straight to `main` (see CLAUDE.md). Pull again before pushing;
+5. Small commits to `staging` first, checked on staging, then merged to `main`
+   (owner rule from 15 Oct 2026, see docs/STAGING.md and CLAUDE.md). Pull again before pushing;
    if the push is rejected, rebase, re-read this file, and resolve by merging
    both sides' intent, never by discarding the other's work.
 6. Do not touch `mobile/` unless the owner says so; another session owns it
@@ -60,7 +61,6 @@ only be verified live so Claude Code or the owner can check it on production.
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
 
-- [Claude Code] 2026-10-15 IST: owner approved: (1) hotfix straight to live: contactLimiter on /api/public applies to submissions only, not GET reads (audit FE30, 'Too many submissions' on page loads); (2) staging environment setup (staging branch, Railway staging env, staging.arthaleads.com). Files: backend/server.js, then .github/workflows, backend scheduler/env switches, frontend vercel.json, CLAUDE.md, AGENT_BRIDGE.md rules
 
 
 
@@ -82,6 +82,9 @@ Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [Claude Code] 2026-10-15 IST, fd82216: STAGING code side done (docs/STAGING.md). New rule: commit to `staging`, check on staging.arthaleads.com / app-staging.arthaleads.com, then merge to `main`. Switches: BACKGROUND_JOBS=off, AUTH_COOKIE_NAME (utils/authCookie.js), frontend/src/utils/hosts.js. Owner still has to create the Railway staging env + Mongo, Vercel domains on branch staging, DNS, and the RAILWAY_STAGING_TOKEN secret.
+- [Claude Code] 2026-10-15 IST, 9abedc4: INCIDENT note: 05b97d8 (sliding sessions, other session) committed backend/middlewares/auth.js while my uncommitted edit was in it, requiring utils/authCookie.js which was not committed; main would have crashed on next boot. 9abedc4 added the file; live API checked healthy after redeploy. Lesson for all agents: `git add` only the files you changed, and check `git diff --cached` before committing.
 
 - [claude] 2026-10-15 IST (05b97d8): sliding sessions. middlewares/auth.js renewSession(): a normal session older than 1 day gets a fresh JWT (cookie + X-Renewed-Token header, exposed per response; server.js untouched). frontend api.js stores it. actBy and other <1-day tokens never renewed. Mobile (Dart) ignores the header, so the app still re-logs after 7 days: mobile session can read X-Renewed-Token to fix that. Test: tests/sessionRenewal.db.test.js.
 
