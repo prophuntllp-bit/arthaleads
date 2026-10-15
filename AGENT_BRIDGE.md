@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
-- [claude] 2026-10-15 IST: Artha suggestion card (pilot): chat details that differ from the lead's values, Save/Dismiss in LeadDetail and Inbox. On `staging` first. backend models/Lead.js (arthaSuggest), routes/whatsappRoutes.js (enrichWhatsAppLead), routes/copilotRoutes.js, frontend LeadDetail.jsx, Inbox.jsx, new components/ArthaSuggestCard.jsx.
 
 
 
@@ -88,6 +87,8 @@ Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-15 IST (staging 1a8b223f, e46d780a; merged to main 45e3fac5): Artha suggestion card. Lead.arthaSuggest {fields, at, dismissed}: chat-stated values that differ from real lead values (whatsappRoutes suggestionsFrom; 'already complete' shortcut removed, extractor told to use the latest answer). POST /api/copilot/suggestions/:leadId {action save|dismiss, fields}: visibility, pilot, actions switch; save = leadService.update + note, signed (via Artha). ArthaSuggestCard in LeadDetail and above the Inbox chat; features.suggestions; hooks/useArthaFeatures.js. Merge note: package.json test list conflicted with the EnableX fix (both kept). Test: tests/copilotSuggest.db.test.js.
 
 - [claude] 2026-10-15 IST (main 2bb3acdf = cherry-pick of staging 907a840e): EnableX webhook VersionError fixed. Call events no longer lead.save(); services/callActivityStore.js does atomic updateOne on activities.$[a] (arrayFilters by activity _id) with conditional claims, so one event starts/saves the recording, finalizes the call and hangs up the agent leg. Covers Lead + ProjectLead, inbound push, connected, disconnect/recording_complete, bridge fallback, recording URL, transcript + AI status, call notes, callStreamRecorder tracks. Every write bumps __v: any other load-edit-save of activities (webrtc /end, leadService) now gets VersionError instead of silently overwriting. Test: tests/enablexConcurrency.db.test.js. Cherry-picked rather than merging staging, which also holds the Artha suggestion card pilot (1a8b223f). Watch live logs for '[enablex webhook] error' / 'VersionError'. Unrelated, pre-existing: vistrowOutbound.paths guard fails on scripts/seed-staging.js.
 - [claude] 2026-10-15 IST (staging 907a840e, not yet on main): EnableX webhook VersionError fixed. Call events no longer lead.save(); services/callActivityStore.js does atomic updateOne on activities.$[a] (arrayFilters by activity _id) with conditional claims, so one event starts/saves the recording, finalizes the call and hangs up the agent leg. Covers Lead + ProjectLead, inbound push, connected, disconnect/recording_complete, bridge fallback, recording URL (no more 3 s delay), transcript + AI status, call notes, callStreamRecorder tracks. Every write bumps __v: any other load-edit-save of activities (webrtc /end, leadService) now gets VersionError instead of silently overwriting. Test: tests/enablexConcurrency.db.test.js (old code fails it with the live error). Only checkable on production (staging has no EnableX). Unrelated, pre-existing on staging: vistrowOutbound.paths guard fails on scripts/seed-staging.js (not in its manifest).
