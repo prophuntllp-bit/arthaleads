@@ -65,6 +65,8 @@ const outboundDeliverySchema = new mongoose.Schema(
     // decline to queue a call, e.g. unknown agent or no caller number).
     callQueued: { type: Boolean, default: null },
     callReason: { type: String, default: "" },
+    // Vistrow's queued_until: the call is scheduled for this time (calling window closed).
+    callQueuedUntil: { type: Date, default: null },
 
     payload: { type: mongoose.Schema.Types.Mixed, select: false },
     phoneKey: { type: String, default: "" }, // E.164, for the repeat-phone window
@@ -100,6 +102,8 @@ outboundDeliverySchema.index({ status: 1, nextAttemptAt: 1 });
 outboundDeliverySchema.index({ status: 1, lockedUntil: 1 });
 outboundDeliverySchema.index({ orgId: 1, phoneKey: 1, createdAt: -1 });
 outboundDeliverySchema.index({ orgId: 1, createdAt: -1 });
+// The lead page's "Vistrow Voice" panel reads the newest delivery of one lead.
+outboundDeliverySchema.index({ leadId: 1, createdAt: -1 });
 outboundDeliverySchema.index({ expireAt: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model("OutboundDelivery", outboundDeliverySchema);

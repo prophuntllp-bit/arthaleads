@@ -508,6 +508,82 @@ test("queued:false for a Contact-only lead is expected and raises nothing", asyn
   assert.equal(e.notified.length, 0);
 });
 
+// ═══ what Vistrow says about the call reaches the lead (15 Oct 2026) ═════
+function envWithResults(opts) {
+  const e = env(opts);
+  e.results = [];
+  e.svc = createService({
+    store: e.store, now: () => new Date(e.clock.t), autoKick: false, rand: () => 0.5,
+    send: async ({ url, headers, body }) => { const rec = { url, headers, rawBody: body, body: JSON.parse(body) }; e.sent.push(rec); return opts.respond(e.sent.length, rec); },
+    onCallResult: async (job, r) => { e.results.push({ origin: job.origin, ...r }); },
+  });
+  e.process = () => e.svc.processDue({ limit: 50 });
+  return e;
+}
+test("queued_until is stored on the delivery and handed to the lead as a scheduled time", async () => {
+  const e = envWithResults({ cfg: { routing: routingOn(["website"]) }, respond: () => ({ httpStatus: 200, json: { ok: true, queued: true, queued_until: "2026-10-16T03:30:00Z" }, latencyMs: 5 }) });
+  await e.svc.enqueueLeadCreated(lead(e), WEB); await e.process(); await e.svc.drain();
+  assert.equal(e.d().callQueuedUntil.toISOString(), "2026-10-16T03:30:00.000Z");
+  assert.deepEqual(e.results, [{ origin: "webhook-website", queued: true, reason: "", reasonText: "", queuedUntil: new Date("2026-10-16T03:30:00Z") }]);
+});
+test("queued:false reasons are translated for the team; unknown codes are shown as codes", async () => {
+  const e = envWithResults({ cfg: { routing: routingOn(["website"]) }, respond: (n) => ({ httpStatus: 200, json: { ok: true, queued: false, reason: ["auto_call_off", "agent_not_live", "lead_opted_out", "something_new"][n - 1] }, latencyMs: 5 }) });
+  for (let i = 0; i < 4; i++) await e.svc.enqueueLeadCreated(lead(e), WEB);
+  await e.process(); await e.svc.drain();
+  assert.deepEqual(e.results.map((r) => r.reasonText).sort(), [
+    "Auto-call is switched off for this agent in Vistrow", "The Vistrow agent is not live", "This lead has opted out of calls", "Vistrow did not queue the call (something_new)",
+  ].sort());
+  assert.ok(e.results.every((r) => r.queued === false && r.queuedUntil === null));
+});
+test("a Contact-only delivery never reports a call result to the lead", async () => {
+  const e = envWithResults({ cfg: { routing: routingOn([]) }, respond: () => ({ httpStatus: 200, json: { ok: true, queued: false, reason: "contact_only" }, latencyMs: 5 }) });
+  await e.svc.enqueueLeadCreated(lead(e), WEB); await e.process(); await e.svc.drain();
+  assert.equal(e.results.length, 0);
+});
+
+// ═══ "Call now via Vistrow" (origin manual-call, ctx.callRequest) ═════════
+const CALL_NOW = (over = {}) => ({ origin: "manual-call", routeSource: "website", callRequest: true, submittedAt: new Date("2026-10-09T10:00:00Z"), requestedBy: "Ravi", ...over });
+test("call now: an old lead with earlier Vistrow calls is sent as a call, exempt from the age, watermark and repeat-phone rules", async () => {
+  const e = env({ cfg: { routing: routingOn(["website"]) } });
+  const old = lead(e, { createdAt: new Date("2026-10-01T09:00:00Z"), voiceCalls: [{ externalCallId: 1, result: "Not Reachable" }] });
+  await e.svc.enqueueLeadCreated(old, WEB); // the normal path: already called by Vistrow
+  assert.equal(e.store.deliveries.length, 0);
+  const r = await e.svc.enqueueLeadCreated(old, CALL_NOW());
+  assert.equal(r.queued, true, JSON.stringify(r)); assert.equal(r.autoCall, true);
+  assert.match(r.eventId, /^evt_call_/);
+  await e.process();
+  const b = e.sent[0].body;
+  assert.equal(b.auto_call, true); assert.equal(b.agent_id, "agent_khopoli");
+  assert.equal(b.enquiry_id, r.eventId);
+  assert.equal(b.custom_fields.call_request, true); assert.equal(b.custom_fields.requested_by, "Ravi");
+  assert.equal(b.custom_fields.repeat_enquiry, undefined);
+  assert.equal(e.sent[0].headers["Idempotency-Key"], `${ORG}:${old._id}:${r.eventId}`);
+  assert.equal(e.d().origin, "manual-call");
+  // Pressed again a minute later: a second call request is its own event, and the repeat-phone window does not downgrade it.
+  e.advance(60000);
+  const r2 = await e.svc.enqueueLeadCreated(old, CALL_NOW({ submittedAt: new Date(e.clock.t) }));
+  assert.equal(r2.autoCall, true); assert.notEqual(r2.eventId, r.eventId);
+});
+test("call now: refused outright (no Contact-only fallback) when nothing routes, and the kill switch still wins", async () => {
+  const e = env({ cfg: { routing: routingOn([]) } });
+  const r = await e.svc.enqueueLeadCreated(lead(e), CALL_NOW());
+  assert.deepEqual([r.queued, r.reason], [false, "source_disabled"]);
+  assert.equal(e.store.deliveries.length, 0);
+  e.cfg({ routing: routingOn(["website"]) });
+  const r2 = await e.svc.enqueueLeadCreated(lead(e, { sourcePage: "https://shaporjipallonji.com/elsewhere/" }), CALL_NOW());
+  assert.deepEqual([r2.queued, r2.reason], [false, "no_route"]);
+  const r3 = await e.svc.enqueueLeadCreated(lead(e), CALL_NOW({ routeSource: "facebook" }));
+  assert.equal(r3.queued, false, "a lead may only be routed as its own source");
+  const k = env({ cfg: { routing: routingOn(["website"]) }, kill: true });
+  assert.equal((await k.svc.enqueueLeadCreated(lead(k), CALL_NOW())).reason, "kill_switch");
+});
+test("call now: callRequest without the manual-call origin is an ordinary event (no exemptions)", async () => {
+  const e = env({ cfg: { routing: routingOn(["website"]) } });
+  const old = lead(e, { createdAt: new Date("2026-10-01T09:00:00Z") });
+  const r = await e.svc.enqueueLeadCreated(old, { ...WEB, callRequest: true });
+  assert.deepEqual([r.queued, r.reason], [false, "pre_enable"]);
+});
+
 // ═══ never blocks lead creation ═══════════════════════════════════════════
 test("enqueue never throws, even if the store is down, and reports only an error class", async () => {
   const e = env({ cfg: { routing: routingOn(["website"]) } });

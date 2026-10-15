@@ -36,7 +36,13 @@ async function onCallQueued(job) {
   await require("../../utils/vistrowBotPause").pauseBotForCall({ orgId: job.orgId, leadId: job.leadId });
 }
 
-const service = createService({ store: mongoStore, logger, notifyFailure: notifyAdmins, onCallQueued });
+// Vistrow answered a call we asked for: scheduled (queued_until), calling now,
+// or declined with a reason. Written on the lead (utils/vistrowCallActivity.js).
+async function onCallResult(job, result) {
+  await require("../../utils/vistrowCallActivity").recordCallResult(job, result);
+}
+
+const service = createService({ store: mongoStore, logger, notifyFailure: notifyAdmins, onCallQueued, onCallResult });
 
 let timer = null;
 function startWorker({ intervalMs = 5000 } = {}) {

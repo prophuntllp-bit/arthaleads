@@ -58,6 +58,45 @@ function validDate(iso, now) {
 
 const fmt = (d) => d.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
+// Scheduled follow-up calls Vistrow places on its own (15 Oct 2026):
+// `follow_up_kind` at the top level or inside `custom_fields`.
+const FOLLOW_UP_LABELS = {
+  callback: "Scheduled call-back by Vistrow Voice",
+  visit_reminder: "Site-visit reminder call",
+  nurture: "Follow-up call",
+};
+
+function followUpKindOf(body) {
+  const b = body && typeof body === "object" ? body : {};
+  const cf = b.custom_fields && typeof b.custom_fields === "object" && !Array.isArray(b.custom_fields) ? b.custom_fields : {};
+  const raw = b.follow_up_kind ?? cf.follow_up_kind;
+  const k = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  return Object.prototype.hasOwnProperty.call(FOLLOW_UP_LABELS, k) ? k : "";
+}
+
+// crm_outcome.attempts: how many dials Vistrow made for this lead (sent with
+// the final "Not Reachable" report once its retries are used up).
+function attemptsOf(outcome) {
+  const n = Number(outcome && typeof outcome === "object" ? outcome.attempts : NaN);
+  return Number.isInteger(n) && n > 0 && n < 1000 ? n : null;
+}
+
+// The booking Vistrow reported, whether or not the rules let it change the lead.
+function reportedBooking(outcome) {
+  const b = outcome && typeof outcome === "object" && typeof outcome.booking === "string" ? outcome.booking.trim() : "";
+  return b && OPTS.BOOKING.includes(b) ? b : "";
+}
+
+// One line for the lead's activity feed saying what this call was.
+function callDescription({ direction, followUpKind, attempts, booking, durationSeconds } = {}) {
+  const secs = Number(durationSeconds) > 0 ? ` (${Math.round(Number(durationSeconds))}s)` : "";
+  if (booking === "Not Reachable" && attempts) {
+    return `Vistrow Voice could not reach this lead after ${attempts} ${attempts === 1 ? "try" : "tries"}`;
+  }
+  if (followUpKind && FOLLOW_UP_LABELS[followUpKind]) return `${FOLLOW_UP_LABELS[followUpKind]}${secs}`;
+  return `${direction === "outbound" ? "Outbound" : "Inbound"} Vistrow Voice call${secs}`;
+}
+
 /**
  * @param {object} current  the lead as stored now (status, booking, followUpDate, siteVisitDate)
  * @param {object} outcome  Vistrow's crm_outcome
@@ -122,4 +161,4 @@ function planOutcome(current, outcome, now = new Date()) {
   return { set, activities, lines };
 }
 
-module.exports = { planOutcome, phoneFilter, cleanEmail, cleanName, last10, STATUS_ORDER };
+module.exports = { planOutcome, phoneFilter, cleanEmail, cleanName, last10, STATUS_ORDER, FOLLOW_UP_LABELS, followUpKindOf, attemptsOf, reportedBooking, callDescription };

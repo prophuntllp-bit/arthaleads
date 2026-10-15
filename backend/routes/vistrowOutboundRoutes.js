@@ -18,6 +18,7 @@ const R = require("../services/vistrowOutbound/routing");
 const agentsLib = require("../services/vistrowOutbound/agents");
 const { service } = require("../services/vistrowOutbound");
 const { mongoStore, toConfig } = require("../services/vistrowOutbound/store.mongo");
+const { notQueuedText } = require("../services/vistrowOutbound/callReasons");
 
 const router = express.Router();
 router.use(protect, authorize("admin"));
@@ -304,6 +305,8 @@ router.get("/deliveries", async (req, res) => {
         id: d._id, eventId: d.eventId, leadId: d.leadId, status: d.status, skipReason: d.skipReason, origin: d.origin, isTest: d.isTest,
         autoCall: d.autoCall, autoCallReason: d.autoCallReason, routeSource: d.routeSource, routeLabel: d.routeLabel,
         agentLabel: d.agentLabel, callQueued: d.callQueued, callReason: d.callReason,
+        callReasonText: d.autoCall && d.callQueued === false ? notQueuedText(d.callReason) : "",
+        callQueuedUntil: d.callQueuedUntil || null,
         phone: maskPhone(d.phoneKey), attempts: d.attempts, nextAttemptAt: d.nextAttemptAt, lastHttpStatus: d.lastHttpStatus,
         lastErrorCode: d.lastErrorCode, lastErrorMessage: d.lastErrorMessage, lastLatencyMs: d.lastLatencyMs, endToEndMs: d.endToEndMs,
         deduped: d.deduped, createdAt: d.createdAt, deliveredAt: d.deliveredAt,

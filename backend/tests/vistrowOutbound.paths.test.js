@@ -461,7 +461,7 @@ test("guard: the number of emit call sites is exactly the reviewed set", () => {
     single += (src.match(/\bemitLeadCreated\(/g) || []).length;
     batch += (src.match(/\bemitLeadsCreated\(/g) || []).length;
   }
-  assert.equal(single, 9, "facebook, facebook recovered phone, website, custom, google webhook, google poller, whatsapp (delayed hand-off), manual, qr");
+  assert.equal(single, 10, "facebook, facebook recovered phone, website, custom, google webhook, google poller, whatsapp (delayed hand-off), manual, qr, call now (routes/vistrowLeadRoutes.js)");
   assert.equal(batch, 1, "bulk import");
 });
 test("guard: the call_id branches of the inbound Vistrow route contain no emit", () => {
