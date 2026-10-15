@@ -5,6 +5,7 @@ import StatusBreakdown from "../components/dashboard/StatusBreakdown";
 import SourceDonut from "../components/dashboard/SourceDonut";
 import SourcePerformance from "../components/dashboard/SourcePerformance";
 import AutomationHealth from "../components/dashboard/AutomationHealth";
+import MorningBrief from "../components/dashboard/MorningBrief";
 import { InfoTip } from "../components/Tooltip";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
@@ -650,6 +651,8 @@ export default function Dashboard() {
         {/* Right: live clock panel */}
         <DashboardClock />
       </header>
+
+      <MorningBrief />
 
       {analyticsError && (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3">

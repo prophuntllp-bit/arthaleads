@@ -20,6 +20,7 @@ const projectService = require("../services/projectService");
 const visibility = require("../utils/visibility");
 const { findLeadById } = require("../utils/leadLookup");
 const { projectLeadStage } = require("../utils/pipelineStage");
+const { buildBrief, briefForModel } = require("./brief");
 const { istDateKey, istRangeStart, istRangeEnd, formatISTDateTime } = require("../utils/datetime");
 const { STATUS, SOURCE } = require("../constants/leadOptions");
 const actions = require("../actions");
@@ -122,8 +123,13 @@ const CHOOSE_TOOL = tool("ask_user_to_choose",
     lead_ids: { type: "array", items: { type: "string" }, description: "Ids of the matching leads from earlier results (2 to 6)" },
   }, ["question", "lead_ids"]);
 
+const BRIEF_TOOL = tool("morning_brief",
+  "The user's day, ranked: site visits today, unread WhatsApp chats, missed follow-ups, new leads not contacted, follow-ups due today, each with the reason. Managers also get a per-person team summary. Use for 'who should I call first', 'plan my day', 'what's pending'.");
+
+const briefOn = (org) => isPilot(org) && org?.copilot?.brief !== false;
+
 function toolsFor(user, org) {
-  return [...READ_TOOLS, ...(isPilot(org) ? [CHOOSE_TOOL] : []), ...writeTools(user, org)];
+  return [...READ_TOOLS, ...(isPilot(org) ? [CHOOSE_TOOL] : []), ...(briefOn(org) ? [BRIEF_TOOL] : []), ...writeTools(user, org)];
 }
 
 // Plain-language step shown while a tool runs.
@@ -139,6 +145,7 @@ function stepLabel(name, args = {}) {
     case "list_projects": return "Checking projects";
     case "search_help": return "Looking it up in the guide";
     case "ask_user_to_choose": return "Asking which one you mean";
+    case "morning_brief": return "Checking your day";
     default: return actions.byId.get(name) ? `Preparing: ${actions.byId.get(name).describe.summary.toLowerCase()}` : "Working";
   }
 }
@@ -235,6 +242,12 @@ async function runTool(name, args, ctx) {
 
     case "search_help": return { result: { sections: searchHelp(args.query, 3) } };
 
+    case "morning_brief": {
+      if (!briefOn(ctx.org)) return { result: { error: "Not available." }, records };
+      const brief = briefForModel(await buildBrief(user));
+      remember(brief.callFirst.filter((x) => x.kind !== "chat"));
+      return { result: brief, records };
+    }
     case "ask_user_to_choose": {
       const ids = (args.lead_ids || []).filter(isId).slice(0, 6);
       const options = [];

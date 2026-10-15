@@ -6,6 +6,7 @@
 //   DELETE /api/copilot/threads/:id     delete a chat
 //   POST   /api/copilot/threads/:id/turns/:turnId/rating   thumbs up/down
 //   GET    /api/copilot/starters?page=  page + role starter buttons (no AI call)
+//   GET    /api/copilot/brief           morning brief, worked out by code (no AI call)
 //
 // Changes Artha proposes are applied through the existing /api/help/preview,
 // /api/help/action and /api/help/undo (same gates, idempotency and undo).
@@ -21,6 +22,7 @@ const CopilotThread = require("../models/CopilotThread");
 const provider = require("../utils/ai/provider");
 const { runTurn } = require("../copilot/agent");
 const { startersFor } = require("../copilot/starters");
+const { buildBrief } = require("../copilot/brief");
 const logger = require("../config/logger");
 
 const router = express.Router();
@@ -152,6 +154,18 @@ router.get("/actions", async (req, res, next) => {
       id: String(r._id), by: r.userName, what: actions.byId.get(r.actionId)?.describe.summary || r.actionId,
       message: r.result?.message || "", at: r.createdAt, undone: !!r.undoneAt,
     })) });
+  } catch (err) { next(err); }
+});
+
+// GET /api/copilot/brief - the morning brief (Phase 3). Worked out by code,
+// no AI call, so it costs nothing and does not touch the allowance. Pilot
+// companies only for now; brief: null means "don't show the card".
+router.get("/brief", async (req, res, next) => {
+  try {
+    const org = await loadOrg(req);
+    const on = org?.copilot?.beta && org.copilot.enabled !== false && org.copilot.brief !== false;
+    if (!on) return res.json({ success: true, brief: null });
+    res.json({ success: true, brief: await buildBrief(req.user) });
   } catch (err) { next(err); }
 });
 

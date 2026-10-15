@@ -11,7 +11,7 @@
     "audit": "npm audit --audit-level=moderate",
     "eval:copilot": "node tests/copilot/capability.eval.js",
     "test:vistrow": "node tests/vistrowOutbound.unit.test.js && node tests/vistrowOutbound.routing.test.js && node tests/vistrowOutbound.service.test.js && node tests/vistrowOutbound.paths.test.js && node tests/vistrowOutbound.agents.test.js && node tests/vistrowPicker.test.js",
-    "test": "node tests/accountDeletion.coverage.test.js && node tests/accountDeletion.behaviour.test.js && node tests/accountDeletion.db.test.js && node tests/contentReport.db.test.js && node tests/visibility.db.test.js && node tests/aiProvider.test.js && node tests/istDays.db.test.js && node tests/copilotTools.db.test.js && node tests/copilotActions.db.test.js && npm run test:vistrow"
+    "test": "node tests/accountDeletion.coverage.test.js && node tests/accountDeletion.behaviour.test.js && node tests/accountDeletion.db.test.js && node tests/contentReport.db.test.js && node tests/visibility.db.test.js && node tests/aiProvider.test.js && node tests/istDays.db.test.js && node tests/copilotTools.db.test.js && node tests/copilotActions.db.test.js && node tests/copilotBrief.db.test.js && npm run test:vistrow"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1124.0",
