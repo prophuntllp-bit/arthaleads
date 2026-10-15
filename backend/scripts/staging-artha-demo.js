@@ -47,6 +47,9 @@ if (!isStaging) {
   await setLead("Test Lead 5", { createdAt: at(2 * D) });
   await setLead("Test Lead 6", { createdAt: at(3 * D), assignedTo: null, assignedToName: "" });
 
+  // An Artha suggestion card: the customer later asked for something different.
+  await Lead.collection.updateOne({ _id: lead._id }, { $set: { arthaSuggest: { fields: { preferredLocation: "Wakad", bhk: "3BHK" }, at: new Date() } } });
+
   const phone = `91${String(lead.phone).replace(/\D/g, "").slice(-10)}`;
   let conv = await WaConversation.findOne({ orgId: org._id, contactPhone: phone });
   if (!conv) {

@@ -10,6 +10,7 @@ import WhatsAppIcon from "../components/WhatsAppIcon";
 import CreditTopUpModal from "../components/CreditTopUpModal";
 import TemplateSendModal from "../components/TemplateSendModal";
 import ProjectMediaSendModal from "../components/ProjectMediaSendModal";
+import ArthaSuggestCard from "../components/ArthaSuggestCard";
 import { StatusBadge } from "../components/UI";
 import toast from "react-hot-toast";
 
@@ -766,6 +767,12 @@ export default function Inbox() {
               )}
             </div>
           </div>
+
+          {lead?._id && (
+            <div className="px-4 pt-2">
+              <ArthaSuggestCard compact key={`${lead._id}:${lead.arthaSuggest?.at || ""}`} lead={lead} onChanged={() => fetchConvs(true)} />
+            </div>
+          )}
 
           <div ref={threadRef} className="wa-thread flex-1 overflow-y-auto px-4 py-3">
             {loadingMsgs ? (

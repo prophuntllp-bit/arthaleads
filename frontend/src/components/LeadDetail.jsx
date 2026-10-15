@@ -4,6 +4,7 @@ import { useCopilot } from "../context/CopilotContext";
 import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText, Clock, Headphones, PhoneIncoming, PhoneOutgoing, Trash2, Check, X, MapPin, AlertCircle, ChevronDown, Bot, MessageCircle } from "lucide-react";
 import api from "../services/api";
 import useAppRefresh from "../hooks/useAppRefresh";
+import ArthaSuggestCard from "./ArthaSuggestCard";
 import fetchLeadToOpen from "../utils/fetchLeadToOpen";
 import { ConfirmDialog, Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
 import { useSoftPhone } from "../context/SoftPhoneContext";
@@ -591,6 +592,9 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
             </div>
           </div>
         </div>
+
+        <ArthaSuggestCard key={`${lead._id}:${lead.arthaSuggest?.at || ""}`} lead={lead}
+          onChanged={(r) => { if (r?.lead) onUpdated?.({ ...lead, ...r.lead, arthaSuggest: undefined }); }} />
 
         <div className="flex flex-wrap gap-2 border-b pb-3" style={{ borderColor: "var(--app-border)" }}>
           {tabList.map((item) => (

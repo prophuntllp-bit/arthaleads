@@ -238,6 +238,20 @@ const leadSchema = new mongoose.Schema(
     // array so historical leads aren't orphaned.
     voiceCalls: { type: [voiceCallSchema], default: undefined },
 
+    // ── Artha suggestions ─────────────────────────────────────────────────────
+    // Details the customer stated on WhatsApp that differ from what the lead
+    // already holds (the automatic reader never overwrites a real value). The
+    // team confirms or dismisses them on a card; a dismissed value is not
+    // suggested again. See routes/whatsappRoutes.js enrichWhatsAppLead.
+    arthaSuggest: {
+      type: {
+        fields:    { type: mongoose.Schema.Types.Mixed, default: undefined }, // { preferredLocation: "Wakad", bhk: "3BHK", budget: {min,max}, ... }
+        at:        { type: Date },
+        dismissed: { type: mongoose.Schema.Types.Mixed, default: undefined }, // { preferredLocation: ["Wakad"] }
+      },
+      default: undefined,
+    },
+
     // ── Response Time Tracking ────────────────────────────────────────────────
     firstContactedAt: { type: Date, default: null }, // set once when status first moves to "Contacted"
 
