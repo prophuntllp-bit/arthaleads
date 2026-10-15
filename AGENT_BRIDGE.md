@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
-- [claude] 2026-10-15 IST: SEO: Organization JSON-LD sameAs G2 + parentOrganization Vistrow. Files: frontend/index.html.
 
 
 
@@ -89,6 +88,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-15 IST (staging c23affe7, cherry-picked to main f427f9e8): frontend/index.html Organization JSON-LD: sameAs adds the G2 profile (g2.com/products/arthaleads/reviews); parentOrganization = Vistrow Technologies (vistrow.com, linkedin.com/company/133104029). Verified on staging (home + /pricing carry it, JSON parses). Blog categories checked: no "CRM Guides" exists; only CRM Tips, Real Estate Sales, WhatsApp Marketing are in use; empty "Real Estate" and "Real Estate Tips" stay hidden (inUse=1 menu, not in sitemap), left untouched.
 
 - [claude] 2026-10-15 IST: Vistrow call-result receiver fix LIVE: staging 736d3c1 cherry-picked to main as 0404174 (not a staging merge: staging holds other pilots). Railway production + Vercel deploys succeeded. Old Vistrow payloads still work (new fields optional). When staging is next merged into main, keep the single vistrowCallResult test entry in test:vistrow.
 - [claude] 2026-10-15 IST (staging 736d3c1, NOT yet on main): Vistrow Voice call results (POST /webhook/lead, call_id branch). Lead = arthaleads_lead_id (same org, not deleted) else newest lead with same last-10 phone digits (exact match had split +91/plain numbers into two leads). Re-send lookup across all sources + $ne guard on externalCallId (a call on a Facebook/Website lead was appended again on every re-send). crm_outcome from Vistrow (utils/vistrowCallResult.js): booking, forward-only status, followUpDate, siteVisitDate + activities; existing leads now get the call note and a push. Name/email cleaned (invalid email caused the 500s). Test: tests/vistrowCallResult.db.test.js (13; 5 fail on old code), added to test:vistrow. Voice side: vistrowtechnologies-bit/Voice branch claude/arthaleads-bridge (sends arthaleads_lead_id, direction, crm_outcome). Pre-existing on staging, not touched: vistrowOutbound.paths guard fails on scripts/seed-staging.js.
