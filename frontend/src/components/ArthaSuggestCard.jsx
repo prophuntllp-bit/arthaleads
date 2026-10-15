@@ -23,19 +23,20 @@ function show(key, v) {
 export default function ArthaSuggestCard({ lead, onChanged, compact = false }) {
   const { suggestions: on } = useArthaFeatures();
   const fields = lead?.arthaSuggest?.fields || {};
-  const keys = ORDER.filter((k) => fields[k] !== undefined && fields[k] !== null);
-  const [picked, setPicked] = useState(() => new Set(keys));
+  const [handled, setHandled] = useState(() => new Set()); // saved or dismissed here
+  const keys = ORDER.filter((k) => fields[k] !== undefined && fields[k] !== null && !handled.has(k));
+  const [picked, setPicked] = useState(() => new Set(ORDER));
   const [busy, setBusy] = useState(null);
-  const [gone, setGone] = useState(false);
-  if (!on || !lead?._id || lead._type === "project" || !keys.length || gone) return null;
+  if (!on || !lead?._id || lead._type === "project" || !keys.length) return null;
 
   const act = async (action) => {
+    // Save: the ticked rows. Dismiss: everything still shown.
     const chosen = action === "save" ? keys.filter((k) => picked.has(k)) : keys;
     if (!chosen.length) return;
     setBusy(action);
     try {
       const { data } = await api.post(`/copilot/suggestions/${lead._id}`, { action, fields: chosen });
-      setGone(true);
+      setHandled((h) => new Set([...h, ...chosen]));
       toast.success(action === "save" ? `Saved ${chosen.map((k) => LABEL[k]).join(", ")}` : "Dismissed");
       onChanged?.(data);
       notifyDataChanged("leads");
@@ -53,7 +54,7 @@ export default function ArthaSuggestCard({ lead, onChanged, compact = false }) {
       <div className={`mt-1.5 flex ${compact ? "flex-wrap gap-x-4 gap-y-1" : "flex-col gap-1"}`}>
         {keys.map((k) => (
           <label key={k} className="flex items-center gap-2 text-xs cursor-pointer text-app">
-            <input type="checkbox" checked={picked.has(k)} disabled={!!busy}
+            <input type="checkbox" checked={picked.has(k)} disabled={!!busy} aria-label={`Include ${LABEL[k]}`}
               onChange={(e) => setPicked((p) => { const n = new Set(p); if (e.target.checked) n.add(k); else n.delete(k); return n; })} />
             <span className="text-app-soft">{LABEL[k]}:</span>
             <s className="text-app-soft">{show(k, lead[k])}</s>
@@ -63,7 +64,7 @@ export default function ArthaSuggestCard({ lead, onChanged, compact = false }) {
         ))}
       </div>
       <div className="mt-2 flex items-center gap-2">
-        <button type="button" onClick={() => act("save")} disabled={!!busy || !picked.size}
+        <button type="button" onClick={() => act("save")} disabled={!!busy || !keys.some((k) => picked.has(k))}
           className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-white cursor-pointer disabled:opacity-50"
           style={{ background: "#ea580c" }}>
           <Check className="h-3.5 w-3.5" /> {busy === "save" ? "Saving…" : "Save"}
