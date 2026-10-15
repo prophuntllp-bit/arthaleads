@@ -60,7 +60,7 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
-- [claude] 2026-10-15 IST: Artha Phase 3b WhatsApp reply drafts (pilot), on `staging` first. backend/routes/copilotRoutes.js, backend/copilot/drafts.js, frontend Inbox.jsx composer. Worktree E:/PROPHUNT CRM-staging.
+- [claude] 2026-10-15 IST: Artha Phase 3b WhatsApp reply drafts ON STAGING (b519777, plus staging-artha-demo.js), waiting for the owner to try it on staging before merging to main. backend/copilot/drafts.js, routes/copilotRoutes.js (/draft-reply, /features), frontend Inbox.jsx. NOTE for whoever owns seed-staging.js: tests/vistrow guard 'every Lead-creating site is accounted for' fails because scripts/seed-staging.js creates leads and is not in the manifest (fails on main too).
 
 
 
