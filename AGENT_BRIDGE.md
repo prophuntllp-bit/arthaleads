@@ -58,7 +58,9 @@ only be verified live so Claude Code or the owner can check it on production.
 
 ## Active work
 
-Format: `- [agent] 2026-10-14 14:30 IST: what, files`
+Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+
+- [claude] 2026-10-15 IST: SEO: Organization JSON-LD sameAs G2 + parentOrganization Vistrow. Files: frontend/index.html.
 
 
 
