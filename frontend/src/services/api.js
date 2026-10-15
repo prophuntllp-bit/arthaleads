@@ -65,7 +65,12 @@ api.interceptors.request.use((config) => {
 
 // Propagate auth failures and org-level blocks as window events
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // The server renews a day-old session while it is in use (middlewares/auth.js).
+    const renewed = res.headers?.["x-renewed-token"];
+    if (renewed && getAuthToken()) setToken(renewed);
+    return res;
+  },
   (err) => {
     // Aborted requests (e.g. /auth/me cancelled by a concurrent login) must be
     // ignored entirely — do not treat them as auth failures.

@@ -1,4 +1,5 @@
 ﻿// middlewares/auth.js
+const { COOKIE_NAME, COOKIE_DOMAIN } = require("../utils/authCookie");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Organization = require("../models/Organization");
@@ -58,8 +59,8 @@ const protect = async (req, res, next) => {
     let tokenFromCookie = false;
 
     // 1. Prefer httpOnly cookie (browser clients - XSS-safe)
-    if (req.cookies?.crm_token) {
-      token = req.cookies.crm_token;
+    if (req.cookies?.[COOKIE_NAME]) {
+      token = req.cookies[COOKIE_NAME];
       tokenFromCookie = true;
     // 2. Fall back to Authorization header (API clients, mobile, Postman)
     } else if (req.headers.authorization?.startsWith("Bearer ")) {
@@ -146,11 +147,41 @@ const protect = async (req, res, next) => {
       req.org = org;
     }
 
+    renewSession(req, res, decoded, tokenFromCookie);
     next();
   } catch (err) {
     next(err);
   }
 };
+
+// ── Sliding session ───────────────────────────────────────────────────────────
+// A sign-in lasts JWT_EXPIRES_IN (7 days in production) from the person's last
+// use, not from when they signed in: once a session is a day old, the next
+// request gets a fresh one (new cookie, plus X-Renewed-Token for clients that
+// send a bearer token). Someone away for the full period still signs in again.
+// Short sessions ("Switch account", super admin "Login as", both 2 hours) are
+// never extended.
+const RENEW_AFTER_SEC = 24 * 60 * 60;
+function renewSession(req, res, decoded, tokenFromCookie) {
+  try {
+    if (decoded.actBy || !decoded.iat || !decoded.exp) return;
+    if (decoded.exp - decoded.iat < RENEW_AFTER_SEC) return;          // a short session
+    if (Math.floor(Date.now() / 1000) - decoded.iat < RENEW_AFTER_SEC) return; // renewed recently
+    const token = require("../services/authService").signToken(req.user._id);
+    if (tokenFromCookie) {
+      res.cookie(COOKIE_NAME, token, {
+        httpOnly: true,
+        secure:   process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        domain:   COOKIE_DOMAIN,
+        maxAge:   30 * 24 * 60 * 60 * 1000,
+      });
+    }
+    res.setHeader("X-Renewed-Token", token);
+    const exposed = res.getHeader("Access-Control-Expose-Headers");
+    res.setHeader("Access-Control-Expose-Headers", exposed ? `${exposed}, X-Renewed-Token` : "X-Renewed-Token");
+  } catch { /* renewal is best effort; the current session still works */ }
+}
 
 // ── Authorize: restrict to specific roles ─────────────────────────────────────
 // Usage: authorize("admin", "manager")
