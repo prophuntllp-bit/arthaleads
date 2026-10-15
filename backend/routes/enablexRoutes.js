@@ -17,6 +17,7 @@ const {
   stopCallStream,
 } = require("../services/callStreamRecorder");
 const enablexRoom = require("../services/enablexRoom");
+const { activityMatch, updateCallActivity, pushActivity, changeLeadStatus } = require("../services/callActivityStore");
 const { formatISTDate } = require("../utils/datetime");
 
 const ENABLEX_BASE = "https://api.enablex.io/voice/v1";
@@ -272,30 +273,27 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
     }
 
     // Log inbound call activity on the lead (async — after response).
-    // Must reload from the collection the lead was actually found in; hardcoding
+    // Must write to the collection the lead was actually found in; hardcoding
     // Lead here silently dropped every project lead's inbound call, so the call
     // never appeared in the CRM at all.
     if (lead) {
-      (leadIsProject ? ProjectLead : Lead).findById(lead._id).then(async (doc) => {
-        if (!doc) return;
-        doc.activities.push({
-          type:            "called",
-          description:     `Inbound call from ${doc.name}`,
-          performedBy:     agentUserId || undefined,
-          performedByName: agentName   || undefined,
-          meta: {
-            direction:      "inbound",
-            status:         "initiated",
-            ownerRef,
-            phone:          callerRaw,
-            agentPhone:     agentPhone,   // normalized agent phone (used for future inbound routing)
-            routedToPhone:  agentPhone,   // actual phone we bridged to (not the virtual DID)
-            routedToAgent:  agentName || "",
-            voiceId,                     // required so the "disconnected" webhook can fetch this call's recording
-          },
-        });
-        doc.markModified("activities");
-        await doc.save();
+      // A single $push, not load-push-save: this lands while the call's own
+      // events are already being written to the same lead.
+      pushActivity(leadIsProject ? ProjectLead : Lead, lead._id, {
+        type:            "called",
+        description:     `Inbound call from ${lead.name}`,
+        performedBy:     agentUserId || undefined,
+        performedByName: agentName   || undefined,
+        meta: {
+          direction:      "inbound",
+          status:         "initiated",
+          ownerRef,
+          phone:          callerRaw,
+          agentPhone:     agentPhone,   // normalized agent phone (used for future inbound routing)
+          routedToPhone:  agentPhone,   // actual phone we bridged to (not the virtual DID)
+          routedToAgent:  agentName || "",
+          voiceId,                     // required so the "disconnected" webhook can fetch this call's recording
+        },
       }).catch(e => console.error("[enablex inbound] activity log failed:", e.message));
     }
   } catch (err) {
@@ -350,27 +348,26 @@ async function processCallStateEvent(orgId, event, logPrefix) {
     // regular Leads, "projectlead_" for Project leads (a separate model with its
     // own _id namespace, see /initiate). Both have an identically-shaped
     // activities array, so the rest of this function treats `lead` generically.
-    // Which model matched is tracked alongside `lead` so the delayed
-    // bridge_disconnected fallback below (which reloads the doc after a setTimeout)
-    // knows which collection to reload from.
+    // Which model matched is tracked alongside `lead` so every write below goes
+    // to the right collection.
     let lead, actIdx = -1, Model = null;
     if (ownerRef?.startsWith("projectlead_")) {
       const id = ownerRef.split("_")[1];
       Model = ProjectLead;
-      lead = await ProjectLead.findOne({ _id: id, orgId });
+      lead = await ProjectLead.findOne({ _id: id, orgId }).lean();
       if (lead) actIdx = lead.activities.findIndex(a => a.meta?.ownerRef === ownerRef);
     } else if (ownerRef?.startsWith("lead_")) {
       const id = ownerRef.split("_")[1];
       Model = Lead;
-      lead = await Lead.findOne({ _id: id, orgId });
+      lead = await Lead.findOne({ _id: id, orgId }).lean();
       if (lead) actIdx = lead.activities.findIndex(a => a.meta?.ownerRef === ownerRef);
     }
     if ((!lead || actIdx < 0) && eventVoiceId) {
       Model = Lead;
-      lead = await Lead.findOne({ orgId, "activities.meta.voiceId": eventVoiceId });
+      lead = await Lead.findOne({ orgId, "activities.meta.voiceId": eventVoiceId }).lean();
       if (!lead) {
         Model = ProjectLead;
-        lead = await ProjectLead.findOne({ orgId, "activities.meta.voiceId": eventVoiceId });
+        lead = await ProjectLead.findOne({ orgId, "activities.meta.voiceId": eventVoiceId }).lean();
       }
       if (lead) {
         actIdx = lead.activities.findIndex(a => a.meta?.voiceId === eventVoiceId);
@@ -379,7 +376,12 @@ async function processCallStateEvent(orgId, event, logPrefix) {
     }
     if (!lead || actIdx < 0) return;
 
-    let dirty = false;
+    // Every write below goes through callActivityStore: one atomic update of the
+    // named fields of this activity, never lead.save(). Several events for the
+    // same call arrive at once, and a whole-document save made all but one of
+    // them fail with VersionError and lose their change.
+    const act = lead.activities[actIdx];
+    const match = activityMatch(act);
 
     // ── Agent or lead connected — bridge is automatic via action_on_connect.connect ─
     // Just log; no second API call needed. The initial call payload wires the bridge.
@@ -390,45 +392,46 @@ async function processCallStateEvent(orgId, event, logPrefix) {
 
       // Recording is its own explicit start/stop call, not something the initial
       // /call payload's "record" field actually triggers — see startRecording().
-      if (legVoiceId && !lead.activities[actIdx].meta?.recordingStartRequested) {
+      // The flag is claimed before starting, so two legs' "connected" events
+      // arriving together start it once.
+      if (legVoiceId && !act.meta?.recordingStartRequested) {
         const orgForRecording = await Organization.findById(orgId).select("enablex").lean();
         if (orgForRecording?.enablex?.appId && orgForRecording?.enablex?.apiKey) {
-          await startRecording(orgForRecording, legVoiceId, lead.activities[actIdx].meta?.direction || "outbound");
-          lead.activities[actIdx].meta = { ...lead.activities[actIdx].meta, recordingStartRequested: true };
-          lead.markModified("activities");
-          await lead.save();
+          const claimed = await updateCallActivity(Model, lead._id, match, {
+            set:   { "meta.recordingStartRequested": true },
+            where: { "meta.recordingStartRequested": { $ne: true } },
+          });
+          if (claimed) await startRecording(orgForRecording, legVoiceId, act.meta?.direction || "outbound");
         }
       }
 
       if (diagnosticsEnabled() && legVoiceId) {
-        const currentDiagnostics = lead.activities[actIdx].meta?.recordingDiagnostics || {};
-        const attemptedVoiceIds = Array.isArray(currentDiagnostics.attemptedVoiceIds)
-          ? currentDiagnostics.attemptedVoiceIds
+        const attemptedVoiceIds = Array.isArray(act.meta?.recordingDiagnostics?.attemptedVoiceIds)
+          ? act.meta.recordingDiagnostics.attemptedVoiceIds
           : [];
 
         if (!attemptedVoiceIds.includes(String(legVoiceId))) {
           const org = await Organization.findById(orgId).select("enablex").lean();
           if (org?.enablex?.appId && org?.enablex?.apiKey) {
             const wssHost = buildCallStreamUrl({ orgId, ownerRef, voiceId: String(legVoiceId) });
-            lead.activities[actIdx].meta = {
-              ...lead.activities[actIdx].meta,
-              recordingDiagnostics: {
-                ...currentDiagnostics,
-                status: "stream_requested",
-                attemptedVoiceIds: [...attemptedVoiceIds, String(legVoiceId)],
-                lastRequestedAt: new Date().toISOString(),
+            const claimed = await updateCallActivity(Model, lead._id, match, {
+              set: {
+                "meta.recordingDiagnostics.status":          "stream_requested",
+                "meta.recordingDiagnostics.lastRequestedAt": new Date().toISOString(),
               },
-            };
-            lead.markModified("activities");
-            await lead.save();
+              addToSet: { "meta.recordingDiagnostics.attemptedVoiceIds": String(legVoiceId) },
+              where:    { "meta.recordingDiagnostics.attemptedVoiceIds": { $ne: String(legVoiceId) } },
+            });
 
-            try {
-              await axios.put(`${ENABLEX_BASE}/call/${encodeURIComponent(legVoiceId)}/stream`,
-                { wss_host: wssHost }, { ...basicAuth(org), timeout: 10000 });
-              console.info("[call-stream] stream requested for bridge leg", legVoiceId);
-            } catch (streamError) {
-              console.error("[call-stream] stream request failed", legVoiceId,
-                streamError.response?.status, streamError.response?.data || streamError.message);
+            if (claimed) {
+              try {
+                await axios.put(`${ENABLEX_BASE}/call/${encodeURIComponent(legVoiceId)}/stream`,
+                  { wss_host: wssHost }, { ...basicAuth(org), timeout: 10000 });
+                console.info("[call-stream] stream requested for bridge leg", legVoiceId);
+              } catch (streamError) {
+                console.error("[call-stream] stream request failed", legVoiceId,
+                  streamError.response?.status, streamError.response?.data || streamError.message);
+              }
             }
           }
         }
@@ -440,23 +443,23 @@ async function processCallStateEvent(orgId, event, logPrefix) {
     // (confirmed live: arrives on a "recording_complete" event and again inline on
     // "disconnected"). No need to poll a separate lookup endpoint - that one needs a
     // service_id we don't have and always 404'd. EnableX's URL itself needs Basic
-    // Auth to download though, so re-host it on Cloudinary rather than saving the
-    // raw URL directly - the browser's audio player and Whisper can't send those
-    // credentials.
+    // Auth to download though, so re-host it on object storage rather than saving
+    // the raw URL directly - the browser's audio player and Whisper can't send
+    // those credentials. Claiming recordingSaveRequested atomically means only one
+    // of the events carrying the URL downloads it.
     const rawRecordingUrl = event?.recording_url ?? event?.data?.recording_url ?? null;
     const legVoiceIdForRecording = event?.voice_id || event?.voiceId || null;
 
-    if (rawRecordingUrl
-      && !lead.activities[actIdx].meta?.recordingUrl
-      && !lead.activities[actIdx].meta?.recordingSaveRequested) {
-      lead.activities[actIdx].meta = { ...lead.activities[actIdx].meta, recordingSaveRequested: true };
-      dirty = true;
-      // Delay so this request's own save (below) finishes first - avoids a
-      // Mongoose version conflict writing to the same lead document at once.
-      setTimeout(() => {
-        saveRecordingFromEnablexUrl(orgId, ownerRef, rawRecordingUrl, legVoiceIdForRecording)
+    if (rawRecordingUrl && !act.meta?.recordingUrl && !act.meta?.recordingSaveRequested) {
+      const claimed = await updateCallActivity(Model, lead._id, match, {
+        set:   { "meta.recordingSaveRequested": true },
+        where: { "meta.recordingUrl": { $in: [null, ""] }, "meta.recordingSaveRequested": { $ne: true } },
+      });
+      if (claimed) {
+        const eventDuration = Number(event?.call_duration ?? event?.recording_duration ?? 0);
+        saveRecordingFromEnablexUrl(orgId, Model, lead._id, match, rawRecordingUrl, legVoiceIdForRecording, eventDuration)
           .catch(e => console.error("[enablex recording] save failed:", e.message));
-      }, 3000);
+      }
     }
 
     // ── Call hangup / completion (duration + status) ─────────────────────────
@@ -468,26 +471,23 @@ async function processCallStateEvent(orgId, event, logPrefix) {
     //     recording_complete and "disconnected" never arrives at all - without
     //     this, the call stayed stuck showing "Initiated" forever despite a
     //     real ~1-minute conversation having happened.
-    // Whichever finalizes first wins (guarded by meta.status still being
-    // "initiated"); the other is then a no-op if it also arrives.
+    // Whichever finalizes first wins (the write only applies while meta.status is
+    // still "initiated"); the other is then a no-op if it also arrives.
     // bridge_disconnected itself carries no duration, so it's NOT used to
     // finalize here - see the delayed fallback below instead.
     const isDisconnectEvent = eventType !== "bridge_disconnected"
       && /disconnected|hangup|completed|exit|end/i.test(eventType);
     const isRecordingComplete = eventType === "recording_complete";
 
-    if ((isDisconnectEvent || isRecordingComplete) && lead.activities[actIdx].meta?.status === "initiated") {
+    if ((isDisconnectEvent || isRecordingComplete) && act.meta?.status === "initiated") {
       const dur = isRecordingComplete
         ? Math.round(Number(event?.recording_duration ?? 0))
         : Math.round(Number(event?.call_duration ?? event?.data?.duration ?? event?.duration ?? 0));
-      const callStatus = finalizeCallActivity(lead, actIdx, dur);
-      dirty = true;
+      const callStatus = await finalizeCallActivity(Model, lead, act, dur);
 
       // Auto-advance lead status New → Contacted on first answered call
-      if (callStatus === "answered" && lead.status === "New") {
-        lead.status = "Contacted";
-        if (!lead.firstContactedAt) lead.firstContactedAt = new Date();
-        lead.activities.push({
+      if (callStatus === "answered") {
+        await changeLeadStatus(Model, lead._id, "New", "Contacted", {
           type:        "status_changed",
           description: "Status automatically changed to Contacted after answered call",
           meta:        { from: "New", to: "Contacted", auto: true },
@@ -495,7 +495,7 @@ async function processCallStateEvent(orgId, event, logPrefix) {
       }
 
       if (callStatus === "missed") {
-        const agentId = lead.activities[actIdx].performedBy;
+        const agentId = act.performedBy;
         if (agentId) {
           sendPushToUser(String(agentId), {
             title: "Missed Call",
@@ -506,8 +506,8 @@ async function processCallStateEvent(orgId, event, logPrefix) {
       }
 
       // Terminate agent's phone leg so it hangs up when lead disconnects
-      const storedVoiceId = lead.activities[actIdx].meta?.voiceId;
-      if (storedVoiceId) {
+      const storedVoiceId = act.meta?.voiceId;
+      if (callStatus && storedVoiceId) {
         Organization.findById(orgId).select("enablex").lean()
           .then(org => org?.enablex?.appId
             ? axios.delete(`${ENABLEX_BASE}/call/${storedVoiceId}`, basicAuth(org)) : null)
@@ -521,23 +521,13 @@ async function processCallStateEvent(orgId, event, logPrefix) {
     // that's still better than a call stuck showing "Initiated" forever with
     // no record it ever ended. Delayed so the more informative events above
     // get first chance to finalize (they arrived within the same second of
-    // bridge_disconnected in every case seen so far); reloads fresh via
-    // saveWithVersionRetry since this runs well after the triggering request.
+    // bridge_disconnected in every case seen so far); the write only applies
+    // if the call is still "initiated" by then.
     if (eventType === "bridge_disconnected" && Model) {
-      const fallbackLeadId = lead._id;
-      const fallbackActIdx = actIdx;
       setTimeout(() => {
-        saveWithVersionRetry(Model, fallbackLeadId, fallbackActIdx, (freshLead, idx) => {
-          if (freshLead.activities[idx].meta?.status === "initiated") {
-            finalizeCallActivity(freshLead, idx, 0);
-          }
-        }, { logPrefix: "[enablex bridge-fallback]" }).catch(() => {});
+        finalizeCallActivity(Model, lead, act, 0)
+          .catch(e => console.error("[enablex bridge-fallback] finalize failed:", e.message));
       }, 8000);
-    }
-
-    if (dirty) {
-      lead.markModified("activities");
-      await lead.save();
     }
   } catch (err) {
     console.error(`${logPrefix} error:`, err.message);
@@ -1160,13 +1150,13 @@ router.get("/analytics", async (req, res, next) => {
 router.patch("/:leadId/:activityId/notes", async (req, res, next) => {
   try {
     const { notes } = req.body;
-    const { doc: lead } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId, { user: req.user });
+    const { doc: lead, Model } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId, { user: req.user });
     if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
     const idx = lead.activities.findIndex(a => String(a._id) === req.params.activityId);
     if (idx < 0) return res.status(404).json({ success: false, message: "Activity not found" });
-    lead.activities[idx].meta = { ...(lead.activities[idx].meta || {}), notes: String(notes || "").trim() };
-    lead.markModified("activities");
-    await lead.save();
+    // Atomic, so notes typed during a live call don't collide with its webhook events.
+    await updateCallActivity(Model, lead._id, activityMatch(lead.activities[idx]),
+      { set: { "meta.notes": String(notes || "").trim() } });
     res.json({ success: true });
   } catch (err) { next(err); }
 });
@@ -1181,7 +1171,7 @@ router.post("/:leadId/:activityId/summarize", async (req, res, next) => {
     const recordingUrl = lead.activities[idx].meta?.recordingUrl;
     if (!recordingUrl) return res.status(400).json({ success: false, message: "No recording available for this call." });
     if (!process.env.OPENAI_API_KEY) return res.status(400).json({ success: false, message: "OpenAI not configured on this server." });
-    await transcribeAndSummarize(String(lead._id), idx, recordingUrl, Model);
+    await transcribeAndSummarize(String(lead._id), activityMatch(lead.activities[idx]), recordingUrl, Model);
     const updated = await Model.findById(lead._id).lean();
     res.json({ success: true, meta: updated.activities[idx]?.meta || {} });
   } catch (err) { next(err); }
@@ -1212,60 +1202,27 @@ router.post("/:leadId/followup", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── Apply the terminal call outcome (status/description/duration) to an
-// activity already loaded in memory. Shared by the immediate disconnected/
-// recording_complete path and the delayed bridge_disconnected fallback so
-// both compute "answered" vs "missed" the same way. Returns the callStatus.
-function finalizeCallActivity(lead, actIdx, dur) {
+// ── Write the terminal call outcome (status/description/duration) to a call
+// activity. Shared by the immediate disconnected/recording_complete path and the
+// delayed bridge_disconnected fallback so both compute "answered" vs "missed" the
+// same way. Applies only while the activity is still "initiated", so when two
+// events race to finalize the same call exactly one wins. Returns the callStatus
+// it wrote, or null if the call was already finalized.
+async function finalizeCallActivity(Model, lead, activity, dur) {
   const callStatus = dur > 5 ? "answered" : "missed";
-  const isInbound = lead.activities[actIdx].meta?.direction === "inbound";
-  lead.activities[actIdx].description = callStatus === "missed"
+  const isInbound = activity.meta?.direction === "inbound";
+  const description = callStatus === "missed"
     ? (isInbound ? `Missed inbound call from ${lead.name}` : `Missed call to ${lead.name}`)
     : `Call with ${lead.name} · ${Math.floor(dur / 60)}m ${dur % 60}s`;
-  lead.activities[actIdx].meta = {
-    ...lead.activities[actIdx].meta,
-    status:   callStatus,
-    duration: dur,
-  };
-  return callStatus;
-}
-
-// ── Save a lead mutation, retrying on a concurrent-write version conflict ─────
-// The recording-save and transcription paths run well after their triggering
-// webhook (a Cloudinary upload, a Whisper transcription) - during that window a
-// SECOND call event on the SAME lead (most commonly: the lead calls back inbound
-// a few seconds after an outbound call ends) can save the document first. Plain
-// lead.save() then throws Mongoose's VersionError and the whole write — the
-// recording URL, or the transcript/summary — was being silently dropped
-// (confirmed live: "save failed: No matching document found ... version 4").
-//
-// Reloading and reapplying the mutation is safe because `activities` is
-// append-only in this codebase (always pushed, never removed/reordered), so an
-// index captured before the retry still points at the same activity after.
-async function saveWithVersionRetry(Model, leadId, actIdx, applyMeta, { maxAttempts = 4, logPrefix = "[enablex]" } = {}) {
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const lead = await Model.findById(leadId);
-    if (!lead || !lead.activities[actIdx]) return null;
-    await applyMeta(lead, actIdx);
-    lead.markModified("activities");
-    try {
-      await lead.save();
-      return lead;
-    } catch (err) {
-      if (err.name === "VersionError" && attempt < maxAttempts) {
-        console.warn(`${logPrefix} save version conflict, retrying (${attempt}/${maxAttempts})`);
-        await new Promise((r) => setTimeout(r, 150 * attempt));
-        continue;
-      }
-      console.error(`${logPrefix} save failed after ${attempt} attempt(s):`, err.message);
-      return null;
-    }
-  }
-  return null;
+  const won = await updateCallActivity(Model, lead._id, activityMatch(activity), {
+    set:   { description, "meta.status": callStatus, "meta.duration": dur },
+    where: { "meta.status": "initiated" },
+  });
+  return won ? callStatus : null;
 }
 
 // ── AI transcription + summarization (runs async after webhook) ──────────────
-async function transcribeAndSummarize(leadId, actIdx, recordingUrl, Model = Lead) {
+async function transcribeAndSummarize(leadId, match, recordingUrl, Model = Lead) {
   const { Readable } = require("stream");
 
   // AI call intelligence is an Enterprise feature, and it is the most expensive
@@ -1319,18 +1276,15 @@ async function transcribeAndSummarize(leadId, actIdx, recordingUrl, Model = Lead
   // mark it clearly instead. Count only tokens that contain actual letters.
   const realWords = transcript.split(/\s+/).filter(t => /[\p{L}]{2,}/u.test(t));
   if (realWords.length < 6) {
-    await saveWithVersionRetry(Model, leadId, actIdx, (lead, idx) => {
-      lead.activities[idx].meta = {
-        ...lead.activities[idx].meta,
-        transcript,
-        summary:    "No clear conversation was captured on this call.",
-        keyPoints:  [],
-        nextAction: null,
-        intent:     "unclear",
-        sentiment:  "neutral",
-        noSpeech:   true,
-      };
-    }, { logPrefix: "[enablex transcript]" });
+    await updateCallActivity(Model, leadId, match, { set: {
+      "meta.transcript": transcript,
+      "meta.summary":    "No clear conversation was captured on this call.",
+      "meta.keyPoints":  [],
+      "meta.nextAction": null,
+      "meta.intent":     "unclear",
+      "meta.sentiment":  "neutral",
+      "meta.noSpeech":   true,
+    } });
     return;
   }
 
@@ -1376,33 +1330,31 @@ ${transcript.slice(0, 3000)}`,
   const INTENT_STATUS_MAP = { site_visit: "Site Visit", negotiation: "Negotiation" };
   const targetStatus = intent ? INTENT_STATUS_MAP[intent] : null;
 
-  await saveWithVersionRetry(Model, leadId, actIdx, async (lead, idx) => {
-    lead.activities[idx].meta = {
-      ...lead.activities[idx].meta,
-      transcript,
-      summary,
-      keyPoints,
-      nextAction,
-      intent,
-      sentiment,
-    };
+  await updateCallActivity(Model, leadId, match, { set: {
+    "meta.transcript": transcript,
+    "meta.summary":    summary,
+    "meta.keyPoints":  keyPoints,
+    "meta.nextAction": nextAction,
+    "meta.intent":     intent,
+    "meta.sentiment":  sentiment,
+  } });
 
-    // Auto-advance lead status when aiAutoStatus is enabled for this org.
-    // Re-checks lead.status fresh on every retry attempt, since a concurrent
-    // save (the very thing being retried against) may have already changed it.
-    if (targetStatus && lead.status !== targetStatus) {
-      const orgSettings = await Organization.findById(lead.orgId).select("enablex.aiAutoStatus").lean();
+  // Auto-advance lead status when aiAutoStatus is enabled for this org. The move
+  // only applies if the status is still what was just read, so a change someone
+  // made meanwhile is never overwritten.
+  if (targetStatus) {
+    const current = await Model.findById(leadId).select("status orgId").lean();
+    if (current && current.status !== targetStatus) {
+      const orgSettings = await Organization.findById(current.orgId).select("enablex.aiAutoStatus").lean();
       if (orgSettings?.enablex?.aiAutoStatus) {
-        const prev = lead.status;
-        lead.status = targetStatus;
-        lead.activities.push({
+        await changeLeadStatus(Model, leadId, current.status, targetStatus, {
           type:        "status_changed",
           description: `Status changed to ${targetStatus} — AI detected "${intent}" intent from call`,
-          meta:        { from: prev, to: targetStatus, auto: true, aiTriggered: true },
+          meta:        { from: current.status, to: targetStatus, auto: true, aiTriggered: true },
         });
       }
     }
-  }, { logPrefix: "[enablex transcript]" });
+  }
 }
 
 // ── Download EnableX's recording URL (pushed directly on the webhook event) →
@@ -1417,19 +1369,16 @@ ${transcript.slice(0, 3000)}`,
 // which is what a player actually needs to seek, so this may simply work — but
 // if recordings show 0:00, the fix is ffmpeg in the Railway build, not a
 // transformation service.
-async function saveRecordingFromEnablexUrl(orgId, ownerRef, enablexRecordingUrl, voiceId) {
+//
+// Runs straight after the webhook claims the recording (no delay needed now that
+// writes are atomic), so the call's duration may not be saved yet when this
+// starts: it is read again after the upload, with the event's own duration as a
+// fallback.
+async function saveRecordingFromEnablexUrl(orgId, Model, leadId, match, enablexRecordingUrl, voiceId, eventDuration = 0) {
   const { uploadCallRecording } = require("../utils/upload");
 
   const org = await Organization.findById(orgId).select("enablex").lean();
   if (!org?.enablex?.appId || !org?.enablex?.apiKey) return;
-
-  const Model = ownerRef?.startsWith("projectlead_") ? ProjectLead : Lead;
-  const lookupLead = await Model.findOne({ orgId, "activities.meta.ownerRef": ownerRef }).select("_id activities").lean();
-  if (!lookupLead) return;
-  const actIdx = lookupLead.activities.findIndex(a => a.meta?.ownerRef === ownerRef);
-  if (actIdx < 0 || lookupLead.activities[actIdx].meta?.recordingUrl) return;
-  const leadId = lookupLead._id;
-  const callDuration = Number(lookupLead.activities[actIdx].meta?.duration ?? 0);
 
   const audioResp = await axios.get(enablexRecordingUrl, {
     responseType: "arraybuffer",
@@ -1438,21 +1387,28 @@ async function saveRecordingFromEnablexUrl(orgId, ownerRef, enablexRecordingUrl,
   });
   const recordingUrl = await uploadCallRecording(
     Buffer.from(audioResp.data),
-    `call-${voiceId || ownerRef}.wav`,
+    `call-${voiceId || String(leadId)}.wav`,
     "audio/wav",
     orgId
   );
   console.info("[enablex recording] saved:", recordingUrl);
 
-  const saved = await saveWithVersionRetry(Model, leadId, actIdx, (lead, idx) => {
-    lead.activities[idx].meta = { ...lead.activities[idx].meta, recordingUrl };
-  }, { logPrefix: "[enablex recording]" });
-  if (!saved) return; // logged inside the helper — a concurrent call kept winning the race
+  const saved = await updateCallActivity(Model, leadId, match, {
+    set:   { "meta.recordingUrl": recordingUrl },
+    where: { "meta.recordingUrl": { $in: [null, ""] } },
+  });
+  if (!saved) return;
+
+  const fresh = await Model.findOne({ _id: leadId, activities: { $elemMatch: match } }, { "activities.$": 1 }).lean();
+  const callDuration = Math.max(Number(fresh?.activities?.[0]?.meta?.duration ?? 0), eventDuration || 0);
 
   // Auto-transcribe + AI analysis
   if (process.env.OPENAI_API_KEY && callDuration > 10) {
-    transcribeAndSummarize(String(leadId), actIdx, recordingUrl, Model).catch(() => {});
+    transcribeAndSummarize(String(leadId), match, recordingUrl, Model).catch(() => {});
   }
 }
+
+// Exposed for tests/enablexConcurrency.db.test.js.
+router._callEvents = { processCallStateEvent, finalizeCallActivity };
 
 module.exports = router;

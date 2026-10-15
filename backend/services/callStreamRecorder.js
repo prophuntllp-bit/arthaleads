@@ -8,6 +8,7 @@ const WebSocket = require("ws");
 
 const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
+const { updateCallActivity } = require("./callActivityStore");
 
 const STREAM_PATH_PREFIX = "/audio/calls/";
 const SAMPLE_RATE = 16000;
@@ -110,30 +111,31 @@ async function saveDiagnosticResult(state, result) {
     orgId: state.orgId,
     "activities.meta.ownerRef": state.ownerRef,
   };
-  const lead =
-    (await Lead.findOne(query)) || (await ProjectLead.findOne(query));
+  let Model = Lead;
+  let lead = await Lead.findOne(query).select("_id").lean();
+  if (!lead) {
+    Model = ProjectLead;
+    lead = await ProjectLead.findOne(query).select("_id").lean();
+  }
   if (!lead) return;
 
-  const activityIndex = lead.activities.findIndex(
-    activity => activity.meta?.ownerRef === state.ownerRef
-  );
-  if (activityIndex < 0) return;
-
-  const current = lead.activities[activityIndex].meta?.recordingDiagnostics || {};
-  const tracks = Array.isArray(current.tracks) ? current.tracks : [];
-  const nextTracks = tracks.filter(track => track.voiceId !== state.voiceId);
-  nextTracks.push(result);
-  lead.activities[activityIndex].meta = {
-    ...lead.activities[activityIndex].meta,
-    recordingDiagnostics: {
-      ...current,
-      status: "captured",
-      updatedAt: new Date().toISOString(),
-      tracks: nextTracks,
+  // Both legs' tracks finish at about the same moment, so these are atomic
+  // updates of this activity's diagnostics rather than a load-edit-save of the
+  // lead (which lost one leg's track to a VersionError). Replacing a track for
+  // the same voiceId takes two writes because one update cannot $pull and $push
+  // the same array.
+  const match = { "meta.ownerRef": state.ownerRef };
+  await updateCallActivity(Model, lead._id, match, {
+    pull: { "meta.recordingDiagnostics.tracks": { voiceId: state.voiceId } },
+    where: { "meta.recordingDiagnostics.tracks.voiceId": state.voiceId },
+  });
+  await updateCallActivity(Model, lead._id, match, {
+    set: {
+      "meta.recordingDiagnostics.status": "captured",
+      "meta.recordingDiagnostics.updatedAt": new Date().toISOString(),
     },
-  };
-  lead.markModified("activities");
-  await lead.save();
+    push: { "meta.recordingDiagnostics.tracks": result },
+  });
 }
 
 async function finalizeTrack(state) {
@@ -297,4 +299,5 @@ module.exports = {
   buildCallStreamUrl,
   diagnosticsEnabled,
   stopCallStream,
+  _saveDiagnosticResult: saveDiagnosticResult, // tests/enablexConcurrency.db.test.js
 };
