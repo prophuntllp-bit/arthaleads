@@ -523,7 +523,8 @@ export default function VistrowOutboundSection() {
                             : d.autoCall ? <>Call &rarr; <strong>{d.agentLabel || "the chosen agent"}</strong>{d.routeLabel ? <span className="text-app-soft"> via {d.routeLabel}</span> : null}</>
                             : <span className="text-app-soft">Contact only - {WHY[d.autoCallReason] || d.autoCallReason || "-"}</span>}
                         </span>
-                        {d.callQueued === false && d.autoCall && <span style={{ color: "#b45309" }}>Vistrow did not queue the call{d.callReason ? ` (${d.callReason})` : ""}</span>}
+                        {d.callQueued === false && d.autoCall && <span style={{ color: "#b45309" }}>{d.callReasonText || `Vistrow did not queue the call${d.callReason ? ` (${d.callReason})` : ""}`}</span>}
+                        {d.callQueued === true && d.callQueuedUntil && <span style={{ color: "#15803d" }}>Call scheduled for {when(d.callQueuedUntil)}</span>}
                         {d.lastErrorCode && d.status !== "delivered" && <span style={{ color: "#dc2626" }}>{d.lastErrorCode}{d.lastErrorMessage ? `: ${d.lastErrorMessage}` : ""}</span>}
                         <span className="flex-1" />
                         <span className="text-app-soft">{d.status === "delivered" ? `reached Vistrow in ${secs(d.endToEndMs)}` : d.attempts ? `${d.attempts} attempt${d.attempts > 1 ? "s" : ""}` : ""}</span>

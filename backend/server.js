@@ -344,6 +344,8 @@ app.use("/api/leads", leadRoutes);
 app.use("/api/automations", automationRoutes);
 app.use("/api/routing-rules", require("./routes/routingRuleRoutes"));
 // Owner-only controls for pushing new leads out to Vistrow Voice (off until enabled).
+// Lead page: Vistrow Voice status and "call now" (any signed-in user reads, admin/manager calls).
+app.use("/api/integrations/vistrow-outbound/leads", require("./routes/vistrowLeadRoutes"));
 app.use("/api/integrations/vistrow-outbound", require("./routes/vistrowOutboundRoutes"));
 app.use("/api/projects", projectRoutes);
 app.use("/api/push", pushRoutes);

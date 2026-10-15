@@ -24,7 +24,8 @@
 //   cancelPending(orgId, now, reason)     -> number
 
 const crypto = require("crypto");
-const { buildLeadCreatedPayload, buildTestPayload, eventIdForLead, eventIdForEnquiry } = require("./payload");
+const { buildLeadCreatedPayload, buildTestPayload, eventIdForLead, eventIdForEnquiry, eventIdForCallRequest } = require("./payload");
+const { notQueuedText } = require("./callReasons");
 const T = require("./transport");
 const { toE164 } = require("./phone");
 const { resolveRouting, routingInputsFrom } = require("./routing");
@@ -49,6 +50,9 @@ const ORIGIN_ROUTE_SOURCES = {
   "whatsapp-inbound": ["whatsapp"],
   "webhook-google": ["google"],
   "poller-google": ["google"],
+  // "Call now via Vistrow" pressed by a person on the lead page: routed as the
+  // source the lead really came from (routes/vistrowLeadRoutes.js decides it).
+  "manual-call": ["website", "facebook", "whatsapp", "google"],
 };
 const CALLABLE_ORIGINS = new Set(Object.keys(ORIGIN_ROUTE_SOURCES));
 
@@ -68,6 +72,9 @@ function createService({
   testSendAllowed = () => process.env.VISTROW_OUTBOUND_ALLOW_TEST_SEND === "1",
   // Called (not awaited by the delivery) when Vistrow confirms it queued a call.
   onCallQueued = async () => {},
+  // Called (not awaited) whenever Vistrow answers a call we asked for:
+  // { queued, reason, reasonText, queuedUntil }. Shown on the lead itself.
+  onCallResult = async () => {},
   // The first retry also runs in this process at its due time, not only on
   // the worker's next tick. The job lease still allows exactly one send.
   schedule = (fn, ms) => { const t = setTimeout(fn, ms); t.unref?.(); },
@@ -86,7 +93,7 @@ function createService({
   function earlyIgnore(l, ctx) {
     if (ctx.isTest) return "test_lead";
     if (ctx.vistrowOrigin) return "vistrow_origin";
-    if (ctx.repeat !== true && (l.source === "Vistrow Voice" || (Array.isArray(l.voiceCalls) && l.voiceCalls.length))) return "vistrow_origin";
+    if (ctx.repeat !== true && ctx.callRequest !== true && (l.source === "Vistrow Voice" || (Array.isArray(l.voiceCalls) && l.voiceCalls.length))) return "vistrow_origin";
     if (l.isDeleted) return "deleted";
     if (!l._id || !l.orgId) return "invalid_lead";
     return null;
@@ -99,18 +106,21 @@ function createService({
     // lead can sit upstream for days), not from when we happened to create it.
     const enquiredAt = ctx.submittedAt ? new Date(ctx.submittedAt) : createdAt;
     const repeat = ctx.repeat === true && !!ctx.submittedAt;
+    // A person asked for this call now: the lead's age and the watermark do not
+    // apply (it is a request, not a replay), and it is only sent as a call.
+    const callRequest = ctx.callRequest === true && ctx.origin === "manual-call";
 
     // The "no replay" watermark: a lead created before the owner switched this
     // on is never sent, however late its creation path finishes. A repeat
     // enquiry is judged by when it happened, not by the lead's age.
-    if (cfg.enabledAt && (repeat ? enquiredAt : createdAt) < new Date(cfg.enabledAt)) return { queued: false, reason: "pre_enable" };
+    if (!callRequest && cfg.enabledAt && (repeat ? enquiredAt : createdAt) < new Date(cfg.enabledAt)) return { queued: false, reason: "pre_enable" };
     if (String(ctx.origin || "").startsWith("import") && !cfg.emitImports) return { queued: false, reason: "imports_off" };
 
-    const eventId = repeat ? eventIdForEnquiry(l._id, enquiredAt) : eventIdForLead(l._id);
+    const eventId = callRequest ? eventIdForCallRequest(l._id, t) : repeat ? eventIdForEnquiry(l._id, enquiredAt) : eventIdForLead(l._id);
     const base = {
       orgId: l.orgId, integrationId: cfg.id, eventId, eventType: "lead.created",
       // For a repeat enquiry the delivery clock starts at the enquiry.
-      leadId: l._id, leadCreatedAt: repeat ? enquiredAt : createdAt, origin: ctx.origin || "unknown",
+      leadId: l._id, leadCreatedAt: callRequest ? t : repeat ? enquiredAt : createdAt, origin: ctx.origin || "unknown",
       isTest: false, attempts: 0, maxAttempts: T.MAX_ATTEMPTS,
     };
     const skip = async (reason) => {
@@ -120,7 +130,7 @@ function createService({
 
     // An old enquiry is not a new lead: it is neither imported nor called.
     const maxAgeMs = (cfg.maxLeadAgeMinutes || DEFAULT_MAX_LEAD_AGE_MIN) * 60 * 1000;
-    if (t - enquiredAt > maxAgeMs) return skip("stale_lead");
+    if (!callRequest && t - enquiredAt > maxAgeMs) return skip("stale_lead");
 
     const phone = toE164(l.phone, cfg.defaultCountryCode);
     if (!phone) return skip("invalid_phone");
@@ -130,10 +140,13 @@ function createService({
     const mayRoute = (ORIGIN_ROUTE_SOURCES[ctx.origin] || []).includes(ctx.routeSource);
     const inputs = routingInputsFrom(l, mayRoute ? ctx : { ...ctx, routeSource: "" });
     let routing = resolveRouting(cfg, inputs);
+    // A call request with no agent to route to is refused outright, never
+    // downgraded to a Contact (the person wanted a call, not an import).
+    if (callRequest && !routing.autoCall) return { queued: false, reason: routing.reason || "no_route" };
 
     // One person submitting twice must not be phoned twice: the repeat is still
-    // sent, but as a Contact only.
-    if (routing.autoCall && cfg.dedupeWindowHours > 0) {
+    // sent, but as a Contact only. A person pressing "call now" is exempt.
+    if (!callRequest && routing.autoCall && cfg.dedupeWindowHours > 0) {
       const since = new Date(t.getTime() - cfg.dedupeWindowHours * 3600 * 1000);
       const prior = await store.findRecentDeliveryForPhone({ orgId: l.orgId, phoneKey: phone, since, excludeEventId: eventId, autoCallOnly: true });
       if (prior) routing = { autoCall: false, reason: "recent_duplicate_phone", sourceKey: routing.sourceKey };
@@ -279,10 +292,15 @@ function createService({
         ...common, status: "delivered", deliveredAt: t1, terminalAt: t1, deduped: !!verdict.deduped,
         endToEndMs: t1 - new Date(job.leadCreatedAt), lastErrorCode: "", lastErrorMessage: "",
         callQueued: typeof verdict.queued === "boolean" ? verdict.queued : null, callReason: verdict.reason || "",
+        callQueuedUntil: verdict.queuedUntil || null,
       });
       await store.recordIntegrationOutcome(job.orgId, { lastSuccessAt: t1, clearError: true, ...(job.autoCall && !callNotQueued ? { clearWarning: true } : {}) });
       if (job.autoCall && verdict.queued === true) {
         track(Promise.resolve().then(() => onCallQueued(job)).catch((e) => logger.error(`[vistrow-outbound] call-queued hook failed: ${safeErr(e)}`)));
+      }
+      if (job.autoCall && typeof verdict.queued === "boolean") {
+        const result = { queued: verdict.queued, reason: verdict.reason || "", reasonText: verdict.queued ? "" : notQueuedText(verdict.reason), queuedUntil: verdict.queuedUntil || null };
+        track(Promise.resolve().then(() => onCallResult(job, result)).catch((e) => logger.error(`[vistrow-outbound] call-result hook failed: ${safeErr(e)}`)));
       }
       logger.info(`[vistrow-outbound] delivered event=${job.eventId} org=${job.orgId} attempt=${job.attempts} http=${res.httpStatus} ms=${res.latencyMs} deduped=${!!verdict.deduped} call=${job.autoCall}${callNotQueued ? " NOT_QUEUED" : ""}`);
       // Accepted as a Contact, but Vistrow declined to call although we asked

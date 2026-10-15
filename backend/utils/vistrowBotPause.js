@@ -40,10 +40,11 @@ const fmt = (d) => d.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "n
 const asDate = (v) => { if (!v) return null; const d = new Date(v); return Number.isNaN(d.getTime()) ? null : d; };
 
 // One line per thing the call decided, from Vistrow's crm_outcome.
-function callResultText({ outcome, direction, durationSeconds } = {}) {
+function callResultText({ outcome, direction, durationSeconds, followUpKind } = {}) {
   const o = outcome && typeof outcome === "object" && !Array.isArray(outcome) ? outcome : {};
   const parts = [];
   if (o.booking) parts.push(`Result: ${clean(o.booking, 60)}`);
+  if (Number.isInteger(Number(o.attempts)) && Number(o.attempts) > 0) parts.push(`Tries: ${Number(o.attempts)}`);
   if (o.status) parts.push(`Status: ${clean(o.status, 60)}`);
   const visit = asDate(o.site_visit_at);
   if (visit) parts.push(`Site visit: ${fmt(visit)}`);
@@ -51,16 +52,19 @@ function callResultText({ outcome, direction, durationSeconds } = {}) {
   if (follow) parts.push(`Follow-up: ${fmt(follow)}`);
   if (o.note) parts.push(`Note: ${clean(o.note, 300)}`);
   const secs = Number(durationSeconds) > 0 ? ` (${Math.round(Number(durationSeconds))}s)` : "";
-  const head = `${direction === "inbound" ? "Inbound" : "Outbound"} Vistrow Voice call finished${secs}.`;
+  const KIND = { callback: "Scheduled call-back", visit_reminder: "Site-visit reminder call", nurture: "Follow-up call" };
+  const head = followUpKind && KIND[followUpKind]
+    ? `${KIND[followUpKind]} by Vistrow Voice finished${secs}.`
+    : `${direction === "inbound" ? "Inbound" : "Outbound"} Vistrow Voice call finished${secs}.`;
   return parts.length ? `${head} ${parts.join(". ")}.` : `${head} No result was reported.`;
 }
 
 // Internal note with the result in every WhatsApp chat of the lead, and the bot
 // back on where this automation paused it.
-async function noteCallResult({ orgId, leadId, outcome, direction, durationSeconds, now = new Date() }) {
+async function noteCallResult({ orgId, leadId, outcome, direction, durationSeconds, followUpKind, now = new Date() }) {
   if (!orgId || !leadId) return { noted: 0, resumed: 0 };
   const convs = await WaConversation.find({ orgId, leadId }).select("_id").lean();
-  const text = callResultText({ outcome, direction, durationSeconds });
+  const text = callResultText({ outcome, direction, durationSeconds, followUpKind });
   let resumed = 0;
   for (const c of convs) {
     const r = await WaConversation.updateOne(

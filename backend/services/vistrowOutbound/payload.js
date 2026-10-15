@@ -46,6 +46,11 @@ function eventIdForLead(leadId) {
 // number) is a separate event about the same lead: its own id, so idempotency
 // does not swallow it, while a literal re-delivery of that enquiry still maps
 // to the same id.
+// A person in the CRM asked Vistrow to call this lead now (15 Oct 2026).
+function eventIdForCallRequest(leadId, at) {
+  return `evt_call_${String(leadId)}_${new Date(at).getTime()}`;
+}
+
 function eventIdForEnquiry(leadId, at) {
   return `evt_re_${String(leadId)}_${new Date(at).getTime()}`;
 }
@@ -118,6 +123,13 @@ function buildCustomFields(l, ctx = {}) {
     cf.repeat_enquiry = true;
     if (ctx.submittedAt) cf.enquiry_at = new Date(ctx.submittedAt).toISOString();
   }
+  // "Call now via Vistrow" pressed by a person: Vistrow must dial even if it
+  // called this number recently (the 24 h repeat rule does not apply).
+  if (ctx.callRequest === true) {
+    cf.call_request = true;
+    put(cf, "requested_by", ctx.requestedBy, 100);
+    if (ctx.submittedAt) cf.requested_at = new Date(ctx.submittedAt).toISOString();
+  }
 
   put(cf, "status", l.status, 50);
   put(cf, "remark_3", l.remark3, 500);
@@ -170,8 +182,9 @@ function buildLeadCreatedPayload(lead, ctx = {}, { orgId, defaultCountryCode = "
     name: str(l.name, 100),
     phone,
   };
-  // Only on a repeat enquiry: lead_id stays the existing lead, this names the enquiry.
-  if (ctx.repeat === true) payload.enquiry_id = eventId;
+  // Only on a repeat enquiry or a call request: lead_id stays the existing
+  // lead, this names the event (Vistrow keys imports on org_id:lead_id).
+  if (ctx.repeat === true || ctx.callRequest === true) payload.enquiry_id = eventId;
 
   put(payload, "email", l.email, 200);
   if (l.source === "WhatsApp") payload.whatsapp = phone; // for a WhatsApp lead the phone IS the WhatsApp number
@@ -272,4 +285,4 @@ function buildTestPayload({ orgId, eventId }) {
   };
 }
 
-module.exports = { MAX_PAYLOAD_BYTES, EVENT_TYPE, eventIdForLead, eventIdForEnquiry, buildLeadCreatedPayload, buildTestPayload, buildCustomFields, consentSignals, formatBudget };
+module.exports = { MAX_PAYLOAD_BYTES, EVENT_TYPE, eventIdForLead, eventIdForEnquiry, eventIdForCallRequest, buildLeadCreatedPayload, buildTestPayload, buildCustomFields, consentSignals, formatBudget };

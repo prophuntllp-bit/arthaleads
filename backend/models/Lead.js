@@ -19,7 +19,7 @@ const activitySchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ["created", "status_changed", "assigned", "note_added", "note_updated", "note_deleted", "follow_up_set", "site_visit", "called", "emailed", "duplicate_flagged", "consent_changed"],
+      enum: ["created", "status_changed", "assigned", "note_added", "note_updated", "note_deleted", "follow_up_set", "site_visit", "called", "emailed", "duplicate_flagged", "consent_changed", "vistrow_voice"],
       required: true,
     },
     description: { type: String, required: true },
@@ -77,6 +77,13 @@ const voiceCallSchema = new mongoose.Schema(
     // Free-form dict of whatever the voice agent captured (budget/location/…).
     // Schema is intentionally variable — stored raw, never normalized.
     extractedData:   { type: mongoose.Schema.Types.Mixed, default: undefined },
+    // Vistrow's own retries and scheduled follow-ups (15 Oct 2026): how many
+    // dials this report covers, which scheduled call it was (callback /
+    // visit_reminder / nurture), and the booking Vistrow reported, kept even
+    // when the forward-only rules did not let it change the lead.
+    attempts:        { type: Number, default: undefined },
+    followUpKind:    { type: String, trim: true, default: undefined },
+    result:          { type: String, trim: true, default: undefined },
   },
   { timestamps: true }
 );

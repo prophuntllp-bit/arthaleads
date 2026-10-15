@@ -14,7 +14,7 @@ const Organization    = require("../models/Organization");
 const { mapGoogleLeadFields, fromWebhookColumns } = require("../utils/googleLeadFields");
 const { mapCustomFieldsToLead } = require("../utils/formFieldMapper");
 const OPTS = require("../constants/leadOptions");
-const { planOutcome, phoneFilter, cleanEmail, cleanName } = require("../utils/vistrowCallResult");
+const { planOutcome, phoneFilter, cleanEmail, cleanName, FOLLOW_UP_LABELS, followUpKindOf, attemptsOf, reportedBooking, callDescription } = require("../utils/vistrowCallResult");
 
 const router = express.Router();
 
@@ -1057,8 +1057,15 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       call_id, recording_url, recording_mime_type, page_path,
       // Vistrow bridge (2026-10-15): the lead this call was placed for, the
       // call direction, and the call's result in this CRM's vocabulary.
+      // crm_outcome.attempts arrives with the final "Not Reachable" report
+      // (an undelivered dial: no transcript, no recording, duration 0);
+      // follow_up_kind (top level or custom_fields) marks a scheduled
+      // call-back / site-visit reminder / nurture call Vistrow placed itself.
       arthaleads_lead_id, crm_outcome, direction,
     } = req.body || {};
+    const followUpKind = followUpKindOf(req.body);
+    const callAttempts = attemptsOf(crm_outcome);
+    const callResult = reportedBooking(crm_outcome);
 
     if (!token) return res.status(400).json({ success: false, message: "Missing token" });
 
@@ -1153,6 +1160,9 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
         }
       }
       if (hasExtracted) voiceCall.extractedData = extracted_data;
+      if (callAttempts) voiceCall.attempts = callAttempts;
+      if (followUpKind) voiceCall.followUpKind = followUpKind;
+      if (callResult) voiceCall.result = callResult;
     }
 
     // Build the note + requirements for a voice call. The full transcript
@@ -1180,9 +1190,12 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
         : [];
       const extractedLines = extractedEntries.map(([k, v]) =>
         `${k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}: ${v}`);
+      const heading = callResult === "Not Reachable" && callAttempts
+        ? `📞 ${callDescription({ booking: callResult, attempts: callAttempts })}`
+        : followUpKind ? `📞 ${FOLLOW_UP_LABELS[followUpKind]} (${sourceLabel})` : `📞 ${sourceLabel} call summary`;
       return {
         noteText: [
-          `📞 ${sourceLabel} call summary`,
+          heading,
           metaBits.length ? metaBits.join(" · ") : null,
           extractedLines.length ? `\nCaptured details:\n${extractedLines.join("\n")}` : null,
           cleanTranscript.length ? `\nFull transcript is in the Transcript tab.` : null,
@@ -1215,6 +1228,9 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
         if (voiceCall.recordingUrl)      setOps["voiceCalls.$.recordingUrl"] = voiceCall.recordingUrl;
         if (voiceCall.recordingMimeType) setOps["voiceCalls.$.recordingMimeType"] = voiceCall.recordingMimeType;
         if (voiceCall.extractedData)     setOps["voiceCalls.$.extractedData"] = voiceCall.extractedData;
+        if (voiceCall.attempts)          setOps["voiceCalls.$.attempts"] = voiceCall.attempts;
+        if (voiceCall.followUpKind)      setOps["voiceCalls.$.followUpKind"] = voiceCall.followUpKind;
+        if (voiceCall.result)            setOps["voiceCalls.$.result"] = voiceCall.result;
 
         await Lead.updateOne(
           { _id: existingByCallId._id, "voiceCalls.externalCallId": callIdNum },
@@ -1254,9 +1270,9 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
         const { noteText } = buildVoiceNote(voiceCall);
         const callActivity = {
           type: "called",
-          description: `${direction === "outbound" ? "Outbound" : "Inbound"} Vistrow Voice call${voiceCall.durationSeconds ? ` (${Math.round(voiceCall.durationSeconds)}s)` : ""}`,
+          description: callDescription({ direction, followUpKind, attempts: callAttempts, booking: callResult, durationSeconds: voiceCall.durationSeconds }),
           performedByName: "Vistrow Voice",
-          meta: { callId: callIdNum, direction: direction || "" },
+          meta: { callId: callIdNum, direction: direction || "", followUpKind, attempts: callAttempts, booking: callResult },
         };
         let pushed;
         try {
@@ -1310,7 +1326,7 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
         // assistant comes back on if it was paused for this call.
         try {
           await require("../utils/vistrowBotPause").noteCallResult({
-            orgId, leadId: existingByPhone._id, outcome: crm_outcome, direction, durationSeconds: voiceCall.durationSeconds,
+            orgId, leadId: existingByPhone._id, outcome: crm_outcome, direction, durationSeconds: voiceCall.durationSeconds, followUpKind,
           });
         } catch (noteErr) { logger.warn(`[custom webhook] WhatsApp call note failed for lead ${existingByPhone._id}: ${noteErr.message}`); }
         logger.info(`[custom webhook] Vistrow call ${callIdNum} appended to existing lead ${existingByPhone._id}`);
@@ -1325,6 +1341,12 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       const { noteText, reqText } = buildVoiceNote(voiceCall);
       const mapped = mapVistrowExtractedFields(hasExtracted ? extracted_data : null);
       const plan = planOutcome({ status: "New", booking: "" }, crm_outcome);
+      const newCallActivity = {
+        type: "called",
+        description: callDescription({ direction, followUpKind, attempts: callAttempts, booking: callResult, durationSeconds: voiceCall.durationSeconds }),
+        performedByName: "Vistrow Voice",
+        meta: { callId: callIdNum, direction: direction || "", followUpKind, attempts: callAttempts, booking: callResult },
+      };
 
       let lead;
       try {
@@ -1363,7 +1385,7 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
             performedBy: assignee?._id || null,
             performedByName: assignee?.name || "",
             meta: { automationId: automation._id?.toString(), sourceName: source_name || "" },
-          }, ...plan.activities],
+          }, newCallActivity, ...plan.activities],
         });
       } catch (createErr) {
         // Two near-simultaneous deliveries of the same brand-new call_id can

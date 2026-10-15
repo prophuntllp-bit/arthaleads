@@ -5,6 +5,7 @@ import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMisse
 import api from "../services/api";
 import useAppRefresh from "../hooks/useAppRefresh";
 import ArthaSuggestCard from "./ArthaSuggestCard";
+import VistrowVoicePanel from "./VistrowVoicePanel";
 import fetchLeadToOpen from "../utils/fetchLeadToOpen";
 import { ConfirmDialog, Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
 import { useSoftPhone } from "../context/SoftPhoneContext";
@@ -596,6 +597,9 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
         <ArthaSuggestCard key={`${lead._id}:${lead.arthaSuggest?.at || ""}`} lead={lead}
           onChanged={(r) => { if (r?.lead) onUpdated?.({ ...lead, ...r.lead, arthaSuggest: undefined }); }} />
 
+        {/* Vistrow Voice: last call, tries, next scheduled call, "call now". Pipeline leads only (project copies have no delivery of their own). */}
+        {!isProjectLead && <VistrowVoicePanel lead={lead} onUpdated={onUpdated} />}
+
         <div className="flex flex-wrap gap-2 border-b pb-3" style={{ borderColor: "var(--app-border)" }}>
           {tabList.map((item) => (
             <button
@@ -1110,6 +1114,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
             {(lead.activities || []).length === 0 && <p className="text-sm text-app-soft">No activity yet.</p>}
             {(lead.activities || []).slice().reverse().map((item) => {
               const isCall = item.type === "called";
+              const isVistrow = item.type === "vistrow_voice";
               const meta   = item.meta || {};
               const sentiment = meta.sentiment;
               const sentimentColor = sentiment === "positive" ? "#22c55e" : sentiment === "negative" ? "#ef4444" : "#a1a1aa";
@@ -1119,6 +1124,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                 <div key={item._id || `${item.type}-${item.createdAt}`} className="rounded-[1.25rem] p-4 stitch-surface-muted overflow-hidden">
                   <div className="flex items-start gap-2">
                     {isCall && <Phone className="w-3.5 h-3.5 text-orange-500 shrink-0 mt-0.5" />}
+                    {isVistrow && <PhoneOutgoing className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: "#6366f1" }} />}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-app break-words">{item.description}</p>
                       <p className="mt-1 text-xs text-app-soft">

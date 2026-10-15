@@ -158,10 +158,14 @@ function classifyResult(r, secrets = []) {
       // ok:true = the event is accepted (and a retry is safe). Whether a CALL was
       // queued is separate: Vistrow may import the Contact yet decline to dial
       // (unknown agent, no caller number), reported as queued:false + reason.
+      // queued_until (ISO): the call is scheduled for later (calling window
+      // closed). Only a real, parseable time is kept.
+      const qu = typeof r.json.queued_until === "string" ? Date.parse(r.json.queued_until) : NaN;
       return {
         outcome: "delivered", code: "OK", deduped: r.json.deduped === true,
         queued: typeof r.json.queued === "boolean" ? r.json.queued : undefined,
         reason: reasonText(r.json.reason, secrets),
+        queuedUntil: Number.isFinite(qu) ? new Date(qu) : null,
       };
     }
     if (r.json && r.json.ok === false) return { outcome: "permanent", code: "OK_FALSE", message: reason() || "Vistrow rejected the event (ok:false)" };
