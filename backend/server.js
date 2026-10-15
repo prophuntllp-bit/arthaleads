@@ -354,7 +354,12 @@ app.use("/api/billing",     require("./routes/billingRoutes"));
 app.use("/api/contact",    contactLimiter, require("./routes/contactRoutes"));
 app.use("/api/careers",    contactLimiter, require("./routes/careersRoutes"));
 app.use("/api/media",      require("./routes/mediaRoutes"));
-app.use("/api/public",     contactLimiter, require("./routes/publicRoutes"));
+// Reads under /api/public (the options list every page loads at startup, form
+// definitions, app version) only count against the general limiter. Before
+// this, ten page loads from one office in 15 minutes hit the submissions
+// limit and every page showed "Too many submissions" (audit FE30).
+const submissionsOnly = (req, res, next) => (req.method === "GET" || req.method === "HEAD" ? next() : contactLimiter(req, res, next));
+app.use("/api/public",     submissionsOnly, require("./routes/publicRoutes"));
 
 // ── Dynamic Sitemap (served at /sitemap.xml) ──────────────────────────────────
 app.get("/sitemap.xml", blogController.getSitemap);
