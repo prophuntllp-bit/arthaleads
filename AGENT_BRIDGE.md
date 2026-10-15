@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
-- [claude] 2026-10-15 IST: Artha Phase 3a morning brief (pilot orgs): backend/copilot/brief.js, routes/copilotRoutes.js, scheduler.js (9:00 IST push), models (User prefs), frontend Dashboard brief card + HelpBot empty state
 
 
 
@@ -79,6 +78,8 @@ Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-15 IST (ea97b0e): Artha Phase 3a morning brief. backend/copilot/brief.js (code-only, no AI), GET /api/copilot/brief, morning_brief tool, Dashboard MorningBrief card. Pilot orgs only (copilot.beta), switch copilot.brief. No 9 AM push added: the existing 9 AM follow-up/task reminder pushes already go out. Test: tests/copilotBrief.db.test.js.
 
 - [claude] 2026-10-15 IST (68645ec): Artha fixes. Open lead window reloads after Artha apply/undo (LeadDetail + useAppRefresh). New GET /api/projects/lead/:leadId (visibility-checked) so Artha links to project leads open; Follow-ups/Calls now handle openLeadId while mounted. create_lead now records leadId so Undo removes the lead.
 
