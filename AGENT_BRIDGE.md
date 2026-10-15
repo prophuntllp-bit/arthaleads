@@ -83,6 +83,8 @@ Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+- [Claude Code] 2026-10-15 IST: correction to the fd82216 entry: no RAILWAY_STAGING_TOKEN is needed. Railway service `arthaleads-staging` (staging environment, with its own MongoDB on mongo:7.0) deploys the `staging` branch directly from GitHub; the staging GitHub Action is removed. Vercel staging domains + Preview/staging VITE_API_URL are set. Remaining: Hostinger DNS records (docs/STAGING.md section 3), then seed test data.
+
 - [Claude Code] 2026-10-15 IST, fd82216: STAGING code side done (docs/STAGING.md). New rule: commit to `staging`, check on staging.arthaleads.com / app-staging.arthaleads.com, then merge to `main`. Switches: BACKGROUND_JOBS=off, AUTH_COOKIE_NAME (utils/authCookie.js), frontend/src/utils/hosts.js. Owner still has to create the Railway staging env + Mongo, Vercel domains on branch staging, DNS, and the RAILWAY_STAGING_TOKEN secret.
 - [Claude Code] 2026-10-15 IST, 9abedc4: INCIDENT note: 05b97d8 (sliding sessions, other session) committed backend/middlewares/auth.js while my uncommitted edit was in it, requiring utils/authCookie.js which was not committed; main would have crashed on next boot. 9abedc4 added the file; live API checked healthy after redeploy. Lesson for all agents: `git add` only the files you changed, and check `git diff --cached` before committing.
 

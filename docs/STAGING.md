@@ -23,8 +23,9 @@ in its frontend/ and backend/.
 
 1. `git checkout staging && git pull`, merge `main` in if staging is behind.
 2. Commit the change to `staging` and push. Vercel builds the staging website and
-   CRM; `.github/workflows/deploy-backend-staging.yml` deploys the API to the
-   Railway staging environment.
+   CRM; Railway's `arthaleads-staging` service (staging environment) deploys the
+   API straight from the `staging` branch (GitHub integration, watch path
+   /backend/**). No GitHub Action or token is involved.
 3. Check the change on staging.arthaleads.com / app-staging.arthaleads.com.
 4. When it works, merge `staging` into `main` and push. That deploys live.
 5. Log both commits in AGENT_BRIDGE.md.
@@ -47,20 +48,16 @@ to `main`; merge it back into `staging` right after.
 
 ## One-time setup (owner, in the dashboards)
 
-### 1. Railway: a separate "staging" environment
-1. Project > Environments > **New environment** > name it `staging`. Choose an
-   **empty** environment, not "duplicate", so no production variable is copied.
-2. In `staging`, add a **MongoDB** database (New > Database > MongoDB).
-3. In `staging`, add the backend service from the same GitHub repo, named
-   `Arthaleads` (same name as production, the deploy workflow uses it).
-4. Set its variables (below). Generate fresh secrets; never copy production's.
-5. Settings > Networking > custom domain `api-staging.arthaleads.com`. Railway
-   shows the CNAME target for step 3.
-6. Project settings > Tokens > create a **project token for the staging
-   environment** and add it in GitHub (repo Settings > Secrets > Actions) as
-   `RAILWAY_STAGING_TOKEN`.
+### 1. Railway: a separate "staging" environment (DONE 15 Oct 2026)
+Project `prolific-endurance` > environment `staging` (created empty, nothing
+copied from production) with:
+- `MongoDB` (Railway template, staging data only)
+- `arthaleads-staging`: GitHub repo prophuntllp-bit/arthaleads, branch
+  `staging`, root `/backend`, watch path `/backend/**`, healthcheck `/health`,
+  restart on failure x10, custom domain `api-staging.arthaleads.com` (port 5000).
+  JWT_SECRET and CRYPTO_KEY were generated with Railway's secret() function.
 
-Staging variables for the `Arthaleads` service:
+Staging variables for the `arthaleads-staging` service:
 
 ```
 NODE_ENV=production
@@ -83,17 +80,24 @@ unavailable and lets forms through (backend/utils/recaptcha.js), which is what
 a test environment wants. Leave WhatsApp, Razorpay, Google Ads and push keys
 unset too.
 
-### 2. Vercel: staging hosts on the `staging` branch
-1. Project > Settings > Domains > add `staging.arthaleads.com` and
-   `app-staging.arthaleads.com`, and set each to **Git branch: staging**.
-2. Settings > Environment Variables > add `VITE_API_URL` =
-   `https://api-staging.arthaleads.com/api` for **Preview**, branch `staging`
-   only. (Production keeps its own value.)
+### 2. Vercel: staging hosts on the `staging` branch (DONE 15 Oct 2026)
+- Domains `staging.arthaleads.com` and `app-staging.arthaleads.com`: Preview,
+  git branch `staging`.
+- `VITE_API_URL` = `https://api-staging.arthaleads.com/api` for Preview, branch
+  `staging` only (the original VITE_API_URL stays on all other environments).
 
-### 3. DNS (wherever arthaleads.com is managed)
-- `staging` CNAME `cname.vercel-dns.com`
-- `app-staging` CNAME `cname.vercel-dns.com`
-- `api-staging` CNAME `<target shown by Railway>`
+### 3. DNS at Hostinger (arthaleads.com uses dns-parking.com nameservers)
+| Type | Name | Value |
+|---|---|---|
+| CNAME | staging | f241532a71ba57e8.vercel-dns-017.com |
+| CNAME | app-staging | f241532a71ba57e8.vercel-dns-017.com |
+| CNAME | api-staging | 2ykmh9ku.up.railway.app |
+| TXT | _railway-verify.api-staging | (verification value shown in Railway > arthaleads-staging > Networking) |
+
+### Note: staging MongoDB runs mongo:7.0
+Railway's MongoDB template ships mongo:8.0, which cannot start on Linux kernel
+6.19+ (MongoDB SERVER-121912, tcmalloc/rseq). Staging uses mongo:7.0 until
+that is fixed upstream.
 
 ### 4. Test data
 Once the staging API is up, seed it with the sandbox data (demo org, admin,
