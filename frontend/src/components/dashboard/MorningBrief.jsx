@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarCheck, MessageCircle, AlarmClock, Sparkles, Clock, ChevronDown, Users } from "lucide-react";
+import { CalendarCheck, MessageCircle, AlarmClock, Sparkles, Clock, ChevronDown, Users, AlertTriangle, Flame, CalendarX, UserX, Hourglass } from "lucide-react";
 import api from "../../services/api";
 import useAppRefresh from "../../hooks/useAppRefresh";
 import { PhoneActions, WhatsAppLink } from "../UI";
@@ -15,6 +15,16 @@ const TAG = {
   overdue: { label: "Missed",     Icon: AlarmClock,    color: "#dc2626", bg: "rgba(239,68,68,0.12)" },
   new:     { label: "New lead",   Icon: Sparkles,      color: "#ea580c", bg: "rgba(249,115,22,0.12)" },
   today:   { label: "Due today",  Icon: Clock,         color: "#2563eb", bg: "rgba(59,130,246,0.12)" },
+};
+
+// Deals slipping (backend copilot/risks.js).
+const RISK = {
+  chat_closing:       { label: "Reply window closing", Icon: Hourglass },
+  unassigned_waiting: { label: "No owner",             Icon: UserX },
+  visit_missed:       { label: "Visit not updated",    Icon: CalendarX },
+  hot_cold:           { label: "Hot lead gone quiet",  Icon: Flame },
+  visit_silent:       { label: "No follow-up after visit", Icon: CalendarCheck },
+  new_waiting:        { label: "New lead waiting",     Icon: AlarmClock },
 };
 
 const COUNTS = [
@@ -47,13 +57,15 @@ export default function MorningBrief() {
   };
 
   const open = (it) => {
-    if (it.tag === "chat" && it.conversationId) { navigate("/conversations", { state: { openConversationId: it.conversationId } }); return; }
+    if (it.kind === "summary") { navigate("/leads"); return; }
+    if ((it.tag === "chat" || it.type === "chat_closing") && it.conversationId) { navigate("/conversations", { state: { openConversationId: it.conversationId } }); return; }
     navigate("/leads", { state: { openLeadId: it.id, openLeadKind: it.kind } });
   };
   const askArtha = () => window.dispatchEvent(new CustomEvent("helpbot:ask", { detail: { question: "Who should I call first today?" } }));
 
   const counts = COUNTS.filter((c) => brief.counts[c.key] > 0);
-  const nothing = !brief.items.length && !(brief.team || []).length;
+  const risks = brief.risks?.list || [];
+  const nothing = !brief.items.length && !risks.length && !(brief.team || []).length;
   const dateLabel = new Date(`${brief.date}T12:00:00+05:30`).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long" });
 
   return (
@@ -63,7 +75,7 @@ export default function MorningBrief() {
           <p className="stitch-kicker mb-1">Artha · {dateLabel}</p>
           <h3 className="flex items-center gap-1.5 text-base font-bold text-app">
             {nothing ? "Nothing urgent today" : "Your day: who to call first"}
-            <InfoTip text="Worked out from your follow-ups, site visits, unread WhatsApp chats and new leads. Updates when your leads change." />
+            <InfoTip text="Worked out from your follow-ups, site visits, unread WhatsApp chats and new leads. 'Needs attention' flags deals slipping: hot leads gone quiet, visits with no follow-up or not updated, new leads waiting, and WhatsApp chats about to lose the reply window. Updates when your leads change." />
           </h3>
           {counts.length > 0 && (
             <p className="mt-1 text-xs text-app-soft">
@@ -88,6 +100,44 @@ export default function MorningBrief() {
           )}
         </div>
       </div>
+
+      {!collapsed && risks.length > 0 && (
+        <div className="mt-3 rounded-2xl p-3" style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.18)" }}>
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-bold" style={{ color: "#dc2626" }}>
+            <AlertTriangle className="h-3.5 w-3.5" /> Needs attention
+            <span className="font-semibold text-app-soft">
+              · {brief.risks.total} {brief.risks.total === 1 ? "deal" : "deals"} slipping{brief.risks.total > risks.length ? `, top ${risks.length} shown` : ""}
+            </span>
+          </p>
+          <ol className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+            {risks.map((it) => {
+              const t = RISK[it.type] || RISK.hot_cold;
+              return (
+                <li key={`${it.kind}:${it.id}`} className="flex items-center gap-2.5 rounded-xl p-2.5"
+                  style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "rgba(239,68,68,0.12)", color: "#dc2626" }} title={t.label}>
+                    <t.Icon className="h-4 w-4" />
+                  </span>
+                  <button type="button" onClick={() => open(it)} className="min-w-0 flex-1 text-left cursor-pointer">
+                    <span className="block truncate text-sm font-semibold text-app hover:underline">
+                      {it.name}{it.owner ? <span className="font-normal text-app-soft"> · {it.owner}</span> : null}
+                    </span>
+                    <span className="block truncate text-[11px] text-app-soft" title={it.reason}>{it.reason}</span>
+                  </button>
+                  {it.phone && it.kind === "lead" && (
+                    <span className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ border: "1px solid var(--app-border)" }}>
+                        <PhoneActions compact phone={it.phone} lead={{ _id: it.id, name: it.name }} />
+                      </span>
+                      <WhatsAppLink phone={it.phone} name={it.name} leadId={it.id} />
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
 
       {!collapsed && brief.items.length > 0 && (
         <ol className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
@@ -132,6 +182,7 @@ export default function MorningBrief() {
               <thead>
                 <tr className="text-left text-app-soft" style={{ background: "var(--app-surface-low)" }}>
                   <th className="px-3 py-2 font-semibold">Person</th>
+                  <th className="px-3 py-2 font-semibold text-right">At risk</th>
                   <th className="px-3 py-2 font-semibold text-right">Missed follow-ups</th>
                   <th className="px-3 py-2 font-semibold text-right">New, not contacted</th>
                   <th className="px-3 py-2 font-semibold text-right">Due today</th>
@@ -142,6 +193,7 @@ export default function MorningBrief() {
                 {brief.team.map((r) => (
                   <tr key={r.id} style={{ borderTop: "1px solid var(--app-border)" }}>
                     <td className="px-3 py-2 font-semibold text-app">{r.name}</td>
+                    <td className="px-3 py-2 text-right tabular-nums font-semibold" style={{ color: r.atRisk ? "#dc2626" : undefined }}>{r.atRisk || 0}</td>
                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: r.overdue ? "#dc2626" : undefined }}>{r.overdue}</td>
                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: r.fresh ? "#ea580c" : undefined }}>{r.fresh}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-app">{r.today}</td>

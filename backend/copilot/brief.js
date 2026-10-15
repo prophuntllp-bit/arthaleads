@@ -12,6 +12,7 @@ const Project = require("../models/Project");
 const User = require("../models/User");
 const WaConversation = require("../models/WaConversation");
 const { istTodayRange, istDateKey } = require("../utils/datetime");
+const { buildRisks } = require("./risks");
 
 const CLOSED = ["Closed Won", "Closed Lost"];
 const NEW_WINDOW_DAYS = 7;
@@ -102,19 +103,27 @@ async function buildBrief(user, now = new Date()) {
   for (const { l, kind, at } of dt) add(leadItem(l, kind, "today", `Follow-up due today at ${timeIST(at)}.`, at));
 
   const [ovL, ovP, tdL, tdP, nwL, nwP, chatN] = counts;
+  // Deals slipping (copilot/risks.js) go in their own "Needs attention" list;
+  // a lead shown there is not repeated in "who to call first".
+  const risks = await buildRisks(user, now);
+  const risky = new Set(risks.list.map((r) => `${r.kind}:${r.id}`));
+  const callFirst = items.filter((it) => !risky.has(`${it.kind}:${it.id}`));
   const brief = {
     date: istDateKey(now),
     counts: { visits: visits.length + pVisits.length, chats: chatN, overdue: ovL + ovP, today: tdL + tdP, fresh: nwL + nwP },
-    items: items.slice(0, MAX_ITEMS),
-    more: Math.max(0, items.length - MAX_ITEMS),
+    risks: { total: risks.total, counts: risks.counts, list: risks.list },
+    items: callFirst.slice(0, MAX_ITEMS),
+    more: Math.max(0, callFirst.length - MAX_ITEMS),
     team: null,
   };
-  if (user.role === "admin" || user.role === "manager") brief.team = await teamSummary(user, { start, end, newSince });
+  if (user.role === "admin" || user.role === "manager") {
+    brief.team = (await teamSummary(user, { start, end, newSince, riskBy: risks.byOwner }));
+  }
   return brief;
 }
 
 // Per person, for managers: who has missed follow-ups or untouched new leads.
-async function teamSummary(user, { start, end, newSince }) {
+async function teamSummary(user, { start, end, newSince, riskBy = {} }) {
   const base = { orgId: oid(user.orgId), isArchived: { $ne: true }, isDeleted: { $ne: true }, status: { $nin: CLOSED }, assignedTo: { $ne: null } };
   const rows = await Lead.aggregate([
     { $match: base },
@@ -129,9 +138,9 @@ async function teamSummary(user, { start, end, newSince }) {
   const users = await User.find({ orgId: user.orgId, isActive: true }).select("name role").lean();
   const byId = new Map(rows.map((r) => [String(r._id), r]));
   return users
-    .map((u) => { const r = byId.get(String(u._id)) || {}; return { id: String(u._id), name: u.name, overdue: r.overdue || 0, today: r.today || 0, fresh: r.fresh || 0, visits: r.visits || 0 }; })
-    .filter((r) => r.overdue || r.today || r.fresh || r.visits)
-    .sort((a, b) => (b.overdue + b.fresh) - (a.overdue + a.fresh) || a.name.localeCompare(b.name))
+    .map((u) => { const r = byId.get(String(u._id)) || {}; return { id: String(u._id), name: u.name, overdue: r.overdue || 0, today: r.today || 0, fresh: r.fresh || 0, visits: r.visits || 0, atRisk: riskBy[String(u._id)] || 0 }; })
+    .filter((r) => r.overdue || r.today || r.fresh || r.visits || r.atRisk)
+    .sort((a, b) => (b.atRisk + b.overdue + b.fresh) - (a.atRisk + a.overdue + a.fresh) || a.name.localeCompare(b.name))
     .slice(0, 12);
 }
 
@@ -141,6 +150,8 @@ function briefForModel(brief) {
   return {
     date: brief.date,
     counts: brief.counts,
+    needsAttention: (brief.risks?.list || []).map(({ id, kind, name, type, reason, owner }) => ({ id, kind, name, type, reason, owner })),
+    atRiskTotal: brief.risks?.total || 0,
     callFirst: brief.items.map(({ id, kind, name, tag, reason, status, projectName }) => ({ id, kind, name, tag, reason, status, project: projectName || undefined })),
     more: brief.more,
     team: brief.team,
