@@ -39,7 +39,8 @@ if (!isStaging) {
 
   // Sample deals slipping, one per risk alert (copilot/risks.js).
   const D = 24 * 3600e3, at = (ms) => new Date(Date.now() - ms);
-  const setLead = (name, fields) => Lead.updateOne({ orgId: org._id, name }, { $set: fields });
+  // Straight to the collection: Mongoose treats createdAt as fixed and would drop it.
+  const setLead = (name, fields) => Lead.collection.updateOne({ orgId: org._id, name }, { $set: fields });
   await setLead("Test Lead 2", { priority: "Hot", status: "Contacted", createdAt: at(4 * D) });
   await setLead("Test Lead 3", { status: "Site Visit", siteVisitDate: at(2 * D), siteVisitDone: false });
   await setLead("Test Lead 4", { status: "Site Visit", siteVisitDate: at(5 * D), siteVisitDone: true, createdAt: at(10 * D) });
