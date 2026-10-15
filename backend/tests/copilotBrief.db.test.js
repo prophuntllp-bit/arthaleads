@@ -43,6 +43,13 @@ const check = (ok, msg, d = "") => {
   const proj = { _id: oid(), orgId: org, name: "Kalpataru", assignedTo: [A._id] };
   await Project.collection.insertOne(proj);
   await ProjectLead.collection.insertOne({ _id: oid(), orgId: org, project: proj._id, name: "Vikram", phone: "919811112222", status: "Contacted", isProspective: false, followUp: at("2026-10-14T05:00:00Z"), createdAt: at("2026-10-02T05:00:00Z") });
+  // An imported list row is cold data, not a new lead waiting for a call; a
+  // WhatsApp one is. One with a remark has been worked already.
+  await ProjectLead.collection.insertMany([
+    { _id: oid(), orgId: org, project: proj._id, name: "Imported Row", phone: "919811110000", status: "", source: "Manual", isProspective: false, remark: "", createdAt: at("2026-10-14T05:00:00Z") },
+    { _id: oid(), orgId: org, project: proj._id, name: "Worked Row", phone: "919811110001", status: "", source: "WhatsApp", isProspective: false, remark: "Busy, call later", createdAt: at("2026-10-14T05:00:00Z") },
+    { _id: oid(), orgId: org, project: proj._id, name: "Kiran", phone: "919811110002", status: "", source: "WhatsApp", isProspective: false, remark: "", createdAt: at("2026-10-14T05:00:00Z") },
+  ]);
   await WaConversation.collection.insertOne({ _id: oid(), orgId: org, contactPhone: "919822223333", contactName: "Sahil", assignedTo: A._id, unreadCount: 2, status: "open", lastMessageAt: at("2026-10-15T03:00:00Z") });
 
   const b = await buildBrief(A, now);
@@ -54,7 +61,8 @@ const check = (ok, msg, d = "") => {
   check(b.items.find((x) => x.name === "Meera")?.tag === "today", "00:30 IST today is due today, not overdue");
   check(b.items.find((x) => x.name === "Neha")?.tag === "new", "a new uncontacted lead is listed");
   check(!names.includes("Old") && !names.includes("Isha"), "closed leads and a colleague's leads are left out");
-  check(b.counts.overdue === 3 && b.counts.today === 1 && b.counts.visits === 1 && b.counts.chats === 1 && b.counts.fresh === 1, "counts add up", JSON.stringify(b.counts));
+  check(b.items.find((x) => x.name === "Kiran")?.tag === "new" && !names.includes("Imported Row") && !names.includes("Worked Row"), "a new WhatsApp project lead counts; imported rows and worked ones don't", names.join(","));
+  check(b.counts.overdue === 3 && b.counts.today === 1 && b.counts.visits === 1 && b.counts.chats === 1 && b.counts.fresh === 2, "counts add up", JSON.stringify(b.counts));
   check(b.team === null, "agents get no team summary");
   const vk = b.items.find((x) => x.name === "Vikram");
   check(vk.kind === "projectLead" && vk.projectName === "Kalpataru" && vk.projectId === String(proj._id), "project leads carry their project for linking");

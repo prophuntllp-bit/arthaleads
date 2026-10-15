@@ -46,6 +46,10 @@ async function buildBrief(user, now = new Date()) {
   const projBase = await projectScope(user);
   const newSince = new Date(now.getTime() - NEW_WINDOW_DAYS * DAY);
   const today = { $gte: start, $lte: end };
+  // Project leads never record a first contact, and most arrive as imported
+  // lists (source "Manual"): cold data, not someone waiting for a call. A
+  // project lead is "new" when it came in by itself and has no remark or note.
+  const projFresh = { ...projBase, status: { $in: ["", "New"] }, source: { $ne: "Manual" }, remark: { $in: ["", null] }, "notes.0": { $exists: false }, createdAt: { $gte: newSince } };
   const fields = "name phone status followUpDate followUp followUp2 siteVisitDate createdAt project";
   const projSelect = (q) => ProjectLead.find(q).select(fields).populate("project", "name");
 
@@ -57,7 +61,7 @@ async function buildBrief(user, now = new Date()) {
     Lead.find({ ...leadBase, followUpDate: today }).select(fields).sort({ followUpDate: 1 }).limit(10).lean(),
     projSelect({ ...projBase, $and: [{ $or: [{ followUp: today }, { followUp2: today }] }] }).sort({ followUp: 1 }).limit(10).lean(),
     Lead.find({ ...leadBase, status: "New", firstContactedAt: null, createdAt: { $gte: newSince } }).select(fields).sort({ createdAt: -1 }).limit(10).lean(),
-    projSelect({ ...projBase, status: { $in: ["", "New"] }, firstContactedAt: null, createdAt: { $gte: newSince } }).sort({ createdAt: -1 }).limit(10).lean(),
+    projSelect(projFresh).sort({ createdAt: -1 }).limit(10).lean(),
     WaConversation.find({ orgId: user.orgId, assignedTo: me, unreadCount: { $gt: 0 }, status: { $ne: "resolved" } })
       .select("contactName contactPhone leadId unreadCount lastMessageAt lastMessagePreview").sort({ lastMessageAt: -1 }).limit(10).lean(),
     Promise.all([
@@ -66,7 +70,7 @@ async function buildBrief(user, now = new Date()) {
       Lead.countDocuments({ ...leadBase, followUpDate: today }),
       ProjectLead.countDocuments({ ...projBase, $and: [{ $or: [{ followUp: today }, { followUp2: today }] }] }),
       Lead.countDocuments({ ...leadBase, status: "New", firstContactedAt: null, createdAt: { $gte: newSince } }),
-      ProjectLead.countDocuments({ ...projBase, status: { $in: ["", "New"] }, firstContactedAt: null, createdAt: { $gte: newSince } }),
+      ProjectLead.countDocuments(projFresh),
       WaConversation.countDocuments({ orgId: user.orgId, assignedTo: me, unreadCount: { $gt: 0 }, status: { $ne: "resolved" } }),
     ]),
   ]);
