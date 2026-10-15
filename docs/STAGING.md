@@ -15,6 +15,12 @@ production data, real customers, payments or WhatsApp.
 
 ## Day-to-day flow (every agent, every change)
 
+Several sessions share the main checkout (E:\PROPHUNT CRM) on `main`: never
+`git checkout staging` there, it would switch the branch under everyone else.
+Work on staging in its own worktree instead (create once):
+`git worktree add "E:/PROPHUNT CRM-staging" staging`, then run `npm install`
+in its frontend/ and backend/.
+
 1. `git checkout staging && git pull`, merge `main` in if staging is behind.
 2. Commit the change to `staging` and push. Vercel builds the staging website and
    CRM; `.github/workflows/deploy-backend-staging.yml` deploys the API to the
