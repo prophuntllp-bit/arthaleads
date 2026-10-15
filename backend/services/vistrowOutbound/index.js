@@ -29,7 +29,14 @@ async function notifyAdmins(cfg, { code }) {
   await Promise.all(admins.map((a) => sendPushToUser(a._id, payload).catch(() => {})));
 }
 
-const service = createService({ store: mongoStore, logger, notifyFailure: notifyAdmins });
+// Vistrow queued a call for a WhatsApp lead: the WhatsApp bot stops replying to
+// that chat until the call result arrives (utils/vistrowBotPause.js).
+async function onCallQueued(job) {
+  if (!String(job.origin || "").startsWith("whatsapp-") || !job.leadId) return;
+  await require("../../utils/vistrowBotPause").pauseBotForCall({ orgId: job.orgId, leadId: job.leadId });
+}
+
+const service = createService({ store: mongoStore, logger, notifyFailure: notifyAdmins, onCallQueued });
 
 let timer = null;
 function startWorker({ intervalMs = 5000 } = {}) {

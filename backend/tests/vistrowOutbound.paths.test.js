@@ -183,34 +183,32 @@ test("QR form: an org-level QR carries no project", async () => {
 // ═══ WhatsApp / click-to-WhatsApp ad ═════════════════════════════════════
 const waOrg = () => ({ _id: ORG, autoAssign: false });
 const campaign = (adId = AD) => ({ adId, headline: "900+ Acre Launch", body: "Hi", sourceUrl: "https://fb.me/x", ctwaClid: "CLICK" });
-test("WhatsApp ad lead: goes to the agent mapped to that ad", async () => {
-  fresh({ on: ["whatsapp"] });
-  const lead = await waRoutes.autoCaptureWhatsAppLead(waOrg(), `91${phone10()}`, "Asha", campaign());
-  await settle();
-  const b = bodies()[0];
-  assert.deepEqual([b.auto_call, b.agent_id, b.lead_source, b.ad_id, b.whatsapp], [true, "agent_ad", "WhatsApp", AD, `+91${lead.phone.slice(2)}`]);
-});
-test("WhatsApp ad lead: falls back to the project route only when the ad has no route of its own", async () => {
+// Since 15 Oct 2026 a WhatsApp lead is NOT emitted at its first message: it is
+// stored with a pending hand-off (vistrowEmit) and emitted after the chat's
+// first AI read, or 60 s, whichever is first. The emission itself (payload,
+// ad/project routing, first message, restart sweep) runs against a real
+// database in tests/vistrowWhatsAppTiming.db.test.js.
+test("WhatsApp ad lead: created with a pending hand-off, and nothing is emitted at the first message", async () => {
   fresh({ on: ["whatsapp"] });
   world.state.rule = { assignTo: oid(), assignToName: "Sheetal", assignToProject: KHOPOLI, assignToProjectName: "SP Khopoli", label: "Khopoli" };
-  await waRoutes.autoCaptureWhatsAppLead(waOrg(), `91${phone10()}`, "Asha", campaign("another-ad-id"));
-  await settle();
-  const b = bodies()[0];
-  assert.deepEqual([b.auto_call, b.agent_id, b.project], [true, "agent_proj", "SP Khopoli"]);
-});
-test("WhatsApp: an organic chat (no ad, no project) is a Contact only", async () => {
-  fresh({ on: ["whatsapp"] });
-  await waRoutes.autoCaptureWhatsAppLead(waOrg(), `91${phone10()}`, "Asha", null);
-  await settle();
-  const b = bodies()[0];
-  assert.deepEqual([b.auto_call, b.auto_call_reason], [false, "no_route"]);
-  assert.ok(!("agent_id" in b));
-});
-test("WhatsApp: with the source OFF the lead is still imported, but not called", async () => {
-  fresh({ on: [] });
+  const before = Date.now();
   await waRoutes.autoCaptureWhatsAppLead(waOrg(), `91${phone10()}`, "Asha", campaign());
   await settle();
-  assert.deepEqual([bodies()[0].auto_call, bodies()[0].auto_call_reason], [false, "source_disabled"]);
+  assert.equal(world.order.filter((o) => o === "emit").length, 0, "no emit at creation");
+  assert.equal(world.store.deliveries.length, 0);
+  const pending = world.state.created[0].vistrowEmit;
+  assert.equal(pending.origin, "whatsapp-ctwa");
+  assert.equal(String(pending.projectId), KHOPOLI);
+  assert.equal(pending.projectName, "SP Khopoli");
+  const due = pending.dueAt.getTime() - before;
+  assert.ok(due >= 59000 && due <= 61000, `due in about 60 s (got ${due} ms)`);
+});
+test("WhatsApp organic chat: pending hand-off with the inbound origin and no project", async () => {
+  fresh({ on: ["whatsapp"] });
+  await waRoutes.autoCaptureWhatsAppLead(waOrg(), `91${phone10()}`, "Asha", null);
+  assert.equal(world.state.created[0].vistrowEmit.origin, "whatsapp-inbound");
+  assert.ok(!world.state.created[0].vistrowEmit.projectId);
+  assert.equal(world.order.filter((o) => o === "emit").length, 0);
 });
 
 // ═══ Website form webhook ═════════════════════════════════════════════════
@@ -337,15 +335,43 @@ const googleBody = (over = {}) => ({
   google_key: "tok-1234567890", is_test: false, lead_id: "L1", campaign_id: "555", campaign_name: "Khopoli Search", adgroup_id: "9", adgroup_name: "Plots",
   user_column_data: [{ column_id: "FULL_NAME", string_value: "Asha Menon" }, { column_id: "PHONE_NUMBER", string_value: `+91${phone10()}` }], ...over,
 });
-test("google lead form: sent as a Contact with its campaign, never called", async () => {
+test("google lead form: with the Google switch OFF it is sent as a Contact with its campaign, not called", async () => {
   fresh({ on: ["website", "facebook", "whatsapp"] });
   world.state.automation = automationOf("Google");
   const r = await post("/webhook/google", googleBody());
   assert.equal(r.status, 201);
   await settle();
   const b = bodies()[0];
-  assert.deepEqual([b.lead_source, b.campaign_id, b.campaign_name, b.auto_call, b.auto_call_reason], ["Google", "555", "Khopoli Search", false, "not_auto_source"]);
+  assert.deepEqual([b.lead_source, b.campaign_id, b.campaign_name, b.auto_call, b.auto_call_reason], ["Google", "555", "Khopoli Search", false, "source_disabled"]);
   assert.equal(b.custom_fields.adgroup_name, "Plots");
+});
+test("google lead form: with the Google switch ON, a routed campaign is called by its agent", async () => {
+  fresh({ on: ["google"], cfg: { routing: { ...routingOn([]), google: { enabled: true, routes: [{ id: "g1", matchKind: "campaign_id", matchValue: "555", agentId: "agent_google", agentLabel: "Google agent" }] } } } });
+  world.state.automation = automationOf("Google");
+  await post("/webhook/google", googleBody());
+  await settle();
+  const b = bodies()[0];
+  assert.deepEqual([b.auto_call, b.agent_id, b.route_label], [true, "agent_google", "Campaign 555"]);
+});
+test("google lead form: an unrouted campaign is a Contact only (no_route)", async () => {
+  fresh({ cfg: { routing: { ...routingOn([]), google: { enabled: true, routes: [{ id: "g1", matchKind: "campaign_id", matchValue: "999", agentId: "agent_google" }] } } } });
+  world.state.automation = automationOf("Google");
+  await post("/webhook/google", googleBody());
+  await settle();
+  assert.deepEqual([bodies()[0].auto_call, bodies()[0].auto_call_reason], [false, "no_route"]);
+});
+test("website form: the same person enquiring again after the 2-minute retry window is sent again (new lead, new event)", async () => {
+  fresh({ on: ["website"] });
+  world.state.automation = automationOf("Website Form");
+  const ph = phone10();
+  await post("/webhook/website", siteBody({ phone: ph }));
+  world.state.leadFindOne = () => null; // nothing from this phone in the last 2 minutes
+  await post("/webhook/website", siteBody({ phone: ph }));
+  await settle();
+  assert.equal(world.state.created.length, 2);
+  assert.equal(world.sent.length, 2, "both enquiries reach Vistrow");
+  assert.notEqual(bodies()[0].event_id, bodies()[1].event_id);
+  assert.deepEqual([bodies()[0].auto_call, bodies()[1].auto_call, bodies()[1].auto_call_reason], [true, false, "recent_duplicate_phone"], "the 24 h same-number rule turns the second into a Contact only");
 });
 test("google lead form: Google's own 'send test lead' is never sent", async () => {
   fresh({ on: ["website"] });
@@ -400,6 +426,7 @@ const MANIFEST = {
   "services/projectService.js": { sites: 3, origins: [], why: "moves an existing person between lists" },
   // Developer tooling, never run in production.
   "utils/seed.js": { sites: 1, origins: [], why: "dev seed" },
+  "scripts/seed-staging.js": { sites: 1, origins: [], why: "staging test data seed, refuses to run outside staging" },
   "scripts/sandbox.js": { sites: 1, origins: [], why: "dev sandbox" },
 };
 test("guard: every Lead-creating site is accounted for", () => {
@@ -434,7 +461,7 @@ test("guard: the number of emit call sites is exactly the reviewed set", () => {
     single += (src.match(/\bemitLeadCreated\(/g) || []).length;
     batch += (src.match(/\bemitLeadsCreated\(/g) || []).length;
   }
-  assert.equal(single, 8, "facebook, website, custom, google webhook, google poller, whatsapp, manual, qr");
+  assert.equal(single, 9, "facebook, facebook recovered phone, website, custom, google webhook, google poller, whatsapp (delayed hand-off), manual, qr");
   assert.equal(batch, 1, "bulk import");
 });
 test("guard: the call_id branches of the inbound Vistrow route contain no emit", () => {
@@ -456,7 +483,8 @@ test("guard: facebook and google-poller hooks carry attribution and the source t
   assert.ok(/origin: "webhook-website", routeSource: "website"/.test(wh));
   const poller = read("utils/googleAdsPoller.js");
   assert.ok(/origin: "poller-google"[^}]*submittedAt/.test(poller), "the poller must pass the real enquiry time so old leads are not treated as new");
-  assert.ok(!/routeSource/.test(poller), "Google never auto-calls");
+  assert.ok(/origin: "poller-google", routeSource: "google"/.test(poller), "polled Google leads route as Google");
+  assert.ok(/origin: "webhook-google", routeSource: "google"/.test(wh), "Google webhook leads route as Google");
 });
 
 run("Vistrow outbound - every lead-creation path");

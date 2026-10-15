@@ -27,6 +27,15 @@ function createMemoryStore({ clock = () => new Date() } = {}) {
       return { inserted: true, delivery: copy(d) };
     },
 
+    async reviveSkipped({ orgId, eventId, skipReason, doc }) {
+      const d = deliveries.find((x) => String(x.orgId) === String(orgId) && x.eventId === eventId && x.status === "skipped" && x.skipReason === skipReason);
+      if (!d) return { inserted: false, delivery: null };
+      const { orgId: _o, eventId: _e, ...rest } = doc;
+      Object.assign(d, rest, { skipReason: "" });
+      delete d.terminalAt;
+      return { inserted: true, delivery: copy(d) };
+    },
+
     async findRecentDeliveryForPhone({ orgId, phoneKey, since, excludeEventId, autoCallOnly = false }) {
       return copy(deliveries.find((d) =>
         String(d.orgId) === String(orgId) && d.phoneKey === phoneKey && !d.isTest &&

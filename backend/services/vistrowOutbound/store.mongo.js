@@ -24,7 +24,7 @@ function toConfig(doc) {
     dedupeWindowHours: doc.dedupeWindowHours ?? 24,
     maxLeadAgeMinutes: doc.maxLeadAgeMinutes || 15,
     emitImports: !!doc.emitImports,
-    routing: Object.fromEntries(["website", "facebook", "whatsapp"].map((k) => {
+    routing: Object.fromEntries(["website", "facebook", "whatsapp", "google"].map((k) => {
       const src = doc.routing?.[k];
       return [k, {
         enabled: src?.enabled === true,
@@ -65,6 +65,20 @@ const mongoStore = {
 
   // autoCallOnly: the repeat-phone window guards against phoning someone twice,
   // so only an earlier delivery that actually asked for a call counts.
+  // A lead first queued without a dialable phone ("N/A" from a failed Facebook
+  // fetch) was never sent: its row is "skipped: invalid_phone". When the phone
+  // is recovered, that same row (same event id) becomes the real job. Only
+  // that exact never-sent state is revived, so nothing sent is ever re-sent.
+  async reviveSkipped({ orgId, eventId, skipReason, doc }) {
+    const { orgId: _o, eventId: _e, ...rest } = doc;
+    const res = await OutboundDelivery.findOneAndUpdate(
+      { orgId: toId(orgId), eventId, status: "skipped", skipReason },
+      { $set: { ...rest, skipReason: "" }, $unset: { terminalAt: "", expireAt: "" } },
+      { new: true }
+    ).select("_id status");
+    return { inserted: !!res, delivery: res };
+  },
+
   async findRecentDeliveryForPhone({ orgId, phoneKey, since, excludeEventId, autoCallOnly = false }) {
     return OutboundDelivery.findOne({
       orgId: toId(orgId), phoneKey, isTest: false,
@@ -75,6 +89,9 @@ const mongoStore = {
     }).select("_id").lean();
   },
 
+  // routingInputs (select:false) must come back with the job: the send-time
+  // recheck re-resolves the call from it, and without it every call was
+  // withdrawn as "changed_before_send" (found 15 Oct 2026).
   // Atomically moves ONE due job to "sending" with a lease. A job is due when
   // it is pending and its time has come, or is "sending" with an expired lease
   // (its worker died mid-send). attempts is bumped here, so a crash mid-send
@@ -84,7 +101,7 @@ const mongoStore = {
       { _id: toId(id), status: "pending", nextAttemptAt: { $lte: now } },
       { $set: { status: "sending", lockedUntil: new Date(now.getTime() + leaseMs) }, $inc: { attempts: 1 } },
       { new: true }
-    ).select("+payload").lean();
+    ).select("+payload +routingInputs").lean();
   },
 
   async claimDue({ now, leaseMs, limit }) {
@@ -94,7 +111,7 @@ const mongoStore = {
         { $or: [{ status: "pending", nextAttemptAt: { $lte: now } }, { status: "sending", lockedUntil: { $lt: now } }] },
         { $set: { status: "sending", lockedUntil: new Date(now.getTime() + leaseMs) }, $inc: { attempts: 1 } },
         { new: true, sort: { nextAttemptAt: 1 } }
-      ).select("+payload").lean();
+      ).select("+payload +routingInputs").lean();
       if (!job) break;
       jobs.push(job);
     }

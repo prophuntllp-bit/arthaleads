@@ -177,7 +177,7 @@ router.post("/disable", async (req, res) => {
 });
 
 // PUT /api/integrations/vistrow-outbound/routing
-// { website|facebook|whatsapp: { enabled?, routes?: [{ matchKind, matchValue|projectId, label?, agentId, agentLabel }] }, confirm }
+// { website|facebook|whatsapp|google: { enabled?, routes?: [{ matchKind, matchValue|projectId, label?, agentId, agentLabel }] }, confirm }
 // Replaces the given sources' route rows and/or flips their switch. Every
 // source is OFF until switched on here, and turning one ON needs confirm:true.
 // There is no default agent: a row with no agent resolves to no call.
@@ -261,7 +261,7 @@ router.get("/agents", agentsLimiter, async (req, res) => {
   } catch (err) { fail(res, err, "agents"); }
 });
 
-// POST /api/integrations/vistrow-outbound/simulate  { source, pageUrl?, projectId?, adId? }
+// POST /api/integrations/vistrow-outbound/simulate  { source, pageUrl?, projectId?, adId?, campaignId? }
 // "Which agent would a lead like this get?" Pure read of the saved settings:
 // sends nothing and touches no lead.
 router.post("/simulate", async (req, res) => {
@@ -269,7 +269,7 @@ router.post("/simulate", async (req, res) => {
     const doc = await load(req.user.orgId);
     if (!doc) return res.status(400).json({ success: false, message: "Save the connection details first." });
     const b = req.body || {};
-    const inputs = { routeSource: String(b.source || ""), sourcePage: String(b.pageUrl || ""), projectId: String(b.projectId || ""), adId: String(b.adId || "") };
+    const inputs = { routeSource: String(b.source || ""), sourcePage: String(b.pageUrl || ""), projectId: String(b.projectId || ""), adId: String(b.adId || ""), campaignId: String(b.campaignId || "") };
     const { agentId, ...decision } = R.resolveRouting(toConfig(doc), inputs); // the raw agent id stays on the server
     res.json({ success: true, decision });
   } catch (err) { fail(res, err, "simulate"); }

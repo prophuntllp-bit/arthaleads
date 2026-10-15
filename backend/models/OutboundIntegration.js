@@ -20,8 +20,8 @@ const { encryptField, decryptField } = require("../utils/fieldCrypto");
 const routeSchema = new mongoose.Schema(
   {
     label: { type: String, trim: true, maxlength: 120, default: "" },
-    // website -> url_contains; facebook -> project; whatsapp -> project | ad_id
-    matchKind: { type: String, enum: ["url_contains", "project", "ad_id"], required: true },
+    // website -> url_contains; facebook -> project; whatsapp -> project | ad_id; google -> project | campaign_id
+    matchKind: { type: String, enum: ["url_contains", "project", "ad_id", "campaign_id"], required: true },
     matchValue: { type: String, trim: true, required: true, maxlength: 300 },
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project", default: null },
     projectName: { type: String, trim: true, default: "" },
@@ -78,6 +78,7 @@ const outboundIntegrationSchema = new mongoose.Schema(
       website:  { type: sourceRoutingSchema, default: () => ({}) },
       facebook: { type: sourceRoutingSchema, default: () => ({}) },
       whatsapp: { type: sourceRoutingSchema, default: () => ({}) },
+      google:   { type: sourceRoutingSchema, default: () => ({}) },
     },
     // Bulk imports are a spreadsheet, not leads arriving: opt-in, and capped.
     emitImports: { type: Boolean, default: false },
