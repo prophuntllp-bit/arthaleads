@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
-- [claude] 2026-10-15 IST: SEO: Organization JSON-LD sameAs G2 + parentOrganization Vistrow. Files: frontend/index.html.
 
 
 
@@ -89,6 +88,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-15 IST (staging c23affe7, cherry-picked to main f427f9e8): frontend/index.html Organization JSON-LD: sameAs adds the G2 profile (g2.com/products/arthaleads/reviews); parentOrganization = Vistrow Technologies (vistrow.com, linkedin.com/company/133104029). Verified on staging (home + /pricing carry it, JSON parses). Blog categories checked: no "CRM Guides" exists; only CRM Tips, Real Estate Sales, WhatsApp Marketing are in use; empty "Real Estate" and "Real Estate Tips" stay hidden (inUse=1 menu, not in sitemap), left untouched.
 
 - [claude] 2026-10-15 IST: Vistrow call-result receiver fix LIVE: staging 736d3c1 cherry-picked to main as 0404174 (not a staging merge: staging holds other pilots). Railway production + Vercel deploys succeeded. Old Vistrow payloads still work (new fields optional). When staging is next merged into main, keep the single vistrowCallResult test entry in test:vistrow.
 - [claude] 2026-10-15 IST (staging 1a8b223f, e46d780a; merged to main 45e3fac5): Artha suggestion card. Lead.arthaSuggest {fields, at, dismissed}: chat-stated values that differ from real lead values (whatsappRoutes suggestionsFrom; 'already complete' shortcut removed, extractor told to use the latest answer). POST /api/copilot/suggestions/:leadId {action save|dismiss, fields}: visibility, pilot, actions switch; save = leadService.update + note, signed (via Artha). ArthaSuggestCard in LeadDetail and above the Inbox chat; features.suggestions; hooks/useArthaFeatures.js. Merge note: package.json test list conflicted with the EnableX fix (both kept). Test: tests/copilotSuggest.db.test.js.
