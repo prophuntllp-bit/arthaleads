@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
-- [claude] 2026-10-15 IST: Artha Phase 3c risk alerts in the morning brief (pilot), on `staging` first. backend/copilot/brief.js, tests/copilotBrief.db.test.js, frontend MorningBrief.jsx, copilot/prompt.js.
 
 
 
@@ -85,6 +84,8 @@ Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-15 IST (staging 6f2dc39, 6f72c0f, cf0f2cb; merged to main 0be586c): Artha Phase 3c risk alerts. backend/copilot/risks.js (code only): hot_cold, visit_silent, visit_missed, new_waiting, chat_closing, unassigned_waiting (managers, one summary line). 'Needs attention' box + 'At risk' team column in MorningBrief; morning_brief tool returns needsAttention. Brief speed: Dashboard prefetches /copilot/brief on open (prefetchBrief, keyed by user), sessionStorage cache per user, placeholder, risks/team computed in parallel. Verified on staging and live. Test: tests/copilotRisks.db.test.js.
 
 - [claude] 2026-10-15 IST (staging b519777..8d93c3e, merged to main 29b6e03): Artha Phase 3b WhatsApp reply drafts, checked on staging first. POST /api/copilot/draft-reply, GET /api/copilot/features, backend/copilot/drafts.js, Inbox 'Draft reply' (pilot, 24h window, empty box; never sends). Brief: WhatsApp items open the chat (/conversations). scripts/staging-artha-demo.js turns on pilot + fake WhatsApp + sample chat on staging only. Staging now has a real OpenAI key (owner). NOTE for whoever owns seed-staging.js: tests/vistrow guard 'every Lead-creating site is accounted for' fails because scripts/seed-staging.js creates leads and is not in the manifest (fails on main too).
 
