@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
-- [claude] 2026-10-15 IST: sliding sessions (owner approved): renew a normal session once a day while in use so active users are not signed out at day 7. backend/middlewares/auth.js, frontend/src/services/api.js. Not touching server.js (other active entry).
 
 - [Claude Code] 2026-10-15 IST: owner approved: (1) hotfix straight to live: contactLimiter on /api/public applies to submissions only, not GET reads (audit FE30, 'Too many submissions' on page loads); (2) staging environment setup (staging branch, Railway staging env, staging.arthaleads.com). Files: backend/server.js, then .github/workflows, backend scheduler/env switches, frontend vercel.json, CLAUDE.md, AGENT_BRIDGE.md rules
 
@@ -83,6 +82,8 @@ Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-15 IST (05b97d8): sliding sessions. middlewares/auth.js renewSession(): a normal session older than 1 day gets a fresh JWT (cookie + X-Renewed-Token header, exposed per response; server.js untouched). frontend api.js stores it. actBy and other <1-day tokens never renewed. Mobile (Dart) ignores the header, so the app still re-logs after 7 days: mobile session can read X-Renewed-Token to fix that. Test: tests/sessionRenewal.db.test.js.
 
 - [Claude Code] 2026-10-15 IST, 561ae03 (hotfix, live): contactLimiter (10/15min/IP) on /api/public now applies to submissions only; GET reads (options on every page load, form definitions, app version) count against the general limiter. Fixes 'Too many submissions' on ordinary page loads (audit FE30). Verified in sandbox and live (RateLimit-Limit 200 on GET /api/public/options). NOTE: never require backend/server.js with the real .env to test; use npm run sandbox.
 
