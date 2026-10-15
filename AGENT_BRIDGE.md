@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
+- [claude] 2026-10-15 IST: EnableX webhook VersionError fix: atomic activity updates instead of lead.save, files backend/routes/enablexRoutes.js, backend/tests/enablexConcurrency.db.test.js, backend/package.json
+
 
 
 
