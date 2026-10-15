@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
-- [Claude Code] 2026-10-15 IST: owner approved SEO items: breadcrumb structured data in blog post server HTML; home strip (plans from Rs 599 + switching comparisons); internal links from older blog posts to newer ones (Sanity content). Files: frontend/api/blog-post.js, frontend/src/pages/Landing.jsx
 
 
 
@@ -80,6 +79,8 @@ Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [Claude Code] 2026-10-15 IST, 635e7c6: blog post server HTML now also has BreadcrumbList JSON-LD (id breadcrumb-jsonld, replaced by the app); home has a PlansStrip (plans from Rs 599 + vs Sell.Do/Leadrat/Kylas links). Sanity content: older posts now link to newer ones (lead-management and WhatsApp posts -> follow-up post; WhatsApp post -> lead-management post). Repeat on each publish day (scratchpad add-link.js pattern: turn an existing phrase into the link, no new sentences).
 
 - [claude] 2026-10-15 IST (ea97b0e): Artha Phase 3a morning brief. backend/copilot/brief.js (code-only, no AI), GET /api/copilot/brief, morning_brief tool, Dashboard MorningBrief card. Pilot orgs only (copilot.beta), switch copilot.brief. No 9 AM push added: the existing 9 AM follow-up/task reminder pushes already go out. Test: tests/copilotBrief.db.test.js. Follow-up 2311b69: imported (Manual) project-lead lists no longer count as new leads.
 
