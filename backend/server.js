@@ -47,11 +47,18 @@ const pushRoutes = require("./routes/pushRoutes");
 const blogRoutes = require("./routes/blogRoutes");
 const blogController = require("./controllers/blogController");
 // Staging sets BACKGROUND_JOBS=off: no cron jobs (reminders, push, backups,
-// Facebook token refresh, Google Ads polling, blog sync) and no outbound
-// worker, so a test environment can never message, charge or back up anything.
+// Facebook token refresh, Google Ads polling, blog sync), so a test environment
+// can never message, charge or back up anything on a schedule.
+// The Vistrow outbound worker is NOT tied to this switch (owner, 15 Oct 2026):
+// a lead's first delivery attempt already runs in the request that created it,
+// so the worker only adds retries and the delayed WhatsApp hand-off; without it
+// staging would test a different delivery path from live. It only ever sends
+// jobs for an org that switched the integration on. VISTROW_OUTBOUND_WORKER=off
+// stops it.
 const BACKGROUND_JOBS = process.env.BACKGROUND_JOBS !== "off";
+const VISTROW_WORKER = process.env.VISTROW_OUTBOUND_WORKER !== "off";
 if (BACKGROUND_JOBS) require("./utils/scheduler");
-else console.log("[BOOT] BACKGROUND_JOBS=off: scheduler and outbound worker disabled");
+else console.log("[BOOT] BACKGROUND_JOBS=off: scheduler disabled (Vistrow outbound worker still runs)");
 
 console.log("[BOOT] Modules loaded, creating app...");
 const app = express();
@@ -74,7 +81,12 @@ connectDB().then(async () => {
   console.log("[BOOT] DB connected");
   // Retries/recovery for outbound lead deliveries. Idles unless an org has
   // enabled the Vistrow outbound integration (nothing is ever queued otherwise).
-  if (BACKGROUND_JOBS) require("./services/vistrowOutbound").startWorker();
+  // The sweep hands over WhatsApp leads whose 60 s timer a restart lost, and
+  // switches back on WhatsApp bots paused for a call whose result never came.
+  if (VISTROW_WORKER) {
+    require("./services/vistrowOutbound").startWorker();
+    require("./routes/whatsappRoutes")._vistrowEmit.startVistrowWhatsAppSweep();
+  }
   // One-time migration: clear auto-defaulted "Not Contacted" remarks (never manually set)
   try {
     const mongoose = require("mongoose");

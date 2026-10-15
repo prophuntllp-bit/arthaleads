@@ -3,7 +3,7 @@
 //
 // A guided four-step setup: connect, choose sources (all off), choose agents by name, review and switch on.
 //   1. "Send new leads to Vistrow" - every new lead reaches Vistrow as a Contact.
-//   2. Per source (Website / Facebook / WhatsApp) - "Auto-call": a lead is only
+//   2. Per source (Website / Facebook / WhatsApp / Google) - "Auto-call": a lead is only
 //      phoned when its source is on AND a rule below matches it AND that rule
 //      names an agent. No rule, no agent, no call: there is no default agent.
 //
@@ -26,12 +26,13 @@ const SOURCES = [
   { key: "website", label: "Website", icon: Globe, how: "Matched by the page the form was filled on", noun: "website form" },
   { key: "facebook", label: "Facebook", icon: Megaphone, how: "Matched by the project the lead is filed under", noun: "Facebook lead-ad" },
   { key: "whatsapp", label: "WhatsApp", icon: MessageCircle, how: "Matched by the project or the ad the chat started from", noun: "WhatsApp" },
+  { key: "google", label: "Google", icon: Search, how: "Matched by the Google Ads campaign or the project the lead is filed under", noun: "Google Ads lead-form" },
 ];
 
 // Why a lead was sent as a Contact only.
 const WHY = {
   source_disabled: "Source is off", no_route: "No matching rule", ambiguous_route: "Two rules tie", agent_missing: "Rule has no agent",
-  not_auto_source: "Not a Website / Facebook / WhatsApp lead", recent_duplicate_phone: "Called recently", changed_before_send: "Changed before sending",
+  not_auto_source: "Not a Website / Facebook / WhatsApp / Google lead", recent_duplicate_phone: "Called recently", changed_before_send: "Changed before sending",
   test_event: "Test event",
 };
 const SKIP = { stale_lead: "Enquiry too old", invalid_phone: "No dialable phone", integration_disabled: "Switched off", config_changed: "Settings changed" };
@@ -99,6 +100,14 @@ function AgentPicker({ value, onChange, agents, placeholder = "Choose an agent",
   );
 }
 
+// Which kind of rule the "add" row of a source is building.
+function draftKind(source, d) {
+  if (source === "website") return "url_contains";
+  if (source === "facebook") return "project";
+  if (source === "google") return d.kind || "campaign_id";
+  return d.kind || "project";
+}
+
 function Banner({ tone = "red", children }) {
   const c = tone === "red" ? { bg: "rgba(220,38,38,0.08)", bd: "rgba(220,38,38,0.25)", fg: "#b91c1c" } : { bg: "rgba(245,158,11,0.10)", bd: "rgba(245,158,11,0.30)", fg: "#92400e" };
   return (
@@ -116,6 +125,7 @@ export default function VistrowOutboundSection() {
   const [projects, setProjects] = useState([]);
   const [pages, setPages] = useState([]);
   const [ads, setAds] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
@@ -124,13 +134,16 @@ export default function VistrowOutboundSection() {
   const [showAdv, setShowAdv] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [confirm, setConfirm] = useState(null); // { title, message, run }
-  const [draft, setDraft] = useState({ website: {}, facebook: {}, whatsapp: {} });
-  const [check, setCheck] = useState({ source: "website", pageUrl: "", projectId: "", adId: "", result: null });
+  const [draft, setDraft] = useState({ website: {}, facebook: {}, whatsapp: {}, google: {} });
+  const [check, setCheck] = useState({ source: "website", pageUrl: "", projectId: "", adId: "", campaignId: "", result: null });
   const [testOut, setTestOut] = useState(null);
   const [agentList, setAgentList] = useState({ state: "idle", agents: [], problem: null }); // state: idle | loading | ok | error
 
   const apply = useCallback((status) => {
-    setSt(status);
+    // An API that predates a source (e.g. Google, during a deploy) leaves it out: show it as off.
+    const routing = { ...(status.routing || {}) };
+    for (const src of SOURCES) routing[src.key] = routing[src.key] || { enabled: false, routes: [] };
+    setSt({ ...status, routing });
     setConn((c) => ({ ...c, baseUrl: status.config.baseUrl, accountId: status.config.accountId, authMode: status.config.authMode, secret: "" }));
     setAdv({ dedupeWindowHours: status.config.dedupeWindowHours, maxLeadAgeMinutes: status.config.maxLeadAgeMinutes, defaultCountryCode: status.config.defaultCountryCode, emitImports: status.config.emitImports });
   }, []);
@@ -160,6 +173,7 @@ export default function VistrowOutboundSection() {
       setProjects(p.data.data || []);
       setPages(d.data.pages || []);
       setAds(c.data.options?.whatsapp?.ad_id || []);
+      setCampaigns(c.data.options?.google?.campaign_id || []);
     }).catch(() => toast.error("Could not load the Vistrow settings")).finally(() => setLoading(false));
     loadDeliveries();
   }, [isAdmin, apply, loadDeliveries]);
@@ -185,12 +199,13 @@ export default function VistrowOutboundSection() {
 
   const addRoute = async (source) => {
     const d = draft[source];
-    const kind = source === "website" ? "url_contains" : source === "facebook" ? "project" : (d.kind || "project");
+    const kind = draftKind(source, d);
     const row = { matchKind: kind, label: "" };
     if (kind === "url_contains") { row.matchValue = (d.url || "").trim(); if (d.projectId) row.projectId = d.projectId; }
     else if (kind === "project") { row.projectId = d.projectId; row.matchValue = d.projectId; }
+    else if (kind === "campaign_id") row.matchValue = (d.campaignId || "").trim();
     else row.matchValue = (d.adId || "").trim();
-    if (!row.matchValue) return toast.error(kind === "url_contains" ? "Enter the page to match" : kind === "project" ? "Choose a project" : "Choose an ad");
+    if (!row.matchValue) return toast.error(kind === "url_contains" ? "Enter the page to match" : kind === "project" ? "Choose a project" : kind === "campaign_id" ? "Enter the campaign" : "Choose an ad");
     if (!d.agent) return toast.error("Choose which agent should call these leads");
     row.agentRef = d.agent;
     const r = await saveRoutes(source, [...st.routing[source].routes.map(toRow), row], "Saved");
@@ -231,7 +246,7 @@ export default function VistrowOutboundSection() {
     if (r) { setTestOut(r.data.result); if (mode === "send") loadDeliveries(); }
   };
   const runCheck = async () => {
-    const r = await call("check", () => api.post(`${BASE}/simulate`, { source: check.source, pageUrl: check.pageUrl, projectId: check.projectId, adId: check.adId }));
+    const r = await call("check", () => api.post(`${BASE}/simulate`, { source: check.source, pageUrl: check.pageUrl, projectId: check.projectId, adId: check.adId, campaignId: check.campaignId }));
     if (r) setCheck((c) => ({ ...c, result: r.data.decision }));
   };
 
@@ -240,7 +255,10 @@ export default function VistrowOutboundSection() {
   const configured = st.configured;
   const anySourceOn = SOURCES.some((x) => st.routing[x.key].enabled);
   const adName = (v) => ads.find((a) => a.value === v)?.label || `ad ${v}`;
-  const describe = (r) => (r.matchKind === "url_contains" ? `a page whose address contains “${r.matchValue}”${r.projectName ? ` (${r.projectName})` : ""}` : r.matchKind === "project" ? `project “${r.projectName || "unknown"}”` : adName(r.matchValue));
+  const campaignName = (v) => campaigns.find((a) => a.value === v)?.label || `campaign ${v}`;
+  const describe = (r) => (r.matchKind === "url_contains" ? `a page whose address contains “${r.matchValue}”${r.projectName ? ` (${r.projectName})` : ""}` : r.matchKind === "project" ? `project “${r.projectName || "unknown"}”` : r.matchKind === "campaign_id" ? campaignName(r.matchValue) : adName(r.matchValue));
+  const KIND_WORD = { url_contains: "Page", project: "Project", ad_id: "Ad", campaign_id: "Campaign" };
+  const matchText = (r) => (r.matchKind === "url_contains" ? r.matchValue : r.matchKind === "project" ? (r.projectName || "Unknown project") : r.matchKind === "campaign_id" ? campaignName(r.matchValue) : adName(r.matchValue));
   const agentsReady = agentList.state === "ok";
   const stepHead = (n, title, done, sub) => (
     <div className="flex items-start gap-3">
@@ -309,7 +327,7 @@ export default function VistrowOutboundSection() {
 
       {/* 3 Agents */}
       <div className="space-y-3" data-testid="step-agents">
-        {stepHead(3, "Choose who calls", SOURCES.some((x) => st.routing[x.key].enabled && st.routing[x.key].routes.some((r) => !r.unassigned)), "Pick an agent for each website page, project or ad - the same idea as the Page rules on your Vistrow website widget. Use the agent whose knowledge covers that project.")}
+        {stepHead(3, "Choose who calls", SOURCES.some((x) => st.routing[x.key].enabled && st.routing[x.key].routes.some((r) => !r.unassigned)), "Pick an agent for each website page, project, ad or campaign - the same idea as the Page rules on your Vistrow website widget. Use the agent whose knowledge covers that project.")}
         <div className="md:pl-10 space-y-4">
           {!anySourceOn && <p className="text-xs text-app-soft rounded-xl px-3 py-2.5" style={{ background: "var(--app-surface-low)" }}>Switch on at least one source in step 2 to choose its agents.</p>}
           {anySourceOn && agentList.state === "loading" && <p className="text-xs text-app-soft flex items-center gap-2" data-testid="agents-loading"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading your Vistrow agents…</p>}
@@ -321,7 +339,7 @@ export default function VistrowOutboundSection() {
           {SOURCES.filter((src) => st.routing[src.key].enabled).map((src) => {
             const cfg = st.routing[src.key];
             const d = draft[src.key];
-            const kind = src.key === "whatsapp" ? (d.kind || "project") : src.key === "facebook" ? "project" : "url_contains";
+            const kind = draftKind(src.key, d);
             return (
               <div key={src.key} className="rounded-2xl border p-4 space-y-3" style={{ borderColor: "var(--app-border)" }} data-testid={`source-${src.key}`}>
                 <p className="text-sm font-semibold text-app">{src.label} leads</p>
@@ -329,8 +347,8 @@ export default function VistrowOutboundSection() {
                   ? <p className="text-xs text-app-soft">No agent chosen yet, so {src.label} leads will not be called.</p>
                   : cfg.routes.map((r) => (
                     <div key={r.id} className="flex flex-wrap items-center gap-2" data-testid="route-row">
-                      <span className="text-sm text-app">{r.matchKind === "url_contains" ? "Page" : r.matchKind === "project" ? "Project" : "Ad"}:</span>
-                      <span className="text-sm font-semibold text-app">{r.matchKind === "url_contains" ? r.matchValue : r.matchKind === "project" ? (r.projectName || "Unknown project") : adName(r.matchValue)}</span>
+                      <span className="text-sm text-app">{KIND_WORD[r.matchKind] || "Rule"}:</span>
+                      <span className="text-sm font-semibold text-app">{matchText(r)}</span>
                       {r.projectName && r.matchKind !== "project" && <span className="text-xs px-2 py-0.5 rounded-lg" style={{ background: "rgba(124,58,237,0.10)", color: "#7c3aed" }}>{r.projectName}</span>}
                       <span className="text-app-soft">&rarr;</span>
                       <div className="min-w-[240px]"><AgentPicker compact allowNone testId="row-agent" value={r.agentRef} agents={agentList.agents} fallbackLabel={r.agentLabel} placeholder="No agent - won't call" onChange={(v) => changeAgent(src.key, r.id, v)} /></div>
@@ -359,6 +377,15 @@ export default function VistrowOutboundSection() {
                       {kind === "project"
                         ? <CustomSelect value={d.projectId || ""} onChange={(v) => setDraftField(src.key, { projectId: v })} options={projectOptions} placeholder="Choose a project" style={FORM_SELECT} />
                         : <CustomSelect value={d.adId || ""} onChange={(v) => setDraftField(src.key, { adId: v })} options={ads.map((a) => ({ value: a.value, label: a.label }))} placeholder="Choose an ad" style={FORM_SELECT} />}</div>
+                  </>)}
+                  {src.key === "google" && (<>
+                    <div className="md:col-span-3"><label className="label">When the lead is from</label>
+                      <CustomSelect value={kind} onChange={(v) => setDraftField(src.key, { kind: v })} options={[{ value: "campaign_id", label: "A campaign" }, { value: "project", label: "A project" }]} style={FORM_SELECT} /></div>
+                    <div className="md:col-span-4"><label className="label">{kind === "project" ? "Project" : "Campaign ID"}</label>
+                      {kind === "project"
+                        ? <CustomSelect value={d.projectId || ""} onChange={(v) => setDraftField(src.key, { projectId: v })} options={projectOptions} placeholder="Choose a project" style={FORM_SELECT} />
+                        : <><input className="input font-mono text-sm" list="vo-campaigns" placeholder="e.g. 21987654321" value={d.campaignId || ""} onChange={(e) => setDraftField(src.key, { campaignId: e.target.value })} />
+                          <datalist id="vo-campaigns">{campaigns.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}</datalist></>}</div>
                   </>)}
                   <div className="md:col-span-5"><label className="label">Agent who calls</label>
                     <AgentPicker testId="add-agent" value={d.agent || ""} agents={agentList.agents} onChange={(v) => setDraftField(src.key, { agent: v })} placeholder={agentsReady ? "Choose an agent" : "Agents not loaded yet"} /></div>
@@ -444,10 +471,11 @@ export default function VistrowOutboundSection() {
               <div className="grid grid-cols-1 gap-3 md:grid-cols-12 items-end">
                 <div className="md:col-span-3"><label className="label">Source</label>
                   <CustomSelect value={check.source} onChange={(v) => setCheck({ ...check, source: v, result: null })} style={FORM_SELECT}
-                    options={[{ value: "website", label: "Website" }, { value: "facebook", label: "Facebook" }, { value: "whatsapp", label: "WhatsApp" }, { value: "other", label: "Anything else" }]} /></div>
+                    options={[{ value: "website", label: "Website" }, { value: "facebook", label: "Facebook" }, { value: "whatsapp", label: "WhatsApp" }, { value: "google", label: "Google" }, { value: "other", label: "Anything else" }]} /></div>
                 {check.source === "website" && <div className="md:col-span-6"><label className="label">Page the form was on</label><input className="input" placeholder="https://yoursite.com/shapoorji-pallonji-khopoli/" value={check.pageUrl} onChange={(e) => setCheck({ ...check, pageUrl: e.target.value, result: null })} /></div>}
-                {(check.source === "facebook" || check.source === "whatsapp") && <div className="md:col-span-3"><label className="label">Project</label><CustomSelect value={check.projectId} onChange={(v) => setCheck({ ...check, projectId: v, result: null })} options={[{ value: "", label: "No project" }, ...projectOptions]} style={FORM_SELECT} /></div>}
+                {(check.source === "facebook" || check.source === "whatsapp" || check.source === "google") && <div className="md:col-span-3"><label className="label">Project</label><CustomSelect value={check.projectId} onChange={(v) => setCheck({ ...check, projectId: v, result: null })} options={[{ value: "", label: "No project" }, ...projectOptions]} style={FORM_SELECT} /></div>}
                 {check.source === "whatsapp" && <div className="md:col-span-3"><label className="label">Ad ID</label><input className="input font-mono text-sm" value={check.adId} onChange={(e) => setCheck({ ...check, adId: e.target.value, result: null })} /></div>}
+                {check.source === "google" && <div className="md:col-span-3"><label className="label">Campaign ID</label><input className="input font-mono text-sm" value={check.campaignId} onChange={(e) => setCheck({ ...check, campaignId: e.target.value, result: null })} /></div>}
                 <div className="md:col-span-2"><button type="button" className="btn-secondary rounded-xl w-full" disabled={busy === "check" || !configured} onClick={runCheck}>Check</button></div>
               </div>
               {check.result && (

@@ -65,8 +65,8 @@ test("switching one source on does not switch on the others", () => {
   assert.equal(R.resolveRouting(c, { routeSource: "facebook", projectId: KHOPOLI }).autoCall, false);
   assert.equal(R.resolveRouting(c, { routeSource: "whatsapp", adId: "120252242040050286" }).autoCall, false);
 });
-test("a source that is not Website / Facebook / WhatsApp is never called", () => {
-  for (const src of ["", "google", "manual", "qr", "custom", undefined, "Website"]) {
+test("a source that is not Website / Facebook / WhatsApp / Google is never called", () => {
+  for (const src of ["", "manual", "qr", "custom", undefined, "Website", "Google"]) {
     const d = R.resolveRouting(cfg(), { routeSource: src, sourcePage: "https://x.com/shapoorji-pallonji-khopoli/", projectId: KHOPOLI });
     assert.equal(d.autoCall, false, String(src));
     assert.equal(d.reason, "not_auto_source", String(src));
@@ -188,7 +188,33 @@ test("a stored agent id that is not valid does not call", () => {
 // ── what the decision is made from ─────────────────────────────────────────
 test("inputs: derived from the lead and context at creation", () => {
   const i = R.routingInputsFrom({ sourcePage: "https://x.com/a/", campaignRef: { adId: "AD1" } }, { routeSource: "whatsapp", project: { id: KHOPOLI } });
-  assert.deepEqual(i, { routeSource: "whatsapp", sourcePage: "https://x.com/a/", projectId: KHOPOLI, adId: "AD1" });
+  assert.deepEqual(i, { routeSource: "whatsapp", sourcePage: "https://x.com/a/", projectId: KHOPOLI, adId: "AD1", campaignId: "" });
+});
+test("inputs: a Google campaign id comes from the attribution", () => {
+  assert.equal(R.routingInputsFrom({}, { routeSource: "google", attribution: { campaign_id: "555" } }).campaignId, "555");
+  assert.equal(R.routingInputsFrom({}, { routeSource: "google" }).routeSource, "google");
+});
+test("google: off by default; on, a campaign rule beats a project rule, and nothing else matches", () => {
+  const g = (on, routes) => ({ routing: { google: { enabled: on, routes } } });
+  const routes = [
+    { id: "gp", matchKind: "project", matchValue: KHOPOLI, projectName: "SP Khopoli", agentId: "agent_proj" },
+    { id: "gc", matchKind: "campaign_id", matchValue: "555", agentId: "agent_camp" },
+  ];
+  const lead = { routeSource: "google", projectId: KHOPOLI, campaignId: "555" };
+  assert.equal(R.resolveRouting({ routing: {} }, lead).reason, "source_disabled");
+  assert.equal(R.resolveRouting(g(false, routes), lead).reason, "source_disabled");
+  assert.equal(R.resolveRouting(g(true, routes), lead).agentId, "agent_camp");
+  assert.equal(R.resolveRouting(g(true, routes), { ...lead, campaignId: "777" }).agentId, "agent_proj");
+  assert.equal(R.resolveRouting(g(true, routes), { routeSource: "google", campaignId: "777" }).reason, "no_route");
+  assert.equal(R.resolveRouting(g(true, routes), lead).route.label, "Campaign 555");
+});
+test("google: settings accept campaign and project rows only", () => {
+  const ok = R.validateRoutingInput({ google: { enabled: true, routes: [{ matchKind: "campaign_id", matchValue: "21987654321", agentId: "a1" }, { matchKind: "project", projectId: KHOPOLI, agentId: "a2" }] } });
+  assert.deepEqual(ok.errors, []);
+  assert.equal(ok.value.google.routes.length, 2);
+  assert.ok(R.validateRoutingInput({ google: { routes: [{ matchKind: "url_contains", matchValue: "/khopoli/" }] } }).errors.length);
+  assert.ok(R.validateRoutingInput({ google: { routes: [{ matchKind: "campaign_id", matchValue: "x" }] } }).errors.length);
+  assert.ok(R.validateRoutingInput({ whatsapp: { routes: [{ matchKind: "campaign_id", matchValue: "21987654321" }] } }).errors.length, "campaign rows are Google only");
 });
 test("inputs: an ad id from the webhook attribution is used when the lead has none", () => {
   assert.equal(R.routingInputsFrom({}, { routeSource: "facebook", attribution: { ad_id: "FB1" } }).adId, "FB1");

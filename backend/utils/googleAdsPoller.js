@@ -212,7 +212,7 @@ async function pollOneGoogleAdsConnection(automation) {
       // the person actually enquired: the first sync reaches back 7 days, and an enquiry that
       // old must not be phoned as if it had just arrived (the age guard uses this, not createdAt).
       emitLeadCreated(lead, {
-        origin: "poller-google", isTest: isTestLead, submittedAt, project: routedProject(ruleMatch),
+        origin: "poller-google", routeSource: "google", isTest: isTestLead, submittedAt, project: routedProject(ruleMatch),
         attribution: { campaign_id: sub.campaignId || "" },
       });
 

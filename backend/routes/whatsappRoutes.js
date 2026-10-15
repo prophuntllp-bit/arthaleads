@@ -431,6 +431,7 @@ async function autoCaptureWhatsAppLead(org, phone, name, campaignRef) {
   } else if (org.autoAssign !== false) {
     try { assignee = await getNextAssignee(org._id); } catch { /* no active agents */ }
   }
+  const project = routedProject(ruleMatch);
   const lead = await Lead.create({
     name: whatsAppLeadName(name, phone),
     phone,
@@ -446,6 +447,12 @@ async function autoCaptureWhatsAppLead(org, phone, name, campaignRef) {
     budget: { min: null, max: null, currency: "INR" },
     leadSourceLabel: campaignLabel(campaignRef),
     campaignRef: campaignRef || undefined,
+    // Handed to Vistrow later, once the chat has been read (see emitDueWhatsAppLead).
+    vistrowEmit: {
+      dueAt: new Date(Date.now() + VISTROW_EMIT_DELAY_MS),
+      origin: campaignRef ? "whatsapp-ctwa" : "whatsapp-inbound",
+      ...(project ? { projectId: project.id, projectName: project.name } : {}),
+    },
     activities: [{
       type: "created",
       description: [
@@ -458,10 +465,114 @@ async function autoCaptureWhatsAppLead(org, phone, name, campaignRef) {
     }],
   });
   if (ruleMatch) await fileLeadInRoutedProject(ruleMatch, lead);
-  // New-lead hand-off to Vistrow (no-op unless the owner enabled it). Not awaited.
-  // campaignRef rides on the lead itself, so ad id/headline reach the payload from there.
-  emitLeadCreated(lead, { origin: campaignRef ? "whatsapp-ctwa" : "whatsapp-inbound", routeSource: "whatsapp", project: routedProject(ruleMatch) });
+  // Not sent to Vistrow yet: at the first message nothing is known but a
+  // profile name. It goes once the chat's first AI read has run, or after
+  // VISTROW_EMIT_DELAY_MS, whichever is first (owner decision, 15 Oct 2026).
+  armWhatsAppEmit(lead._id);
   return lead;
+}
+
+// ── WhatsApp lead -> Vistrow Voice hand-off ──────────────────────────────────
+const VISTROW_EMIT_DELAY_MS = 60 * 1000;
+const VISTROW_EMIT_LOCK_MS = 60 * 1000;
+
+function armWhatsAppEmit(leadId, ms = VISTROW_EMIT_DELAY_MS) {
+  if (process.env.NODE_ENV === "test") return; // tests drive emitDueWhatsAppLead / the sweep directly
+  const t = setTimeout(() => { emitDueWhatsAppLead(leadId).catch(() => {}); }, ms + 500);
+  t.unref?.();
+}
+
+// A number already in the CRM starting a new WhatsApp chat is a repeat
+// enquiry: Vistrow may call it again (its 24 h same-number rule still applies).
+// Same timing as a new lead, as its own event about the existing lead.
+async function markRepeatEnquiry(org, lead, campaignRef) {
+  const ruleMatch = campaignRef?.adId ? await matchRoutingRule(org._id, "whatsapp", { ad_id: campaignRef.adId }) : null;
+  const project = routedProject(ruleMatch);
+  const now = new Date();
+  await Lead.updateOne({ _id: lead._id }, {
+    $set: {
+      vistrowEmit: {
+        dueAt: new Date(now.getTime() + VISTROW_EMIT_DELAY_MS),
+        origin: campaignRef ? "whatsapp-ctwa" : "whatsapp-inbound",
+        repeatAt: now,
+        ...(campaignRef?.adId ? { adId: campaignRef.adId } : {}),
+        ...(project ? { projectId: project.id, projectName: project.name } : {}),
+      },
+    },
+  });
+  armWhatsAppEmit(lead._id);
+}
+
+async function firstCustomerText(conv) {
+  const firsts = await WaMessage.find({ conversationId: conv._id, direction: "inbound" }).sort({ timestamp: 1 }).limit(5).select("body").lean();
+  return String(firsts.find((m) => !isPlaceholderBody(m.body))?.body || "").slice(0, 500);
+}
+
+// Hands one waiting WhatsApp enquiry to Vistrow, exactly once: the claim below
+// lets one caller (the chat read, the timer, the sweep, another instance) do it,
+// and the delivery's event id makes a second hand-off a no-op even so.
+async function emitDueWhatsAppLead(leadId, { now = new Date() } = {}) {
+  const lead = await Lead.findOneAndUpdate(
+    { _id: leadId, "vistrowEmit.dueAt": { $exists: true }, $or: [{ "vistrowEmit.lockedUntil": null }, { "vistrowEmit.lockedUntil": { $lt: now } }] },
+    { $set: { "vistrowEmit.lockedUntil": new Date(now.getTime() + VISTROW_EMIT_LOCK_MS) } },
+    { new: true }
+  ).lean();
+  if (!lead) return { emitted: false, reason: "not_pending" };
+  const pending = lead.vistrowEmit || {};
+  try {
+    let result = { queued: false, reason: "lead_gone" };
+    if (!lead.isDeleted && !lead.isArchived) {
+      const [org, conv] = await Promise.all([
+        Organization.findById(lead.orgId).lean(),
+        WaConversation.findOne({ orgId: lead.orgId, leadId: lead._id }).sort({ createdAt: -1 }).lean(),
+      ]);
+      let project = pending.projectId ? { id: pending.projectId, name: pending.projectName || "" } : undefined;
+      if (project && !project.name) project.name = (await Project.findById(project.id).select("name").lean())?.name || "";
+      // No ad behind the chat: the project its first message names (filed there too), so routing can use it.
+      if (!project && org && conv && !conv.campaignRef?.adId) {
+        const p = await labelAdlessLead(org, conv).catch(() => null);
+        if (p) project = p;
+      }
+      result = await emitLeadCreated(lead, {
+        origin: pending.origin || "whatsapp-inbound", routeSource: "whatsapp", project,
+        whatsappFirstMessage: conv ? await firstCustomerText(conv) : "",
+        ...(pending.adId ? { attribution: { ad_id: pending.adId } } : {}),
+        ...(pending.repeatAt ? { repeat: true, submittedAt: pending.repeatAt } : {}),
+      });
+    }
+    await Lead.updateOne({ _id: lead._id }, { $unset: { "vistrowEmit.dueAt": "", "vistrowEmit.lockedUntil": "" }, $set: { "vistrowEmit.emittedAt": now } });
+    return { emitted: true, result };
+  } catch (err) {
+    // The lock lapses and the sweep tries again.
+    console.error("[vistrow-outbound] WhatsApp hand-off failed:", err.message);
+    return { emitted: false, reason: "error" };
+  }
+}
+
+// Durable side of the 60 s rule: anything due and not handed over (a restart
+// lost its timer) goes now.
+async function sweepDueWhatsAppEmits({ now = new Date(), limit = 20 } = {}) {
+  const due = await Lead.find({ "vistrowEmit.dueAt": { $lte: now } }).select("_id").limit(limit).lean();
+  let emitted = 0;
+  for (const l of due) if ((await emitDueWhatsAppLead(l._id, { now })).emitted) emitted++;
+  return emitted;
+}
+
+let vistrowSweepTimer = null;
+function startVistrowWhatsAppSweep({ intervalMs = 15 * 1000 } = {}) {
+  if (vistrowSweepTimer || process.env.NODE_ENV === "test") return false;
+  let running = false;
+  vistrowSweepTimer = setInterval(async () => {
+    if (running) return;
+    running = true;
+    try {
+      await sweepDueWhatsAppEmits();
+      await require("../utils/vistrowBotPause").resumeOverduePauses();
+    } catch (err) { console.error("[vistrow-outbound] WhatsApp sweep failed:", err.message); }
+    finally { running = false; }
+  }, intervalMs);
+  vistrowSweepTimer.unref?.();
+  return true;
 }
 
 // ── Conversation auto-assignment ──────────────────────────────────────────────
@@ -726,14 +837,17 @@ async function handleInbound(org, parsed) {
       } catch (err) {
         console.error("[WhatsApp Lead Capture] auto-create failed:", err.message);
       }
-    } else if (campaignRef && !lead.campaignRef?.adId) {
-      // A phone number already in the CRM (some other source) just clicked a
-      // WhatsApp ad for the first time — attribute it, but never overwrite an
-      // earlier campaign this lead was already tied to.
-      await Lead.updateOne(
-        { _id: lead._id },
-        { $set: { campaignRef, leadSourceLabel: lead.leadSourceLabel || campaignLabel(campaignRef) } }
-      );
+    } else {
+      if (campaignRef && !lead.campaignRef?.adId) {
+        // A phone number already in the CRM (some other source) just clicked a
+        // WhatsApp ad for the first time — attribute it, but never overwrite an
+        // earlier campaign this lead was already tied to.
+        await Lead.updateOne(
+          { _id: lead._id },
+          { $set: { campaignRef, leadSourceLabel: lead.leadSourceLabel || campaignLabel(campaignRef) } }
+        );
+      }
+      await markRepeatEnquiry(org, lead, campaignRef).catch((err) => console.error("[WhatsApp Lead Capture] repeat enquiry hand-off failed:", err.message));
     }
     // One value for both fields. They used to be derived separately — `?? true`
     // for the flag but a plain ternary for the status — so an org document
@@ -1283,8 +1397,9 @@ async function labelLeadIfWeaker(leadId, label, { replaceGuess = false } = {}) {
   await Lead.updateOne({ _id: leadId, $or: weak }, { $set: { leadSourceLabel: label } });
 }
 
+// Returns the project the chat's message names (the routed one), { id, name }, or null.
 async function labelAdlessLead(org, conv) {
-  if (!conv?.leadId || conv.campaignRef?.adId) return;
+  if (!conv?.leadId || conv.campaignRef?.adId) return null;
   const m = await matchByMessageText(org, conv);
   await labelLeadIfWeaker(conv.leadId, m?.project ? `WhatsApp enquiry · ${m.project.name}` : "");
   await noteWhyDetailsEmpty(conv, m).catch((err) => console.error("[WhatsApp] empty-details note failed:", err.message));
@@ -1292,13 +1407,14 @@ async function labelAdlessLead(org, conv) {
   // with no ad behind it was never filed in that project. Name the project and
   // it goes in, assigned to whoever the lead already has. Once, at the start of
   // the thread: someone removed from the project later is not put back.
-  if (m?.project) {
+  if (!m?.project) return null;
+  // The project a WhatsApp rule files this project's ad leads into (for
+  // Khopoli, the campaign project) is where these belong, not the
+  // assistant's own project of the same name.
+  const target = await routedProjectFor(org._id, m.project);
+  {
     const lead = await Lead.findOne({ _id: conv.leadId, orgId: org._id, isArchived: { $ne: true }, isDeleted: { $ne: true } });
     if (lead) {
-      // The project a WhatsApp rule files this project's ad leads into (for
-      // Khopoli, the campaign project) is where these belong, not the
-      // assistant's own project of the same name.
-      const target = await routedProjectFor(org._id, m.project);
       // Auto-assign can be off, leaving the lead with no owner. The project
       // entry then stays unassigned too, recorded as imported by an admin.
       const owner = lead.assignedTo
@@ -1309,6 +1425,8 @@ async function labelAdlessLead(org, conv) {
       }
     }
   }
+  const name = String(target) === String(m.project._id) ? m.project.name : (await Project.findById(target).select("name").lean())?.name;
+  return { id: target, name: name || m.project.name };
 }
 
 // A WhatsApp lead with no ad details looks broken in the CRM: no source, no
@@ -1409,7 +1527,7 @@ async function resolveAgentByMessageText(org, conversation) {
 // thread Done and tags the lead so the team can see why it went quiet.
 async function muteNonBuyer(conv, reason) {
   console.log(`[WhatsApp Bot] muting non-buyer conversation ${conv._id}: ${reason}`);
-  await WaConversation.findByIdAndUpdate(conv._id, { botEnabled: false, status: "resolved", $unset: { flowState: 1 } });
+  await WaConversation.findByIdAndUpdate(conv._id, { botEnabled: false, status: "resolved", $unset: { flowState: 1, botPausedReason: 1, botPausedAt: 1, botResumeAt: 1 } });
   if (conv.leadId) {
     await Lead.updateOne({ _id: conv.leadId }, { $addToSet: { tags: "Not a buyer" } }).catch(() => {});
   }
@@ -1796,7 +1914,14 @@ function suggestionsFrom(lead, mapped, setOps) {
   return out;
 }
 
-async function enrichWhatsAppLead(conversation, recentMsgs, { org } = {}) {
+// The first read of a chat is also the moment a new WhatsApp lead is handed to
+// Vistrow (if it is still waiting): the payload then carries what was read.
+async function enrichWhatsAppLead(conversation, recentMsgs, opts = {}) {
+  try { await readLeadDetailsFromChat(conversation, recentMsgs, opts); }
+  finally { if (conversation?.leadId) await emitDueWhatsAppLead(conversation.leadId).catch(() => {}); }
+}
+
+async function readLeadDetailsFromChat(conversation, recentMsgs, { org } = {}) {
   if (!conversation.leadId || !process.env.OPENAI_API_KEY) return;
   try {
     const lead = await Lead.findById(conversation.leadId)
@@ -3327,7 +3452,8 @@ router.get("/conversations/:id/messages", async (req, res) => {
     if (!older) await WaConversation.findByIdAndUpdate(req.params.id, { unreadCount: 0 });
     const lastIn = await WaMessage.findOne({ conversationId: req.params.id, direction: "inbound" })
       .sort({ timestamp: -1 }).select("timestamp").lean();
-    res.json({ messages, hasMore, lastInboundAt: lastIn?.timestamp || null });
+    // Team-only notes (never sent): with the newest page, the Inbox shows them in time order.
+    res.json({ messages, hasMore, lastInboundAt: lastIn?.timestamp || null, internalNotes: older ? [] : (conv.internalNotes || []) });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -3389,6 +3515,8 @@ router.patch("/conversations/:id", async (req, res) => {
     const update = {};
     if (botEnabled !== undefined) { update.botEnabled = botEnabled; update.status = botEnabled ? "bot" : "open"; }
     if (status)     update.status     = status;
+    // A person's choice wins: a Vistrow-call pause must never switch the bot back on after this.
+    if (botEnabled !== undefined || status) update.$unset = { botPausedReason: "", botPausedAt: "", botResumeAt: "" };
     // An explicit null means "release this thread". Testing truthiness alone
     // made unassigning silently do nothing. assignedToName is denormalised on
     // the document, so it has to move with the id or the two disagree.
@@ -4090,4 +4218,5 @@ router._resolveAgentForConversation = resolveAgentForConversation;
 
 // For tests only (tests/whatsappLeadCapture.db.test.js).
 router._leadCapture = { enrichWhatsAppLead, typedByCustomer, suggestionsFrom };
+router._vistrowEmit = { emitDueWhatsAppLead, sweepDueWhatsAppEmits, startVistrowWhatsAppSweep, VISTROW_EMIT_DELAY_MS };
 module.exports = router;

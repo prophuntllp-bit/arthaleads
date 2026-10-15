@@ -7,6 +7,21 @@ const waConversationSchema = new mongoose.Schema({
   contactName:  { type: String, default: "" },
   waContactId:  { type: String, default: "" },     // WhatsApp's wa_id
   botEnabled:   { type: Boolean, default: true },
+  // Why the bot is off when something other than a person switched it off.
+  // "vistrow_call": Vistrow Voice is phoning this lead; the bot comes back on
+  // when the call result arrives, or at botResumeAt if none does
+  // (utils/vistrowBotPause.js). A person toggling the bot clears it, so the bot
+  // is only ever switched back on if it was paused by that automation.
+  botPausedReason: { type: String, default: "" },
+  botPausedAt:     { type: Date, default: null },
+  botResumeAt:     { type: Date, default: null },
+  // Notes for the team inside the chat. Never sent to the customer, and kept
+  // out of WaMessage so the bot, nudges and reply checks never read them.
+  internalNotes: [{
+    text: { type: String, default: "" },
+    by:   { type: String, default: "" },
+    at:   { type: Date, default: Date.now },
+  }],
 
   // Which assistant is handling this thread. Pinned on the first bot reply and
   // never re-resolved, so editing routing or pausing an agent cannot swap the
@@ -95,5 +110,6 @@ const waConversationSchema = new mongoose.Schema({
 
 waConversationSchema.index({ orgId: 1, contactPhone: 1 }, { unique: true });
 waConversationSchema.index({ orgId: 1, lastMessageAt: -1 });
+waConversationSchema.index({ botResumeAt: 1 }, { partialFilterExpression: { botPausedReason: "vistrow_call" } });
 
 module.exports = mongoose.model("WaConversation", waConversationSchema);

@@ -227,6 +227,28 @@ const leadSchema = new mongoose.Schema(
     // webhooks dedupe by recent phone number instead and leave this unset.
     externalId: { type: String, trim: true, default: "", index: true },
 
+    // A WhatsApp enquiry waiting to be handed to Vistrow Voice (owner decision
+    // 15 Oct 2026): sent once the chat's first AI read has run, or at dueAt,
+    // whichever comes first, so the payload carries what the person said and
+    // the project their message names. Stored, not just timed in memory, so a
+    // restart still sends it (routes/whatsappRoutes.js, emitDueWhatsAppLead).
+    // dueAt is removed when it is handed over; repeatAt marks a known lead
+    // enquiring again (a separate Vistrow event).
+    vistrowEmit: {
+      type: {
+        dueAt:       { type: Date },
+        origin:      { type: String },
+        projectId:   { type: mongoose.Schema.Types.ObjectId, ref: "Project" },
+        projectName: { type: String },
+        repeatAt:    { type: Date },
+        adId:        { type: String },
+        lockedUntil: { type: Date },
+        emittedAt:   { type: Date },
+      },
+      default: undefined,
+      _id: false,
+    },
+
     // ── Vistrow Voice (AI calling) transcript & metadata ───────────────────────
     // One entry per completed call (a lead can be called more than once).
     // Set only for leads ingested via /webhook/lead with voice data; unset
@@ -315,6 +337,8 @@ leadSchema.index({ orgId: 1, createdAt: -1, isArchived: 1 });
 leadSchema.index({ orgId: 1, updatedAt: -1, isArchived: 1 });
 // phone dedup check
 leadSchema.index({ orgId: 1, phone: 1 });
+// Only leads with a WhatsApp hand-off to Vistrow still waiting carry dueAt.
+leadSchema.index({ "vistrowEmit.dueAt": 1 }, { sparse: true });
 // domain filter
 leadSchema.index({ orgId: 1, sourceDomain: 1 });
 

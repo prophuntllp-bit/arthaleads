@@ -254,6 +254,22 @@ function Bubble({ msg }) {
   );
 }
 
+// A note for the team, shown in the chat but never sent to the customer.
+function NoteBubble({ note }) {
+  return (
+    <div className="flex justify-center mb-3" data-testid="internal-note">
+      <div className="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[12px] leading-relaxed"
+        style={{ background: "rgba(245,158,11,0.10)", border: "1px dashed rgba(245,158,11,0.45)", color: "var(--app-text)" }}>
+        <p className="text-[10px] font-bold mb-1 flex items-center gap-1" style={{ color: "#b45309" }}>
+          <FileText className="w-3 h-3" /> Internal note{note.senderName ? ` · ${note.senderName}` : ""} · not sent to the customer
+        </p>
+        <p className="whitespace-pre-wrap break-words">{note.body}</p>
+        <p className="text-[10px] text-app-soft mt-1">{fmtClock(note.timestamp)}</p>
+      </div>
+    </div>
+  );
+}
+
 const FILTERS = [["all", "All"], ["bot", "Bot"], ["open", "Open"], ["resolved", "Done"]];
 
 // ── Main inbox page ──────────────────────────────────────────────────────────
@@ -267,6 +283,8 @@ export default function Inbox() {
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId]         = useState(null);
   const [messages, setMessages]         = useState([]);
+  // Team-only notes in this chat (e.g. a Vistrow Voice call result). Never sent to the customer.
+  const [notes, setNotes]               = useState([]);
   // undefined = not loaded yet (show nothing), null = they have never written.
   const [lastInboundAt, setLastInbound] = useState(undefined);
   const [msgInput, setMsgInput]         = useState("");
@@ -379,6 +397,7 @@ export default function Inbox() {
       });
       if (!silent) setHasOlder(!!data.hasMore);
       setLastInbound(data.lastInboundAt ?? null);
+      setNotes(data.internalNotes || []);
       setConversations((prev) => prev.map((c) => (c._id === id ? { ...c, unreadCount: 0 } : c)));
     } catch {}
     finally { setLoadingMsgs(false); }
@@ -443,21 +462,30 @@ export default function Inbox() {
     lastMsgCountRef.current = messages.length;
   }, [messages, activeId]);
 
-  // Day separators, grouped on IST calendar days.
+  // Day separators, grouped on IST calendar days. Internal notes sit among the
+  // messages by time (only those inside the loaded range while older ones remain).
   const threadItems = useMemo(() => {
     const out = [];
     let last = null;
-    for (const m of messages) {
+    const firstTs = messages.length ? new Date(messages[0].timestamp).getTime() : 0;
+    const noteItems = notes
+      .filter((n) => !hasOlder || new Date(n.at).getTime() >= firstTs)
+      .map((n, i) => ({ _id: `note-${n._id || i}`, isNote: true, body: n.text, senderName: n.by, timestamp: n.at }));
+    const all = noteItems.length
+      ? [...messages, ...noteItems].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+      : messages;
+    for (const m of all) {
       const k = dayKey(m.timestamp);
       if (k !== last) { out.push({ sep: dayLabel(m.timestamp), key: `sep-${k}` }); last = k; }
       out.push(m);
     }
     return out;
-  }, [messages]);
+  }, [messages, notes, hasOlder]);
 
   const loadConv = useCallback((id) => {
     setActiveId(id);
     setMessages([]);
+    setNotes([]);
     setHasOlder(false);
     setLastInbound(undefined);
     setMsgInput("");
@@ -799,7 +827,7 @@ export default function Inbox() {
                     {item.sep}
                   </span>
                 </div>
-              ) : <Bubble key={item._id} msg={item} />))}
+              ) : item.isNote ? <NoteBubble key={item._id} note={item} /> : <Bubble key={item._id} msg={item} />))}
               </>
             )}
           </div>

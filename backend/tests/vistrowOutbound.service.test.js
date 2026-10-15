@@ -180,14 +180,15 @@ test("leads that are not from Website/Facebook/WhatsApp are Contacts only", asyn
 });
 test("only automated creation paths can ever be called, whatever source label a lead carries", async () => {
   const e = env({ cfg: { routing: routingOn(["website", "facebook", "whatsapp"]) } });
+  // A Google path claiming to be a website lead is not routed as one either.
   for (const origin of ["manual", "import", "qr", "poller-google", "webhook-google", "unknown"]) {
     await e.svc.enqueueLeadCreated(lead(e, { source: "Website" }), { origin, routeSource: "website", project: { id: KHOPOLI, name: "x" } });
   }
   e.cfg({ emitImports: true });
   await e.process();
   for (const s of e.sent) assert.equal(s.body.auto_call, false);
-  assert.ok(["webhook-website", "webhook-facebook", "webhook-custom", "whatsapp-ctwa", "whatsapp-inbound"].every((o) => CALLABLE_ORIGINS.has(o)));
-  assert.ok(!["manual", "import", "qr", "poller-google", "webhook-google"].some((o) => CALLABLE_ORIGINS.has(o)));
+  assert.ok(["webhook-website", "webhook-facebook", "webhook-custom", "whatsapp-ctwa", "whatsapp-inbound", "webhook-google", "poller-google"].every((o) => CALLABLE_ORIGINS.has(o)));
+  assert.ok(!["manual", "import", "qr"].some((o) => CALLABLE_ORIGINS.has(o)));
 });
 test("a WhatsApp-provider token source can be called; a Custom one cannot", async () => {
   const e = env({ cfg: { routing: routingOn(["whatsapp"]) } });

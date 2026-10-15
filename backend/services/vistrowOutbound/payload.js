@@ -42,6 +42,14 @@ function eventIdForLead(leadId) {
   return `evt_lc_${String(leadId)}`;
 }
 
+// A person already in the CRM enquiring again (a new WhatsApp chat from a known
+// number) is a separate event about the same lead: its own id, so idempotency
+// does not swallow it, while a literal re-delivery of that enquiry still maps
+// to the same id.
+function eventIdForEnquiry(leadId, at) {
+  return `evt_re_${String(leadId)}_${new Date(at).getTime()}`;
+}
+
 function str(v, max = 500) {
   if (v === undefined || v === null) return "";
   const s = String(v).replace(CONTROL_CHARS, "").trim();
@@ -103,6 +111,13 @@ function buildCustomFields(l, ctx = {}) {
     put(cf, "ad_source_url", l.campaignRef.sourceUrl, 500);
   }
   if (ctx.project?.id) put(cf, "project_id", String(ctx.project.id), 40);
+  // What the person actually wrote first on WhatsApp (the ad's pre-filled text
+  // or their own words): untrusted, capped, control characters stripped.
+  put(cf, "whatsapp_first_message", ctx.whatsappFirstMessage, 500);
+  if (ctx.repeat === true) {
+    cf.repeat_enquiry = true;
+    if (ctx.submittedAt) cf.enquiry_at = new Date(ctx.submittedAt).toISOString();
+  }
 
   put(cf, "status", l.status, 50);
   put(cf, "remark_3", l.remark3, 500);
@@ -155,6 +170,8 @@ function buildLeadCreatedPayload(lead, ctx = {}, { orgId, defaultCountryCode = "
     name: str(l.name, 100),
     phone,
   };
+  // Only on a repeat enquiry: lead_id stays the existing lead, this names the enquiry.
+  if (ctx.repeat === true) payload.enquiry_id = eventId;
 
   put(payload, "email", l.email, 200);
   if (l.source === "WhatsApp") payload.whatsapp = phone; // for a WhatsApp lead the phone IS the WhatsApp number
@@ -182,8 +199,11 @@ function buildLeadCreatedPayload(lead, ctx = {}, { orgId, defaultCountryCode = "
   put(payload, "preferred_location", l.preferredLocation, 200);
   put(payload, "street_address", l.streetAddress, 300);
   put(payload, "city", l.city, 100);
-  if (l.propertyType && l.propertyType !== SCHEMA_DEFAULT.propertyType && l.propertyType !== "N/A") put(payload, "property_type", l.propertyType, 100);
-  if (l.purpose && l.purpose !== SCHEMA_DEFAULT.purpose && l.purpose !== "N/A") put(payload, "purpose", l.purpose, 100);
+  // A WhatsApp lead is created with "N/A" for these, so there "Apartment" / "Buy"
+  // can only be what the person said (read from the chat), not a schema default.
+  const stated = (k) => l[k] && l[k] !== "N/A" && (l.source === "WhatsApp" || l[k] !== SCHEMA_DEFAULT[k]);
+  if (stated("propertyType")) put(payload, "property_type", l.propertyType, 100);
+  if (stated("purpose")) put(payload, "purpose", l.purpose, 100);
   if (l.bhk && l.bhk !== SCHEMA_DEFAULT.bhk) put(payload, "bhk", l.bhk, 50);
   put(payload, "budget", formatBudget(l.budget), 100);
 
@@ -252,4 +272,4 @@ function buildTestPayload({ orgId, eventId }) {
   };
 }
 
-module.exports = { MAX_PAYLOAD_BYTES, EVENT_TYPE, eventIdForLead, buildLeadCreatedPayload, buildTestPayload, buildCustomFields, consentSignals, formatBudget };
+module.exports = { MAX_PAYLOAD_BYTES, EVENT_TYPE, eventIdForLead, eventIdForEnquiry, buildLeadCreatedPayload, buildTestPayload, buildCustomFields, consentSignals, formatBudget };

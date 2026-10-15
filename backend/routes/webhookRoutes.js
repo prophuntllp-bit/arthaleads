@@ -669,7 +669,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
 
         if (ruleMatch && !isTestLead) await fileLeadInRoutedProject(ruleMatch, createdLead);
         // New-lead hand-off to Vistrow (no-op unless the owner enabled it). Not awaited.
-        emitLeadCreated(createdLead, {
+        const fbEmitCtx = {
           origin: "webhook-facebook", routeSource: "facebook", isTest: isTestLead, project: routedProject(ruleMatch),
           attribution: {
             form_id: formId, form_name: formName,
@@ -678,7 +678,8 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
             adset_id: leadData.adset_id || leadDetails.adset_id || "", adset_name: adsetName,
             ad_id: leadData.ad_id || leadDetails.ad_id || "", ad_name: adName,
           },
-        });
+        };
+        emitLeadCreated(createdLead, fbEmitCtx);
         if (!isTestLead && createdLead.metaLeadId) require("../services/metaConversions").track(createdLead, "New", createdLead.createdAt);
 
         if (automation) {
@@ -739,6 +740,11 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
                 },
               });
               logger.info(`Facebook webhook: auto-retry recovered field data for lead ${gid} (leadId=${leadId})`);
+              // Saved with "N/A" for a phone, so Vistrow never got it (its delivery
+              // row is "skipped: invalid_phone"). Now it has a number: hand it over
+              // once. recovered:true reuses only that never-sent row.
+              const recoveredLead = await Lead.findById(leadId).lean();
+              if (recoveredLead) await emitLeadCreated(recoveredLead, { ...fbEmitCtx, recovered: true });
             } catch (e) {
               logger.error(`Facebook webhook: auto-retry threw for lead ${gid}: ${e.message}`);
             }
@@ -1300,6 +1306,13 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
             data: { url: "/leads", leadId: String(existingByPhone._id) },
           }).catch(() => {});
         }
+        // The lead's WhatsApp chat gets the result as a team-only note, and its
+        // assistant comes back on if it was paused for this call.
+        try {
+          await require("../utils/vistrowBotPause").noteCallResult({
+            orgId, leadId: existingByPhone._id, outcome: crm_outcome, direction, durationSeconds: voiceCall.durationSeconds,
+          });
+        } catch (noteErr) { logger.warn(`[custom webhook] WhatsApp call note failed for lead ${existingByPhone._id}: ${noteErr.message}`); }
         logger.info(`[custom webhook] Vistrow call ${callIdNum} appended to existing lead ${existingByPhone._id}`);
         return res.status(200).json({ success: true, message: "Call added to existing lead", leadId: existingByPhone._id });
       }
@@ -1636,7 +1649,7 @@ router.post("/google", express.json(), googleLeadLimiter, async (req, res) => {
     if (ruleMatch && !isTestLead) await fileLeadInRoutedProject(ruleMatch, lead);
     // New-lead hand-off to Vistrow (no-op unless the owner enabled it). Not awaited.
     emitLeadCreated(lead, {
-      origin: "webhook-google", isTest: isTestLead, project: routedProject(ruleMatch),
+      origin: "webhook-google", routeSource: "google", isTest: isTestLead, project: routedProject(ruleMatch),
       attribution: {
         campaign_id: campaign_id ? String(campaign_id) : "", campaign_name: campaign_name || "",
         adgroup_id: adgroup_id ? String(adgroup_id) : "", adgroup_name: adgroup_name || "",

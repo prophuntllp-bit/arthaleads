@@ -6,7 +6,7 @@ const PROJECTS = [{ _id: "64b0000000000000000000e1", name: "SP Khopoli" }, { _id
 const st = {
   enabled: false, enabledAt: null,
   config: { baseUrl: "", accountId: "", authMode: "header", defaultCountryCode: "91", dedupeWindowHours: 24, maxLeadAgeMinutes: 15, emitImports: false, hasSecret: false },
-  routing: { website: { enabled: false, routes: [] }, facebook: { enabled: false, routes: [] }, whatsapp: { enabled: false, routes: [] } },
+  routing: { website: { enabled: false, routes: [] }, facebook: { enabled: false, routes: [] }, whatsapp: { enabled: false, routes: [] }, google: { enabled: false, routes: [] } },
   health: { lastSuccessAt: null, lastFailureAt: null, lastError: null, lastWarning: null },
   log: [],
 };

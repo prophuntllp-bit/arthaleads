@@ -5,7 +5,10 @@ Opt-in, off by default. Admin setup: **Integrations -> Vistrow Voice card -> Set
 ## What is sent, and when
 * Only for a **new** lead, after it is saved, from: manual add, Website webhook, Facebook webhook, Google webhook/poller, custom `/webhook/lead` (legacy path), WhatsApp/CTWA auto-capture, QR/public form, and small spreadsheet imports (opt-in, never called).
 * Never for updates, never for leads that came from Vistrow Voice (loop prevention), never for existing leads (no backfill or replay; nothing reads the Lead collection).
-* Delivery is a stored job: retries with backoff (3s, 10s, 30s, 2m, 10m, 30m, 1h; 8 attempts / 6h), never blocks lead creation.
+* **WhatsApp/CTWA timing (15 Oct 2026):** not at the first message. Sent once, after the chat's first AI read (name, location, type, BHK, budget filled in) or 60 s after the lead was created, whichever is first. Stored on the lead (`vistrowEmit.dueAt`), so a restart still sends it (15 s sweep). The project the first message names (ad-less match) is resolved first, so routing can use it.
+* **Repeat enquiries:** a number already in the CRM starting a new WhatsApp chat is sent again as its own event about the existing lead: `event_id`/`id`/`enquiry_id` = `evt_re_<lead_id>_<ms>`, `lead_id` = the existing lead, `custom_fields.repeat_enquiry: true`, `custom_fields.enquiry_at`, `Idempotency-Key: <org_id>:<lead_id>:<enquiry_id>`. The 24 h same-number rule still makes it a Contact only if a call was asked for in the last 24 h. Website, Facebook and Google repeats already create a new lead (new `lead_id`) after the 2-minute retry window. **Vistrow side:** its receiver keys ArthaLeads leads on `org_id:lead_id`, so it must use `enquiry_id` when present or it will treat a repeat as already imported.
+* **Recovered Facebook leads:** a Facebook lead saved with phone "N/A" (token fetch failed) is sent after the 45 s self-heal recovers its phone, reusing its never-sent row (same `evt_lc_` id).
+* Delivery is a stored job: retries with backoff (3s, 10s, 30s, 2m, 10m, 30m, 1h; 8 attempts / 6h), never blocks lead creation. The first retry also runs in-process at its due time; the job lease still allows one send.
 
 ## Request
 `POST {web address}/leads/inbound/{account_id}` (default address `https://api.vistrowvoice.com`, host allow-listed, redirects not followed).
@@ -13,7 +16,7 @@ Opt-in, off by default. Admin setup: **Integrations -> Vistrow Voice card -> Set
 Headers: `X-Vistrow-Webhook-Token: <key>` (or `Authorization: Bearer <key>`), `Idempotency-Key: <org_id>:<lead_id>`, `X-ArthaLeads-Event`, `X-ArthaLeads-Event-Id`, `X-ArthaLeads-Timestamp`, `X-ArthaLeads-Signature: v1=<HMAC-SHA256 of "<ts>.<body>">`, `X-ArthaLeads-Test: 1` on tests. The key is never put in the URL or logs.
 
 ## Source values (`lead_source`)
-`Website`, `Facebook Ad`, `WhatsApp`; other ArthaLeads sources pass through unchanged (e.g. `Google Ads`, `Manual`, `Import`, `QR`). The CRM's own value is in `custom_fields.arthaleads_source`. Only Website, Facebook and WhatsApp leads can ever have `auto_call: true`.
+`Website`, `Facebook Ad`, `WhatsApp`; other ArthaLeads sources pass through unchanged (e.g. `Google Ads`, `Manual`, `Import`, `QR`). The CRM's own value is in `custom_fields.arthaleads_source`. Only Website, Facebook, WhatsApp and Google leads can ever have `auto_call: true`.
 
 ## Body fields
 Required: `event` (`"lead.created"`), `source` (`"arthaleads"`), `org_id`, `lead_id`, `name`, `phone` (E.164), plus `id`/`event_id` (`evt_lc_<lead_id>`), `created_at`.
@@ -21,11 +24,11 @@ Optional, only when present: `email`, `whatsapp`, `lead_source`, `source_detail`
 
 **Call decision (always present):** `auto_call` (bool). When true: `agent_id` and `route_label`. When false: `auto_call_reason` (`source_disabled`, `no_route`, `ambiguous_route`, `agent_missing`, `not_auto_source`, `test_event`) and **no** `agent_id`. Vistrow must import/tag the Contact either way and may queue a call **only** if `auto_call === true`, only for `agent_id`, with no fallback agent.
 
-`custom_fields`: `arthaleads_source`, `source_page`, `source_domain`, `form_plugin`, `page_id`, `adset_*`, `adgroup_*`, `meta_lead_id`, `ad_headline/body/source_url`, `project_id`, `status`, `remark_3/4`, `remark_note`, `budget_min/max/currency`, `tags`, `form_responses`, `whatsapp_consent`. Text has control characters stripped.
+`custom_fields`: `whatsapp_first_message` (first text the person sent, max 500 chars), `repeat_enquiry`, `enquiry_at`, `arthaleads_source`, `source_page`, `source_domain`, `form_plugin`, `page_id`, `adset_*`, `adgroup_*`, `meta_lead_id`, `ad_headline/body/source_url`, `project_id`, `status`, `remark_3/4`, `remark_note`, `budget_min/max/currency`, `tags`, `form_responses`, `whatsapp_consent`. Text has control characters stripped.
 
 ## Routing (owner-configured; mirrors Website Widget page rules)
-* Each source (Website, Facebook, WhatsApp) has a switch, **off by default**.
-* Rules: Website = page address contains X (optionally tagged with a project); Facebook = project; WhatsApp = project or ad. Most specific wins; equal ties with different agents -> `ambiguous_route`; a rule with no agent -> `agent_missing`. No default agent.
+* Each source (Website, Facebook, WhatsApp, Google) has a switch, **off by default**.
+* Rules: Website = page address contains X (optionally tagged with a project); Facebook = project; WhatsApp = project or ad; Google = campaign id or project. **Vistrow side:** its receiver currently recognises only website/facebook/whatsapp as ArthaLeads sources, so Google leads need a matching change there before they are dialled. Most specific wins; equal ties with different agents -> `ambiguous_route`; a rule with no agent -> `agent_missing`. No default agent.
 * **Website page rules can carry project context:** the page URL is sent as `custom_fields.source_page`; a rule's optional project becomes `project` / `custom_fields.project_id` when the lead has no project of its own.
 * Re-checked at send time; a change since creation can only downgrade to no-call.
 
@@ -49,10 +52,10 @@ The token is the existing "Vistrow Voice" connection token (the one used for `PO
 Show `name` in the picker; keep `id` on the Vistrow server. A lead's project reaches Vistrow as `project` (name) and `custom_fields.project_id` (this id) in `lead.created`.
 
 ## Response handling
-2xx `{ok:true}` (also `deduped`) = delivered. `queued:false` => delivered but warning "call not queued". 2xx `{ok:false,reason}` and 4xx (except 408/429) = permanent, shown to the admin, never marked delivered. Transport errors, 408, 429 (Retry-After honoured), 5xx = retry.
+2xx `{ok:true}` (also `deduped`) = delivered. `queued:false` => delivered but warning "call not queued". `queued:true` on a WhatsApp lead pauses that chat's WhatsApp assistant until the call result arrives on `/webhook/lead` (then a team-only note with booking/status/follow-up/site visit is added and the assistant resumes, unless a person changed it), or for at most 15 minutes. 2xx `{ok:false,reason}` and 4xx (except 408/429) = permanent, shown to the admin, never marked delivered. Transport errors, 408, 429 (Retry-After honoured), 5xx = retry.
 
 ## Open points for Vistrow to confirm
 `auto_call` / `agent_id` / `auto_call_reason` / `route_label` key names; `budget` as a display string; `queued:false` response shape; an agent-list endpoint (so the UI can offer agents without a pasted code). **Compliance:** ArthaLeads holds no call-consent or DND data (only WhatsApp marketing opt-in, sent as `consent_basis` / `opt_out`); DND/TRAI checks must be done on the Vistrow side.
 
 ## Tests
-`cd backend && npm run test:vistrow` (210 checks, no database needed); browser check in `frontend/e2e/vistrow-outbound`.
+`cd backend && npm run test:vistrow` (in-memory MongoDB for the .db tests; tests/vistrowOwnerDecisions.db.test.js covers the 15 Oct 2026 decisions); browser check in `frontend/e2e/vistrow-outbound`.

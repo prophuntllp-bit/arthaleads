@@ -36,7 +36,10 @@ to `main`; merge it back into `staging` right after.
 ## Safety switches (already in the code, set by staging's variables)
 
 - `BACKGROUND_JOBS=off`: no cron jobs (reminders, push, backups, Facebook token
-  refresh, Google Ads polling, blog sync) and no outbound worker.
+  refresh, Google Ads polling, blog sync). The Vistrow outbound worker and the
+  WhatsApp hand-off sweep still run (15 Oct 2026) so retries and the delayed
+  WhatsApp hand-off behave as on live; they only send for an org that switched
+  the integration on. `VISTROW_OUTBOUND_WORKER=off` stops them.
 - `AUTH_COOKIE_NAME=crm_token_staging`: staging logins never overwrite or read
   the live `crm_token` cookie (both are on `.arthaleads.com`).
 - Vercel Deployment Protection is OFF (owner, 15 Oct 2026: the Vercel login

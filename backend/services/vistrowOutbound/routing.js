@@ -1,25 +1,27 @@
 // Which Vistrow agent (if any) may phone a new lead.
 //
 // This is deliberately the opposite of "call everyone":
-//   * a source (Website / Facebook / WhatsApp) must be switched ON by the owner;
+//   * a source (Website / Facebook / WhatsApp / Google) must be switched ON by the owner;
 //   * the lead must match a route row -- Website: page URL contains X;
-//     Facebook: project; WhatsApp: project or ad id -- and that row must name an
-//     agent. Several matches resolve to the most specific one;
+//     Facebook: project; WhatsApp: project or ad id; Google: project or
+//     campaign id -- and that row must name an agent. Several matches resolve
+//     to the most specific one;
 //   * anything else (source off, no matching row, an ambiguous tie, a row with
-//     no agent, a source that is not one of the three) is still sent to Vistrow
+//     no agent, a source that is not one of these) is still sent to Vistrow
 //     so it exists as a tagged Contact, but with auto_call:false and NO agent.
 //
 // There is no default agent and no fallback of any kind. Pure functions: the
 // decision is made once, when the lead is created, from what the lead was at
 // that moment, and is never re-derived from later edits.
 
-const SOURCE_KEYS = ["website", "facebook", "whatsapp"];
+const SOURCE_KEYS = ["website", "facebook", "whatsapp", "google"];
 
 // What a route row may match on, per source.
 const KINDS_BY_SOURCE = {
   website: ["url_contains"],
   facebook: ["project"],
   whatsapp: ["project", "ad_id"],
+  google: ["project", "campaign_id"],
 };
 
 const AGENT_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
@@ -40,6 +42,7 @@ function routeLabel(r) {
   if (r.matchKind === "url_contains") return `Page contains ${r.matchValue}`;
   if (r.matchKind === "project") return `Project: ${r.projectName || r.matchValue}`;
   if (r.matchKind === "ad_id") return `Ad ${r.matchValue}`;
+  if (r.matchKind === "campaign_id") return `Campaign ${r.matchValue}`;
   return "Route";
 }
 
@@ -56,6 +59,8 @@ function specificity(source, route, inputs) {
   }
   if (route.matchKind === "project") return inputs.projectId && String(inputs.projectId) === v ? 10000 : 0;
   if (route.matchKind === "ad_id") return inputs.adId && String(inputs.adId) === v ? 20000 : 0;
+  // A Google campaign is narrower than a project, like an ad is for WhatsApp.
+  if (route.matchKind === "campaign_id") return inputs.campaignId && String(inputs.campaignId) === v ? 20000 : 0;
   return 0;
 }
 
@@ -74,7 +79,7 @@ const no = (reason, sourceKey = null, route = null) => ({
 
 /**
  * @param cfg    integration config (cfg.routing.<source>.{enabled, routes[]})
- * @param inputs { routeSource, sourcePage, projectId, adId }  (see routingInputsFrom)
+ * @param inputs { routeSource, sourcePage, projectId, adId, campaignId }  (see routingInputsFrom)
  */
 function resolveRouting(cfg, inputs = {}) {
   const sourceKey = inputs.routeSource;
@@ -111,6 +116,7 @@ function routingInputsFrom(lead, ctx = {}) {
     sourcePage: String(lead.sourcePage || ""),
     projectId: ctx.project?.id ? String(ctx.project.id) : "",
     adId: String(ctx.attribution?.ad_id || lead.campaignRef?.adId || ""),
+    campaignId: String(ctx.attribution?.campaign_id || ""),
   };
 }
 
@@ -158,6 +164,10 @@ function validateRoutingInput(body) {
         } else if (r.matchKind === "ad_id") {
           const v = String(r.matchValue || "").trim();
           if (!/^[A-Za-z0-9_-]{4,64}$/.test(v)) { errors.push(`${where}: enter the ad id`); return; }
+          row.matchValue = v;
+        } else if (r.matchKind === "campaign_id") {
+          const v = String(r.matchValue || "").trim();
+          if (!/^[A-Za-z0-9_-]{4,64}$/.test(v)) { errors.push(`${where}: enter the campaign id`); return; }
           row.matchValue = v;
         }
 

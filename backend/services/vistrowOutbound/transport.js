@@ -67,7 +67,8 @@ function buildRequest({ baseUrl, accountId, authMode = "header", secret, eventId
     "Content-Type": "application/json",
     Accept: "application/json",
     "User-Agent": "ArthaLeads-Webhook/1",
-    "Idempotency-Key": `${payload.org_id}:${payload.lead_id}`,
+    // A repeat enquiry about an existing lead is its own event, so its key names it.
+    "Idempotency-Key": `${payload.org_id}:${payload.lead_id}${payload.enquiry_id ? `:${payload.enquiry_id}` : ""}`,
     "X-ArthaLeads-Event": payload.event,
     "X-ArthaLeads-Event-Id": eventId,
     "X-ArthaLeads-Timestamp": String(nowSeconds),
