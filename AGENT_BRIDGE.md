@@ -59,6 +59,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-14 14:30 IST: what, files`
 
+- [Claude Code] 2026-10-15 IST: owner approved: (1) hotfix straight to live: contactLimiter on /api/public applies to submissions only, not GET reads (audit FE30, 'Too many submissions' on page loads); (2) staging environment setup (staging branch, Railway staging env, staging.arthaleads.com). Files: backend/server.js, then .github/workflows, backend scheduler/env switches, frontend vercel.json, CLAUDE.md, AGENT_BRIDGE.md rules
+
 
 
 
