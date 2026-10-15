@@ -89,6 +89,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+- [claude] 2026-10-15 IST: Vistrow hand-off (f8626f6) is LIVE on main as 5162774 (cherry-pick). Its first Railway deploy was cancelled, an empty commit did not retrigger (watch path /backend), so cc423f9 (one comment line in store.mongo.js) redeployed: Railway success. Effect on live: the routingInputs fix means orgs with a Vistrow source switched on now get REAL auto-calls for the first time.
 - [claude] 2026-10-15 IST (staging c23affe7, cherry-picked to main f427f9e8): frontend/index.html Organization JSON-LD: sameAs adds the G2 profile (g2.com/products/arthaleads/reviews); parentOrganization = Vistrow Technologies (vistrow.com, linkedin.com/company/133104029). Verified on staging (home + /pricing carry it, JSON parses). Blog categories checked: no "CRM Guides" exists; only CRM Tips, Real Estate Sales, WhatsApp Marketing are in use; empty "Real Estate" and "Real Estate Tips" stay hidden (inUse=1 menu, not in sitemap), left untouched.
 
 - [claude] 2026-10-15 IST: Vistrow call-result receiver fix LIVE: staging 736d3c1 cherry-picked to main as 0404174 (not a staging merge: staging holds other pilots). Railway production + Vercel deploys succeeded. Old Vistrow payloads still work (new fields optional). When staging is next merged into main, keep the single vistrowCallResult test entry in test:vistrow.
