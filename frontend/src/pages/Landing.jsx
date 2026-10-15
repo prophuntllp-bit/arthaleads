@@ -1099,6 +1099,53 @@ function TrustFacts({ isDark }) {
   );
 }
 
+// ── Plans and switching ───────────────────────────────────────────────────────
+// One slim band instead of the old pricing section (owner: plans live on
+// /pricing): the starting price with a link, and the comparison pages for
+// teams already on another CRM.
+function PlansStrip({ isDark }) {
+  const bg      = isDark ? "#0d0d1a" : "#ffffff";
+  const heading = isDark ? "#ffffff" : "#111827";
+  const body    = isDark ? "rgba(255,255,255,0.58)" : "#4b5563";
+  const cardBg  = isDark ? "rgba(255,255,255,0.035)" : "#fffaf6";
+  const cardBdr = isDark ? "rgba(255,255,255,0.08)" : "#f3e3d6";
+  const rule    = isDark ? "rgba(255,255,255,0.08)" : "#f0e2d6";
+  const COMPARE = [["Sell.Do", "/compare/sell-do-alternative"], ["Leadrat", "/compare/leadrat-alternative"], ["Kylas", "/compare/kylas-alternative"]];
+
+  return (
+    <section className="pb-16 lg:pb-24" style={{ background: bg }}>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Reveal className="rounded-3xl border grid md:grid-cols-2 overflow-hidden" style={{ background: cardBg, borderColor: cardBdr }}>
+          <div className="p-7 sm:p-8 flex flex-col">
+            <h2 className="text-xl font-bold mb-2" style={{ color: heading }}>
+              Plans from {formatINR(PLAN_PRICING.starter.monthly)} per user per month
+            </h2>
+            <p className="text-[15px] leading-relaxed mb-5 flex-1" style={{ color: body }}>
+              Starter, Growth and Enterprise, with GST shown separately and a 14-day free trial on every Growth feature.
+            </p>
+            <Link to="/pricing" className="group inline-flex items-center gap-1.5 text-sm font-semibold transition-all hover:gap-2.5" style={{ color: "var(--brand-text)" }}>
+              See plans and pricing <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+          <div className="p-7 sm:p-8 flex flex-col border-t md:border-t-0 md:border-l" style={{ borderColor: rule }}>
+            <h2 className="text-xl font-bold mb-2" style={{ color: heading }}>Switching from another CRM?</h2>
+            <p className="text-[15px] leading-relaxed mb-5 flex-1" style={{ color: body }}>
+              See how ArthaLeads compares on price, trial, WhatsApp and features, with every competitor detail linked to its source.
+            </p>
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {COMPARE.map(([name, to]) => (
+                <Link key={to} to={to} className="group inline-flex items-center gap-1.5 text-sm font-semibold transition-all hover:gap-2.5" style={{ color: "var(--brand-text)" }}>
+                  vs {name} <ArrowRight className="w-4 h-4" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
 // ── Latest from the blog ──────────────────────────────────────────────────────
 // The three newest published posts. Hidden until they load (and if the API is
 // down), so the home page never shows an empty block.
@@ -1327,6 +1374,7 @@ export default function Landing() {
       <HowItWorks isDark={isDark} />
       <About isDark={isDark} />
       <TrustFacts isDark={isDark} />
+      <PlansStrip isDark={isDark} />
       <LatestPosts isDark={isDark} />
       <FAQ isDark={isDark} />
       <Contact isDark={isDark} />

@@ -183,6 +183,16 @@ export default async function handler(req, res) {
     // Every "<" is escaped so a title can never close the script tag early.
     const ld = articleLd(post, { url: `${SITE}/blog/${post.slug}`, desc, image });
     html = html.replace("</head>", `    <script type="application/ld+json" id="blog-jsonld">${JSON.stringify(ld).replace(/</g, "\u005Cu003c")}</script>\n  </head>`);
+    // Breadcrumb too, built exactly like PublicBlogPost's (same id, so the app replaces it).
+    const crumbs = [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+      { "@type": "ListItem", position: 2, name: "Blog", item: `${SITE}/blog` },
+    ];
+    if (post.category?.name) crumbs.push({ "@type": "ListItem", position: 3, name: post.category.name, item: `${SITE}/blog?category=${post.category._id}` });
+    crumbs.push({ "@type": "ListItem", position: crumbs.length + 1, name: post.breadcrumbTitle || post.title, item: `${SITE}/blog/${post.slug}` });
+    const bc = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: crumbs };
+    html = html.replace("</head>", `    <script type="application/ld+json" id="breadcrumb-jsonld">${JSON.stringify(bc).replace(/</g, "\u005Cu003c")}</script>
+  </head>`);
     if (html.includes('<div id="root"></div>')) {
       html = html
         .replace("</head>", `${HIDE_UNTIL_LIVE}
