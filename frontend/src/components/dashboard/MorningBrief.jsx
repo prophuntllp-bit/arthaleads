@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarCheck, MessageCircle, AlarmClock, Sparkles, Clock, ChevronDown, Users, AlertTriangle, Flame, CalendarX, UserX, Hourglass } from "lucide-react";
 import api from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 import useAppRefresh from "../../hooks/useAppRefresh";
 import { PhoneActions, WhatsAppLink } from "../UI";
 import { InfoTip } from "../Tooltip";
@@ -36,24 +37,64 @@ const COUNTS = [
 ];
 
 const hideKey = (date) => `al.brief.hidden.${date}`;
+const CACHE_KEY = "al.brief.last";   // sessionStorage: the last brief, shown instantly
+const ON_KEY = "al.brief.on";        // localStorage: this person gets a brief (show a placeholder)
+const todayIST = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+const store = (kind, key, value) => { try { if (value === undefined) return window[kind].getItem(key); if (value === null) window[kind].removeItem(key); else window[kind].setItem(key, value); } catch { /* storage blocked */ } return null; };
+
+// The Dashboard starts this the moment it opens, so the brief loads alongside
+// the other cards instead of after them. One request is shared for 20 s.
+// Everything is keyed by the signed-in person, so after a switch of account
+// nobody sees someone else's brief.
+let pending = null;
+export function prefetchBrief(userId) {
+  if (!pending || pending.userId !== userId || Date.now() - pending.at > 20000) {
+    pending = { userId, at: Date.now(), promise: api.get("/copilot/brief").then(({ data }) => data.brief || null) };
+  }
+  return pending.promise;
+}
+
+function cachedBrief(userId) {
+  try {
+    const c = JSON.parse(store("sessionStorage", CACHE_KEY) || "null");
+    return c && c.userId === userId && c.brief?.date === todayIST() ? c.brief : null;
+  } catch { return null; }
+}
 
 export default function MorningBrief() {
   const navigate = useNavigate();
-  const [brief, setBrief] = useState(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const { user } = useAuth();
+  const uid = user?._id || user?.id || "";
+  const [brief, setBrief] = useState(() => cachedBrief(uid));
+  const [loading, setLoading] = useState(() => !cachedBrief(uid) && store("localStorage", ON_KEY) === uid);
+  const [collapsed, setCollapsed] = useState(() => { const c = cachedBrief(uid); return !!c && store("localStorage", hideKey(c.date)) === "1"; });
 
-  const load = () => api.get("/copilot/brief").then(({ data }) => {
-    setBrief(data.brief || null);
-    if (data.brief) { try { setCollapsed(localStorage.getItem(hideKey(data.brief.date)) === "1"); } catch { /* storage blocked */ } }
-  }).catch(() => setBrief(null));
-  useEffect(() => { load(); }, []);
-  useAppRefresh(load, ["leads", "projects"]);
+  const apply = (b) => {
+    setBrief(b);
+    setLoading(false);
+    store("localStorage", ON_KEY, b ? uid : null);
+    store("sessionStorage", CACHE_KEY, b ? JSON.stringify({ userId: uid, brief: b }) : null);
+    if (b) setCollapsed(store("localStorage", hideKey(b.date)) === "1");
+  };
+  useEffect(() => { prefetchBrief(uid).then(apply).catch(() => setLoading(false)); }, [uid]); // eslint-disable-line react-hooks/exhaustive-deps
+  useAppRefresh(() => { pending = null; prefetchBrief(uid).then(apply).catch(() => {}); }, ["leads", "projects"]);
 
+  if (!brief && loading) {
+    return (
+      <section className="card p-4 sm:p-5" aria-busy="true" aria-label="Loading your day">
+        <div className="h-3 w-40 rounded-full animate-pulse" style={{ background: "var(--app-surface-low)" }} />
+        <div className="mt-2 h-4 w-64 rounded-full animate-pulse" style={{ background: "var(--app-surface-low)" }} />
+        <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
+          {[0, 1, 2, 3].map((i) => <div key={i} className="h-14 rounded-xl animate-pulse" style={{ background: "var(--app-surface-low)" }} />)}
+        </div>
+      </section>
+    );
+  }
   if (!brief) return null;
   const toggle = () => {
     const next = !collapsed;
     setCollapsed(next);
-    try { localStorage.setItem(hideKey(brief.date), next ? "1" : "0"); } catch { /* storage blocked */ }
+    store("localStorage", hideKey(brief.date), next ? "1" : "0");
   };
 
   const open = (it) => {
