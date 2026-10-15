@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+- [claude] 2026-10-15 18:40 IST: Vistrow Voice follow-up calls: receiver accepts crm_outcome.attempts (Not Reachable after N tries, undelivered dials) and follow_up_kind; sender stores queued_until / not-queued reasons in the delivery log + lead activity; lead page Vistrow Voice panel + POST /vistrow-outbound/leads/:id/call. Files: backend/routes/webhookRoutes.js, backend/utils/vistrowCallResult.js, backend/services/vistrowOutbound/*, backend/routes/vistrowOutboundRoutes.js, backend/models (delivery), frontend lead detail + VistrowOutboundSection, docs/vistrow-outbound-lead-created.md, tests.
 
 
 
