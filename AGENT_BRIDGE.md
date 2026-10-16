@@ -64,7 +64,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 
-- [claude] 2026-10-16 IST: Artha Phase 4 (mobile). Done: sign-in renewal (main 9c5ade8), staging app (main 836efd0), Artha sheet (staging 08a97eb, NOT on main yet: waiting for the owner's check). Next: change cards (preview, edit, Apply, Undo) in mobile/lib/screens/artha/. No backend changes.
+- [claude] 2026-10-16 IST: Artha Phase 4 (mobile). Done: sign-in renewal (main 9c5ade8), staging app (main 836efd0); on staging only, waiting for the owner's check: Artha sheet (08a97eb, af72a0c), change cards (c9a9a34, 3c56b14), team-member choice buttons (backend, 3f6e4df). Next: hold-to-talk voice (mobile/lib/screens/artha/).
 
 
 
@@ -97,6 +97,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-16 IST (staging c9a9a34 + 3f6e4df + 3c56b14, not on main yet): (1) mobile change cards, Phase 4 step 3: screens/artha/change_card.dart (ChangeProposal: /help/preview on arrival, edit a field -> new preview, datetime editors in IST sent back with +05:30, select/text editors; bulk rows with tick boxes, first 6 then Show all; Apply with source artha, threadId, scopeConfirmed and one idempotency key per card reused on retry; Undo; Cancel; scope prompt; writesDisabled), Apply all for 2+ cards, ArthaEvents.changed reloads the Leads list and an open lead sheet; keyboard closes on send and before editors. (2) BACKEND (owner asked for buttons instead of typing a name): backend/copilot/tools.js ask_user_to_choose also takes user_ids (active people of the org, name + role, <2 = answer directly), prompt.js tells the model to use it to pick a team member; step label now 'Asking you to choose'. tests: copilotActions.db.test.js +3 checks (fail on old code); copilot tools/actions/brief/drafts/risks/suggest pass; flutter test 43/43. Verified on the staging app + api-staging: log a call card (4 changes) edit/apply/undo, bulk reassign card for 8 leads via person buttons, cancelled. Seen, not fixed (web/server session): the answer text says 'I logged the call' / 'proposed' before Apply; model wrote 'Thu 17 Oct' for Sat 17 Oct; step label 'Preparing: <whole tool summary>' is long.
 
 - [claude] 2026-10-16 IST (staging 89b29284, cherry-picked to main 8d3f867c): AUDIT P1 security batch live. Project create/update drop system fields; project file deletes limited to the project's folder; uploads image-only (utils/upload.js imageOnly) and /api/media serves non-image types as sandboxed downloads; super admin accounts protected from company admins (authService assertCanManage); Facebook page / intake key / WhatsApp phoneNumberId+wabaId unique per company (409); agent visibility on old helpbot context, conversations/start, retry-facebook, draft-message; Google sign-in records token's app, enforces once GOOGLE_SIGNIN_CLIENT_IDS is set (NOT set yet: collect web + Android client ids from the [googleAuth] log lines first); EnableX recording fetch only from https *.enablex.io; regex escaping; site_url http(s); registrationPin stripped; page-size caps; frontend OAuth postMessage origin check. tests/securityP1.db.test.js (21). Open owner decisions: WA_WEBHOOK_ENFORCE is unset in production (Meta WhatsApp signatures only logged); AiSensy/Wati/Interakt webhooks are unsigned by design.
 
