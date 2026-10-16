@@ -21,7 +21,7 @@ const { sendPushToUser } = require("./push");
 const { planFieldFill, suggestionsFrom, sameValue, describeFields, LABEL, showValue } = require("./leadFieldFill");
 
 const BY = "Vistrow Voice";
-const DETAIL_FIELDS = "propertyType purpose bhk preferredLocation budget arthaSuggest source vistrowEmit";
+const DETAIL_FIELDS = "propertyType purpose bhk preferredLocation budget timeline arthaSuggest source vistrowEmit detailsSetByPerson";
 
 // The property type the CRM may itself have guessed for this lead: only the
 // WhatsApp reader guesses one (from the chat's project). The project a
@@ -63,6 +63,9 @@ async function applyCallDetails(leadId, mapped) {
     const description = `Lead details updated from Vistrow Voice call: ${describeFields(setOps)}`;
     update.$push = { activities: { type: "vistrow_voice", description, performedByName: BY, meta: { fields: Object.keys(setOps) } } };
     noteLines.push(`Filled on the lead: ${describeFields(setOps)}`);
+    // An untouched "Apartment" / "Buy" default the caller corrected: say what it was.
+    const replaced = Object.keys(setOps).filter((k) => k !== "budget" && lead[k] && lead[k] !== "N/A");
+    if (replaced.length) noteLines.push(`Replaced the default: ${replaced.map((k) => `${LABEL[k]} ${lead[k]} to ${setOps[k]}`).join(", ")}`);
   }
   if (Object.keys(suggest).length) {
     noteLines.push(`Not changed (already set on the lead): ${Object.keys(suggest).map((k) => `${LABEL[k]} ${showValue(k, suggest[k])} (lead has ${showValue(k, lead[k])})`).join(", ")}`);

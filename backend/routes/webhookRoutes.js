@@ -1032,6 +1032,9 @@ function mapVistrowExtractedFields(extractedData) {
   const location = get("location", "preferred_location", "area");
   if (location) out.preferredLocation = location;
 
+  const timeline = get("timeline");
+  if (timeline) out.timeline = timeline.slice(0, 120);
+
   // Number(null) is 0, not NaN - get() returning null (key absent) must NOT
   // be fed straight into Number(), or an absent budget silently becomes a
   // real "₹0 - ₹0" budget on every voice lead. Only convert when something
@@ -1423,6 +1426,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
           bhk: mapped.bhk || "N/A",
           budget: mapped.budget || { min: null, max: null, currency: "INR" },
           preferredLocation: mapped.preferredLocation || "",
+          timeline: mapped.timeline || "",
           notes: [{ text: [noteText, ...plan.lines].join("\n"), addedBy: assignee?._id || null, addedByName: assignee?.name || "" }],
           activities: [{
             type: "created",
@@ -1525,6 +1529,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
         bhk: mapped.bhk || "N/A",
         budget: mapped.budget || { min: null, max: null, currency: "INR" },
         preferredLocation: mapped.preferredLocation || "",
+        timeline: mapped.timeline || "",
       } : {}),
       notes: [
         {

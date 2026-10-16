@@ -115,6 +115,47 @@ test("hand-made lead with form defaults (Apartment/Buy): budget filled, Apartmen
   assert.equal(after.arthaSuggest.fields.purpose, undefined, "same value is not suggested");
 });
 
+test("integration lead (Facebook) with untouched Apartment/Buy defaults: the caller's Plot, budget and timeline fill it", async () => {
+  // What the Facebook webhook stores when the form never asked property type / purpose.
+  const lead = await Lead.create({ name: "FB Default", phone: "9876500013", source: "Facebook", orgId: ORG, status: "New" });
+  assert.equal(lead.propertyType, "Apartment");
+  assert.equal(lead.purpose, "Buy");
+  await post(call(7013, "+919876500013", { extracted_data: { budget_min: 10000000, budget_max: 10000000, purpose: "Invest", property_type: "Plot", timeline: "within 6 months" } }));
+  const after = await Lead.findById(lead._id).lean();
+  assert.equal(after.propertyType, "Plot");
+  assert.equal(after.purpose, "Invest");
+  assert.equal(after.budget.min, 10000000);
+  assert.equal(after.timeline, "within 6 months");
+  assert.equal(after.arthaSuggest?.fields?.propertyType, undefined, "filled, not suggested");
+  const note = after.notes.map((n) => n.text).join("\n");
+  assert.match(note, /Replaced the default: Property type Apartment to Plot, Purpose Buy to Invest/);
+  const act = after.activities.find((a) => /Lead details updated/.test(a.description));
+  assert.match(act.description, /Timeline within 6 months/);
+});
+
+test("a detail a person changed in Edit Lead is theirs: a later call never fills over it", async () => {
+  const lead = await Lead.create({ name: "FB Edited", phone: "9876500014", source: "Facebook", orgId: ORG, status: "New", propertyType: "Villa" });
+  const leadService = require("../services/leadService");
+  const admin = await User.findById(ADMIN1).lean();
+  // The Edit Lead form sends every field; only the changed one is marked.
+  await leadService.update(String(lead._id), { propertyType: "Apartment", purpose: "Buy", bhk: "N/A", preferredLocation: "" }, { ...admin, orgId: ORG });
+  const edited = await Lead.findById(lead._id).lean();
+  assert.deepEqual(edited.detailsSetByPerson, ["propertyType"]);
+  await post(call(7014, "+919876500014", { extracted_data: { property_type: "Plot", purpose: "Invest" } }));
+  const after = await Lead.findById(lead._id).lean();
+  assert.equal(after.propertyType, "Apartment", "a person's pick is kept");
+  assert.equal(after.arthaSuggest.fields.propertyType, "Plot");
+  assert.equal(after.purpose, "Invest", "purpose was never touched by a person, so the default is filled");
+});
+
+test("WhatsApp lead: Apartment there was a person's pick (created as N/A), so it is kept", async () => {
+  const lead = await Lead.create({ name: "WA", phone: "9876500015", source: "WhatsApp", orgId: ORG, status: "New", propertyType: "Apartment", purpose: "N/A" });
+  await post(call(7015, "+919876500015", { extracted_data: { property_type: "Plot" } }));
+  const after = await Lead.findById(lead._id).lean();
+  assert.equal(after.propertyType, "Apartment");
+  assert.equal(after.arthaSuggest.fields.propertyType, "Plot");
+});
+
 test("a dismissed suggestion is not offered again", async () => {
   const lead = await Lead.create({ name: "Dismissed", phone: "9876500004", source: "Manual", orgId: ORG,
     arthaSuggest: { dismissed: { propertyType: ["Plot"] } } });
