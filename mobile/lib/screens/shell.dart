@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/auth_state.dart';
 import '../core/push_service.dart';
@@ -38,28 +39,209 @@ import '../core/deep_link.dart';
 import '../core/api_client.dart';
 import 'projects/project_detail_screen.dart';
 
-/// Opens Artha from the top bar. Replaces the floating avatar, which sat
-/// over the call and WhatsApp buttons at the bottom of lists (Phase 4 plan,
-/// section 5). [navLabel] tells Artha which screen it was opened over.
-class _ArthaButton extends StatelessWidget {
-  final String navLabel;
-  const _ArthaButton({required this.navLabel});
+/// Floating button opening the Artha AI help assistant — persistent across
+/// every tab, mirrors the web app's floating HelpBot bubble: same 56dp size
+/// and the same expanding-ring pulse (web's `animate-ping`) so it doesn't
+/// get lost among the rest of the screen.
+class _ArthaFab extends StatefulWidget {
+  /// Drawer label of the screen underneath, handed to the assistant so it can
+  /// look up live data for it. See core/copilot_pages.dart.
+  final String? navLabel;
+
+  const _ArthaFab({this.navLabel});
 
   @override
-  Widget build(BuildContext context) => IconButton(
-        tooltip: 'Ask Artha',
-        onPressed: () => showArthaSheet(context, navLabel: navLabel),
-        icon: Container(
-          padding: const EdgeInsets.all(1.5),
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(colors: [AppColors.primaryDeep, AppColors.primary]),
-          ),
-          child: const CircleAvatar(radius: 14, backgroundImage: AssetImage('assets/images/ai_avatar.png')),
-        ),
-      );
+  State<_ArthaFab> createState() => _ArthaFabState();
 }
 
+class _ArthaFabState extends State<_ArthaFab>
+    with SingleTickerProviderStateMixin {
+  static const _buttonSize = 56.0;
+  static const _boxSize = 84.0;
+
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    );
+  }
+
+  // The "reduce motion" setting is read here, not in initState: reading
+  // MediaQuery that early is not allowed (debug builds showed a red error box
+  // where this button should be). This also follows the setting if it
+  // changes while the app is open.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    if (reduceMotion && _pulse.isAnimating) {
+      _pulse.stop();
+    } else if (!reduceMotion && !_pulse.isAnimating) {
+      _pulse.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: _boxSize,
+      height: _boxSize,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          AnimatedBuilder(
+            animation: _pulse,
+            builder: (context, child) {
+              final t = Curves.easeOut.transform(_pulse.value);
+              return Opacity(
+                opacity: (1 - t) * 0.45,
+                child: Transform.scale(
+                  scale: 1 + t * 0.7,
+                  child: Container(
+                    width: _buttonSize,
+                    height: _buttonSize,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFFFF6B00),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          SizedBox(
+            width: _buttonSize,
+            height: _buttonSize,
+            child: FloatingActionButton(
+              heroTag: 'artha-fab',
+              elevation: 8,
+              backgroundColor: AppColors.primaryDeep,
+              shape: CircleBorder(
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
+              ),
+              // See GradientFab (widgets/buttons.dart) for why this matters —
+              // the theme's default FAB shape is a rounded square, and
+              // FloatingActionButton doesn't clip to `shape` unless told to.
+              clipBehavior: Clip.antiAlias,
+              onPressed: () => showArthaSheet(context, navLabel: widget.navLabel),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/ai_avatar.png',
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Wraps [_ArthaFab] so the user can drag it anywhere on screen — the
+/// position is remembered per-device (SharedPreferences — a plain UI
+/// coordinate isn't sensitive enough to need the encrypted secure-storage
+/// used for the auth token, and avoids that store's Keystore-dependent
+/// write path, which proved unreliable for rapid-fire writes on-device)
+/// so it stays where they left it next time the app opens.
+class _DraggableArthaFab extends StatefulWidget {
+  final String? navLabel;
+
+  const _DraggableArthaFab({this.navLabel});
+
+  @override
+  State<_DraggableArthaFab> createState() => _DraggableArthaFabState();
+}
+
+class _DraggableArthaFabState extends State<_DraggableArthaFab> {
+  // _v3: back to bottom-right, which is where the assistant is expected to
+  // live. The collision that moved it left in _v2 is now solved from the
+  // other side — every screen's own Add/+ FAB sits bottom-LEFT
+  // (floatingActionButtonLocation.startFloat), so the two no longer share a
+  // corner. Bumping the key repositions existing installs once; dragging and
+  // persistence behave exactly as before afterwards.
+  static const _xKey = 'artha_fab_x_v3';
+  static const _yKey = 'artha_fab_y_v3';
+  static const _boxSize = 84.0;
+
+  Offset? _pos;
+
+  @override
+  void initState() {
+    super.initState();
+    _restore();
+  }
+
+  Future<void> _restore() async {
+    final prefs = await SharedPreferences.getInstance();
+    final x = prefs.getDouble(_xKey);
+    final y = prefs.getDouble(_yKey);
+    if (!mounted || x == null || y == null) return;
+    setState(() => _pos = Offset(x, y));
+  }
+
+  Future<void> _persist(Offset pos) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_xKey, pos.dx);
+    await prefs.setDouble(_yKey, pos.dy);
+  }
+
+  // Bottom-right corner, level with the screen's own Add/+ FAB — which is
+  // pinned bottom-LEFT, so the two never share a corner.
+  //
+  // The old 74px bottom margin was clearing a bottom nav bar this shell does
+  // not have (navigation is the drawer), which left the bubble hovering over
+  // list rows and covering their call/WhatsApp icons instead of resting in
+  // the corner. 24px keeps it clear of the gesture bar.
+  Offset _defaultPos(Size area) =>
+      Offset(area.width - _boxSize - 6, area.height - _boxSize - 24);
+
+  Offset _clamp(Offset pos, Size area) => Offset(
+    pos.dx.clamp(0, (area.width - _boxSize).clamp(0, double.infinity)),
+    pos.dy.clamp(0, (area.height - _boxSize).clamp(0, double.infinity)),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final area = Size(constraints.maxWidth, constraints.maxHeight);
+        final pos = _clamp(_pos ?? _defaultPos(area), area);
+        return Stack(
+          children: [
+            Positioned(
+              left: pos.dx,
+              top: pos.dy,
+              child: GestureDetector(
+                onPanUpdate: (details) {
+                  final next = _clamp((_pos ?? pos) + details.delta, area);
+                  setState(() => _pos = next);
+                  // Persisted on every update (not just onPanEnd) — some
+                  // synthetic/edge-case gesture streams never deliver a
+                  // clean pan-end, which silently dropped the save.
+                  _persist(next);
+                },
+                child: _ArthaFab(navLabel: widget.navLabel),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// One entry in the navigation drawer.
 class _NavItem {
   final String label;
   final IconData icon;
@@ -371,7 +553,6 @@ class _ShellState extends State<Shell> {
           appBar: current.label == 'Inbox' ? null : AppBar(
             title: Text(current.label),
             actions: [
-              _ArthaButton(navLabel: current.label),
               const HeaderSearchButton(),
               const HeaderAlertsButton(),
               Consumer<ThemeState>(
@@ -518,7 +699,18 @@ class _ShellState extends State<Shell> {
               ),
             ),
           ),
-          body: currentScreen,
+          body: Stack(
+            children: [
+              currentScreen,
+              // Persistent, user-draggable AI avatar — defaults to bottom-right
+              // (matching the web app's floating HelpBot bubble) but can be
+              // dragged anywhere and remembers where it was left.
+              // `current.label` is how the assistant learns which screen it
+              // was opened over -- the web copilot reads location.pathname on
+              // every request, and this is the equivalent handle here.
+              Positioned.fill(child: _DraggableArthaFab(navLabel: current.label)),
+            ],
+          ),
         ),
       ),
     );
