@@ -85,7 +85,9 @@ const protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Check if user still exists and is active
-    const user = await User.findById(decoded.id).select("-password");
+    // The photo is not needed to authorise a request and used to be a
+    // multi-megabyte data URI read on every call; /auth/me loads it itself.
+    const user = await User.findById(decoded.id).select("-password -avatar");
     if (!user) return next(new AppError("User no longer exists.", 401));
     if (!user.isActive) return next(new AppError("Your account has been deactivated.", 403));
     // A password change or reset ends every session that started before it.
