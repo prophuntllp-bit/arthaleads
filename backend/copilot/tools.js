@@ -147,7 +147,7 @@ function stepLabel(name, args = {}) {
     case "list_team": return "Checking the team";
     case "list_projects": return "Checking projects";
     case "search_help": return "Looking it up in the guide";
-    case "ask_user_to_choose": return "Asking which one you mean";
+    case "ask_user_to_choose": return "Asking you to choose";
     case "morning_brief": return "Checking your day";
     default: return actions.byId.get(name) ? `Preparing: ${actions.byId.get(name).describe.summary.toLowerCase()}` : "Working";
   }
