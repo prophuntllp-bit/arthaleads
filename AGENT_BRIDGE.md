@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
-- [claude] 2026-10-16 IST: AUDIT P0 fixes (owner approved), staging first: media route crash, NoSQL operator injection guard (global middleware + String() at token sites), AiSensy apiKey, generateWhatsAppTemplate export, unhandledRejection no longer exits. Files: backend/server.js, routes/mediaRoutes.js, routes/webhookRoutes.js, routes/whatsappRoutes.js, utils/openai.js, new middlewares/noOperators.js. See docs/AUDIT_2026-10-16.md.
 
 - [claude] 2026-10-16 IST: Artha Phase 4 (mobile) start. Step 1 done (staging 63a95da, main 9c5ade8). Now: separate "Arthaleads Staging" app (com.arthaleads.crm.staging) for any build with API_BASE_URL=api-staging: android/app/build.gradle.kts, AndroidManifest.xml, main.dart, api_client.dart, push_service.dart, update_service.dart. Then the Artha bottom sheet in mobile/ (no backend changes planned).
 
@@ -95,6 +94,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-16 IST (staging 6dec3892, cherry-picked to main 539ddd7f): AUDIT P0 fixes live. middlewares/noOperators.js strips "$" keys from body/query/params globally (after cookieParser for query, after express.json/urlencoded for bodies) and after each /webhook route body parser; webhook tokens looked up only as strings (asToken); AiSensy apiKey must be a string; /api/media decode errors are 404; generateWhatsAppTemplate exported; unhandledRejection now logs + Sentry instead of process.exit; copilot /chat, GET /whatsapp/settings and FB webhook verify catch their errors. Verified on staging and live (crash URL 404 with health 200, injection probe 401, logs show the strip). Test: tests/securityP0.db.test.js. NOTE for everyone: no client may send keys starting with "$" any more; they are removed. Remaining audit items: docs/AUDIT_2026-10-16.md.
 
 - [claude] 2026-10-16 IST (staging 94053ae, main 836efd0): mobile staging app. A build with --dart-define=API_BASE_URL=https://api-staging.arthaleads.com/api becomes com.arthaleads.crm.staging, label "Arthaleads Staging" (build.gradle.kts decodes Flutter's dart-defines; manifest label is ${appLabel}); google-services tasks disabled for it and Firebase.initializeApp, PushService.init and both update checks skipped (ApiClient.isStaging); STAGING corner banner. Live build checked unchanged: com.arthaleads.crm, label Arthaleads, release key 2d9ac02f, Firebase resources present. analyze clean, flutter test 35/35. Build it: flutter build apk --release --dart-define=API_BASE_URL=https://api-staging.arthaleads.com/api (no push, no Google sign-in in it). NOT yet installed on the phone (USB dropped).
 
