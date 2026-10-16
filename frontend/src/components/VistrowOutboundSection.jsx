@@ -54,8 +54,9 @@ const errMsg = (e, fallback) => e?.response?.data?.message || fallback;
 function Switch({ on, onChange, disabled, label }) {
   return (
     <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} onClick={() => onChange(!on)}
-      className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${on ? "bg-emerald-500" : "bg-black/15 dark:bg-white/15"}`}>
-      <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform mt-0.5 ${on ? "translate-x-[22px]" : "translate-x-0.5"}`} />
+      className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50"
+      style={{ background: on ? "#10b981" : "rgba(120, 113, 108, 0.32)", boxShadow: on ? "none" : "inset 0 0 0 1px rgba(120, 113, 108, 0.25)" }}>
+      <span className={`inline-block h-5 w-5 rounded-full bg-white transition-transform ${on ? "translate-x-[22px]" : "translate-x-0.5"}`} style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.25)" }} />
     </button>
   );
 }
@@ -84,7 +85,7 @@ function AgentPicker({ value, onChange, agents, placeholder = "Choose an agent",
         <span className="flex-1 truncate">{shown}</span><ChevronDown className="w-4 h-4 shrink-0" />
       </button>
       {open && (
-        <div className="absolute z-30 mt-1 w-full min-w-[260px] rounded-2xl border shadow-lg p-2" style={{ background: "var(--app-surface)", borderColor: "var(--app-border)" }}>
+        <div className="absolute z-[60] mt-1 w-full min-w-[260px] rounded-2xl border shadow-xl p-2" style={{ background: "var(--app-surface-solid)", borderColor: "var(--app-border)" }}>
           <div className="flex items-center gap-2 px-2 pb-2"><Search className="w-4 h-4 text-app-soft" />
             <input autoFocus className="flex-1 bg-transparent outline-none text-sm" placeholder="Search by agent or knowledge base" value={q} onChange={(e) => setQ(e.target.value)} /></div>
           <div role="listbox" className="max-h-60 overflow-auto">
@@ -474,9 +475,9 @@ export default function VistrowOutboundSection() {
                         : <><input className="input font-mono text-sm" list="vo-campaigns" placeholder="e.g. 21987654321" value={d.campaignId || ""} onChange={(e) => setDraftField(src.key, { campaignId: e.target.value })} />
                           <datalist id="vo-campaigns">{campaigns.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}</datalist></>}</div>
                   </>)}
-                  <div className="md:col-span-5"><label className="label">Agent who calls</label>
+                  <div className="md:col-span-3"><label className="label">Agent who calls</label>
                     <AgentPicker testId="add-agent" value={d.agent || ""} agents={agentList.agents} onChange={(v) => setDraftField(src.key, { agent: v })} placeholder={agentsReady ? "Choose an agent" : "Agents not loaded yet"} /></div>
-                  <div className="md:col-span-2"><button type="button" className="btn-primary rounded-xl w-full" disabled={busy === `routes-${src.key}` || !agentsReady} onClick={() => addRoute(src.key)}>
+                  <div className="md:col-span-2"><button type="button" className="btn-primary rounded-2xl w-full justify-center" style={{ minHeight: 46 }} disabled={busy === `routes-${src.key}` || !agentsReady} onClick={() => addRoute(src.key)}>
                     {busy === `routes-${src.key}` ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4" /> Add</>}</button></div>
                 </div>
               </div>

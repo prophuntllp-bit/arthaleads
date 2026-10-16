@@ -97,6 +97,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-16 18:15 IST: main gets the Vistrow auto-call page UI fixes (staging 101d324): solid agent dropdown, visible off switch, Add on the rule row.
 - [claude] 2026-10-16 17:50 IST: main gets the staging Vercel ignoreCommand fix (staging a891fe3; owner-approved edit of frontend/vercel.json only). Builds are now skipped only when frontend/ is unchanged since the last successful deployment (VERCEL_GIT_PREVIOUS_SHA), not since the previous commit.
 - [claude] 2026-10-16 17:25 IST: ad-picker UI redeploy on main (staging 5742258). Comment-only change in VistrowOutboundSection.jsx committed with this log line so the push's last commit touches frontend/. Cause: frontend/vercel.json `ignoreCommand: git diff --quiet HEAD^ HEAD -- .` checks only the last commit, so 24f6d2d's UI never built. Proposed fix (not applied, vercel.json is under another agent's claim): `[ -n "$VERCEL_GIT_PREVIOUS_SHA" ] && git diff --quiet "$VERCEL_GIT_PREVIOUS_SHA" HEAD -- .`.
 
