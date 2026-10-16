@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-16 IST: Artha Phase 4 (mobile) start. Step 1: app keeps X-Renewed-Token (7-day sign-out fix), mobile/lib/core/api_client.dart only. Then the Artha bottom sheet in mobile/ (no backend changes planned).
+
 
 
 
