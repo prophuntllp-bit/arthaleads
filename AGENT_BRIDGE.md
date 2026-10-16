@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-16 IST: Vistrow auto-call routing: default agent per source ("any" rule) + Facebook ad_id/campaign_id rules and options. Files: backend/services/vistrowOutbound/routing.js, backend/routes/vistrowOutboundRoutes.js, backend/models/OutboundIntegration.js, frontend/src/components/VistrowOutboundSection.jsx, docs/vistrow-outbound-lead-created.md, backend/tests (routing + new db test).
+
 
 
 
