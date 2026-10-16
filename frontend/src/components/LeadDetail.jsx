@@ -634,7 +634,9 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
             <Info label="City" value={lead.city || "-"} />
             <Info label="Budget" value={
               lead.budget?.min || lead.budget?.max
-                ? `${fmtCurrency(lead.budget?.min)} - ${fmtCurrency(lead.budget?.max)}`
+                ? (lead.budget?.min === lead.budget?.max
+                  ? fmtCurrency(lead.budget.max)
+                  : `${fmtCurrency(lead.budget?.min)} - ${fmtCurrency(lead.budget?.max)}`)
                 : "Not captured"
             } />
             {lead.timeline && <Info label="Timeline" value={lead.timeline} />}

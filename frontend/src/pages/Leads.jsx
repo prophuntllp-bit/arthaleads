@@ -1288,7 +1288,7 @@ export default function Leads() {
                           )
                           : <span className="text-xs text-app-soft">-</span>}
                     </td>
-                    <td className="whitespace-nowrap"><StatusBadge status={lead.status} lead={lead} /></td>
+                    <td className="whitespace-nowrap"><StatusBadge status={lead.status} lead={lead} compact /></td>
                     <td className="whitespace-nowrap"><PriorityBadge priority={lead.priority} /></td>
                     <td>
                       {cleanRequirements(lead.requirements)
@@ -1347,7 +1347,9 @@ export default function Leads() {
                         </p>
                       ) : <span className="text-xs text-app-soft">-</span>}
                       {(lead.budget?.min || lead.budget?.max) && (
-                        <p className="mt-0.5 text-xs text-orange-500">{fmtCurrency(lead.budget?.min)} – {fmtCurrency(lead.budget?.max)}</p>
+                        <p className="mt-0.5 text-xs text-orange-500">{lead.budget?.min === lead.budget?.max
+                          ? fmtCurrency(lead.budget.max)
+                          : `${fmtCurrency(lead.budget?.min)} – ${fmtCurrency(lead.budget?.max)}`}</p>
                       )}
                     </td>
                     <td className="whitespace-nowrap text-sm text-app-soft">{lead.assignedToName || lead.assignedTo?.name || "-"}</td>
