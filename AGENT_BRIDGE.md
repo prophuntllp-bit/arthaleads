@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-16 IST: web-app wrapper cleanup part 2: drop capacitor://localhost + http://localhost from CORS/CSRF (server.js, auth.js), Capacitor comments (push.js, pushRoutes.js, PushSubscription.js, index.html, main.jsx, mobile/ comments), .gitignore/.railwayignore lines, MOBILE_PARITY_AUDIT intro.
+
 
 
 
