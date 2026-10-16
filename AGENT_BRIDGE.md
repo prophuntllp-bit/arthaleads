@@ -61,6 +61,8 @@ only be verified live so Claude Code or the owner can check it on production.
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 - [claude] 2026-10-16 14:05 IST: Vistrow routing: Facebook lead-form (form_id) rules + name·id dropdowns for every Facebook rule kind (no bare text box by default). Files: backend/services/vistrowOutbound/routing.js, backend/models/OutboundIntegration.js, backend/routes/vistrowOutboundRoutes.js, frontend/src/components/VistrowOutboundSection.jsx, frontend/src/components/CustomSelect.jsx (disabled option), docs/vistrow-outbound-lead-created.md, backend/tests/vistrowOutbound.routing.test.js, backend/tests/vistrowRoutingDefault.db.test.js.
 
+- [claude] 2026-10-16 IST: SEO /product-tour watch page (owner approved) so Google indexes the intro film. Files: frontend/src/pages/ProductTour.jsx (new), components/IntroVideo.jsx, App.jsx, entry-prerender.jsx, CustomCursor.jsx, vercel.json, backend/controllers/blogController.js (sitemap).
+
 
 
 

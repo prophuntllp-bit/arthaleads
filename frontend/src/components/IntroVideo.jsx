@@ -20,8 +20,10 @@ export const INTRO_VIDEOS = {
 // VideoObject structured data, so the film can appear in Google video results.
 // Rendered in the markup (not added by an effect) so the prerendered HTML that
 // crawlers read first already carries it. uploadDate needs a time and timezone:
-// a bare date is flagged by Search Console.
-const INTRO_VIDEO_JSONLD = JSON.stringify({
+// a bare date is flagged by Search Console. Only the /product-tour watch page
+// sends it (jsonLd prop): Google indexes a video only where it is the main
+// content, and on the home page it is one section of many.
+export const INTRO_VIDEO_JSONLD = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "VideoObject",
   name: "ArthaLeads in 2 minutes",
@@ -34,7 +36,8 @@ const INTRO_VIDEO_JSONLD = JSON.stringify({
   inLanguage: "en-IN",
 });
 
-export default function IntroVideo({ isDark, id = "tour" }) {
+// bare: player and language toggle only, for a page that brings its own heading.
+export default function IntroVideo({ isDark, id = "tour", jsonLd = false, bare = false }) {
   const [lang, setLang]         = useState("en");
   const [started, setStarted]   = useState(false);   // has played at least once: show the player controls
   const [blocked, setBlocked]   = useState(false);   // autoplay refused or disabled: show the big play button
@@ -112,10 +115,13 @@ export default function IntroVideo({ isDark, id = "tour" }) {
   const segBdr  = isDark ? "rgba(255,255,255,0.10)" : "#e7e1d8";
 
   return (
-    <section id={id} ref={sectionRef} className="relative py-16 lg:py-24 overflow-hidden scroll-mt-20" style={{ background: bg, borderTop: `1px solid ${rail}`, borderBottom: `1px solid ${rail}` }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: INTRO_VIDEO_JSONLD }} />
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8 lg:mb-10">
+    <section id={id} ref={sectionRef}
+      className={bare ? "relative scroll-mt-20" : "relative py-16 lg:py-24 overflow-hidden scroll-mt-20"}
+      style={bare ? undefined : { background: bg, borderTop: `1px solid ${rail}`, borderBottom: `1px solid ${rail}` }}>
+      {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: INTRO_VIDEO_JSONLD }} />}
+      <div className={bare ? "relative" : "relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8"}>
+        <div className={`flex flex-col md:flex-row md:items-end gap-6 ${bare ? "md:justify-end mb-4" : "md:justify-between mb-8 lg:mb-10"}`}>
+          {!bare && (
           <div className="max-w-2xl">
             <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--brand-text)]">Watch the tour</span>
             <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-black mt-3 leading-[1.1]" style={{ color: heading, textWrap: "balance" }}>
@@ -126,6 +132,7 @@ export default function IntroVideo({ isDark, id = "tour" }) {
               site visit and hands your team a lead with every answer already filled in.
             </p>
           </div>
+          )}
 
           <div role="group" aria-label="Video language" className="inline-flex self-start md:self-auto p-1 rounded-full shrink-0"
             style={{ background: segBg, border: `1px solid ${segBdr}` }}>

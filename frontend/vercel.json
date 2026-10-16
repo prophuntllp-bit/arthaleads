@@ -13,11 +13,6 @@
       "permanent": true
     },
     {
-      "source": "/product-tour",
-      "destination": "/#tour",
-      "permanent": true
-    },
-    {
       "source": "/robots.txt",
       "has": [
         {
@@ -111,6 +106,10 @@
     {
       "source": "/compare/kylas-alternative",
       "destination": "/compare/kylas-alternative.html"
+    },
+    {
+      "source": "/product-tour",
+      "destination": "/product-tour.html"
     },
     {
       "source": "/features",

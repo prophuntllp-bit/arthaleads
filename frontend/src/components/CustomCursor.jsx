@@ -19,6 +19,7 @@ const MARKETING_PATHS = new Set([
   "/compare/sell-do-alternative",
   "/compare/leadrat-alternative",
   "/compare/kylas-alternative",
+  "/product-tour",
   "/blog",
   "/about-us",
   "/case-studies",

@@ -384,6 +384,7 @@ const WhatsAppCrm    = lazy(() => import("./pages/WhatsAppCrm"));
 const SellDoAlternative = lazy(() => import("./pages/SellDoAlternative"));
 const LeadratAlternative = lazy(() => import("./pages/LeadratAlternative"));
 const KylasAlternative  = lazy(() => import("./pages/KylasAlternative"));
+const ProductTour    = lazy(() => import("./pages/ProductTour"));
 const Projects       = lazy(() => import("./pages/Projects"));
 const ProjectDetail  = lazy(() => import("./pages/ProjectDetail"));
 const DumpLeads      = lazy(() => import("./pages/DumpLeads"));
@@ -779,6 +780,7 @@ export default function App() {
         <Route path="/compare/sell-do-alternative" element={<SellDoAlternative />} />
         <Route path="/compare/leadrat-alternative" element={<LeadratAlternative />} />
         <Route path="/compare/kylas-alternative" element={<KylasAlternative />} />
+        <Route path="/product-tour"         element={<ProductTour />} />
         <Route path="/blog"                 element={<PublicBlog />} />
         <Route path="/blog/:slug"           element={<PublicBlogPost />} />
         <Route path="/about-us"             element={<AboutUs />} />

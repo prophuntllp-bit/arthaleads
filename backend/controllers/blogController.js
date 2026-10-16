@@ -123,6 +123,7 @@ const blogController = {
         { url: "/api-docs",         priority: "0.6", changefreq: "monthly" },
         { url: "/download-app",     priority: "0.6", changefreq: "monthly" },
         { url: "/whatsapp-crm",     priority: "0.9", changefreq: "monthly" },
+        { url: "/product-tour",     priority: "0.7", changefreq: "monthly" },
         { url: "/refer",            priority: "0.5", changefreq: "monthly" },
         { url: "/careers",          priority: "0.5", changefreq: "monthly" },
         { url: "/contact",          priority: "0.6", changefreq: "monthly" },
