@@ -64,7 +64,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 
-- [claude] 2026-10-16 IST: Artha Phase 4 (mobile). Done: sign-in renewal (main 9c5ade8), staging app (main 836efd0); on staging only, waiting for the owner's check: Artha sheet (08a97eb, af72a0c), change cards (c9a9a34, 3c56b14), team-member choice buttons (backend, 3f6e4df). voice (e822aa3, waiting for the owner to speak-test). Next: morning brief on the Dashboard.
+- [claude] 2026-10-16 IST: Artha Phase 4 (mobile). Done: sign-in renewal (main 9c5ade8), staging app (main 836efd0); on staging only, waiting for the owner's check: Artha sheet (08a97eb, af72a0c), change cards (c9a9a34, 3c56b14), team-member choice buttons (backend, 3f6e4df). voice (e822aa3 + fix d1f0695, waiting for the owner to speak-test). Next: morning brief on the Dashboard.
 
 
 
@@ -97,6 +97,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-16 IST (staging d1f0695, not on main yet): mobile voice fix after the owner found the panel stuck on Listening with no words and no way out (first hold raced the permission prompt; recogniser's own stop NO_SPEECH_DETECTED was ignored). ArthaVoice now ends on the recogniser's done/notListening status and on every error; first hold only prepares/asks; lift before start stops; onLongPressCancel stops; panel has Cancel and Done; mic is a stop button while listening; 'Didn't catch that' note. Verified silent holds on the staging app; speech needs a person.
 
 - [claude] 2026-10-16 IST (staging e822aa3, not on main yet): mobile hold-to-talk, Phase 4 step 4. New screens/artha/voice_input.dart (ArthaVoice on speech_to_text 7.5.0: dictation mode, partial results, en_IN default (writes Hinglish in Latin) or hi_IN, remembered in SharedPreferences; VoiceMicButton: hold/let go/slide away to cancel, short tap = help + language; VoicePanel: live words, timer). Heard text goes INTO the box, never sent by itself. AndroidManifest: RECORD_AUDIO declared again (was tools:node=remove since 4df40996) + <queries> android.speech.RecognitionService. Website session: the privacy policy should now mention the microphone (used only while holding Artha's mic, via the phone's speech recogniser). Verified on staging app: mic, help sheet, chips, runtime permission prompt; speech itself not yet (needs a person).
 
