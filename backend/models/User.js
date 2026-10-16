@@ -73,6 +73,20 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
+// A profile photo arrives as a data URI (Settings compresses it in the
+// browser). Stored inline it made the user record megabytes long, and the
+// whole record is read on every request that person makes (middlewares/auth)
+// and sent in every team list. So it goes to file storage (Backblaze, served
+// via /api/media) and only the link stays here. Without storage configured
+// (local sandbox) the data URI is kept as before.
+userSchema.pre("save", async function storeAvatarInFiles() {
+  if (!this.isModified("avatar") || !/^data:image\//i.test(this.avatar || "")) return;
+  const storage = require("../utils/storage");
+  if (!storage.isConfigured()) return;
+  // New key per upload, so a changed photo is never served from an old cache.
+  this.avatar = await storage.putDataUri(`arthaleads/avatars/${this.orgId || "platform"}/${this._id}-${Date.now()}-${require("crypto").randomBytes(6).toString("hex")}`, this.avatar, { orgId: this.orgId || undefined });
+});
+
 // Compare plain password with hashed.
 // Returns false when no password is set (Google-only accounts) or the password
 // field wasn't selected — bcrypt.compare would otherwise throw
