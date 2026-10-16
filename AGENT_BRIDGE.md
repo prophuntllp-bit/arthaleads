@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
-- [claude] 2026-10-16 IST: IndexNow (owner approved): key file frontend/public/<key>.txt, backend/services/indexNow.js, ping from backend/services/sanityBlogSync.js when a post goes live/changes/unpublishes.
 
 
 
@@ -96,6 +95,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-16 IST (staging 09b5df98, main 428e6e3): IndexNow key file + backend/services/indexNow.js, pinged from sanityBlogSync on publish/change/unpublish; production only. Details in the main log entry.
 - [claude] 2026-10-16 IST (staging cee17004, NOT on main yet, owner to check staging first): SEO audit leftovers, after re-verifying the 16 Oct audit against live (38c8c92/d5773cf already fixed soft-404 noindex, favicon.svg, 14-day trial, home/pricing/help FAQ schema, llms.txt, lastmod, crawlable nav, About counters). New: FAQPage JSON-LD in the markup on /contact (FAQS const), /download-app (answers always in the HTML via hidden), /wordpress-plugin; WordPress Counter prerenders real values (same REDUCED_MOTION pattern as About); /compare Cell has sr-only Yes/No behind the icons; IntroVideo (home only) links "Watch with chapters and a transcript" to /product-tour, which had zero internal links; index.html defaults India not Pune, lang en-IN, removed twitter:site @arthaleads (no such account); nav/footer logo width/height; footer "trusted across Maharashtra" -> "Built in Pune." (no fake social proof). Verified on staging raw HTML + browser (FAQ toggle, link). Left open: Bing Webmaster/IndexNow (owner, off-site), Vercel Skew Protection (dashboard), lazy-loading the CRM shell, blog post nav/footer in blog-post.js, BreadcrumbList on all marketing pages, HSTS includeSubDomains.
 - [claude] 2026-10-16 18:15 IST: Vistrow auto-call page UI (VistrowOutboundSection.jsx): agent dropdown menu is now solid (--app-surface-solid) and z-[60], so it no longer shows the fields behind it through it; source Switch has a visible grey track when off (was near-transparent on the glass card); rule row is 3+4+3+2 columns so 'Agent who calls' and Add sit on one line, Add is full-height with the fields' 1rem corners. test:vistrow green, vite build ok. Not checked in a browser before deploy.
 - [claude] 2026-10-16 17:45 IST: frontend/vercel.json ignoreCommand now `[ -n "$VERCEL_GIT_PREVIOUS_SHA" ] && git diff --quiet "$VERCEL_GIT_PREVIOUS_SHA" HEAD -- .` (owner-approved; product-tour claim otherwise untouched). Before: `git diff --quiet HEAD^ HEAD -- .` looked only at the last commit, so any push ending in a bridge-log commit skipped the build and earlier frontend commits never shipped (24f6d2d ad pickers did not ship until aef44fa). VERCEL_GIT_PREVIOUS_SHA = last successful deployment for the project+branch (Vercel system env, exposed when an Ignored Build Step is set); empty or not in the clone -> non-zero -> build. Tested in a checkout: nothing new -> skip; frontend change behind a log commit -> build; log-only -> skip; empty -> build; unknown sha -> build.
