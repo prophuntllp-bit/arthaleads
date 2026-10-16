@@ -64,7 +64,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 
-- [claude] 2026-10-16 IST: Artha Phase 4 (mobile). Done: sign-in renewal (main 9c5ade8), staging app (main 836efd0); on staging only, waiting for the owner's check: Artha sheet (08a97eb, af72a0c), change cards (c9a9a34, 3c56b14), team-member choice buttons (backend, 3f6e4df). Next: hold-to-talk voice (mobile/lib/screens/artha/).
+- [claude] 2026-10-16 IST: Artha Phase 4 (mobile). Done: sign-in renewal (main 9c5ade8), staging app (main 836efd0); on staging only, waiting for the owner's check: Artha sheet (08a97eb, af72a0c), change cards (c9a9a34, 3c56b14), team-member choice buttons (backend, 3f6e4df). voice (e822aa3, waiting for the owner to speak-test). Next: morning brief on the Dashboard.
 
 
 
@@ -97,6 +97,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-16 IST (staging e822aa3, not on main yet): mobile hold-to-talk, Phase 4 step 4. New screens/artha/voice_input.dart (ArthaVoice on speech_to_text 7.5.0: dictation mode, partial results, en_IN default (writes Hinglish in Latin) or hi_IN, remembered in SharedPreferences; VoiceMicButton: hold/let go/slide away to cancel, short tap = help + language; VoicePanel: live words, timer). Heard text goes INTO the box, never sent by itself. AndroidManifest: RECORD_AUDIO declared again (was tools:node=remove since 4df40996) + <queries> android.speech.RecognitionService. Website session: the privacy policy should now mention the microphone (used only while holding Artha's mic, via the phone's speech recogniser). Verified on staging app: mic, help sheet, chips, runtime permission prompt; speech itself not yet (needs a person).
 
 - [claude] 2026-10-16 IST (staging aef8066, not on main yet): Artha weekday fix (owner asked to check the 'Thu 17 Oct' for a Saturday). Root cause: backend/copilot/prompt.js example said "Thu 16 Oct" (true in 2025, Fri in 2026) and the model computed weekdays itself. contextMessage now adds `Calendar (IST): today Fri 16 Oct 2026, tomorrow Sat 17 Oct 2026, ...` (14 days, nextDays(), per-request so the cached SYSTEM stays time-free); SYSTEM says to take every weekday from it; example is now "Sat 17 Oct, 5:00 pm". copilotTools.db.test.js +4 checks. Retest on api-staging after deploy: Saturday 6pm -> Sat 17 Oct, next Monday -> Mon 19 Oct, 3 November -> Tue 3 Nov, kal shaam 5 baje -> card 17 Oct 5 pm; all cards correct (they always were; only the AI's text could be wrong). Web session: this also affects web Artha text once on main.
 
