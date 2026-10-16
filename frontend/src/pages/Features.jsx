@@ -4,6 +4,7 @@
 // follows you down the page; each workflow shows the real screen it happens on
 // (a short clip that plays when scrolled to) beside its heading, with the
 // individual features as cards underneath.
+import { SITE_MEDIA } from "../data/siteMedia";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Check } from "lucide-react";
@@ -90,8 +91,8 @@ function Screen({ spec, isDark }) {
         {near && (
           <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover object-top" poster={`/tour/${spec.id}.webp`}
             muted loop playsInline preload="auto" aria-hidden="true">
-            <source src={`/tour/${spec.id}.mp4`} type="video/mp4" />
-            <source src={`/tour/${spec.id}.webm`} type="video/webm" />
+            <source src={`${SITE_MEDIA}/tour/${spec.id}.mp4`} type="video/mp4" />
+            <source src={`${SITE_MEDIA}/tour/${spec.id}.webm`} type="video/webm" />
           </video>
         )}
       </div>
