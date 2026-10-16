@@ -72,14 +72,14 @@ export function isAiCallStatus(lead) {
 
 // Pass `lead` to mark a status set by a Vistrow Voice call: indigo (the
 // Vistrow colour, distinct from the violet Site Visit pill), a phone icon and
-// "· AI call". `compact` (narrow table columns) drops the "· AI call" text and
-// keeps the colour, icon and tooltip. Human-set statuses keep their usual colours.
+// "· AI call". `compact` (narrow table columns) keeps the indigo colour and the
+// tooltip only, so it is no wider than a normal pill. Human-set statuses keep their usual colours.
 export function StatusBadge({ status, lead, compact = false }) {
   if (isAiCallStatus(lead)) {
     return (
       <span className="badge inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-300"
         title="Updated by Vistrow Voice call" aria-label={`${status}, updated by Vistrow Voice call`}>
-        <PhoneCall className="h-3 w-3" aria-hidden="true" />
+        {!compact && <PhoneCall className="h-3 w-3" aria-hidden="true" />}
         {status}{!compact && <span className="font-normal opacity-80">· AI call</span>}
       </span>
     );
