@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-16 IST: AUDIT P0 fixes (owner approved), staging first: media route crash, NoSQL operator injection guard (global middleware + String() at token sites), AiSensy apiKey, generateWhatsAppTemplate export, unhandledRejection no longer exits. Files: backend/server.js, routes/mediaRoutes.js, routes/webhookRoutes.js, routes/whatsappRoutes.js, utils/openai.js, new middlewares/noOperators.js. See docs/AUDIT_2026-10-16.md.
+
 - [claude] 2026-10-16 IST: Artha Phase 4 (mobile) start. Step 1 done (staging 63a95da, main 9c5ade8). Now: separate "Arthaleads Staging" app (com.arthaleads.crm.staging) for any build with API_BASE_URL=api-staging: android/app/build.gradle.kts, AndroidManifest.xml, main.dart, api_client.dart, push_service.dart, update_service.dart. Then the Artha bottom sheet in mobile/ (no backend changes planned).
 
 
