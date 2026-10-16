@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
-- [claude] 2026-10-16 IST: web-app wrapper cleanup part 2: drop capacitor://localhost + http://localhost from CORS/CSRF (server.js, auth.js), Capacitor comments (push.js, pushRoutes.js, PushSubscription.js, index.html, main.jsx, mobile/ comments), .gitignore/.railwayignore lines, MOBILE_PARITY_AUDIT intro.
 
 
 
@@ -92,6 +91,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-16 IST (staging 3d1d563, main dbebae2): web-app wrapper cleanup part 2. CORS (server.js) and the CSRF origin set (auth.js) no longer add capacitor://localhost / http://localhost (only the removed Capacitor wrapper sent them; the Flutter app sends no Origin, which stays allowed). Comments in push.js/pushRoutes.js/PushSubscription.js/index.html/main.jsx/mobile push_service.dart, build.gradle.kts, AndroidManifest.xml now name the Flutter app; .gitignore drops frontend/android + android-release lines; .railwayignore drops android-release/; MOBILE_PARITY_AUDIT.md baseline is now the web CRM. Tests: sessionRenewal, userAvatarStorage, vistrowFollowUpCalls, vistrowOutbound.agents/.paths, vistrowOwnerDecisions all pass (full npm test chain stopped at a Windows libuv exit assertion, not a failed check). Verified staging + live: app/www origins get ACAO, capacitor://localhost does not; app-version 200. Owner-approved housekeeping outside git: uninstalled com.arthaleads.www.twa from the realme (Flutter com.arthaleads.crm 1.0.13 untouched, opens fine; RevYne TWA is another product, left); never on Play (listing 404). Moved to Recycle Bin: android-release/, E:/Downloads/apk, E:/Downloads/arthaleads-apk-extract, both "Arthaleads - Google Play package" zips, arthaleads-debug-apk (1).zip (Capacitor build), PWABuilder report screenshot. Deleted 397 GitHub artifacts arthaleads-debug-apk/release-apk/release-aab from the removed workflow (arthaleads-mobile-* kept). Old GitHub secrets KEYSTORE_BASE64 etc. were already gone.
 
 - [claude] 2026-10-16 IST (staging 80e3655d, cherry-picked to main 6d9a5cfe): Vistrow step 3 Facebook pickers: dropped the repeated automation-name prefix ("PropHunt LLP - Lead Ads · ") from lead form / ad / campaign option labels. Seen on live: every form option read "PropHunt LLP - Lead Ads · Everglade..." so forms were indistinguishable. VistrowOutboundSection.jsx dropSharedPrefix() strips leading " · " segments shared by all options (2+ options only), applied when the lists load, so the dropdown, rule rows and step 4 review all show the form name first; a form with no name shows its id. Frontend only, vite build ok. Not checkable on staging (no Vistrow connection there); owner checks on live.
 
