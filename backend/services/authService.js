@@ -79,6 +79,15 @@ async function assertAnotherActiveAdmin(orgId, exceptUserId) {
   if (!others) throw new AppError("Your workspace needs at least one active admin. Make someone else an admin first.", 400);
 }
 
+// A platform super admin may belong to a company too (one was promoted from a
+// company account). A company admin must never be able to change or delete
+// that account: it could reset the super admin's password (16 Oct 2026 audit).
+async function assertCanManage(target, actorId) {
+  if (target.role !== "super_admin") return;
+  const actor = await User.findById(actorId).select("role").lean();
+  if (actor?.role !== "super_admin") throw new AppError("Access denied", 403);
+}
+
 const authService = {
   // Self-serve signup. The caller (authController.signup) has already proven
   // the person controls `data.email` via the OTP step — this never runs on an
@@ -266,6 +275,28 @@ const authService = {
 
     const { sub: googleId, email, name, picture, email_verified } = payload;
 
+    // Which Google app issued this token. userinfo accepts a token from ANY
+    // Google app, so a third-party app holding someone's token could sign in
+    // as them here (16 Oct 2026 audit). The allowed apps (our web client and
+    // the Android app) go in GOOGLE_SIGNIN_CLIENT_IDS, comma separated. Until
+    // that is set the check only records which app signed in, so the right
+    // IDs can be collected without locking anyone out.
+    const allowed = String(process.env.GOOGLE_SIGNIN_CLIENT_IDS || "").split(",").map((v) => v.trim()).filter(Boolean);
+    let issuedTo = "";
+    try {
+      const info = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(credential)}`, { signal: AbortSignal.timeout(8000) });
+      const t = await info.json();
+      if (info.ok) issuedTo = String(t.azp || t.aud || "");
+    } catch { /* checked below */ }
+    if (allowed.length) {
+      if (!issuedTo || !allowed.includes(issuedTo)) {
+        console.warn(`[googleAuth] refused: token issued to an app that is not ours (${issuedTo || "unknown"})`);
+        throw new AppError("Google sign-in failed. Please try again.", 401);
+      }
+    } else {
+      console.log(`[googleAuth] sign-in token issued to app ${issuedTo || "unknown"} (not enforced: GOOGLE_SIGNIN_CLIENT_IDS unset)`);
+    }
+
     if (!email) throw new AppError("Google account has no email", 400);
 
     // Reject unverified Google emails. Google issues tokens for unverified
@@ -420,6 +451,7 @@ const authService = {
   async updateUser(targetId, updates, adminId, adminOrgId) {
     const user = await User.findById(targetId).select("+password");
     if (!user) throw new AppError("User not found", 404);
+    await assertCanManage(user, adminId);
     if (adminOrgId && user.orgId?.toString() !== adminOrgId.toString()) {
       throw new AppError("Access denied", 403);
     }
@@ -453,6 +485,7 @@ const authService = {
 
     const user = await User.findById(targetId);
     if (!user) throw new AppError("User not found", 404);
+    await assertCanManage(user, adminId);
     if (adminOrgId && user.orgId?.toString() !== adminOrgId.toString()) {
       throw new AppError("Access denied", 403);
     }

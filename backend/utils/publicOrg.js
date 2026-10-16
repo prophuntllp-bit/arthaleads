@@ -10,6 +10,7 @@
 const SECRET_PATHS = [
   ["whatsapp", "apiKey"],
   ["whatsapp", "webhookVerifyToken"],
+  ["whatsapp", "registrationPin"],
   ["enablex", "apiKey"],
   ["enablex", "webrtc", "videoAppKey"],
   ["metaCapi", "accessToken"],

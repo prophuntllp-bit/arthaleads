@@ -45,9 +45,15 @@ async function migrateImages(images, projectId, orgId) {
 
 // An empty-string advisorId (CustomSelect's "none selected" value) would
 // otherwise hit Mongoose as an invalid ObjectId cast, not a clear "no advisor".
+// Fields the system owns are dropped here: the request body went straight into
+// findOneAndUpdate, so a manager could set orgId and move a project (and its
+// leads) into another company, or set qrToken (16 Oct 2026 audit).
+const SYSTEM_FIELDS = ["_id", "orgId", "createdBy", "qrToken", "isArchived", "createdAt", "updatedAt", "__v"];
 function sanitizeAdvisorId(data) {
-  if (data.advisorId === "") return { ...data, advisorId: null };
-  return data;
+  const clean = { ...(data || {}) };
+  for (const k of SYSTEM_FIELDS) delete clean[k];
+  if (clean.advisorId === "") clean.advisorId = null;
+  return clean;
 }
 
 const projectService = {
@@ -137,7 +143,7 @@ const projectService = {
     if (before?.images?.length) {
       const kept = new Set((project.images || []).map(String));
       for (const url of before.images) {
-        if (typeof url === "string" && url.includes("/api/media/") && !kept.has(url)) deleteProjectImage(url).catch(() => {});
+        if (typeof url === "string" && url.includes("/api/media/") && !kept.has(url)) deleteProjectImage(url, String(project._id)).catch(() => {});
       }
     }
     return project;

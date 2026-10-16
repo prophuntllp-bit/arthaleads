@@ -18,7 +18,13 @@ function todayStr() {
 }
 void pad;
 
-async function fetchPageContext(page, userId, orgId, leadId) {
+async function fetchPageContext(page, userId, orgId, leadId, user = null) {
+  // Agents see only their own leads here too (utils/visibility.js), the same
+  // rule as every screen and the new Artha; managers and admins see the org.
+  const visibility = require("./visibility");
+  const isAgent = user?.role === "agent";
+  const leadScope = (user && visibility.leadCondition(user)) || {};
+  const projScope = (user && (await visibility.projectLeadCondition(user))) || {};
   const parts = [];
   const today = todayStr();
   const now = new Date();
@@ -68,8 +74,8 @@ async function fetchPageContext(page, userId, orgId, leadId) {
       // leads that were moved into a project. Counted on the IST day.
       const startOfDay = startOfISTDay(today);
       const endOfDay   = endOfISTDay(today);
-      const leadQ  = { orgId, isArchived: { $ne: true }, isDeleted: { $ne: true } };
-      const movedQ = { orgId, isDeleted: { $ne: true }, fromLeadId: { $ne: null } };
+      const leadQ  = { orgId, isArchived: { $ne: true }, isDeleted: { $ne: true }, ...leadScope };
+      const movedQ = { orgId, isDeleted: { $ne: true }, fromLeadId: { $ne: null }, ...projScope };
       const todayQ = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
       const countBoth = async (extra = {}) => {
         const [a, b] = await Promise.all([
@@ -96,9 +102,9 @@ When asked how many leads came in today, answer with "Leads that came in today",
       const startOfDay = startOfISTDay(today);
       const endOfDay   = endOfISTDay(today);
       const [overdueCount, todayCount, overdueLeads] = await Promise.all([
-        Lead.countDocuments({ orgId, isDeleted: { $ne: true }, followUpDate: { $lt: startOfDay, $ne: null } }),
-        Lead.countDocuments({ orgId, isDeleted: { $ne: true }, followUpDate: { $gte: startOfDay, $lte: endOfDay } }),
-        Lead.find({ orgId, isDeleted: { $ne: true }, followUpDate: { $lt: startOfDay, $ne: null } })
+        Lead.countDocuments({ orgId, isDeleted: { $ne: true }, followUpDate: { $lt: startOfDay, $ne: null }, ...leadScope }),
+        Lead.countDocuments({ orgId, isDeleted: { $ne: true }, followUpDate: { $gte: startOfDay, $lte: endOfDay }, ...leadScope }),
+        Lead.find({ orgId, isDeleted: { $ne: true }, followUpDate: { $lt: startOfDay, $ne: null }, ...leadScope })
           .sort({ followUpDate: 1 }).limit(3).select("name phone status followUpDate").lean(),
       ]);
       parts.push(`LIVE FOLLOW-UP DATA:
@@ -110,7 +116,7 @@ When asked how many leads came in today, answer with "Leads that came in today",
     if (cleanPage === "/pipeline") {
       const stages = ["New", "Contacted", "Site Visit", "Negotiation", "Closed Won", "Closed Lost"];
       const counts = await Promise.all(
-        stages.map(s => Lead.countDocuments({ orgId, isDeleted: { $ne: true }, status: s }))
+        stages.map(s => Lead.countDocuments({ orgId, isDeleted: { $ne: true }, status: s, ...leadScope }))
       );
       parts.push(`LIVE PIPELINE DATA:\n${stages.map((s, i) => `- ${s}: ${counts[i]} leads`).join("\n")}`);
     }
@@ -128,7 +134,10 @@ When asked how many leads came in today, answer with "Leads that came in today",
       const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
       const agents = await User.find({ orgId, isActive: { $ne: false } })
         .select("name role").limit(10).lean();
-      const reportable = agents.filter(a => a.role === "agent" || a.role === "manager").slice(0, 5);
+      const reportable = agents
+        .filter(a => a.role === "agent" || a.role === "manager")
+        .filter(a => !isAgent || String(a._id) === String(userId)) // an agent sees only their own numbers
+        .slice(0, 5);
       if (reportable.length) {
         const agentStats = await Promise.all(
           reportable.map(async (a) => {

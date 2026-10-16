@@ -233,7 +233,7 @@ router.post("/:id/transfer", leadController.transferLead);
 router.post("/:id/retry-facebook", async (req, res, next) => {
   try {
     const lead = await Lead.findOne({ _id: req.params.id, orgId: req.user.orgId });
-    if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
+    if (!lead || !require("../utils/visibility").canSeeLead(req.user, lead)) return res.status(404).json({ success: false, message: "Lead not found" });
 
     // Find the error note that contains the stored leadgen_id
     const errorNote = (lead.notes || []).find((n) =>
@@ -360,9 +360,9 @@ router.post("/:id/retry-facebook", async (req, res, next) => {
 router.post("/:id/draft-message", planGate("growth"), async (req, res, next) => {
   try {
     const lead = await Lead.findOne({ _id: req.params.id, orgId: req.user.orgId })
-      .select("name phone status priority source budget booking siteVisitDone followUpDate notes propertyType bhk preferredLocation purpose assignedToName")
+      .select("name phone status priority source budget booking siteVisitDone followUpDate notes propertyType bhk preferredLocation purpose assignedToName assignedTo createdBy")
       .lean();
-    if (!lead) return res.status(404).json({ success: false, message: "Lead not found." });
+    if (!lead || !require("../utils/visibility").canSeeLead(req.user, lead)) return res.status(404).json({ success: false, message: "Lead not found." });
 
     if (!process.env.OPENAI_API_KEY) {
       return res.status(503).json({ success: false, message: "AI drafting is not configured. Ask your admin to set the OPENAI_API_KEY." });

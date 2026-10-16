@@ -165,7 +165,7 @@ export default function ConnectionCard({
         {isWebsite && (
           <>
             <Row label="Website">
-              {item.siteUrl ? (
+              {item.siteUrl && /^https?:\/\//i.test(item.siteUrl) ? (
                 <a href={item.siteUrl} target="_blank" rel="noreferrer" className="inline-flex max-w-full items-center gap-1 text-app hover:underline">
                   <span className="truncate">{hostOf(item.siteUrl)}</span>
                   <ExternalLink className="h-3 w-3 shrink-0 text-app-soft" />

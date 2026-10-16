@@ -23,6 +23,31 @@ const storage = require("./storage");
 const ledger = require("./storageLedger");
 
 /** ?v=<ms> so a re-upload to the same key is a different URL to the browser. */
+// Photos people upload (logo, selfie, project photo, blog image, profile
+// photo) must really be images. Any other type (HTML, JavaScript, SVG with
+// script) served from our API domain could run code there (16 Oct 2026 audit).
+const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif", "image/avif"]);
+function imageOnly(dataUri) {
+  const decoded = storage.decodeDataUri(dataUri);
+  if (!IMAGE_TYPES.has(String(decoded.contentType).toLowerCase())) {
+    const err = new Error("Please upload a PNG, JPG, WebP or GIF image.");
+    err.statusCode = 400;
+    throw err;
+  }
+  return decoded;
+}
+
+// A stored file may only be deleted through a project if it lives in that
+// project's own folder: a manager could otherwise put another company's file
+// link on their project and remove it again to delete the original.
+function keyInsideProject(url, projectId) {
+  const key = String(url || "").split("/api/media/")[1];
+  if (!key || !projectId) return null;
+  let decoded;
+  try { decoded = decodeURIComponent(key.split("?")[0]); } catch { return null; }
+  return decoded.startsWith(`arthaleads/projects/${projectId}/`) && !decoded.includes("..") ? decoded : null;
+}
+
 const versioned = (url) => `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
 
 // Stable keys carry no file extension on purpose: the content type is stored
@@ -63,7 +88,7 @@ const selfieKey = (userId, date, leg) =>
  * Returns the public HTTPS URL.
  */
 async function uploadOrgLogo(dataUri, orgId) {
-  const { contentType, buffer } = storage.decodeDataUri(dataUri);
+  const { contentType, buffer } = imageOnly(dataUri);
   // Replacing the logo only counts the difference, so a full workspace can still swap its logo for a smaller one.
   await ledger.assertCanStore(orgId, buffer.length, orgLogoKey(orgId));
   const url = await storage.put(orgLogoKey(orgId), buffer, contentType, { orgId });
@@ -81,6 +106,7 @@ async function deleteOrgLogo(orgId) {
  * readable filename is worth more here than a tidy key.
  */
 async function uploadBlogImage(dataUri) {
+  imageOnly(dataUri);
   return storage.putDataUri(`arthaleads/blog/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, dataUri);
 }
 
@@ -92,7 +118,7 @@ async function uploadBlogImage(dataUri) {
  * @param {string} leg     "in" | "out"
  */
 async function uploadAttendanceSelfie(dataUri, userId, date, leg, orgId) {
-  const { contentType, buffer } = storage.decodeDataUri(dataUri);
+  const { contentType, buffer } = imageOnly(dataUri);
   const url = await storage.put(selfieKey(userId, date, leg), buffer, contentType, { orgId });
   return versioned(url);
 }
@@ -143,10 +169,10 @@ async function uploadProjectVideo(buffer, projectId, orgId) {
   if (orgId) await ledger.assertCanStore(orgId, buffer.length);
   return storage.put(projectVideoKey(projectId), buffer, "video/mp4", { orgId });
 }
-async function deleteProjectVideo(url) {
-  const key = String(url || "").split("/api/media/")[1];
+async function deleteProjectVideo(url, projectId) {
+  const key = keyInsideProject(url, projectId);
   if (!key) return;
-  return storage.remove(decodeURIComponent(key));
+  return storage.remove(key);
 }
 
 /** Delete a project's brochure. Never throws — see storage.remove. */
@@ -163,19 +189,21 @@ async function deleteProjectBrochure(projectId) {
  * document (the old behaviour) is not fetchable and silently fails to send.
  */
 async function uploadProjectImage(dataUri, projectId, orgId) {
-  const { contentType, buffer } = storage.decodeDataUri(dataUri);
+  const { contentType, buffer } = imageOnly(dataUri);
   if (orgId) await ledger.assertCanStore(orgId, buffer.length);
   return storage.put(projectImageKey(projectId), buffer, contentType, { orgId });
 }
 
 /** Delete one project photo by its stored URL. Never throws — see storage.remove. */
-async function deleteProjectImage(url) {
-  const key = String(url || "").split("/api/media/")[1];
+async function deleteProjectImage(url, projectId) {
+  const key = keyInsideProject(url, projectId);
   if (!key) return;
-  return storage.remove(decodeURIComponent(key));
+  return storage.remove(key);
 }
 
 module.exports = {
+  imageOnly,
+  IMAGE_TYPES,
   uploadOrgLogo,
   deleteOrgLogo,
   uploadBlogImage,

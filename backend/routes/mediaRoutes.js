@@ -54,6 +54,16 @@ router.get("/*", async (req, res) => {
     // Media is embedded by the app, never navigated to. Stops a stored SVG or
     // HTML masquerading as an image from running on our own origin.
     res.set("X-Content-Type-Options", "nosniff");
+    // Belt and braces for files stored before uploads were limited to images:
+    // only plain image, audio, video and PDF types render inline. Anything
+    // else (HTML, JavaScript, SVG) downloads, and a sandbox policy means it
+    // could never run script on this origin (16 Oct 2026 audit).
+    const type = String(obj.contentType || "").toLowerCase();
+    const inline = /^(image\/(png|jpe?g|webp|gif|avif)|video\/|audio\/|application\/pdf$)/.test(type);
+    if (!inline) {
+      res.set("Content-Disposition", "attachment");
+      res.set("Content-Security-Policy", "default-src 'none'; sandbox");
+    }
     // helmet() sets Cross-Origin-Resource-Policy: same-origin across the API,
     // which is right for JSON and wrong for this: app.arthaleads.com embedding
     // an image from api.arthaleads.com is cross-origin, so the browser fetched

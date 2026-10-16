@@ -21,7 +21,8 @@ const followupService = {
       : [];
 
     const searchCond = search
-      ? [{ $or: [{ name: { $regex: search, $options: "i" } }, { phone: { $regex: search, $options: "i" } }] }]
+      // Escaped: typed text is matched literally, never run as a pattern.
+      ? [{ $or: [{ name: { $regex: String(search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").slice(0, 80), $options: "i" } }, { phone: { $regex: String(search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").slice(0, 80), $options: "i" } }] }]
       : [];
 
     const baseLeadFilter = {

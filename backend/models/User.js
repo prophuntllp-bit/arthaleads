@@ -82,6 +82,7 @@ userSchema.pre("save", async function (next) {
 userSchema.pre("save", async function storeAvatarInFiles() {
   if (!this.isModified("avatar") || !/^data:image\//i.test(this.avatar || "")) return;
   const storage = require("../utils/storage");
+  require("../utils/upload").imageOnly(this.avatar); // PNG/JPG/WebP/GIF only
   if (!storage.isConfigured()) return;
   // New key per upload, so a changed photo is never served from an old cache.
   this.avatar = await storage.putDataUri(`arthaleads/avatars/${this.orgId || "platform"}/${this._id}-${Date.now()}-${require("crypto").randomBytes(6).toString("hex")}`, this.avatar, { orgId: this.orgId || undefined });

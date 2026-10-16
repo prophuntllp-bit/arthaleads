@@ -123,12 +123,12 @@ router.delete("/project-files", managerOrAdmin, async (req, res) => {
       if (!(project.images || []).includes(url)) return res.status(404).json({ message: "Photo not found." });
       project.images = project.images.filter((u) => u !== url);
       await project.save();
-      await up.deleteProjectImage(url);
+      await up.deleteProjectImage(url, String(project._id));
     } else if (kind === "video") {
       if (!(project.videos || []).some((v) => v.url === url)) return res.status(404).json({ message: "Video not found." });
       project.videos = project.videos.filter((v) => v.url !== url);
       await project.save();
-      await up.deleteProjectVideo(url);
+      await up.deleteProjectVideo(url, String(project._id));
     } else if (kind === "brochure") {
       if (!project.brochureUrl) return res.status(404).json({ message: "Brochure not found." });
       await up.deleteProjectBrochure(project._id.toString());

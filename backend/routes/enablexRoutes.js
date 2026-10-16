@@ -557,7 +557,8 @@ router.get("/", async (req, res, next) => {
 
     const mongoose = require("mongoose");
     const searchCond = search
-      ? { $or: [{ name: { $regex: search, $options: "i" } }, { phone: { $regex: search, $options: "i" } }] }
+      // Escaped: typed text is matched literally, never run as a pattern.
+      ? { $or: [{ name: { $regex: String(search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").slice(0, 80), $options: "i" } }, { phone: { $regex: String(search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").slice(0, 80), $options: "i" } }] }
       : {};
     const actMatch = {
       "activities.type": "called",
@@ -1376,6 +1377,16 @@ ${transcript.slice(0, 3000)}`,
 // fallback.
 async function saveRecordingFromEnablexUrl(orgId, Model, leadId, match, enablexRecordingUrl, voiceId, eventDuration = 0) {
   const { uploadCallRecording } = require("../utils/upload");
+
+  // The recording URL arrives in an unsigned webhook. Fetching any URL with the
+  // company's EnableX credentials attached would hand them to whoever sent it
+  // (16 Oct 2026 audit, M6): only EnableX's own https hosts are fetched.
+  let host = "";
+  try { const u = new URL(String(enablexRecordingUrl)); host = u.protocol === "https:" ? u.hostname.toLowerCase() : ""; } catch { /* not a URL */ }
+  if (!(host === "enablex.io" || host.endsWith(".enablex.io"))) {
+    console.warn(`[enablex] ignored recording URL on unexpected host "${host || "invalid"}"`);
+    return;
+  }
 
   const org = await Organization.findById(orgId).select("enablex").lean();
   if (!org?.enablex?.appId || !org?.enablex?.apiKey) return;
