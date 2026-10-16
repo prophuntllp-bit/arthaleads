@@ -104,6 +104,12 @@ const check = (ok, msg, d = "") => {
   const ch = await runTool("ask_user_to_choose", { question: "Which Rahul?", lead_ids: [String(rahul._id), String(k1._id), String(k3._id)] }, ctx);
   check(ch.result.status === "shown" && ctx.choices[0].options.length === 2 && !ctx.choices[0].options.some((o) => o.name === "Isha"), "choices only include leads the person can see", JSON.stringify(ctx.choices));
   check(/…1111/.test(ctx.choices[0].options[0].detail), "each choice shows status and the last 4 phone digits");
+  const who = await runTool("ask_user_to_choose", { question: "Assign them to?", user_ids: [String(A._id), String(M._id), String(new mongoose.Types.ObjectId())] }, ctx);
+  const people = ctx.choices[1]?.options || [];
+  check(who.result.status === "shown" && people.length === 2 && people.every((o) => o.kind === "user"), "team members can be offered as buttons (only real, active people)", JSON.stringify(people));
+  check(people.some((o) => o.detail === "Manager"), "each person shows their role");
+  const one = await runTool("ask_user_to_choose", { question: "Assign them to?", user_ids: [String(A._id)] }, { ...ctx, choices: [] });
+  check(!!one.result.error, "one person is not a choice: answer directly");
 
   console.log(failures ? `\n  ${failures} FAILED\n` : "\n  all Artha Phase 2 checks passed\n");
   await mongoose.disconnect(); await mongod.stop();

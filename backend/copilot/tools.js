@@ -117,11 +117,14 @@ function writeTools(user, org) {
     } }));
 }
 
+const ROLE_LABEL = { super_admin: "Owner", admin: "Admin", manager: "Manager", agent: "Agent" };
+
 const CHOOSE_TOOL = tool("ask_user_to_choose",
-  "When a name matches several leads, show them as buttons for the user to tap instead of guessing. Then stop and wait for their answer.", {
+  "Show the user buttons to tap instead of asking them to type: when a name matches several leads (lead_ids), or when they must pick a team member, for example who to assign leads to (user_ids, from list_team). Then stop and wait for their answer.", {
     question: { type: "string", description: "Short question, in the user's language" },
     lead_ids: { type: "array", items: { type: "string" }, description: "Ids of the matching leads from earlier results (2 to 6)" },
-  }, ["question", "lead_ids"]);
+    user_ids: { type: "array", items: { type: "string" }, description: "Ids of team members from list_team (2 to 8)" },
+  }, ["question"]);
 
 const BRIEF_TOOL = tool("morning_brief",
   "The user's day, ranked. needsAttention: deals slipping (hot leads gone quiet, visits with no follow-up, missed visits, new leads waiting, WhatsApp chats about to lose the reply window; managers see the whole team with owners). callFirst: site visits today, unread WhatsApp chats, missed follow-ups, new leads not contacted, follow-ups due today, each with the reason. Managers also get a per-person team summary. Use for 'who should I call first', 'plan my day', 'what's pending', 'what's at risk', 'which deals are slipping'.");
@@ -249,6 +252,17 @@ async function runTool(name, args, ctx) {
       return { result: brief, records };
     }
     case "ask_user_to_choose": {
+      // A team member: the active people of this company, as list_team shows them.
+      if (Array.isArray(args.user_ids) && args.user_ids.length) {
+        const uids = args.user_ids.filter(isId).slice(0, 8);
+        const people = await User.find({ _id: { $in: uids }, orgId: user.orgId, isActive: true }).select("name role").lean();
+        const byId = new Map(people.map((p) => [String(p._id), p]));
+        const options = uids.map((id) => byId.get(id)).filter(Boolean)
+          .map((p) => ({ id: String(p._id), kind: "user", name: p.name, detail: ROLE_LABEL[p.role] || p.role }));
+        if (options.length < 2) return { result: { error: "Fewer than two of those people are on the team; answer directly instead." } };
+        ctx.choices.push({ question: String(args.question || "Who?").slice(0, 160), options });
+        return { result: { status: "shown", note: "Buttons are shown. Stop here and wait for the user's choice; do not propose any change yet." }, records };
+      }
       const ids = (args.lead_ids || []).filter(isId).slice(0, 6);
       const options = [];
       for (const id of ids) {
