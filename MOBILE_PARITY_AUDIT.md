@@ -2,7 +2,7 @@
 
 Updated: 14 September 2026 (Leads and Conversations rows only — see note below; every other row is still the 17 July 2026 snapshot and needs its own fresh pass before being trusted)
 
-This is the working parity ledger for the installed Arthaleads web app (`com.arthaleads.www.twa`) and the native Flutter app (`com.arthaleads.crm`). A feature is only marked complete when its API behavior and phone interaction are both represented in the native app.
+This is the working parity ledger between the web CRM (app.arthaleads.com) and the native Flutter app (`com.arthaleads.crm`). The old installable web-app wrapper (`com.arthaleads.www.twa`) was removed on 16 Oct 2026; the Flutter app is the only Android app. A feature is only marked complete when its API behavior and phone interaction are both represented in the native app.
 
 **Note on the 14 Sep update**: the Leads and Conversations rows below were re-verified by reading the actual Flutter source against current backend/web behavior — not a phone regression pass, a code read. `MOBILE_APP_HANDOFF.md` §8b has the full reasoning and file/line-level evidence behind each claim below; this table just carries the short version. Two of the Conversations gaps (no consent field on Leads, no AI Agent screen reflecting the new multi-agent system) exist because the web app shipped real changes the same day this row was updated — they are same-day drift, not old unfixed debt.
 

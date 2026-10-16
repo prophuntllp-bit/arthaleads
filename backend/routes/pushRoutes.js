@@ -37,7 +37,7 @@ router.delete("/subscribe", protect, async (req, res) => {
   }
 });
 
-// POST /api/push/fcm-token — register an FCM device token (Capacitor Android APK)
+// POST /api/push/fcm-token — register an FCM device token (Flutter Android app)
 // Called automatically on app start after the user is authenticated.
 router.post("/fcm-token", protect, async (req, res) => {
   try {

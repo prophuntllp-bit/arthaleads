@@ -12,8 +12,6 @@ function _buildCsrfAllowedOrigins() {
   const raw = (process.env.CLIENT_URLS || "http://localhost:3000")
     .split(",").map((o) => o.trim());
   const set = new Set(raw);
-  set.add("capacitor://localhost");
-  set.add("http://localhost");
   for (const o of raw) {
     try {
       const { protocol, hostname, port } = new URL(o);

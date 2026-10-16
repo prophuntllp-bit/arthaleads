@@ -14,7 +14,6 @@ frontend/
 mobile/
 graphify-out/
 docs/
-android-release/
 
 node_modules/
 **/node_modules/
