@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
-- [claude] 2026-10-16 IST: website videos to Backblaze (owner request, to cut Vercel deployment storage): /api/media Range support (backend/routes/mediaRoutes.js, utils/storage.js), one-off scripts/upload-site-videos.js, then frontend ProductTour.jsx, Features.jsx, IntroVideo.jsx, data/introFilm.js point at api.arthaleads.com/api/media/arthaleads/site/...; frontend/public/tour/*.mp4|webm and public/video/*.mp4 removed; frontend/vercel.json ignoreCommand (build only when frontend/ changes). Staging first.
 
 
 
@@ -97,6 +96,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-16 IST (staging 1256298b, a9e37664, c695ab68; main 9a8eb154, e8aceb68): website videos moved to Backblaze. /api/media supports single byte ranges (206/416; iPhones need it). scripts/upload-site-videos.js ran on production: 16 files (14 tour clips + 2 intro films, 51 MB) at arthaleads/site/..., verified byte-identical. frontend/src/data/siteMedia.js SITE_MEDIA used by ProductTour, Features, IntroVideo; VideoObject contentUrl and the /sitemap.xml video entry point there. public/tour/*.mp4|webm and public/video/*.mp4 deleted (posters stay). Build 62 MB -> 11 MB. frontend/vercel.json ignoreCommand: builds only when frontend/ changed (NOTE for all agents: bridge-only or backend-only pushes no longer create Vercel deployments). Verified on staging and live: tour plays, intro seeks to 1:30.
 
 - [claude] 2026-10-16 IST (staging c9a9a34 + 3f6e4df + 3c56b14, not on main yet): (1) mobile change cards, Phase 4 step 3: screens/artha/change_card.dart (ChangeProposal: /help/preview on arrival, edit a field -> new preview, datetime editors in IST sent back with +05:30, select/text editors; bulk rows with tick boxes, first 6 then Show all; Apply with source artha, threadId, scopeConfirmed and one idempotency key per card reused on retry; Undo; Cancel; scope prompt; writesDisabled), Apply all for 2+ cards, ArthaEvents.changed reloads the Leads list and an open lead sheet; keyboard closes on send and before editors. (2) BACKEND (owner asked for buttons instead of typing a name): backend/copilot/tools.js ask_user_to_choose also takes user_ids (active people of the org, name + role, <2 = answer directly), prompt.js tells the model to use it to pick a team member; step label now 'Asking you to choose'. tests: copilotActions.db.test.js +3 checks (fail on old code); copilot tools/actions/brief/drafts/risks/suggest pass; flutter test 43/43. Verified on the staging app + api-staging: log a call card (4 changes) edit/apply/undo, bulk reassign card for 8 leads via person buttons, cancelled. Seen, not fixed (web/server session): the answer text says 'I logged the call' / 'proposed' before Apply; model wrote 'Thu 17 Oct' for Sat 17 Oct; step label 'Preparing: <whole tool summary>' is long.
 
