@@ -12,10 +12,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Play, Volume2 } from "lucide-react";
 import { filmJsonLd } from "../data/introFilm";
+import { SITE_MEDIA } from "../data/siteMedia";
 
 export const INTRO_VIDEOS = {
-  en: { label: "English", src: "/video/arthaleads-intro-en.mp4", poster: "/video/arthaleads-intro-en-poster.jpg" },
-  hi: { label: "हिन्दी",   src: "/video/arthaleads-intro-hi.mp4", poster: "/video/arthaleads-intro-hi-poster.jpg" },
+  en: { label: "English", src: `${SITE_MEDIA}/video/arthaleads-intro-en.mp4`, poster: "/video/arthaleads-intro-en-poster.jpg" },
+  hi: { label: "हिन्दी",   src: `${SITE_MEDIA}/video/arthaleads-intro-hi.mp4`, poster: "/video/arthaleads-intro-hi-poster.jpg" },
 };
 
 // `chapters` (the /product-tour watch page only): player and language toggle

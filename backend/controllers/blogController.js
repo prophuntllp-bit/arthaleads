@@ -159,7 +159,7 @@ const blogController = {
       <video:thumbnail_loc>${baseUrl}/video/arthaleads-intro-en-poster.jpg</video:thumbnail_loc>
       <video:title>What is ArthaLeads? The real estate CRM in 2 minutes</video:title>
       <video:description>A buyer messages at 1 AM. See how ArthaLeads replies on WhatsApp, qualifies the buyer, books the site visit, fills in the lead, scores it and tells your team who to call first.</video:description>
-      <video:content_loc>${baseUrl}/video/arthaleads-intro-en.mp4</video:content_loc>
+      <video:content_loc>https://api.arthaleads.com/api/media/arthaleads/site/video/arthaleads-intro-en.mp4</video:content_loc>
       <video:duration>137</video:duration>
       <video:publication_date>2026-10-07T12:00:00+05:30</video:publication_date>
       <video:family_friendly>yes</video:family_friendly>

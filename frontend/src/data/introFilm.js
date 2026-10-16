@@ -17,7 +17,8 @@ export const FILM = {
   // Full date-time with the IST offset: a bare date is flagged by Search Console
   // ("uploadDate is missing a timezone").
   uploadDate: "2026-10-07T12:00:00+05:30",
-  contentUrl: `${SITE}/video/arthaleads-intro-en.mp4`,
+  // The film itself is in file storage (data/siteMedia.js); the poster stays on the site.
+  contentUrl: "https://api.arthaleads.com/api/media/arthaleads/site/video/arthaleads-intro-en.mp4",
   thumbnailUrl: `${SITE}/video/arthaleads-intro-en-poster.jpg`,
 };
 

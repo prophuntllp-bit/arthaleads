@@ -6,7 +6,9 @@
 // that clip loops. The clip only downloads for the active tab; the still image
 // is the poster, so nothing is blank while it loads.
 //
-// Files live in /public/tour as <id>.mp4, <id>.webm and <id>.webp (poster).
+// Posters live in /public/tour as <id>.webp; the clips (<id>.mp4, <id>.webm)
+// are in file storage (data/siteMedia.js), not in every Vercel deployment.
+import { SITE_MEDIA } from "../data/siteMedia";
 import { useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard, MessageCircle, UserRound, KanbanSquare, Building2, BarChart3, Receipt,
@@ -34,7 +36,7 @@ const STEPS = [
   { id: "performance", icon: BarChart3, label: "Performance", path: "performance",
     title: "Know who is closing",
     desc: "Calls, site visits and closings for every team member, across the main pipeline and every project." },
-].map((s) => ({ ...s, image: `/tour/${s.id}.webp`, mp4: `/tour/${s.id}.mp4`, webm: `/tour/${s.id}.webm` }));
+].map((s) => ({ ...s, image: `/tour/${s.id}.webp`, mp4: `${SITE_MEDIA}/tour/${s.id}.mp4`, webm: `${SITE_MEDIA}/tour/${s.id}.webm` }));
 
 const CLIP_MS = 10000;      // every clip is 10 seconds
 const STILL_MS = 6000;      // how long a still stays when a clip cannot play
