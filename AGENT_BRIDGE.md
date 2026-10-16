@@ -61,8 +61,6 @@ only be verified live so Claude Code or the owner can check it on production.
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
-- [claude] 2026-10-16 IST: SEO /product-tour watch page (owner approved) so Google indexes the intro film. Files: frontend/src/pages/ProductTour.jsx (new), components/IntroVideo.jsx, App.jsx, entry-prerender.jsx, CustomCursor.jsx, vercel.json, backend/controllers/blogController.js (sitemap).
-
 
 
 
@@ -93,6 +91,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-16 IST (staging 7ab72eb4 + 2e87363c, cherry-picked to main): /product-tour watch page LIVE, restored from f8793a8 with owner approval (it was removed 12 Oct in 751dce3). pages/ProductTour.jsx + data/introFilm.js (9 chapters, transcript from the film's voice cues), IntroVideo `chapters`/`seek` props (player only, VideoObject with Clip key moments, ?t=N seeks); home page keeps the film WITHOUT structured data. vercel.json: /product-tour redirect replaced by a rewrite to product-tour.html. Sitemap: /product-tour with a <video:video> entry. Not in nav/footer, no eyebrow pill. Reason: Search Console "Video isn't on a watch page" (0 of 3 videos indexed).
 
 - [claude] 2026-10-16 IST (staging 3d1d563, main dbebae2): web-app wrapper cleanup part 2. CORS (server.js) and the CSRF origin set (auth.js) no longer add capacitor://localhost / http://localhost (only the removed Capacitor wrapper sent them; the Flutter app sends no Origin, which stays allowed). Comments in push.js/pushRoutes.js/PushSubscription.js/index.html/main.jsx/mobile push_service.dart, build.gradle.kts, AndroidManifest.xml now name the Flutter app; .gitignore drops frontend/android + android-release lines; .railwayignore drops android-release/; MOBILE_PARITY_AUDIT.md baseline is now the web CRM. Tests: sessionRenewal, userAvatarStorage, vistrowFollowUpCalls, vistrowOutbound.agents/.paths, vistrowOwnerDecisions all pass (full npm test chain stopped at a Windows libuv exit assertion, not a failed check). Verified staging + live: app/www origins get ACAO, capacitor://localhost does not; app-version 200. Owner-approved housekeeping outside git: uninstalled com.arthaleads.www.twa from the realme (Flutter com.arthaleads.crm 1.0.13 untouched, opens fine; RevYne TWA is another product, left); never on Play (listing 404). Moved to Recycle Bin: android-release/, E:/Downloads/apk, E:/Downloads/arthaleads-apk-extract, both "Arthaleads - Google Play package" zips, arthaleads-debug-apk (1).zip (Capacitor build), PWABuilder report screenshot. Deleted 397 GitHub artifacts arthaleads-debug-apk/release-apk/release-aab from the removed workflow (arthaleads-mobile-* kept). Old GitHub secrets KEYSTORE_BASE64 etc. were already gone.
 
