@@ -110,6 +110,17 @@ function draftKind(source, d) {
   return d.kind || "project";
 }
 
+// Facebook option labels come from leadSourceLabel ("PropHunt LLP - Lead Ads · Everglades II | ..."),
+// so every option starts with the same automation name and the part that tells them apart gets cut off.
+// Drop the leading " · " segments that every option shares (needs 2+ options to know what is shared).
+function dropSharedPrefix(list) {
+  if (list.length < 2) return list;
+  const parts = list.map((o) => (o.label || "").split(" · "));
+  let n = 0;
+  while (parts.every((p) => p.length > n && p[n] === parts[0][n]) && parts.some((p) => p.length > n + 1)) n += 1;
+  return n ? list.map((o, i) => ({ ...o, label: parts[i].slice(n).join(" · ") })) : list;
+}
+
 function Banner({ tone = "red", children }) {
   const c = tone === "red" ? { bg: "rgba(220,38,38,0.08)", bd: "rgba(220,38,38,0.25)", fg: "#b91c1c" } : { bg: "rgba(245,158,11,0.10)", bd: "rgba(245,158,11,0.30)", fg: "#92400e" };
   return (
@@ -180,9 +191,9 @@ export default function VistrowOutboundSection() {
       setPages(d.data.pages || []);
       setAds(c.data.options?.whatsapp?.ad_id || []);
       setCampaigns(c.data.options?.google?.campaign_id || []);
-      setFbForms(c.data.options?.facebook?.form_id || []);
-      setFbAds(c.data.options?.facebook?.ad_id || []);
-      setFbCampaigns(c.data.options?.facebook?.campaign_id || []);
+      setFbForms(dropSharedPrefix(c.data.options?.facebook?.form_id || []));
+      setFbAds(dropSharedPrefix(c.data.options?.facebook?.ad_id || []));
+      setFbCampaigns(dropSharedPrefix(c.data.options?.facebook?.campaign_id || []));
     }).catch(() => toast.error("Could not load the Vistrow settings")).finally(() => setLoading(false));
     loadDeliveries();
   }, [isAdmin, apply, loadDeliveries]);
