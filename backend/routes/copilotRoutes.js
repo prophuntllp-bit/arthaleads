@@ -66,7 +66,15 @@ async function loadOrg(req) {
 
 const isId = (v) => mongoose.Types.ObjectId.isValid(String(v || "")) && String(v).length === 24;
 
-router.post("/chat", chatLimiter, async (req, res) => {
+router.post("/chat", chatLimiter, (req, res) => {
+  chat(req, res).catch((err) => {
+    logger.error(`[copilot] chat failed: ${err.message}`);
+    if (!res.headersSent) res.status(500).json({ success: false, message: "Something went wrong. Try again." });
+    else if (!res.writableEnded) res.end();
+  });
+});
+
+async function chat(req, res) {
   const question = String(req.body?.question || "").trim().slice(0, 2000);
   const page = String(req.body?.page || "/").slice(0, 120);
   const focus = req.body?.focus && isId(req.body.focus.id)
@@ -111,7 +119,7 @@ router.post("/chat", chatLimiter, async (req, res) => {
   } finally {
     res.end();
   }
-});
+}
 
 router.get("/threads", async (req, res, next) => {
   try {

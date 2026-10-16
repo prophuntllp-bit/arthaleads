@@ -11,9 +11,13 @@ process.on("uncaughtException", (err) => {
   console.error("[FATAL] Uncaught Exception:", err.message, err.stack);
   process.exit(1);
 });
+// A rejected promise nobody awaited used to restart the whole API (and every
+// company with it) for one bad request or a database blip. It is now logged
+// and sent to Sentry; the process keeps serving. Truly broken state still
+// exits via uncaughtException above. (16 Oct 2026 audit, P0-5.)
 process.on("unhandledRejection", (reason) => {
-  console.error("[FATAL] Unhandled Rejection:", reason?.message || String(reason));
-  process.exit(1);
+  console.error("[ERROR] Unhandled Rejection:", reason?.stack || reason?.message || String(reason));
+  try { require("@sentry/node").captureException(reason); } catch { /* Sentry not configured */ }
 });
 
 require("dotenv").config();
@@ -304,6 +308,8 @@ const blogLimiter = rateLimit({
 // charge the request to the person who made it rather than to their office.
 app.use(cookieParser());
 app.use(generalLimiter);
+// Query strings are parsed by now; bodies are stripped again after parsing.
+app.use(require("./middlewares/noOperators").noOperators);
 
 // ── Logging ───────────────────────────────────────────────────────────────────
 if (process.env.NODE_ENV !== "test") {
@@ -323,6 +329,7 @@ app.use(express.json({
   verify: (req, res, buf) => { if (req.originalUrl.startsWith("/api/whatsapp/")) req.rawBody = buf; },
 }));
 app.use(express.urlencoded({ extended: true, limit: "8mb" }));
+app.use(require("./middlewares/noOperators").noOperators);
 
 // ── Global API hardening headers ──────────────────────────────────────────────
 // Applied to every /api/* and /webhook response - not the frontend.

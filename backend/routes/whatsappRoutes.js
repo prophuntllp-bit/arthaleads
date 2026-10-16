@@ -2525,7 +2525,10 @@ router.post("/webhook", async (req, res) => {
   res.sendStatus(200);
   try {
     const payload  = req.body;
-    const inApiKey = payload.apiKey || req.headers["x-aisensy-api-key"] || "";
+    // Only a plain string can identify a company: an operator object such as
+    // {"$gt":""} would match any org with WhatsApp (16 Oct 2026 audit, P0-3).
+    const rawKey = payload.apiKey || req.headers["x-aisensy-api-key"] || "";
+    const inApiKey = typeof rawKey === "string" ? rawKey : "";
     if (!inApiKey) return;
     const org = await Organization.findOne({ "whatsapp.apiKey": inApiKey }).lean();
     await processWebhookForOrg(org, "aisensy", payload, req.headers, "WhatsApp Webhook");
@@ -2609,15 +2612,17 @@ router.get("/status", async (req, res) => {
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 
-router.get("/settings", authorize("admin", "manager", "super_admin"), async (req, res) => {
-  const org = await Organization.findById(req.orgId).select("whatsapp name").lean();
-  if (!org) return res.status(404).json({ message: "Org not found" });
-  const { apiKey, ...safe } = org.whatsapp || {};
-  res.json({
-    whatsapp: { ...safe, hasApiKey: !!apiKey },
-    connected: !!(apiKey && org.whatsapp?.enabled),
-    orgId: req.orgId,
-  });
+router.get("/settings", authorize("admin", "manager", "super_admin"), async (req, res, next) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("whatsapp name").lean();
+    if (!org) return res.status(404).json({ message: "Org not found" });
+    const { apiKey, ...safe } = org.whatsapp || {};
+    res.json({
+      whatsapp: { ...safe, hasApiKey: !!apiKey },
+      connected: !!(apiKey && org.whatsapp?.enabled),
+      orgId: req.orgId,
+    });
+  } catch (err) { next(err); }
 });
 
 // Aggregate WhatsApp marketing-consent counts across this org's leads.

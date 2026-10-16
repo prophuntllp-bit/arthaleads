@@ -33,7 +33,11 @@ const CACHE = "public, max-age=31536000, immutable";
 router.get("/*", async (req, res) => {
   // Everything after /api/media/ is the object key. Express gives it back
   // percent-encoded exactly as the client sent it.
-  const key = decodeURIComponent(req.params[0] || "");
+  // Express has already decoded the path once; a second decode of something
+  // like "%E0" throws. Outside a try that rejection used to restart the whole
+  // API (16 Oct 2026 audit, P0-1), so a malformed key is simply "not found".
+  let key;
+  try { key = decodeURIComponent(req.params[0] || ""); } catch { return res.status(404).end(); }
 
   // A key is built by this codebase, never by a user, so anything trying to
   // climb out of the prefix is someone poking at it.
