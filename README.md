@@ -9,7 +9,7 @@ Real-estate lead management SaaS for Indian brokerages and agencies. Manage lead
 | Layer | Technology |
 |---|---|
 | Frontend | React 18 + Vite + Tailwind CSS |
-| Mobile | Capacitor (Android) |
+| Mobile | Flutter (Android), in `mobile/` |
 | Backend | Express.js + Node.js |
 | Database | MongoDB (Mongoose) |
 | AI | OpenAI GPT-4o / 4o-mini |
@@ -159,16 +159,11 @@ Six clear zones, all fully responsive (mobile → tablet → desktop):
 
 ---
 
-## Mobile (Android via Capacitor)
+## Mobile (Android)
 
-```bash
-cd frontend
-npm run build
-npx cap sync android
-npx cap open android   # opens Android Studio
-```
+The Android app is the native Flutter app in `mobile/` (package `com.arthaleads.crm`). See MOBILE_APP_HANDOFF.md for building and releasing it.
 
-Push notifications use Firebase Admin (server) + `@capacitor/push-notifications` (client).
+Push notifications use Firebase Admin (server, `backend/utils/push.js`) + `firebase_messaging` in the app, through `POST /api/push/fcm-token`.
 
 ---
 

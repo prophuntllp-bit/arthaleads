@@ -17,7 +17,6 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import CustomCursor from "./components/CustomCursor";
 import { Download, X, Bell, Share } from "lucide-react";
 import { subscribeToPush } from "./utils/pushNotifications";
-import { isCapacitorNative, setupCapacitorPush } from "./utils/capacitorPush";
 import api from "./services/api";
 import { hydrateLeadOptions } from "./utils/constants";
 import { CRM_URL, waLink, WA_MESSAGES } from "./utils/crmLinks";
@@ -127,8 +126,8 @@ function InstallBanner() {
   );
 
   useEffect(() => {
-    // Running as Capacitor APK or already installed as PWA - don't show banner
-    if (isCapacitorNative || isInStandaloneMode()) return;
+    // Already installed as PWA - don't show banner
+    if (isInStandaloneMode()) return;
     if (dismissed) return;
 
     // Android: offer the real app. Delayed like the iOS card so it does not
@@ -283,8 +282,6 @@ function NotificationBanner() {
   }, [user, status, dismissed]);
 
   if (!user) return null;
-  // In Capacitor APK the native layer handles push permissions — no web banner needed
-  if (isCapacitorNative) return null;
   if (status === "unsupported" || status === "granted" || status === "denied" || dismissed) return null;
 
   const handleEnable = async () => {
@@ -547,12 +544,6 @@ function RequireAuth() {
 
   // Apply (or clear) the org's custom brand colour whenever it changes
   useEffect(() => { applyBrandColor(org?.brandColor); }, [org?.brandColor]);
-
-  // Capacitor APK: set up FCM push once the user is authenticated.
-  // In browser/PWA this is a no-op — NotificationBanner handles Web Push instead.
-  useEffect(() => {
-    if (user && isCapacitorNative) setupCapacitorPush();
-  }, [user]);
 
   // Listen for blocking 403 events fired by the API interceptor / AuthContext
   useEffect(() => {
