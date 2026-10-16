@@ -79,6 +79,13 @@ const check = (ok, msg, d = "") => {
   const notAllowed = await runTool("assign_lead", { leadId: String(priya._id), agentId: String(B._id) }, ctx(A));
   check(/isn't available/.test(notAllowed.result.error || ""), "an agent cannot propose an assignment even by calling the tool by name");
 
+  // Weekdays come from a calendar in the context, not the model's arithmetic
+  const { nextDays, SYSTEM } = require("../copilot/prompt");
+  check(nextDays(new Date("2026-10-16T10:00:00Z"), 3) === "today Fri 16 Oct 2026, tomorrow Sat 17 Oct 2026, Sun 18 Oct 2026", "the calendar has the right weekdays", nextDays(new Date("2026-10-16T10:00:00Z"), 3));
+  check(nextDays(new Date("2026-10-16T19:00:00Z"), 1) === "today Sat 17 Oct 2026", "the calendar's today is the IST day (00:30 IST is already the next day)");
+  check(nextDays(new Date("2026-12-31T05:00:00Z"), 2) === "today Thu 31 Dec 2026, tomorrow Fri 1 Jan 2027", "the calendar runs across the new year");
+  check(!/Thu 16 Oct/.test(SYSTEM), "the instructions carry no wrong example weekday");
+
   // Help and starters
   check(searchHelp("how do I export leads")[0]?.title === "EXPORT LEADS", "search_help finds the right guide section");
   check(startersFor({ role: "agent", page: "/followups" }).length >= 3 && startersFor({ role: "manager", page: "/unknown" }).length >= 3, "starters exist for every page and role");
