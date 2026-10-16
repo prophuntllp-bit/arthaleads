@@ -27,7 +27,7 @@ const FORM_SELECT = { width: "100%", padding: "12px 16px", borderRadius: "1rem",
 const SOURCES = [
   { key: "website", label: "Website", icon: Globe, how: "Matched by the page the form was filled on", noun: "website form" },
   { key: "facebook", label: "Facebook", icon: Megaphone, how: "Matched by the ad, the campaign or the project the lead came from", noun: "Facebook lead-ad" },
-  { key: "whatsapp", label: "WhatsApp", icon: MessageCircle, how: "Matched by the project or the ad the chat started from", noun: "WhatsApp" },
+  { key: "whatsapp", label: "WhatsApp", icon: MessageCircle, how: "Matched by the project or the ad the chat started from. Ads you route to an assistant on the AI Agents page appear in the ad picker too.", noun: "WhatsApp" },
   { key: "google", label: "Google", icon: Search, how: "Matched by the Google Ads campaign or the project the lead is filed under", noun: "Google Ads lead-form" },
 ];
 
@@ -142,6 +142,7 @@ export default function VistrowOutboundSection() {
   const [fbForms, setFbForms] = useState([]); // Facebook lead forms / ads / campaigns, from this org's leads
   const [fbAds, setFbAds] = useState([]);
   const [fbCampaigns, setFbCampaigns] = useState([]);
+  const [allAds, setAllAds] = useState([]); // every ad the org knows (CTWA leads, AI-agent routes, lead-form ads), for both ad pickers
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
@@ -194,6 +195,7 @@ export default function VistrowOutboundSection() {
       setFbForms(dropSharedPrefix(c.data.options?.facebook?.form_id || []));
       setFbAds(dropSharedPrefix(c.data.options?.facebook?.ad_id || []));
       setFbCampaigns(dropSharedPrefix(c.data.options?.facebook?.campaign_id || []));
+      setAllAds(c.data.options?.ads?.all || []);
     }).catch(() => toast.error("Could not load the Vistrow settings")).finally(() => setLoading(false));
     loadDeliveries();
   }, [isAdmin, apply, loadDeliveries]);
@@ -289,7 +291,10 @@ export default function VistrowOutboundSection() {
   const showConnFields = manualConn || (configured && !linkedByVistrow);
   const anySourceOn = SOURCES.some((x) => st.routing[x.key].enabled);
   // Facebook ads/campaigns are named from this org's leads; WhatsApp ads and Google campaigns from their own lists.
-  const adName = (v, source) => (source === "facebook" ? fbAds : ads).find((a) => a.value === v)?.label || `ad ${v}`;
+  const adName = (v, source) => { const a = allAds.find((x) => x.value === v); return (a && a.label !== a.value ? a.label : null) || (source === "facebook" ? fbAds : ads).find((x) => x.value === v)?.label || `ad ${v}`; };
+  // A Click-to-WhatsApp ad chosen in a Facebook rule: its leads arrive as WhatsApp leads, so that rule alone never matches.
+  const isCtwaAd = (v) => allAds.some((a) => a.value === v && a.kind === "ctwa");
+  const CTWA_NOTE = "This is a Click-to-WhatsApp ad: leads from it arrive as WhatsApp leads, so add this rule under WhatsApp leads too.";
   const campaignName = (v, source) => (source === "facebook" ? fbCampaigns : campaigns).find((a) => a.value === v)?.label || `campaign ${v}`;
   const formName = (v) => fbForms.find((a) => a.value === v)?.label || `form ${v}`;
   const describe = (r, source) => (r.matchKind === "url_contains" ? `a page whose address contains “${r.matchValue}”${r.projectName ? ` (${r.projectName})` : ""}` : r.matchKind === "project" ? `project “${r.projectName || "unknown"}”` : r.matchKind === "campaign_id" ? `campaign “${campaignName(r.matchValue, source)}”` : r.matchKind === "form_id" ? `lead form “${formName(r.matchValue)}”` : `ad “${adName(r.matchValue, source)}”`);
@@ -306,6 +311,20 @@ export default function VistrowOutboundSection() {
     if (d[`${field}Manual`]) return <input className="input font-mono text-sm" autoFocus placeholder={`${noun} ID`} value={d[field] || ""} onChange={(e) => setDraftField("facebook", { [field]: e.target.value })} />;
     const opts = list.length ? idOptions(list) : [{ value: "__none__", label: `No ${plural} seen yet - they appear after the first lead arrives`, disabled: true }, { value: MANUAL, label: "Enter an ID manually…" }];
     return <CustomSelect value={d[field] || ""} onChange={(v) => setDraftField("facebook", v === MANUAL ? { [field]: "", [`${field}Manual`]: true } : { [field]: v })} options={opts} placeholder={`Choose a ${noun.toLowerCase()}`} style={FORM_SELECT} />;
+  };
+  // Both ad pickers list every ad the org knows (ads.all), newest first (the server sorts), with the kind,
+  // lead count and the AI agent it is routed to. "Enter an ID manually…" is always offered.
+  const adOptions = allAds.map((a) => ({ value: a.value, label: [
+    `${a.kind === "leadform" ? "Lead-form ad" : "WhatsApp ad"} · ${a.label}`,
+    a.label !== a.value ? a.value : "",
+    a.count ? `${a.count} lead${a.count === 1 ? "" : "s"}` : "no leads yet",
+    a.agentName ? `routed to ${a.agentName}` : "",
+  ].filter(Boolean).join(" · ") }));
+  const adPicker = (source) => {
+    const d = draft[source];
+    if (d.adIdManual) return <input className="input font-mono text-sm" autoFocus placeholder="Ad ID" value={d.adId || ""} onChange={(e) => setDraftField(source, { adId: e.target.value })} />;
+    const opts = [...(adOptions.length ? adOptions : [{ value: "__none__", label: "No ads seen yet - they appear after the first lead arrives, or once you route an ad on the AI Agents page", disabled: true }]), { value: MANUAL, label: "Enter an ID manually…" }];
+    return <CustomSelect value={d.adId || ""} onChange={(v) => setDraftField(source, v === MANUAL ? { adId: "", adIdManual: true } : { adId: v })} options={opts} placeholder="Choose an ad" style={FORM_SELECT} />;
   };
   const RULE_NOUN = { website: "pages", facebook: "lead forms, ads, campaigns or projects", whatsapp: "ads or projects", google: "campaigns or projects" };
   const agentsReady = agentList.state === "ok";
@@ -414,6 +433,7 @@ export default function VistrowOutboundSection() {
                       {r.unassigned && <span className="text-xs font-semibold" style={{ color: "#b45309" }}>Won't call</span>}
                       <span className="flex-1" />
                       <button type="button" className="text-app-soft hover:text-red-400" title="Remove" aria-label="Remove" disabled={busy === `routes-${src.key}`} onClick={() => removeRoute(src.key, r.id)}><Trash2 className="w-4 h-4" /></button>
+                      {src.key === "facebook" && r.matchKind === "ad_id" && isCtwaAd(r.matchValue) && <p className="basis-full text-xs" style={{ color: "#b45309" }} data-testid="ctwa-note">{CTWA_NOTE}</p>}
                     </div>
                   ))}
 
@@ -433,7 +453,8 @@ export default function VistrowOutboundSection() {
                         ? <CustomSelect value={d.projectId || ""} onChange={(v) => setDraftField(src.key, { projectId: v })} options={projectOptions} placeholder="Choose a project" style={FORM_SELECT} />
                         : kind === "campaign_id" ? fbPicker("campaignId", fbCampaigns, "Campaign", "campaigns")
                           : kind === "form_id" ? fbPicker("formId", fbForms, "Lead form", "forms")
-                            : fbPicker("adId", fbAds, "Ad", "ads")}</div>
+                            : adPicker("facebook")}
+                      {kind === "ad_id" && isCtwaAd(d.adId) && <p className="text-xs mt-1" style={{ color: "#b45309" }} data-testid="ctwa-note">{CTWA_NOTE}</p>}</div>
                   </>)}
                   {src.key === "whatsapp" && (<>
                     <div className="md:col-span-3"><label className="label">When the chat is about</label>
@@ -441,7 +462,7 @@ export default function VistrowOutboundSection() {
                     <div className="md:col-span-4"><label className="label">{kind === "project" ? "Project" : "Ad"}</label>
                       {kind === "project"
                         ? <CustomSelect value={d.projectId || ""} onChange={(v) => setDraftField(src.key, { projectId: v })} options={projectOptions} placeholder="Choose a project" style={FORM_SELECT} />
-                        : <CustomSelect value={d.adId || ""} onChange={(v) => setDraftField(src.key, { adId: v })} options={ads.map((a) => ({ value: a.value, label: a.label }))} placeholder="Choose an ad" style={FORM_SELECT} />}</div>
+                        : adPicker("whatsapp")}</div>
                   </>)}
                   {src.key === "google" && (<>
                     <div className="md:col-span-3"><label className="label">When the lead is from</label>
