@@ -14,13 +14,13 @@
          per-app-source security model, not something we can or should skip. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
 
-    <!-- The camera plugin declares RECORD_AUDIO because it supports video, and
-         the merged manifest is what Play reads. We only ever take stills:
-         attendance_capture_sheet.dart builds its CameraController with
-         enableAudio: false and calls takePicture(). Left in, it would put
-         "Microphone" on the store listing for a CRM, and Play's permissions
-         policy requires every permission be necessary for a current feature. -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>
+    <!-- Hold-to-talk in Artha (screens/artha/voice_input.dart): the phone's
+         own speech recogniser turns what the person says into text in the
+         message box, which they read before sending. Asked for at runtime the
+         first time someone holds the mic, never at install or start-up.
+         (Until 16 Oct 2026 this was removed: the camera plugin declares it
+         for video, and attendance photos still use enableAudio: false.) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
 
     <!-- Superseded by the granular media permissions from API 33. Without a
          ceiling it advertises on every level, which widens the requested set
@@ -89,6 +89,11 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- Android 11+ package visibility for the speech recogniser (Google's
+             on most phones) that speech_to_text binds to for hold-to-talk. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
