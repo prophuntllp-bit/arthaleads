@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-16 IST: AUDIT P1 security batch (owner approved), staging first: project field allow-list + org-owned file deletes, upload type allow-list + sandboxed media responses, Google sign-in audience check, Facebook page claiming, EnableX recording URL host check, agent visibility gaps (help, conversations/start, retry-facebook, draft-message), super-admin protection in updateUser, regex escaping, site_url scheme, OAuth postMessage origin. Files: services/projectService.js, utils/upload.js, utils/storage.js, routes/mediaRoutes.js, services/authService.js, routes/webhookRoutes.js, controllers/automationController.js or services/automationService.js, routes/enablexRoutes.js, routes/helpRoutes.js, routes/whatsappRoutes.js, routes/leadRoutes.js, routes/projectRoutes.js, services/followupService.js, frontend Automation.jsx, ConnectionCard.jsx.
+
 
 - [claude] 2026-10-16 IST: Artha Phase 4 (mobile). Done: sign-in renewal (staging 63a95da, main 9c5ade8), staging app (staging 94053ae, main 836efd0). Now: Artha bottom sheet (design https://claude.ai/artifact/PKFV4N7BXXizwERbs94pJ1): new mobile/lib/core/artha_stream.dart + mobile/lib/screens/artha/artha_sheet.dart; shell.dart (app bar Artha button replaces the floating avatar); lead_detail_sheet.dart (Ask Artha about this lead). No backend changes.
 
