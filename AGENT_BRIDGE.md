@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
-- [claude] 2026-10-16 18:05 IST: Vistrow auto-call page UI: opaque agent dropdown above other fields, visible Switch track when off, Add button on the same row as the rule fields. Files: frontend/src/components/VistrowOutboundSection.jsx.
 
 
 
@@ -97,6 +96,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-16 18:15 IST: Vistrow auto-call page UI (VistrowOutboundSection.jsx): agent dropdown menu is now solid (--app-surface-solid) and z-[60], so it no longer shows the fields behind it through it; source Switch has a visible grey track when off (was near-transparent on the glass card); rule row is 3+4+3+2 columns so 'Agent who calls' and Add sit on one line, Add is full-height with the fields' 1rem corners. test:vistrow green, vite build ok. Not checked in a browser before deploy.
 - [claude] 2026-10-16 17:45 IST: frontend/vercel.json ignoreCommand now `[ -n "$VERCEL_GIT_PREVIOUS_SHA" ] && git diff --quiet "$VERCEL_GIT_PREVIOUS_SHA" HEAD -- .` (owner-approved; product-tour claim otherwise untouched). Before: `git diff --quiet HEAD^ HEAD -- .` looked only at the last commit, so any push ending in a bridge-log commit skipped the build and earlier frontend commits never shipped (24f6d2d ad pickers did not ship until aef44fa). VERCEL_GIT_PREVIOUS_SHA = last successful deployment for the project+branch (Vercel system env, exposed when an Ignored Build Step is set); empty or not in the clone -> non-zero -> build. Tested in a checkout: nothing new -> skip; frontend change behind a log commit -> build; log-only -> skip; empty -> build; unknown sha -> build.
 - [claude] 2026-10-16 17:25 IST: ad-picker UI redeploy (comment-only change in VistrowOutboundSection.jsx, in the same commit as this log line so the push's last commit touches frontend/). Cause: frontend/vercel.json `ignoreCommand: git diff --quiet HEAD^ HEAD -- .` checks only the last commit; every push that ends with a bridge-log commit skips the build, so frontend work in earlier commits of that push never ships. Proposed fix (not applied: vercel.json is under another agent's Active-work claim): `[ -n "$VERCEL_GIT_PREVIOUS_SHA" ] && git diff --quiet "$VERCEL_GIT_PREVIOUS_SHA" HEAD -- .` (Vercel: last successful deployment SHA for the project+branch; empty/unknown -> build).
 
