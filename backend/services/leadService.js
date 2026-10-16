@@ -17,6 +17,7 @@ const { formatISTDate, istDateKey, startOfISTDay, endOfISTDay, istTodayRange } =
 const OPTS = require("../constants/leadOptions");
 const { projectLeadStage, projectLeadStageCondition } = require("../utils/pipelineStage");
 const visibility = require("../utils/visibility");
+const WaAgent = require("../models/WaAgent");
 
 // An agent works on the leads they can see: those assigned to them and those
 // they created themselves (an agent's new lead is often round-robined to a
@@ -25,6 +26,62 @@ const visibility = require("../utils/visibility");
 // The rule itself lives in utils/visibility.js, shared with every screen and Artha.
 function agentOwnsLead(lead, user) {
   return visibility.ownsLead(user._id, lead);
+}
+
+// Every ad id the org knows, de-duplicated, for the Vistrow ad pickers
+// (16 Oct 2026): Meta's lead-form webhook often gives no ad id, so the
+// Facebook list alone was empty while the org had Click-to-WhatsApp ads and
+// ads routed on the AI Agents page. Lead-derived entries follow `base` (an
+// agent sees only their own leads); WaAgent routing is org config, so it is
+// added for everyone but agents. kind: "leadform" when seen on a Facebook
+// lead-form lead, otherwise "ctwa". Newest first, never-seen ads last.
+async function allKnownAds(user, base) {
+  const [ctwa, leadform, waAgents] = await Promise.all([
+    Lead.aggregate([
+      { $match: { ...base, source: "WhatsApp", "campaignRef.adId": { $nin: ["", null] } } },
+      { $group: { _id: "$campaignRef.adId", label: { $max: "$campaignRef.headline" }, count: { $sum: 1 }, lastSeen: { $max: "$createdAt" } } },
+    ]),
+    Lead.aggregate([
+      { $match: { ...base, source: "Facebook" } },
+      { $unwind: "$activities" },
+      { $match: { "activities.meta.adId": { $nin: ["", null] } } },
+      { $group: { _id: "$activities.meta.adId", label: { $max: "$activities.meta.adName" }, leads: { $addToSet: "$_id" }, lastSeen: { $max: "$createdAt" } } },
+      { $project: { label: 1, lastSeen: 1, count: { $size: "$leads" } } },
+    ]),
+    user.role === "agent" ? [] : WaAgent.find({ orgId: user.orgId, "adIds.0": { $exists: true } }).select("name adIds").sort({ name: 1 }).lean(),
+  ]);
+
+  const byId = new Map();
+  const entry = (id) => {
+    const value = String(id).trim();
+    if (!value) return null;
+    if (!byId.has(value)) byId.set(value, { value, label: "", kind: "ctwa", sources: [], agentNames: [], count: 0, lastSeenAt: null });
+    return byId.get(value);
+  };
+  const addLeads = (rows, source) => {
+    for (const r of rows) {
+      const e = entry(r._id);
+      if (!e) continue;
+      e.sources.push(source);
+      e.count += r.count;
+      if (!e.label && r.label) e.label = String(r.label).trim();
+      if (r.lastSeen && (!e.lastSeenAt || r.lastSeen > e.lastSeenAt)) e.lastSeenAt = r.lastSeen;
+      if (source === "facebook_lead") e.kind = "leadform";
+    }
+  };
+  addLeads(ctwa, "whatsapp_lead");
+  addLeads(leadform, "facebook_lead");
+  for (const a of waAgents) {
+    for (const id of new Set(a.adIds || [])) {
+      const e = entry(id || "");
+      if (!e) continue;
+      if (!e.sources.includes("wa_agent")) e.sources.push("wa_agent");
+      if (!e.agentNames.includes(a.name)) e.agentNames.push(a.name);
+    }
+  }
+  return [...byId.values()]
+    .sort((x, y) => (y.lastSeenAt ? +y.lastSeenAt : -1) - (x.lastSeenAt ? +x.lastSeenAt : -1))
+    .map(({ agentNames, ...e }) => ({ ...e, label: e.label || e.value, ...(agentNames.length ? { agentName: agentNames.join(", ") } : {}) }));
 }
 
 // ── Analytics cache (in-memory, 60-second TTL per org+range) ─────────────────
@@ -439,10 +496,18 @@ const leadService = {
     ]);
 
     const shape = (rows) => rows.map((r) => ({ value: r._id, label: r.name || r.label || r._id, count: r.count, lastSeenAt: r.lastSeen || null }));
+    const all = await allKnownAds(user, base);
+    // An ad routed to an AI agent but with no WhatsApp lead yet is still pickable
+    // in the WhatsApp lists (count 0). Lead-form ads are not WhatsApp ads.
+    const waAds = shape(waAdId);
+    for (const a of all) {
+      if (a.kind === "ctwa" && !a.sources.includes("whatsapp_lead")) waAds.push({ value: a.value, label: a.value, count: 0, lastSeenAt: null });
+    }
     return {
       facebook: { form_id: shape(formId), campaign_id: shape(campaignId), adset_id: shape(adsetId), ad_id: shape(adId) },
-      whatsapp: { ad_id: shape(waAdId), no_ad: shape(waNoAd) },
+      whatsapp: { ad_id: waAds, no_ad: shape(waNoAd) },
       google:   { campaign_id: shape(googleCampaignId) },
+      ads:      { all },
     };
   },
 
