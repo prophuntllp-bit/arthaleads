@@ -7,7 +7,8 @@ import { Check, ChevronDown } from "lucide-react";
  * Props:
  *   value        string  — current selected value
  *   onChange     fn(v)   — called with the new value string
- *   options      Array<{value: string, label: string} | string>
+ *   options      Array<{value: string, label: string, disabled?: boolean} | string>
+ *                (a disabled option is an information line: muted, not selectable)
  *   placeholder  string  — label shown when value is ""
  *   style        object  — extra styles for the trigger button
  */
@@ -156,15 +157,18 @@ export default function CustomSelect({ value, onChange, options, placeholder = "
               <button
                 key={item.value}
                 type="button"
+                disabled={!!item.disabled}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] transition-colors"
                 style={{
                   background: selected ? "rgba(249,115,22,0.10)" : "transparent",
-                  color: selected ? "var(--app-primary)" : "var(--app-text)",
+                  color: item.disabled ? "var(--app-text-soft)" : selected ? "var(--app-primary)" : "var(--app-text)",
                   fontWeight: selected ? 600 : 400,
+                  cursor: item.disabled ? "default" : "pointer",
+                  whiteSpace: item.disabled ? "normal" : undefined,
                 }}
-                onMouseEnter={(e) => { if (!selected) e.currentTarget.style.background = "var(--app-surface-low)"; }}
+                onMouseEnter={(e) => { if (!selected && !item.disabled) e.currentTarget.style.background = "var(--app-surface-low)"; }}
                 onMouseLeave={(e) => { if (!selected) e.currentTarget.style.background = "transparent"; }}
-                onClick={() => { onChange(item.value); setOpen(false); }}
+                onClick={() => { if (item.disabled) return; onChange(item.value); setOpen(false); }}
               >
                 {item.color && (
                   <span className="shrink-0 rounded-full" style={{ width: 8, height: 8, background: item.color }} />

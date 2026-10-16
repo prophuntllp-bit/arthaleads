@@ -268,7 +268,7 @@ router.get("/agents", agentsLimiter, async (req, res) => {
   } catch (err) { fail(res, err, "agents"); }
 });
 
-// POST /api/integrations/vistrow-outbound/simulate  { source, pageUrl?, projectId?, adId?, campaignId? }
+// POST /api/integrations/vistrow-outbound/simulate  { source, pageUrl?, projectId?, adId?, formId?, campaignId? }
 // "Which agent would a lead like this get?" Pure read of the saved settings:
 // sends nothing and touches no lead.
 router.post("/simulate", async (req, res) => {
@@ -276,7 +276,7 @@ router.post("/simulate", async (req, res) => {
     const doc = await load(req.user.orgId);
     if (!doc) return res.status(400).json({ success: false, message: "Save the connection details first." });
     const b = req.body || {};
-    const inputs = { routeSource: String(b.source || ""), sourcePage: String(b.pageUrl || ""), projectId: String(b.projectId || ""), adId: String(b.adId || ""), campaignId: String(b.campaignId || "") };
+    const inputs = { routeSource: String(b.source || ""), sourcePage: String(b.pageUrl || ""), projectId: String(b.projectId || ""), adId: String(b.adId || ""), formId: String(b.formId || ""), campaignId: String(b.campaignId || "") };
     const { agentId, ...decision } = R.resolveRouting(toConfig(doc), inputs); // the raw agent id stays on the server
     res.json({ success: true, decision });
   } catch (err) { fail(res, err, "simulate"); }
