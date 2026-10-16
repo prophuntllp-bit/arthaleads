@@ -1730,7 +1730,8 @@ router.post("/website/register", express.json(), noOperators, async (req, res) =
     if (!automation) return res.status(401).json({ success: false, message: "Invalid token" });
 
     if (site_name) automation.siteName = site_name;
-    if (site_url)  automation.siteUrl  = site_url;
+    // Shown as a link in the CRM, so only a real http(s) address is stored.
+    if (typeof site_url === "string" && /^https?:\/\/[^\s<>"']+$/i.test(site_url.trim())) automation.siteUrl = site_url.trim().slice(0, 300);
     if (Array.isArray(forms)) automation.connectedForms = forms;
     automation.status = "connected";
     automation.lastSyncAt = new Date();

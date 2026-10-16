@@ -173,7 +173,7 @@ router.delete("/:id/videos", authorize("admin", "manager"), async (req, res, nex
     if (project.videos.length === before) return res.status(404).json({ success: false, message: "Video not found." });
     await project.save();
     const { deleteProjectVideo } = require("../utils/upload");
-    await deleteProjectVideo(url);
+    await deleteProjectVideo(url, String(project._id));
     res.json({ success: true, videos: project.videos });
   } catch (err) { next(err); }
 });
@@ -334,7 +334,9 @@ router.post("/:id/leads/:leadId/draft-message", async (req, res, next) => {
     if (!project) return res.status(404).json({ success: false, message: "Project not found." });
 
     const lead = await ProjectLead.findOne({ _id: req.params.leadId, project: project._id }).lean();
-    if (!lead) return res.status(404).json({ success: false, message: "Lead not found." });
+    if (!lead || !(await require("../utils/visibility").canSeeProjectLead(req.user, { ...lead, orgId: req.orgId }))) {
+      return res.status(404).json({ success: false, message: "Lead not found." });
+    }
 
     const agentName = req.user.name || "";
     const result = await draftWhatsAppMessage(lead, agentName);

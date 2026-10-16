@@ -2652,8 +2652,14 @@ router.patch("/settings", authorize("admin", "super_admin"), async (req, res) =>
     const update = {};
     if (provider            !== undefined) update["whatsapp.provider"]            = provider;
     if (accountEndpoint     !== undefined) update["whatsapp.accountEndpoint"]     = accountEndpoint;
-    if (phoneNumberId       !== undefined) update["whatsapp.phoneNumberId"]       = phoneNumberId;
-    if (wabaId              !== undefined) update["whatsapp.wabaId"]              = wabaId;
+    for (const [field, value] of [["phoneNumberId", phoneNumberId], ["wabaId", wabaId]]) {
+      if (value === undefined || value === "" || value === null) continue;
+      if (typeof value !== "string" && typeof value !== "number") return res.status(400).json({ message: `Invalid ${field}.` });
+      const taken = await Organization.exists({ _id: { $ne: req.orgId }, [`whatsapp.${field}`]: String(value) });
+      if (taken) return res.status(409).json({ message: "This WhatsApp number is already connected to another ArthaLeads workspace. Contact support if it is yours." });
+    }
+    if (phoneNumberId       !== undefined) update["whatsapp.phoneNumberId"]       = phoneNumberId === null ? "" : String(phoneNumberId);
+    if (wabaId              !== undefined) update["whatsapp.wabaId"]              = wabaId === null ? "" : String(wabaId);
     if (webhookVerifyToken  !== undefined) update["whatsapp.webhookVerifyToken"]  = webhookVerifyToken;
     // The org-wide kill switch. Each assistant has its own active/paused
     // state; this one stops all of them at once.
@@ -3356,7 +3362,7 @@ router.get("/conversations", async (req, res) => {
     const [conversations, total] = await Promise.all([
       WaConversation.find(filter)
         .sort({ lastMessageAt: -1 })
-        .skip((page - 1) * limit).limit(+limit)
+        .skip((Math.max(1, +page || 1) - 1) * Math.min(500, Math.max(1, +limit || 50))).limit(Math.min(500, Math.max(1, +limit || 50))) // capped: the Inbox loads 50 more at a time
         .populate("leadId", LEAD_SCORE_FIELDS)
         .populate("assignedTo", "name avatar")
         .lean(),
@@ -3382,11 +3388,16 @@ router.post("/conversations/start", async (req, res) => {
     }
     const { leadId } = req.body || {};
     const lead = leadId ? await Lead.findOne({ _id: leadId, orgId: req.orgId }).lean() : null;
-    if (leadId && !lead) return res.status(404).json({ message: "Lead not found" });
+    if (leadId && (!lead || !require("../utils/visibility").canSeeLead(req.user, lead))) return res.status(404).json({ message: "Lead not found" });
     const phone = toWaId(lead?.phone || req.body?.phone);
     if (!phone || phone.length < 10) return res.status(400).json({ message: "This lead has no usable phone number." });
 
     let conv = await WaConversation.findOne({ orgId: req.orgId, contactPhone: phone });
+    // A chat with this number assigned to a colleague stays theirs: an
+    // agent must not be handed it (or its preview) by starting a new one.
+    if (conv && conv.assignedTo && !canAccessConversation(req.user, conv)) {
+      return res.status(409).json({ message: "This number already has a WhatsApp chat with a colleague. Ask a manager to reassign it." });
+    }
     if (!conv) {
       // Agent-initiated, not the bot's to answer — a customer replying to
       // an outreach an agent started should reach that agent, not the AI.

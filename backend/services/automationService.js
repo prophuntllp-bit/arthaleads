@@ -77,6 +77,24 @@ function applyDefaults(payload = {}) {
   };
 }
 
+// A Facebook Page, or a lead-intake key, belongs to one company only. Leads
+// are routed by page id and by key, so a second company "connecting" the same
+// page (with no form filter) or reusing a key would start receiving the first
+// company's leads (16 Oct 2026 audit, H4).
+async function assertNotClaimedElsewhere(normalized, orgId, selfId = null) {
+  const others = { orgId: { $ne: orgId }, isActive: true, ...(selfId ? { _id: { $ne: selfId } } : {}) };
+  if (normalized.platform === "Facebook" && normalized.pageId) {
+    if (await Automation.exists({ ...others, platform: "Facebook", pageId: String(normalized.pageId) })) {
+      throw new AppError("This Facebook Page is already connected to another ArthaLeads workspace. Disconnect it there first, or contact support.", 409);
+    }
+  }
+  if (normalized.verifyToken && typeof normalized.verifyToken === "string") {
+    if (await Automation.exists({ ...others, verifyToken: normalized.verifyToken })) {
+      throw new AppError("That key is already in use. Leave it empty and a new one will be created.", 409);
+    }
+  }
+}
+
 const automationService = {
   async list(orgId) {
     const rows = await Automation.find({ orgId }).select("-accessToken -userToken").sort({ createdAt: -1 });
@@ -118,6 +136,7 @@ const automationService = {
       normalized.verifyToken = generateIngestToken();
     }
 
+    await assertNotClaimedElsewhere(normalized, actor.orgId);
     const automation = await Automation.create({
       ...normalized,
       orgId: actor.orgId,
@@ -186,6 +205,7 @@ const automationService = {
     const existingToken = automation.verifyToken;
 
     const normalized = applyDefaults({ ...automation.toObject(), ...payload });
+    await assertNotClaimedElsewhere(normalized, actor.orgId, automation._id);
     [
       "name",
       "platform",

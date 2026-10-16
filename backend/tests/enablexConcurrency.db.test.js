@@ -90,8 +90,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await Promise.all([
       processCallStateEvent(String(orgId), { state: "connected", voice_id: voiceId, custom_data: ownerRef }, "[enablex webhook]"),
       processCallStateEvent(String(orgId), { state: "connected", voice_id: voiceId }, "[enablex webhook]"),
-      processCallStateEvent(String(orgId), { state: "disconnected", voice_id: voiceId, custom_data: ownerRef, call_duration: 42, recording_url: "https://enablex/rec/1" }, "[enablex webhook]"),
-      processCallStateEvent(String(orgId), { state: "recording_complete", voice_id: voiceId, recording_duration: 40, recording_url: "https://enablex/rec/1" }, "[enablex webhook]"),
+      processCallStateEvent(String(orgId), { state: "disconnected", voice_id: voiceId, custom_data: ownerRef, call_duration: 42, recording_url: "https://portal.enablex.io/rec/1" }, "[enablex webhook]"),
+      processCallStateEvent(String(orgId), { state: "recording_complete", voice_id: voiceId, recording_duration: 40, recording_url: "https://portal.enablex.io/rec/1" }, "[enablex webhook]"),
     ]);
     for (let i = 0; i < 50; i++) {
       if ((await Model.findById(_id).lean()).activities[0].meta.recordingUrl) break;

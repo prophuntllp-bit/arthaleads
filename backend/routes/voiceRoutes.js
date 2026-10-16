@@ -50,7 +50,7 @@ router.use((req, res, next) => {
 // campaign_id maps to leadSourceLabel or source field
 router.get("/leads", async (req, res) => {
   try {
-    const { campaign_id, limit = 20, page = 1, status, phone } = req.query;
+    let { campaign_id, limit = 20, page = 1, status, phone } = req.query;
 
     const escRx = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const filter = { orgId: req.voiceOrgId, isDeleted: { $ne: true }, isArchived: { $ne: true } };
@@ -66,7 +66,8 @@ router.get("/leads", async (req, res) => {
     if (status) filter.status = status;
     if (phone) filter.phone = { $regex: escRx(phone.replace(/\D/g, "")), $options: "i" };
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    limit = Math.min(500, Math.max(1, parseInt(limit) || 50)); // capped page size
+    const skip = (Math.max(1, parseInt(page) || 1) - 1) * limit;
 
     const [leads, total] = await Promise.all([
       Lead.find(filter)

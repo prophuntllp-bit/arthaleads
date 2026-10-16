@@ -99,7 +99,7 @@ router.post("/ask", async (req, res, next) => {
           : question.split(/\s+/).filter(w => w.length >= 3 && !STOP.has(w.toLowerCase())).slice(0, 3);
 
         if (words.length > 0) {
-          const regexConds = words.map(w => ({ name: { $regex: w, $options: "i" } }));
+          const regexConds = words.map(w => ({ name: { $regex: String(w).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" } }));
           const query = {
             orgId: req.user.orgId, isDeleted: { $ne: true },
             ...(regexConds.length > 1 ? { $and: regexConds } : regexConds[0]),
@@ -115,8 +115,22 @@ router.post("/ask", async (req, res, next) => {
       } catch { /* non-critical — fall through without lead context */ }
     }
 
+    // The lead the question is about (opened on screen, or found by name) must
+    // be one this person can see: an agent asking about a colleague's lead
+    // gets no lead details (16 Oct 2026 audit, M1).
+    if (resolvedLeadId) {
+      try {
+        const visibility = require("../utils/visibility");
+        const { findLeadById } = require("../utils/leadLookup");
+        const { doc, Model } = await findLeadById(resolvedLeadId, req.user.orgId, { lean: true, select: "_id orgId assignedTo createdBy project" });
+        const ProjectLead = require("../models/ProjectLead");
+        const visible = doc && (Model === ProjectLead ? await visibility.canSeeProjectLead(req.user, doc) : visibility.canSeeLead(req.user, doc));
+        if (!visible) resolvedLeadId = null;
+      } catch { resolvedLeadId = null; }
+    }
+
     // Fetch live context from the database for this user/page
-    const context = await fetchPageContext(page, req.user._id, req.user.orgId, resolvedLeadId || null);
+    const context = await fetchPageContext(page, req.user._id, req.user.orgId, resolvedLeadId || null, req.user);
 
     // Only describe actions this user can actually run from this page. The
     // model cannot propose what it was never told about — and if it invents

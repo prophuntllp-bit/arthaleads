@@ -182,6 +182,8 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
 
     // Primary: postMessage - fires synchronously before window.close()
     const onMessage = (e) => {
+      // Only our own callback page (same origin) may hand over OAuth results.
+      if (e.origin !== window.location.origin) return;
       const d = e.data;
       if (!d || typeof d.type !== "string" || !d.type.startsWith("facebook_oauth")) return;
       handleResult(d);
@@ -1253,6 +1255,8 @@ function GoogleWizard({ open, onClose, onChanged }) {
     };
 
     const onMessage = (e) => {
+      // Only our own callback page (same origin) may hand over OAuth results.
+      if (e.origin !== window.location.origin) return;
       const d = e.data;
       if (!d || typeof d.type !== "string" || !d.type.startsWith("google_oauth")) return;
       handleResult(d);
