@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-16 IST: remove the old web-app wrappers (Capacitor frontend/android, PWABuilder TWA com.arthaleads.www.twa): frontend/android, capacitor.config.ts, capacitorPush.js, App.jsx, main.jsx, styles.css is-native block, package.json @capacitor deps, assetlinks.json, .github/workflows/build-apk.yml, README. Backend push untouched (shared with Flutter).
+
 
 
 
