@@ -61,7 +61,7 @@ only be verified live so Claude Code or the owner can check it on production.
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
-- [claude] 2026-10-16 IST: Artha Phase 4 (mobile) start. Step 1 done (staging 63a95da, main 9c5ade8). Now: separate "Arthaleads Staging" app (com.arthaleads.crm.staging) for any build with API_BASE_URL=api-staging: android/app/build.gradle.kts, AndroidManifest.xml, main.dart, api_client.dart, push_service.dart, update_service.dart. Then the Artha bottom sheet in mobile/ (no backend changes planned).
+- [claude] 2026-10-16 IST: Artha Phase 4 (mobile). Done: sign-in renewal (staging 63a95da, main 9c5ade8), staging app (staging 94053ae, main 836efd0). Now: Artha bottom sheet (design https://claude.ai/artifact/PKFV4N7BXXizwERbs94pJ1): new mobile/lib/core/artha_stream.dart + mobile/lib/screens/artha/artha_sheet.dart; shell.dart (app bar Artha button replaces the floating avatar); lead_detail_sheet.dart (Ask Artha about this lead). No backend changes.
 
 
 
