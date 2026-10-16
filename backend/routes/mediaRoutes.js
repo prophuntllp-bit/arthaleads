@@ -46,7 +46,17 @@ router.get("/*", async (req, res) => {
   }
 
   try {
-    const obj = await storage.getObject(key);
+    // One byte range ("bytes=start-end" or "bytes=start-") is passed through to
+    // storage, so videos can be streamed and skipped through, and iPhones play
+    // them at all. Anything else is ignored and the whole file is sent.
+    const rangeHeader = String(req.headers.range || "");
+    const range = /^bytes=\d*-\d*$/.test(rangeHeader) && rangeHeader !== "bytes=-" ? rangeHeader : null;
+    const obj = await storage.getObject(key, { range });
+    res.set("Accept-Ranges", "bytes");
+    if (range && obj.contentRange) {
+      res.status(206);
+      res.set("Content-Range", obj.contentRange);
+    }
     res.set("Content-Type", obj.contentType || "application/octet-stream");
     if (obj.contentLength != null) res.set("Content-Length", String(obj.contentLength));
     if (obj.etag) res.set("ETag", obj.etag);
@@ -83,6 +93,9 @@ router.get("/*", async (req, res) => {
     const code = err?.name || err?.Code || "";
     if (code === "NoSuchKey" || code === "NotFound" || err?.$metadata?.httpStatusCode === 404) {
       return res.status(404).end();
+    }
+    if (code === "InvalidRange" || err?.$metadata?.httpStatusCode === 416) {
+      return res.status(416).end();
     }
     logger.error(`[media] ${key}: ${err.message}`);
     res.status(502).end();
