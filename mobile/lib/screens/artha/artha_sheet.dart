@@ -10,6 +10,7 @@ import '../../core/copilot_pages.dart';
 import '../../core/push_service.dart';
 import '../../core/theme.dart';
 import '../../widgets/report_message_button.dart';
+import 'change_card.dart';
 
 /// The lead Artha is looking at ("summarise this", "log a call").
 class ArthaFocus {
@@ -51,7 +52,8 @@ class _Msg {
   List<_Step> steps = [];
   List<Map<String, dynamic>> records = [];
   List<Map<String, dynamic>> choices = [];
-  List<Map<String, dynamic>> proposals = [];
+  List<ChangeProposal> proposals = [];
+  bool writesDisabled = false;
   bool streaming;
   String? turnId;
   String? rating;
@@ -124,6 +126,8 @@ class _ArthaSheetState extends State<ArthaSheet> {
     final q = (override ?? _input.text).trim();
     if (q.isEmpty || _busy) return;
     if (override == null) _input.clear();
+    // The answer (and any change card) needs the room the keyboard takes.
+    _inputFocus.unfocus();
     final bot = _Msg('bot', '', prompt: q, streaming: true);
     setState(() {
       _showHistory = false;
@@ -184,13 +188,31 @@ class _ArthaSheetState extends State<ArthaSheet> {
           if (c is Map) bot.choices.add(c.cast<String, dynamic>());
         case 'proposal':
           final p = ev['proposal'];
-          if (p is Map) bot.proposals.add(p.cast<String, dynamic>());
+          if (p is Map && p['type'] is String) {
+            final card = ChangeProposal(
+              type: p['type'] as String,
+              params: ((p['params'] as Map?) ?? const {}).cast<String, dynamic>(),
+              page: _page,
+              prompt: bot.prompt,
+              threadId: _threadId,
+            );
+            bot.proposals.add(card);
+            card.loadPreview();
+          }
         case 'done':
           bot.streaming = false;
           bot.turnId = ev['turnId'] as String?;
           final text = ev['text'] as String?;
           if (text != null && text.isNotEmpty) bot.text = _tidy(text);
           if (ev['records'] is List) bot.records = _maps(ev['records']);
+          if (ev['writesDisabled'] == true) {
+            bot.writesDisabled = true;
+            bot.proposals = [
+              for (final c in bot.proposals)
+                ChangeProposal(type: c.type, params: c.params, page: c.page, prompt: c.prompt, threadId: c.threadId, writesDisabled: true)
+                  ..loadPreview(),
+            ];
+          }
         case 'error':
           bot.streaming = false;
           bot.text = '${ev['message'] ?? 'Something went wrong. Please try again.'}';
@@ -590,7 +612,8 @@ class _ArthaSheetState extends State<ArthaSheet> {
                       : Text.rich(_answerSpans(t, m), style: TextStyle(fontSize: 14, height: 1.5, color: t.text)),
                 ),
               for (final c in m.choices) _choices(t, c),
-              for (final p in m.proposals) _proposalPlaceholder(t, p),
+              for (final p in m.proposals) ChangeCard(key: ObjectKey(p), p: p),
+              if (m.proposals.length >= 2 && !m.writesDisabled) _applyAll(t, m),
               if (!m.streaming && m.text.isNotEmpty) _feedbackRow(t, m),
             ],
           ),
@@ -695,21 +718,37 @@ class _ArthaSheetState extends State<ArthaSheet> {
     );
   }
 
-  /// Change cards (preview, edit, Apply, Undo) are the next build step; until
-  /// then a proposal says plainly that nothing was changed.
-  Widget _proposalPlaceholder(AppTheme t, Map<String, dynamic> p) => Container(
-        margin: const EdgeInsets.only(top: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.06),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          'Artha has a change ready (${'${p['type'] ?? 'update'}'.replaceAll('_', ' ')}). '
-          'Reviewing and applying changes from the phone comes in the next update. Nothing has been changed.',
-          style: TextStyle(fontSize: 13, height: 1.45, color: t.text),
-        ),
+  /// Several changes in one answer: one tap applies the ones still waiting,
+  /// one after another, each with its own receipt and Undo.
+  Widget _applyAll(AppTheme t, _Msg m) => ListenableBuilder(
+        listenable: Listenable.merge(m.proposals),
+        builder: (context, _) {
+          final waiting = m.proposals.where((p) => p.pending && !p.busy).toList();
+          if (waiting.length < 2) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.maybeOf(context);
+                for (final p in waiting) {
+                  final err = await p.apply();
+                  if (err != null) {
+                    messenger?.showSnackBar(SnackBar(content: Text(err)));
+                    break;
+                  }
+                }
+              },
+              icon: const Icon(Icons.done_all_rounded, size: 18),
+              label: Text('Apply all ${waiting.length} changes'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _link(t),
+                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.40)),
+                minimumSize: const Size(0, 44),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          );
+        },
       );
 
   Widget _feedbackRow(AppTheme t, _Msg m) => Padding(

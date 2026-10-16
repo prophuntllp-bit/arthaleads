@@ -1,4 +1,5 @@
 import '../artha/artha_sheet.dart';
+import '../artha/change_card.dart';
 import 'package:flutter/material.dart';
 import 'lead_chat_panel.dart';
 import 'lead_origin.dart';
@@ -57,9 +58,31 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
   final _noteCtrl = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    ArthaEvents.changed.addListener(_reloadAfterArtha);
+  }
+
+  @override
   void dispose() {
+    ArthaEvents.changed.removeListener(_reloadAfterArtha);
     _noteCtrl.dispose();
     super.dispose();
+  }
+
+  /// Artha (opened over this lead) applied or undid a change: show the lead
+  /// as it is now, not as it was when the sheet opened.
+  Future<void> _reloadAfterArtha() async {
+    try {
+      final isProject = lead['_type'] == 'project';
+      final res = await _api.dio.get(isProject ? '/projects/lead/${lead['_id']}' : '/leads/${lead['_id']}');
+      final fresh = (res.data['data'] as Map?)?.cast<String, dynamic>();
+      if (fresh == null || !mounted) return;
+      setState(() => lead = {...lead, ...fresh});
+      widget.onUpdated(lead);
+    } catch (_) {
+      // The next open shows it; a failed refresh must not disturb the sheet.
+    }
   }
 
   /// Projects this lead was also filed into by a routing rule or a transfer

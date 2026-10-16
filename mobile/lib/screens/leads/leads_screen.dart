@@ -1,3 +1,4 @@
+import '../artha/change_card.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -102,6 +103,7 @@ class LeadsScreenState extends State<LeadsScreen> {
       }
     });
     DeepLink.openLeadId.addListener(_handleDeepLink);
+    ArthaEvents.changed.addListener(_refreshTop);
     if (DeepLink.openLeadId.value != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _handleDeepLink());
     }
@@ -127,6 +129,7 @@ class LeadsScreenState extends State<LeadsScreen> {
   void dispose() {
     _autoRefresh?.cancel();
     DeepLink.openLeadId.removeListener(_handleDeepLink);
+    ArthaEvents.changed.removeListener(_refreshTop);
     DeepLink.leadFilters.removeListener(_handleFilterLink);
     _scroll.dispose();
     _searchCtrl.dispose();
