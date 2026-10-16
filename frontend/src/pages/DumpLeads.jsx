@@ -455,7 +455,7 @@ export default function DumpLeads() {
                           ? <span className="text-xs text-app-soft">Leads</span>
                           : <span className="text-xs text-app-soft" title="Deleted before the CRM recorded where from">Unknown</span>}
                     </td>
-                    <td><StatusBadge status={lead.status} /></td>
+                    <td><StatusBadge status={lead.status} lead={lead} /></td>
                     <td>
                       {lead.booking ? (
                         <span className={`badge border ${BOOKING_COLOR[lead.booking] || "bg-gray-100 text-gray-600"}`}>

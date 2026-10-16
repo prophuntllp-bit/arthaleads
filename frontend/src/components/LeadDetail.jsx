@@ -576,7 +576,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
             <div className="flex flex-wrap items-start gap-2">
               <SourceBadge source={lead.source} />
               <PriorityBadge priority={lead.priority} />
-              <StatusBadge status={lead.status} />
+              <StatusBadge status={lead.status} lead={lead} />
               {onEdit && (
                 <button
                   type="button"

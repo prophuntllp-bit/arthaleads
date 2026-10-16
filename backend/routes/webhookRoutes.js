@@ -19,6 +19,7 @@ const { mapGoogleLeadFields, fromWebhookColumns } = require("../utils/googleLead
 const { mapCustomFieldsToLead } = require("../utils/formFieldMapper");
 const OPTS = require("../constants/leadOptions");
 const { planOutcome, phoneFilter, cleanEmail, cleanName, FOLLOW_UP_LABELS, followUpKindOf, attemptsOf, reportedBooking, callDescription } = require("../utils/vistrowCallResult");
+const { applyCallDetails, notifyBrochureRequest } = require("../utils/vistrowLeadDetails");
 
 const router = express.Router();
 
@@ -1073,10 +1074,25 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
       // follow_up_kind (top level or custom_fields) marks a scheduled
       // call-back / site-visit reminder / nurture call Vistrow placed itself.
       arthaleads_lead_id, crm_outcome, direction,
+      // Vistrow's post-call analysis (16 Oct 2026), both optional: a summary
+      // sentence and a list of key points, shown in the call's note.
+      summary, key_points,
     } = req.body || {};
     const followUpKind = followUpKindOf(req.body);
     const callAttempts = attemptsOf(crm_outcome);
     const callResult = reportedBooking(crm_outcome);
+    const summaryText = typeof summary === "string" ? summary.trim().slice(0, 1000) : "";
+    const keyPoints = Array.isArray(key_points)
+      ? key_points.filter((k) => typeof k === "string" && k.trim()).map((k) => k.trim().slice(0, 200)).slice(0, 10)
+      : [];
+    // The caller asked for the brochure (Vistrow's send_brochure tool): the
+    // team gets a task. Only a literal true counts.
+    const brochureRequested = !!(crm_outcome && typeof crm_outcome === "object" && crm_outcome.brochure_requested === true);
+    const brochureProject = (() => {
+      const ed = extracted_data && typeof extracted_data === "object" ? extracted_data : {};
+      const v = crm_outcome?.brochure_project ?? ed.brochure_project ?? ed.project;
+      return typeof v === "string" ? v.trim() : "";
+    })();
 
     if (!token) return res.status(400).json({ success: false, message: "Missing token" });
 
@@ -1208,6 +1224,8 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
         noteText: [
           heading,
           metaBits.length ? metaBits.join(" · ") : null,
+          summaryText ? `\nSummary: ${summaryText}` : null,
+          keyPoints.length ? `\nKey points:\n${keyPoints.map((k) => `- ${k}`).join("\n")}` : null,
           extractedLines.length ? `\nCaptured details:\n${extractedLines.join("\n")}` : null,
           cleanTranscript.length ? `\nFull transcript is in the Transcript tab.` : null,
         ].filter(Boolean).join("\n"),
@@ -1247,6 +1265,13 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
           { _id: existingByCallId._id, "voiceCalls.externalCallId": callIdNum },
           { $set: setOps }
         );
+        // A re-send can carry details or a brochure request the first delivery
+        // did not: both are safe to repeat (fill-if-empty, one task per call).
+        if (hasExtracted) {
+          try { await applyCallDetails(existingByCallId._id, mapVistrowExtractedFields(extracted_data)); }
+          catch (e) { logger.warn(`[custom webhook] details from call ${callIdNum} failed: ${e.message}`); }
+        }
+        if (brochureRequested) await notifyBrochureRequest({ orgId, leadId: existingByCallId._id, callId: callIdNum, projectName: brochureProject });
         automation.status = "connected";
         automation.lastSyncAt = new Date();
         await automation.save();
@@ -1279,6 +1304,14 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
         // returning caller no longer looks "not synced".
         const plan = planOutcome(existingByPhone, crm_outcome);
         const { noteText } = buildVoiceNote(voiceCall);
+        // Details the caller stated fill the lead's empty fields, with the same
+        // rules as the WhatsApp chat reader (utils/leadFieldFill.js). Safe to
+        // run before the append: it only ever fills an empty field once.
+        let details = { noteLines: [] };
+        if (hasExtracted) {
+          try { details = await applyCallDetails(existingByPhone._id, mapVistrowExtractedFields(extracted_data)); }
+          catch (e) { logger.warn(`[custom webhook] details from call ${callIdNum} failed: ${e.message}`); }
+        }
         const callActivity = {
           type: "called",
           description: callDescription({ direction, followUpKind, attempts: callAttempts, booking: callResult, durationSeconds: voiceCall.durationSeconds }),
@@ -1294,7 +1327,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
             {
               $push: {
                 voiceCalls: newCallEntry,
-                notes: { text: [noteText, ...plan.lines].join("\n"), addedByName: "Vistrow Voice" },
+                notes: { text: [noteText, ...plan.lines, ...details.noteLines].join("\n"), addedByName: "Vistrow Voice" },
                 activities: { $each: [callActivity, ...plan.activities] },
               },
               ...(Object.keys(plan.set).length ? { $set: plan.set } : {}),
@@ -1313,6 +1346,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
             }).select("_id").lean();
             if (winner) {
               logger.info(`[custom webhook] push/push race resolved for call ${callIdNum} - lead ${winner._id} already has it`);
+              if (brochureRequested) await notifyBrochureRequest({ orgId, leadId: winner._id, callId: callIdNum, projectName: brochureProject });
               return res.status(200).json({ success: true, message: "Call updated", leadId: winner._id });
             }
           }
@@ -1320,8 +1354,10 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
         }
         if (pushed && pushed.matchedCount === 0) {
           // This lead already has this call (a re-send that raced the lookup).
+          if (brochureRequested) await notifyBrochureRequest({ orgId, leadId: existingByPhone._id, callId: callIdNum, projectName: brochureProject });
           return res.status(200).json({ success: true, message: "Call updated", leadId: existingByPhone._id });
         }
+        if (brochureRequested) await notifyBrochureRequest({ orgId, leadId: existingByPhone._id, callId: callIdNum, projectName: brochureProject });
         automation.status = "connected";
         automation.lastSyncAt = new Date();
         await automation.save();
@@ -1412,7 +1448,8 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
           }).select("_id").lean();
           if (winner) {
             logger.info(`[custom webhook] create/create race resolved for call ${callIdNum} - lead ${winner._id} already has it`);
-            return res.status(200).json({ success: true, message: "Call updated", leadId: winner._id });
+            if (brochureRequested) await notifyBrochureRequest({ orgId, leadId: winner._id, callId: callIdNum, projectName: brochureProject });
+              return res.status(200).json({ success: true, message: "Call updated", leadId: winner._id });
           }
         }
         throw createErr;
@@ -1421,6 +1458,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
       automation.status = "connected";
       automation.lastSyncAt = new Date();
       await automation.save();
+      if (brochureRequested) await notifyBrochureRequest({ orgId, leadId: lead._id, callId: callIdNum, projectName: brochureProject });
 
       if (assignee?._id) {
         sendPushToUser(assignee._id, {

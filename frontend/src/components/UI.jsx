@@ -3,7 +3,7 @@ import { STATUS_COLORS, PRIORITY_COLORS, SOURCE_COLORS, ROLE_COLORS } from "../u
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { X, Loader2, Phone, MessageCircle, Inbox as InboxIcon, ChevronDown, Check, Calendar, ChevronLeft, ChevronRight, Sparkles, Headphones, Trash2 } from "lucide-react";
+import { X, Loader2, Phone, MessageCircle, Inbox as InboxIcon, ChevronDown, Check, Calendar, ChevronLeft, ChevronRight, Sparkles, Headphones, Trash2, PhoneCall } from "lucide-react";
 import HoldToConfirmButton from "./HoldToConfirmButton";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -64,7 +64,25 @@ export function SmartImage({ src, alt = "", fallback = null, retries = 2, retryD
   );
 }
 
-export function StatusBadge({ status }) {
+// True while the lead's current status is the one a Vistrow Voice call set
+// (server: Lead.statusSetBy). Any later change, by anyone, makes it false.
+export function isAiCallStatus(lead) {
+  return lead?.statusSetBy?.by === "vistrow_voice" && !!lead.status && lead.statusSetBy.status === lead.status;
+}
+
+// Pass `lead` to mark a status set by a Vistrow Voice call: indigo (the
+// Vistrow colour, distinct from the violet Site Visit pill), a phone icon and
+// "· AI call". Human-set statuses keep their usual colours.
+export function StatusBadge({ status, lead }) {
+  if (isAiCallStatus(lead)) {
+    return (
+      <span className="badge inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-300"
+        title="Updated by Vistrow Voice call" aria-label={`${status}, updated by Vistrow Voice call`}>
+        <PhoneCall className="h-3 w-3" aria-hidden="true" />
+        {status}<span className="font-normal opacity-80">· AI call</span>
+      </span>
+    );
+  }
   return (
     <span className={`badge ${STATUS_COLORS[status] || "bg-gray-100 text-gray-600"}`}>
       {status}

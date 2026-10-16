@@ -639,6 +639,8 @@ const leadService = {
         user,
         { from: lead.status, to: updates.status }
       );
+      // A person set this status: it is no longer an AI-call status.
+      lead.statusSetBy = undefined;
       // Record first time the lead is contacted (for response time tracking)
       if (updates.status === "Contacted" && !lead.firstContactedAt) {
         updates.firstContactedAt = new Date();
@@ -712,7 +714,7 @@ const leadService = {
     });
     const result = await Lead.updateMany(
       { _id: { $in: ids }, orgId: user.orgId, status: { $ne: status } },
-      { $set: { status }, $push: { activities: entry } }
+      { $set: { status }, $unset: { statusSetBy: "" }, $push: { activities: entry } }
     );
     const touched = await Lead.find({ _id: { $in: ids }, orgId: user.orgId }).select("phone orgId status").lean();
     for (const l of touched) await mirrorLeadEdit(l, { fields: ["status"] }, user);
