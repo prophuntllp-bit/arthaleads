@@ -105,7 +105,7 @@ function AgentPicker({ value, onChange, agents, placeholder = "Choose an agent",
 // Which kind of rule the "add" row of a source is building.
 function draftKind(source, d) {
   if (source === "website") return "url_contains";
-  if (source === "facebook") return d.kind || "ad_id";
+  if (source === "facebook") return d.kind || "form_id";
   if (source === "google") return d.kind || "campaign_id";
   return d.kind || "project";
 }
@@ -128,7 +128,8 @@ export default function VistrowOutboundSection() {
   const [pages, setPages] = useState([]);
   const [ads, setAds] = useState([]); // WhatsApp (click-to-WhatsApp) ads
   const [campaigns, setCampaigns] = useState([]); // Google Ads campaigns
-  const [fbAds, setFbAds] = useState([]); // Facebook lead-ad ads / campaigns, from this org's leads
+  const [fbForms, setFbForms] = useState([]); // Facebook lead forms / ads / campaigns, from this org's leads
+  const [fbAds, setFbAds] = useState([]);
   const [fbCampaigns, setFbCampaigns] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -140,7 +141,7 @@ export default function VistrowOutboundSection() {
   const [manualConn, setManualConn] = useState(false);
   const [confirm, setConfirm] = useState(null); // { title, message, run }
   const [draft, setDraft] = useState({ website: {}, facebook: {}, whatsapp: {}, google: {} });
-  const [check, setCheck] = useState({ source: "website", pageUrl: "", projectId: "", adId: "", campaignId: "", result: null });
+  const [check, setCheck] = useState({ source: "website", pageUrl: "", projectId: "", adId: "", formId: "", campaignId: "", result: null });
   const [testOut, setTestOut] = useState(null);
   const [agentList, setAgentList] = useState({ state: "idle", agents: [], problem: null }); // state: idle | loading | ok | error
 
@@ -179,6 +180,7 @@ export default function VistrowOutboundSection() {
       setPages(d.data.pages || []);
       setAds(c.data.options?.whatsapp?.ad_id || []);
       setCampaigns(c.data.options?.google?.campaign_id || []);
+      setFbForms(c.data.options?.facebook?.form_id || []);
       setFbAds(c.data.options?.facebook?.ad_id || []);
       setFbCampaigns(c.data.options?.facebook?.campaign_id || []);
     }).catch(() => toast.error("Could not load the Vistrow settings")).finally(() => setLoading(false));
@@ -211,8 +213,9 @@ export default function VistrowOutboundSection() {
     if (kind === "url_contains") { row.matchValue = (d.url || "").trim(); if (d.projectId) row.projectId = d.projectId; }
     else if (kind === "project") { row.projectId = d.projectId; row.matchValue = d.projectId; }
     else if (kind === "campaign_id") row.matchValue = (d.campaignId || "").trim();
+    else if (kind === "form_id") row.matchValue = (d.formId || "").trim();
     else row.matchValue = (d.adId || "").trim();
-    if (!row.matchValue) return toast.error(kind === "url_contains" ? "Enter the page to match" : kind === "project" ? "Choose a project" : kind === "campaign_id" ? "Enter the campaign" : "Choose an ad");
+    if (!row.matchValue) return toast.error(kind === "url_contains" ? "Enter the page to match" : kind === "project" ? "Choose a project" : kind === "campaign_id" ? "Choose a campaign" : kind === "form_id" ? "Choose a lead form" : "Choose an ad");
     if (kind === "any") return toast.error("Use the default agent picker above");
     if (!d.agent) return toast.error("Choose which agent should call these leads");
     row.agentRef = d.agent;
@@ -262,7 +265,7 @@ export default function VistrowOutboundSection() {
     if (r) { setTestOut(r.data.result); if (mode === "send") loadDeliveries(); }
   };
   const runCheck = async () => {
-    const r = await call("check", () => api.post(`${BASE}/simulate`, { source: check.source, pageUrl: check.pageUrl, projectId: check.projectId, adId: check.adId, campaignId: check.campaignId }));
+    const r = await call("check", () => api.post(`${BASE}/simulate`, { source: check.source, pageUrl: check.pageUrl, projectId: check.projectId, adId: check.adId, formId: check.formId, campaignId: check.campaignId }));
     if (r) setCheck((c) => ({ ...c, result: r.data.decision }));
   };
 
@@ -277,12 +280,23 @@ export default function VistrowOutboundSection() {
   // Facebook ads/campaigns are named from this org's leads; WhatsApp ads and Google campaigns from their own lists.
   const adName = (v, source) => (source === "facebook" ? fbAds : ads).find((a) => a.value === v)?.label || `ad ${v}`;
   const campaignName = (v, source) => (source === "facebook" ? fbCampaigns : campaigns).find((a) => a.value === v)?.label || `campaign ${v}`;
-  const describe = (r, source) => (r.matchKind === "url_contains" ? `a page whose address contains “${r.matchValue}”${r.projectName ? ` (${r.projectName})` : ""}` : r.matchKind === "project" ? `project “${r.projectName || "unknown"}”` : r.matchKind === "campaign_id" ? `campaign “${campaignName(r.matchValue, source)}”` : `ad “${adName(r.matchValue, source)}”`);
-  const KIND_WORD = { url_contains: "Page", project: "Project", ad_id: "Ad", campaign_id: "Campaign", any: "Default" };
-  const matchText = (r, source) => (r.matchKind === "url_contains" ? r.matchValue : r.matchKind === "project" ? (r.projectName || "Unknown project") : r.matchKind === "campaign_id" ? campaignName(r.matchValue, source) : adName(r.matchValue, source));
-  // "Name · id" so the owner can tell two ads with the same name apart.
-  const idOptions = (list) => list.map((a) => ({ value: a.value, label: a.label && a.label !== a.value ? `${a.label} · ${a.value}` : a.value }));
-  const RULE_NOUN = { website: "pages", facebook: "ads, campaigns or projects", whatsapp: "ads or projects", google: "campaigns or projects" };
+  const formName = (v) => fbForms.find((a) => a.value === v)?.label || `form ${v}`;
+  const describe = (r, source) => (r.matchKind === "url_contains" ? `a page whose address contains “${r.matchValue}”${r.projectName ? ` (${r.projectName})` : ""}` : r.matchKind === "project" ? `project “${r.projectName || "unknown"}”` : r.matchKind === "campaign_id" ? `campaign “${campaignName(r.matchValue, source)}”` : r.matchKind === "form_id" ? `lead form “${formName(r.matchValue)}”` : `ad “${adName(r.matchValue, source)}”`);
+  const KIND_WORD = { url_contains: "Page", project: "Project", ad_id: "Ad", form_id: "Lead form", campaign_id: "Campaign", any: "Default" };
+  const matchText = (r, source) => (r.matchKind === "url_contains" ? r.matchValue : r.matchKind === "project" ? (r.projectName || "Unknown project") : r.matchKind === "campaign_id" ? campaignName(r.matchValue, source) : r.matchKind === "form_id" ? formName(r.matchValue) : adName(r.matchValue, source));
+  // "Name · id · N leads", newest first, so the owner can tell two ads with the same name apart.
+  const idOptions = (list) => [...list].sort((a, b) => Date.parse(b.lastSeenAt || 0) - Date.parse(a.lastSeenAt || 0))
+    .map((a) => ({ value: a.value, label: `${a.label && a.label !== a.value ? `${a.label} · ` : ""}${a.value}${a.count ? ` · ${a.count} lead${a.count === 1 ? "" : "s"}` : ""}` }));
+  // A Facebook rule picks from what this org's leads have actually come from. Never a bare id box by
+  // default: an empty list says so and offers manual entry; the box appears only when that is chosen.
+  const MANUAL = "__manual__";
+  const fbPicker = (field, list, noun, plural) => {
+    const d = draft.facebook;
+    if (d[`${field}Manual`]) return <input className="input font-mono text-sm" autoFocus placeholder={`${noun} ID`} value={d[field] || ""} onChange={(e) => setDraftField("facebook", { [field]: e.target.value })} />;
+    const opts = list.length ? idOptions(list) : [{ value: "__none__", label: `No ${plural} seen yet - they appear after the first lead arrives`, disabled: true }, { value: MANUAL, label: "Enter an ID manually…" }];
+    return <CustomSelect value={d[field] || ""} onChange={(v) => setDraftField("facebook", v === MANUAL ? { [field]: "", [`${field}Manual`]: true } : { [field]: v })} options={opts} placeholder={`Choose a ${noun.toLowerCase()}`} style={FORM_SELECT} />;
+  };
+  const RULE_NOUN = { website: "pages", facebook: "lead forms, ads, campaigns or projects", whatsapp: "ads or projects", google: "campaigns or projects" };
   const agentsReady = agentList.state === "ok";
   const stepHead = (n, title, done, sub) => (
     <div className="flex items-start gap-3">
@@ -402,17 +416,13 @@ export default function VistrowOutboundSection() {
                   </>)}
                   {src.key === "facebook" && (<>
                     <div className="md:col-span-3"><label className="label">When the lead came from</label>
-                      <CustomSelect value={kind} onChange={(v) => setDraftField(src.key, { kind: v })} options={[{ value: "ad_id", label: "An ad" }, { value: "campaign_id", label: "A campaign" }, { value: "project", label: "A project" }]} style={FORM_SELECT} /></div>
-                    <div className="md:col-span-4"><label className="label">{kind === "project" ? "Project" : kind === "campaign_id" ? "Campaign" : "Ad"}</label>
+                      <CustomSelect value={kind} onChange={(v) => setDraftField(src.key, { kind: v })} options={[{ value: "form_id", label: "A lead form" }, { value: "ad_id", label: "An ad" }, { value: "campaign_id", label: "A campaign" }, { value: "project", label: "A project" }]} style={FORM_SELECT} /></div>
+                    <div className="md:col-span-4"><label className="label">{kind === "project" ? "Project" : kind === "campaign_id" ? "Campaign" : kind === "form_id" ? "Lead form" : "Ad"}</label>
                       {kind === "project"
                         ? <CustomSelect value={d.projectId || ""} onChange={(v) => setDraftField(src.key, { projectId: v })} options={projectOptions} placeholder="Choose a project" style={FORM_SELECT} />
-                        : kind === "campaign_id"
-                          ? (fbCampaigns.length
-                            ? <CustomSelect value={d.campaignId || ""} onChange={(v) => setDraftField(src.key, { campaignId: v })} options={idOptions(fbCampaigns)} placeholder="Choose a campaign" style={FORM_SELECT} />
-                            : <input className="input font-mono text-sm" placeholder="Campaign ID, e.g. 120252242040050200" value={d.campaignId || ""} onChange={(e) => setDraftField(src.key, { campaignId: e.target.value })} />)
-                          : (fbAds.length
-                            ? <CustomSelect value={d.adId || ""} onChange={(v) => setDraftField(src.key, { adId: v })} options={idOptions(fbAds)} placeholder="Choose an ad" style={FORM_SELECT} />
-                            : <input className="input font-mono text-sm" placeholder="Ad ID, e.g. 120252242040050286" value={d.adId || ""} onChange={(e) => setDraftField(src.key, { adId: e.target.value })} />)}</div>
+                        : kind === "campaign_id" ? fbPicker("campaignId", fbCampaigns, "Campaign", "campaigns")
+                          : kind === "form_id" ? fbPicker("formId", fbForms, "Lead form", "forms")
+                            : fbPicker("adId", fbAds, "Ad", "ads")}</div>
                   </>)}
                   {src.key === "whatsapp" && (<>
                     <div className="md:col-span-3"><label className="label">When the chat is about</label>
@@ -526,6 +536,7 @@ export default function VistrowOutboundSection() {
                 {check.source === "website" && <div className="md:col-span-6"><label className="label">Page the form was on</label><input className="input" placeholder="https://yoursite.com/shapoorji-pallonji-khopoli/" value={check.pageUrl} onChange={(e) => setCheck({ ...check, pageUrl: e.target.value, result: null })} /></div>}
                 {(check.source === "facebook" || check.source === "whatsapp" || check.source === "google") && <div className="md:col-span-3"><label className="label">Project</label><CustomSelect value={check.projectId} onChange={(v) => setCheck({ ...check, projectId: v, result: null })} options={[{ value: "", label: "No project" }, ...projectOptions]} style={FORM_SELECT} /></div>}
                 {(check.source === "whatsapp" || check.source === "facebook") && <div className="md:col-span-3"><label className="label">Ad ID</label><input className="input font-mono text-sm" value={check.adId} onChange={(e) => setCheck({ ...check, adId: e.target.value, result: null })} /></div>}
+                {check.source === "facebook" && <div className="md:col-span-3"><label className="label">Form ID</label><input className="input font-mono text-sm" value={check.formId} onChange={(e) => setCheck({ ...check, formId: e.target.value, result: null })} /></div>}
                 {(check.source === "google" || check.source === "facebook") && <div className="md:col-span-3"><label className="label">Campaign ID</label><input className="input font-mono text-sm" value={check.campaignId} onChange={(e) => setCheck({ ...check, campaignId: e.target.value, result: null })} /></div>}
                 <div className="md:col-span-2"><button type="button" className="btn-secondary rounded-xl w-full" disabled={busy === "check" || !configured} onClick={runCheck}>Check</button></div>
               </div>

@@ -189,7 +189,7 @@ test("a stored agent id that is not valid does not call", () => {
 // ── what the decision is made from ─────────────────────────────────────────
 test("inputs: derived from the lead and context at creation", () => {
   const i = R.routingInputsFrom({ sourcePage: "https://x.com/a/", campaignRef: { adId: "AD1" } }, { routeSource: "whatsapp", project: { id: KHOPOLI } });
-  assert.deepEqual(i, { routeSource: "whatsapp", sourcePage: "https://x.com/a/", projectId: KHOPOLI, adId: "AD1", campaignId: "" });
+  assert.deepEqual(i, { routeSource: "whatsapp", sourcePage: "https://x.com/a/", projectId: KHOPOLI, adId: "AD1", campaignId: "", formId: "" });
 });
 test("inputs: a Google campaign id comes from the attribution", () => {
   assert.equal(R.routingInputsFrom({}, { routeSource: "google", attribution: { campaign_id: "555" } }).campaignId, "555");
@@ -311,8 +311,8 @@ const FB_CAMPAIGN = "120252242040050200";
 const anyRow = (agentId, id = "any1") => ({ id, matchKind: "any", matchValue: "*", agentId, agentLabel: `Default ${agentId}` });
 const fbCfg = (routes) => cfg({ facebook: { enabled: true, routes } });
 
-test("KINDS_BY_SOURCE: every source may have a default; facebook may match an ad or a campaign", () => {
-  assert.deepEqual(R.KINDS_BY_SOURCE.facebook, ["ad_id", "campaign_id", "project", "any"]);
+test("KINDS_BY_SOURCE: every source may have a default; facebook may match an ad, a lead form or a campaign", () => {
+  assert.deepEqual(R.KINDS_BY_SOURCE.facebook, ["ad_id", "form_id", "campaign_id", "project", "any"]);
   assert.deepEqual(R.KINDS_BY_SOURCE.whatsapp, ["ad_id", "project", "any"]);
   assert.deepEqual(R.KINDS_BY_SOURCE.google, ["campaign_id", "project", "any"]);
   assert.deepEqual(R.KINDS_BY_SOURCE.website, ["url_contains", "any"]);
@@ -399,6 +399,53 @@ test("validate: facebook accepts ad and campaign rules; routeLabel names them", 
   const v = R.validateRoutingInput({ facebook: { routes: [{ matchKind: "ad_id", matchValue: FB_AD, agentId: "a" }, { matchKind: "campaign_id", matchValue: FB_CAMPAIGN, agentId: "a" }] } });
   assert.equal(v.errors.length, 0, v.errors.join(";"));
   assert.equal(R.routeLabel({ matchKind: "any", matchValue: "*" }), "Default agent");
+});
+
+// ── facebook: lead form rules (16 Oct 2026) ────────────────────────────────
+// Meta's lead-form webhook often carries no ad_id/campaign_id, only form_id,
+// so the form is the reliable, named key for a Facebook lead-ad rule.
+const FORM = "4425016081084691";
+const fbForms = () => cfg({ facebook: { enabled: true, routes: [
+  { id: "ff", matchKind: "form_id", matchValue: FORM, agentId: "agent_form", agentLabel: "Form agent" },
+  { id: "fa", matchKind: "ad_id", matchValue: "120252242040050286", agentId: "agent_ad" },
+  { id: "fc", matchKind: "campaign_id", matchValue: "120252242040050200", agentId: "agent_camp" },
+  { id: "fp", matchKind: "project", matchValue: KHOPOLI, projectName: "SP Khopoli", agentId: "agent_proj" },
+  { id: "f0", matchKind: "any", matchValue: "*", agentId: "agent_default" },
+] } });
+test("facebook: a form rule matches the lead's form id", () => {
+  const d = R.resolveRouting(fbForms(), { routeSource: "facebook", formId: FORM });
+  assert.equal(d.autoCall, true);
+  assert.equal(d.agentId, "agent_form");
+  assert.equal(d.route.kind, "form_id");
+  assert.equal(d.route.label, `Lead form ${FORM}`);
+  assert.equal(R.resolveRouting(fbForms(), { routeSource: "facebook", formId: "999" }).agentId, "agent_default", "another form -> default");
+});
+test("facebook: ad beats form; form beats campaign and project", () => {
+  const all = { routeSource: "facebook", formId: FORM, adId: "120252242040050286", campaignId: "120252242040050200", projectId: KHOPOLI };
+  assert.equal(R.resolveRouting(fbForms(), all).agentId, "agent_ad");
+  assert.equal(R.resolveRouting(fbForms(), { ...all, adId: "" }).agentId, "agent_form");
+  assert.equal(R.resolveRouting(fbForms(), { ...all, adId: "", formId: "" }).agentId, "agent_camp");
+});
+test("facebook: a form rule is ignored for other sources", () => {
+  const c = cfg({ whatsapp: { enabled: true, routes: [{ id: "wf", matchKind: "form_id", matchValue: FORM, agentId: "agent_form" }] } });
+  assert.equal(R.resolveRouting(c, { routeSource: "whatsapp", formId: FORM }).reason, "no_route");
+});
+test("inputs: the form id comes from the webhook attribution, else the lead's created activity", () => {
+  assert.equal(R.routingInputsFrom({}, { routeSource: "facebook", attribution: { form_id: FORM } }).formId, FORM);
+  const lead = { activities: [{ type: "created", meta: { formId: FORM, pageId: "p1" } }, { type: "note", meta: { formId: "other" } }] };
+  assert.equal(R.routingInputsFrom(lead, { routeSource: "facebook" }).formId, FORM);
+  assert.equal(R.routingInputsFrom(lead, { routeSource: "facebook", attribution: { form_id: "ctx" } }).formId, "ctx", "attribution wins");
+  assert.equal(R.routingInputsFrom({ activities: [{ type: "note" }] }, { routeSource: "facebook" }).formId, "");
+});
+test("validate: form rows are accepted for Facebook only and need a real id", () => {
+  const ok = R.validateRoutingInput({ facebook: { routes: [{ matchKind: "form_id", matchValue: ` ${FORM} `, agentId: "a1" }] } });
+  assert.deepEqual(ok.errors, []);
+  assert.equal(ok.value.facebook.routes[0].matchValue, FORM);
+  assert.ok(R.validateRoutingInput({ facebook: { routes: [{ matchKind: "form_id", matchValue: "x", agentId: "a1" }] } }).errors.length);
+  for (const src of ["website", "whatsapp", "google"]) {
+    assert.ok(R.validateRoutingInput({ [src]: { routes: [{ matchKind: "form_id", matchValue: FORM, agentId: "a1" }] } }).errors.length, src);
+  }
+  assert.deepEqual(R.KINDS_BY_SOURCE.facebook, ["ad_id", "form_id", "campaign_id", "project", "any"]);
 });
 
 run("Vistrow outbound - routing (source toggles and route rows)");

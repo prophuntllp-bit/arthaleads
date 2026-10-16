@@ -1,8 +1,8 @@
 // Default agent per source and Facebook ad/campaign rules (16 Oct 2026),
 // against a real in-memory MongoDB and the real routes:
 //   PUT  /api/integrations/vistrow-outbound/routing   (one "any" row per source)
-//   POST /api/integrations/vistrow-outbound/simulate  (facebook + adId / campaignId)
-//   GET  /api/leads/campaign-options                  (facebook.ad_id / campaign_id with names)
+//   POST /api/integrations/vistrow-outbound/simulate  (facebook + adId / campaignId / formId)
+//   GET  /api/leads/campaign-options                  (facebook.form_id / ad_id / campaign_id with names)
 process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = process.env.JWT_SECRET || "test-secret";
 process.env.CRYPTO_KEY = process.env.CRYPTO_KEY || "a".repeat(64);
@@ -18,6 +18,8 @@ const oid = () => new mongoose.Types.ObjectId();
 const FB_AD = "120252242040050286";
 const FB_AD_2 = "120252242040050287";
 const FB_CAMPAIGN = "120252242040050200";
+const FB_FORM = "4425016081084691";
+const FB_FORM_2 = "4425016081084692";
 let base, mongod, server, ORG, admin, PROJECT, OutboundIntegration, Lead;
 
 const auth = () => ({ Authorization: `Bearer ${jwt.sign({ id: admin._id }, process.env.JWT_SECRET, { expiresIn: "1h" })}`, "Content-Type": "application/json" });
@@ -41,14 +43,15 @@ test("PUT /routing: a default plus ad, campaign and project rules are saved; sta
   const r = await putRouting([
     row("any", "", "fb_default"),
     row("ad_id", FB_AD, "fb_ad"),
+    row("form_id", FB_FORM, "fb_form"),
     row("campaign_id", FB_CAMPAIGN, "fb_campaign"),
     { matchKind: "project", projectId: String(PROJECT), agentId: "fb_project", agentLabel: "Agent fb_project" },
   ]);
   assert.equal(r.status, 200, JSON.stringify(r.body));
   const fb = r.body.status.routing.facebook;
-  assert.deepEqual(fb.allowedKinds, ["ad_id", "campaign_id", "project", "any"]);
+  assert.deepEqual(fb.allowedKinds, ["ad_id", "form_id", "campaign_id", "project", "any"]);
   assert.deepEqual(fb.routes.map((x) => [x.matchKind, x.matchValue, x.label]), [
-    ["any", "*", "Default agent"], ["ad_id", FB_AD, `Ad ${FB_AD}`], ["campaign_id", FB_CAMPAIGN, `Campaign ${FB_CAMPAIGN}`], ["project", String(PROJECT), "Project: SP Khopoli"],
+    ["any", "*", "Default agent"], ["ad_id", FB_AD, `Ad ${FB_AD}`], ["form_id", FB_FORM, `Lead form ${FB_FORM}`], ["campaign_id", FB_CAMPAIGN, `Campaign ${FB_CAMPAIGN}`], ["project", String(PROJECT), "Project: SP Khopoli"],
   ]);
   const saved = (await OutboundIntegration.findOne({ orgId: ORG })).routing.facebook.routes;
   assert.equal(saved.find((x) => x.matchKind === "any").matchValue, "*");
@@ -65,6 +68,15 @@ test("simulate facebook: the ad rule wins; the campaign rule beats the project r
   assert.equal(r.body.decision.agentLabel, "Agent fb_campaign");
   r = await simulate({ projectId: String(PROJECT) });
   assert.equal(r.body.decision.agentLabel, "Agent fb_project");
+});
+
+test("simulate facebook: a lead-form rule (formId) is picked; the ad rule still beats it", async () => {
+  let r = await simulate({ formId: FB_FORM, campaignId: FB_CAMPAIGN, projectId: String(PROJECT) });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.decision.agentLabel, "Agent fb_form");
+  assert.equal(r.body.decision.route.kind, "form_id");
+  r = await simulate({ formId: FB_FORM, adId: FB_AD });
+  assert.equal(r.body.decision.agentLabel, "Agent fb_ad");
 });
 
 test("simulate facebook: the default agent is used when no rule matches", async () => {
@@ -91,8 +103,10 @@ test("GET /leads/campaign-options: facebook ads and campaigns seen on this org's
   for (const a of ads) assert.ok(!Number.isNaN(Date.parse(a.lastSeenAt)), "lastSeenAt is a date");
   const campaigns = r.body.options.facebook.campaign_id;
   assert.deepEqual(campaigns.map((c) => [c.value, c.label, c.count]), [[FB_CAMPAIGN, "Khopoli October", 3]]);
-  // An old lead that stored only the id falls back to the lead's source label.
-  assert.equal(r.body.options.facebook.form_id[0].label, "Facebook Lead Ads · Khopoli October");
+  // Lead forms: named from the lead's source label (Meta sends no form name on the lead), newest first, with counts.
+  const forms = r.body.options.facebook.form_id;
+  assert.deepEqual(forms.map((f) => [f.value, f.label, f.count]), [[FB_FORM_2, "PropHunt LLP - Lead Ads · Everglades II | Short Form V2 | Sep 2026", 1], [FB_FORM, "Facebook Lead Ads · Khopoli October", 3]], JSON.stringify(forms));
+  assert.ok(Date.parse(forms[0].lastSeenAt) > Date.parse(forms[1].lastSeenAt), "sorted by last seen, newest first");
   assert.equal(r.body.options.whatsapp.ad_id.length, 0, "other org / source untouched");
 });
 
@@ -114,15 +128,17 @@ test("GET /leads/campaign-options: facebook ads and campaigns seen on this org's
   await doc.save();
 
   // Facebook leads as the webhook stores them: ids and names on the "created" activity's meta.
-  const fbLead = (orgId, phone, meta, daysAgo) => ({
-    orgId, name: "Lead", phone, source: "Facebook", leadSourceLabel: "Facebook Lead Ads · Khopoli October",
+  const fbLead = (orgId, phone, meta, daysAgo, leadSourceLabel = "Facebook Lead Ads · Khopoli October") => ({
+    orgId, name: "Lead", phone, source: "Facebook", leadSourceLabel,
     createdAt: new Date(Date.now() - daysAgo * 86400 * 1000),
     activities: [{ type: "created", description: "Lead received from Meta Lead Ads webhook", meta }],
   });
   await Lead.create([
-    fbLead(ORG, "9000000001", { formId: "f1", campaignId: FB_CAMPAIGN, campaignName: "Khopoli October", adId: FB_AD, adName: "Khopoli 2BHK launch" }, 3),
-    fbLead(ORG, "9000000002", { formId: "f1", campaignId: FB_CAMPAIGN, campaignName: "Khopoli October", adId: FB_AD, adName: "Khopoli 2BHK launch" }, 2),
-    fbLead(ORG, "9000000003", { formId: "f1", campaignId: FB_CAMPAIGN, campaignName: "Khopoli October", adId: FB_AD_2, adName: "Treetopia villas" }, 1),
+    fbLead(ORG, "9000000001", { formId: FB_FORM, campaignId: FB_CAMPAIGN, campaignName: "Khopoli October", adId: FB_AD, adName: "Khopoli 2BHK launch" }, 3),
+    fbLead(ORG, "9000000002", { formId: FB_FORM, campaignId: FB_CAMPAIGN, campaignName: "Khopoli October", adId: FB_AD, adName: "Khopoli 2BHK launch" }, 2),
+    fbLead(ORG, "9000000003", { formId: FB_FORM, campaignId: FB_CAMPAIGN, campaignName: "Khopoli October", adId: FB_AD_2, adName: "Treetopia villas" }, 1),
+    // As production stores a lead-form lead today: form + page only, no ad/campaign ids.
+    fbLead(ORG, "9000000005", { formId: FB_FORM_2, pageId: "p1", automationId: "a1" }, 0.5, "PropHunt LLP - Lead Ads · Everglades II | Short Form V2 | Sep 2026"),
     fbLead(OTHER_ORG, "9000000004", { formId: "f9", campaignId: "777", campaignName: "Other org", adId: "888", adName: "Other org ad" }, 1),
   ]);
 
@@ -135,5 +151,5 @@ test("GET /leads/campaign-options: facebook ads and campaigns seen on this org's
   base = `http://127.0.0.1:${server.address().port}`;
   const origExit = process.exit;
   process.exit = async (code) => { server.close(); await mongoose.disconnect(); await mongod.stop(); origExit(code); };
-  await run("Vistrow Voice routing: default agent per source + Facebook ad/campaign rules");
+  await run("Vistrow Voice routing: default agent per source + Facebook ad/form/campaign rules");
 })();

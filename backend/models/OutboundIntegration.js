@@ -21,8 +21,8 @@ const { encryptField, decryptField } = require("../utils/fieldCrypto");
 const routeSchema = new mongoose.Schema(
   {
     label: { type: String, trim: true, maxlength: 120, default: "" },
-    // website -> url_contains | any; facebook -> ad_id | campaign_id | project | any; whatsapp -> ad_id | project | any; google -> campaign_id | project | any
-    matchKind: { type: String, enum: ["url_contains", "project", "ad_id", "campaign_id", "any"], required: true },
+    // website -> url_contains | any; facebook -> ad_id | form_id | campaign_id | project | any; whatsapp -> ad_id | project | any; google -> campaign_id | project | any
+    matchKind: { type: String, enum: ["url_contains", "project", "ad_id", "form_id", "campaign_id", "any"], required: true },
     matchValue: { type: String, trim: true, required: true, maxlength: 300 },
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project", default: null },
     projectName: { type: String, trim: true, default: "" },
