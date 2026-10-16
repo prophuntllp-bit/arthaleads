@@ -26,16 +26,10 @@ yarn-error.log*
 
 .vercel
 
-# Capacitor Android project — committed; android/.gitignore handles internal exclusions.
-# google-services.json is injected by CI from GOOGLE_SERVICES_JSON secret (never committed).
-frontend/android/app/google-services.json
-
-# Same pattern for the Flutter mobile app.
+# Flutter app: google-services.json is injected by CI from the GOOGLE_SERVICES_JSON secret (never committed).
 mobile/android/app/google-services.json
 
-# Android release keystore — store privately, add base64 as KEYSTORE_BASE64 GitHub secret
-android-release/
-frontend/android/app/release.keystore
+# Signing keys never go in git.
 *.jks
 
 # Python bytecode
@@ -47,8 +41,8 @@ __pycache__/
 *.zip
 # ...except the WordPress plugin the marketing site hands out. The blanket rule
 # above is why /arthaleads-integration.zip served an 11KB SPA fallback instead
-# of a download: the file was on every developer's disk and in the Capacitor
-# build assets, so it looked present everywhere except the one place Vercel
+# of a download: the file was on every developer's disk and in the old
+# Capacitor build assets, so it looked present everywhere except the one place Vercel
 # serves from.
 !frontend/public/arthaleads-integration.zip
 

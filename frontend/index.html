@@ -174,7 +174,7 @@
       })();
     </script>
 
-    <!-- Service Worker - registered here so PWABuilder / crawlers can detect it -->
+    <!-- Service Worker - registered here (browser push + offline), early so installs and crawlers can detect it -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {

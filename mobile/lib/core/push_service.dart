@@ -13,9 +13,8 @@ import 'api_client.dart';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
 
-/// FCM push notifications (Android). Mirrors
-/// frontend/src/utils/capacitorPush.js, which this native app replaces —
-/// same "leads" channel, same POST/DELETE /push/fcm-token contract.
+/// FCM push notifications (Android): the "leads" channel and the
+/// POST/DELETE /push/fcm-token contract (backend/routes/pushRoutes.js).
 class PushService {
   PushService._();
   static final PushService instance = PushService._();

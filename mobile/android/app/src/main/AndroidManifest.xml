@@ -72,7 +72,7 @@
             android:value="2" />
 
         <!-- FCM defaults — matches the "leads" channel created at runtime in
-             push_service.dart (mirrors the old Capacitor app's capacitorPush.js). -->
+             push_service.dart. -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="leads" />

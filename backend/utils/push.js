@@ -1,4 +1,4 @@
-// utils/push.js — unified push: Web Push (browser/PWA) + FCM (Capacitor Android APK)
+// utils/push.js — unified push: Web Push (browser/PWA) + FCM (Flutter Android app)
 const webPush = require("web-push");
 const PushSubscription = require("../models/PushSubscription");
 const User = require("../models/User");
@@ -68,7 +68,7 @@ function _fcmMessage(token, payload) {
     android: {
       priority: "high",   // wakes the screen immediately
       notification: {
-        channelId: "leads",   // must match channel created in capacitorPush.js
+        channelId: "leads",   // must match channel created in mobile/lib/core/push_service.dart
         sound:     "default",
         icon:      "ic_notification",
         // Android strips all colour from a small icon and tints the silhouette
@@ -114,7 +114,7 @@ async function _sendFcm(tokens, payload) {
 
 /**
  * Send push to every active subscriber in an org.
- * Sends to both Web Push (browser/PWA) and FCM (Capacitor APK) subscribers.
+ * Sends to both Web Push (browser/PWA) and FCM (Flutter app) subscribers.
  */
 async function sendPushToAll(payload, orgId) {
   // orgId is not optional — every caller in this codebase already passes

@@ -46,8 +46,8 @@ android {
     }
 
     defaultConfig {
-        // Matches the Capacitor app's ID (com.arthaleads.crm) — this Flutter
-        // app replaces it and reuses its Firebase project (FCM, Google Sign-In)
+        // Same ID as the old Capacitor app (removed 16 Oct 2026) — this Flutter
+        // app replaced it and reuses its Firebase project (FCM, Google Sign-In)
         // registration, which is tied to this package name + signing cert.
         applicationId = "com.arthaleads.crm"
         // You can update the following values to match your application needs.

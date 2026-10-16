@@ -7,7 +7,7 @@ import UpdateBanner from "./components/UpdateBanner";
 window.__alBooted = true;
 
 // ── Service Worker: periodic sync + message handling ─────────────────────────
-// SW is registered in index.html so PWABuilder/crawlers can detect it.
+// SW is registered in index.html so installs/crawlers can detect it.
 // Here we set up periodic sync tags and listen for SW messages.
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {

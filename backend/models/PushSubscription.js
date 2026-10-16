@@ -4,7 +4,7 @@ const pushSubscriptionSchema = new mongoose.Schema({
   userId:   { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   orgId:    { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
 
-  // "webpush" = browser Web Push (VAPID), "fcm" = Firebase Cloud Messaging (Capacitor APK)
+  // "webpush" = browser Web Push (VAPID), "fcm" = Firebase Cloud Messaging (Flutter Android app)
   type:     { type: String, enum: ["webpush", "fcm"], default: "webpush" },
 
   // ── Web Push fields (type = "webpush") ──────────────────────────────────────
