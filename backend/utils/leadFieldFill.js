@@ -11,8 +11,15 @@
 //   * a stated value that differs from a real value already on the lead is
 //     never written; it becomes an Artha suggestion (lead.arthaSuggest) for a
 //     person to confirm or dismiss, unless that value was dismissed before.
-// Form defaults ("Apartment", "Buy" on the add-lead form) cannot be told apart
-// from a person's choice, so they count as real values.
+//   * an untouched default counts as empty: "Apartment" / "Buy" are what the
+//     schema and the add-lead form put on every lead whose source did not say
+//     (a Facebook form that never asked), so a buyer's stated "Plot" replaces
+//     it. Only on leads an integration created (Facebook, Google, website...):
+//     not on leads a person typed in (Manual / Walk-in / Referral, where the
+//     person saw "Apartment" selected and kept it), not on WhatsApp or Vistrow
+//     Voice leads (created with "N/A", so "Apartment" there was a person's
+//     pick), and never on a field a person changed after creation
+//     (lead.detailsSetByPerson, set by leadService.update).
 
 const SUGGESTABLE = ["propertyType", "purpose", "bhk", "preferredLocation", "budget"];
 
@@ -22,6 +29,16 @@ const sameValue = (a, b) => (a && typeof a === "object")
 
 const isBlank = (k, v) => k === "budget" ? !(v?.min || v?.max) : (!v || v === "N/A");
 
+const SCHEMA_DEFAULT = { propertyType: "Apartment", purpose: "Buy" };
+const DEFAULT_IS_A_CHOICE = ["Manual", "Walk-in", "Referral", "WhatsApp", "Vistrow Voice"];
+
+// Fields whose value is still the untouched schema / add-lead-form default.
+function untouchedDefaults(lead) {
+  if (!lead.source || DEFAULT_IS_A_CHOICE.includes(lead.source)) return [];
+  const mine = lead.detailsSetByPerson || [];
+  return Object.keys(SCHEMA_DEFAULT).filter((k) => lead[k] === SCHEMA_DEFAULT[k] && !mine.includes(k));
+}
+
 /**
  * @param {object} lead    current values (propertyType, purpose, bhk, preferredLocation, budget)
  * @param {object} mapped  what the buyer stated, already matched to the lead's enums
@@ -30,15 +47,18 @@ const isBlank = (k, v) => k === "budget" ? !(v?.min || v?.max) : (!v || v === "N
  */
 function planFieldFill(lead, mapped, { projectType = null } = {}) {
   const setOps = {};
+  const defaults = untouchedDefaults(lead);
+  const empty = (k) => isBlank(k, lead[k]) || defaults.includes(k);
   // The buyer's own words win over the project's type (which only ever fills
   // an empty field), so "I want a flat" after a plot ad corrects it.
-  const typeWasGuessed = isBlank("propertyType", lead.propertyType) || (projectType && lead.propertyType === projectType);
+  const typeWasGuessed = empty("propertyType") || (projectType && lead.propertyType === projectType);
   if (mapped.propertyType && typeWasGuessed && mapped.propertyType !== lead.propertyType) setOps.propertyType = mapped.propertyType;
   else if (!mapped.propertyType && isBlank("propertyType", lead.propertyType) && projectType) setOps.propertyType = projectType;
-  if (mapped.purpose && isBlank("purpose", lead.purpose))                 setOps.purpose = mapped.purpose;
+  if (mapped.purpose && empty("purpose") && mapped.purpose !== lead.purpose) setOps.purpose = mapped.purpose;
   if (mapped.bhk && isBlank("bhk", lead.bhk))                             setOps.bhk = mapped.bhk;
   if (mapped.preferredLocation && !lead.preferredLocation)                setOps.preferredLocation = mapped.preferredLocation;
   if (mapped.budget && isBlank("budget", lead.budget))                    setOps.budget = mapped.budget;
+  if (mapped.timeline && !lead.timeline)                                  setOps.timeline = mapped.timeline;
   return setOps;
 }
 
@@ -50,14 +70,14 @@ function suggestionsFrom(lead, mapped, setOps) {
   for (const k of SUGGESTABLE) {
     const said = mapped[k];
     if (said === undefined || isBlank(k, said) || k in setOps) continue;
-    if (isBlank(k, lead[k]) || sameValue(said, lead[k])) continue;
+    if (isBlank(k, lead[k]) || untouchedDefaults(lead).includes(k) || sameValue(said, lead[k])) continue;
     if ((dismissed[k] || []).some((d) => sameValue(said, d))) continue;
     out[k] = k === "budget" ? { min: said.min || 0, max: said.max || 0 } : said;
   }
   return out;
 }
 
-const LABEL = { propertyType: "Property type", purpose: "Purpose", bhk: "BHK", preferredLocation: "Location", budget: "Budget" };
+const LABEL = { propertyType: "Property type", purpose: "Purpose", bhk: "BHK", preferredLocation: "Location", budget: "Budget", timeline: "Timeline" };
 
 function rupees(n) {
   if (n >= 1e7) return `₹${+(n / 1e7).toFixed(2)} Cr`;
@@ -75,7 +95,7 @@ function showValue(k, v) {
 
 // "Budget ₹1 Cr, Purpose Buy" in a fixed order.
 function describeFields(fields) {
-  return SUGGESTABLE.filter((k) => fields[k] !== undefined).map((k) => `${LABEL[k]} ${showValue(k, fields[k])}`).join(", ");
+  return [...SUGGESTABLE, "timeline"].filter((k) => fields[k] !== undefined).map((k) => `${LABEL[k]} ${showValue(k, fields[k])}`).join(", ");
 }
 
-module.exports = { planFieldFill, suggestionsFrom, sameValue, isBlank, describeFields, showValue, SUGGESTABLE, LABEL };
+module.exports = { planFieldFill, suggestionsFrom, untouchedDefaults, sameValue, isBlank, describeFields, showValue, SUGGESTABLE, LABEL };

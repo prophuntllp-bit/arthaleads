@@ -684,6 +684,13 @@ const leadService = {
       delete updates.whatsappConsent;
     }
 
+    // A person changing a lead detail makes it theirs: automatic readers (the
+    // WhatsApp chat reader, a Vistrow Voice call) never fill over it.
+    const { sameValue } = require("../utils/leadFieldFill");
+    const touched = ["propertyType", "purpose", "bhk", "preferredLocation", "budget", "timeline"]
+      .filter((k) => k in updates && !sameValue(updates[k], lead[k]));
+    if (touched.length) updates.detailsSetByPerson = [...new Set([...(lead.detailsSetByPerson || []), ...touched])];
+
     const statusBefore = lead.status;
     Object.assign(lead, updates);
     await lead.save();

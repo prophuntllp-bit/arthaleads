@@ -170,6 +170,11 @@ const leadSchema = new mongoose.Schema(
       default: undefined,
       _id: false,
     },
+    // Detail fields a person changed after the lead was created
+    // (leadService.update), e.g. ["propertyType"]. Automatic readers treat an
+    // untouched default ("Apartment" / "Buy") as not known yet; a field listed
+    // here is a person's choice and is never filled over (utils/leadFieldFill).
+    detailsSetByPerson: { type: [String], default: undefined },
     priority: {
       type: String,
       enum: OPTS.PRIORITY,
