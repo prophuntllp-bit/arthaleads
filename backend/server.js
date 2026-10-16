@@ -315,6 +315,7 @@ if (process.env.NODE_ENV !== "test") {
 
 // ── Webhooks BEFORE json parser (they verify signatures over the raw body) ────
 app.use("/webhook/lead", require("./routes/vistrowPickerRoutes")); // GET /webhook/lead/projects: read-only project list for Vistrow (token in header)
+app.use("/webhook/vistrow", require("./routes/vistrowLinkRoutes")); // POST /webhook/vistrow/link | /unlink: single-token handshake from Vistrow Voice
 app.use("/webhook", webhookRoutes);
 app.use("/api/billing/webhook", require("./routes/billingWebhookRoutes"));
 

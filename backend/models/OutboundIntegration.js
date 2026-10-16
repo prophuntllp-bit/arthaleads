@@ -64,6 +64,11 @@ const outboundIntegrationSchema = new mongoose.Schema(
     // never serialised: read it only through getSecret(), write via setSecret().
     secretEnc: { type: String, default: "", select: false },
     secretUpdatedAt: { type: Date, default: null },
+    // How step 1 was filled: "vistrow" = the single-token handshake
+    // (POST /webhook/vistrow/link), "manual" = typed in by the owner.
+    linkedAt: { type: Date, default: null },
+    linkedBy: { type: String, enum: ["", "vistrow", "manual"], default: "" },
+    linkedAccountName: { type: String, trim: true, maxlength: 120, default: "" },
 
     defaultCountryCode: { type: String, trim: true, default: "91" },
     // Skip a lead whose phone already had a delivery inside this window, so
