@@ -90,6 +90,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+- [claude] 2026-10-16 IST (97f5a5e1, also on staging): docs/ARTHA_MOBILE_HANDOFF.md, Artha Phase 4 (mobile) handover for the APK session: server endpoints (/copilot/chat SSE events, /help preview/action/undo, /copilot/brief, draft-reply, suggestions, features, /projects/lead/:id), screen rules, and the X-Renewed-Token fix the app still needs (phones are signed out 7 days after sign-in). Plan page updated with progress: https://claude.ai/artifact/8nQwUJxjEVqC3PG5mYNwHB
+
 - [claude] 2026-10-16 IST (staging 78866de9, cherry-picked to main a48af737): frontend/index.html Organization foundingDate 2022 -> 2025 (owner: CRM work started in 2025; Vistrow itself founded 2026). Verified on staging.
 
 - [claude] 2026-10-16 IST (staging 0949a49a, cherry-picked to main f34adaae): profile photos to file storage. models/User.js pre-save uploads data-URI avatars to B2 (arthaleads/avatars/<org>/<user>-<time>-<random>, served by /api/media); middlewares/auth.js selects -password -avatar; scripts/move-avatars-to-storage.js run on production with owner's yes: moved 3 (users collection 2.69 MB -> 13 KB), links verified 200. Shipped by cherry-pick because staging and main have diverged on the Vistrow follow-up commits (06c0327e on main vs 20edc8d9 on staging): merging main into staging conflicts in AGENT_BRIDGE.md, vistrowLeadRoutes.js, vistrowOutbound/store.mongo.js; owner of the Vistrow work please reconcile. Also: Atlas cluster has an unused sample_mflix database (117 MB of the 136 MB used); the app's DB user can't drop it, owner deletes it in Atlas.
