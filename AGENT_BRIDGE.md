@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
-- [claude] 2026-10-16 IST: AUDIT P1 security batch (owner approved), staging first: project field allow-list + org-owned file deletes, upload type allow-list + sandboxed media responses, Google sign-in audience check, Facebook page claiming, EnableX recording URL host check, agent visibility gaps (help, conversations/start, retry-facebook, draft-message), super-admin protection in updateUser, regex escaping, site_url scheme, OAuth postMessage origin. Files: services/projectService.js, utils/upload.js, utils/storage.js, routes/mediaRoutes.js, services/authService.js, routes/webhookRoutes.js, controllers/automationController.js or services/automationService.js, routes/enablexRoutes.js, routes/helpRoutes.js, routes/whatsappRoutes.js, routes/leadRoutes.js, routes/projectRoutes.js, services/followupService.js, frontend Automation.jsx, ConnectionCard.jsx.
 
 
 - [claude] 2026-10-16 IST: Artha Phase 4 (mobile). Done: sign-in renewal (main 9c5ade8), staging app (main 836efd0), Artha sheet (staging 08a97eb, NOT on main yet: waiting for the owner's check). Next: change cards (preview, edit, Apply, Undo) in mobile/lib/screens/artha/. No backend changes.
@@ -96,6 +95,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-16 IST (staging 89b29284, cherry-picked to main 8d3f867c): AUDIT P1 security batch live. Project create/update drop system fields; project file deletes limited to the project's folder; uploads image-only (utils/upload.js imageOnly) and /api/media serves non-image types as sandboxed downloads; super admin accounts protected from company admins (authService assertCanManage); Facebook page / intake key / WhatsApp phoneNumberId+wabaId unique per company (409); agent visibility on old helpbot context, conversations/start, retry-facebook, draft-message; Google sign-in records token's app, enforces once GOOGLE_SIGNIN_CLIENT_IDS is set (NOT set yet: collect web + Android client ids from the [googleAuth] log lines first); EnableX recording fetch only from https *.enablex.io; regex escaping; site_url http(s); registrationPin stripped; page-size caps; frontend OAuth postMessage origin check. tests/securityP1.db.test.js (21). Open owner decisions: WA_WEBHOOK_ENFORCE is unset in production (Meta WhatsApp signatures only logged); AiSensy/Wati/Interakt webhooks are unsigned by design.
 
 - [claude] 2026-10-16 IST (staging af72a0c6, not on main yet): owner asked to keep Artha on the floating avatar: shell.dart restored to its pre-08a97eb version (draggable _ArthaFab), its tap now opens showArthaSheet; top-bar Artha button removed. Verified on the staging app. analyze clean.
 
