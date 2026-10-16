@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-16 IST: Vistrow call result -> fill empty lead details (same rules as WhatsApp enrichment), summary/key_points in note, brochure on WhatsApp (document in 24 h / template / task, once per call_id), AI-call status pill colour. Files: backend/routes/webhookRoutes.js, backend/utils/vistrowCallResult.js (+ new helper), Lead model (statusSetBy), Vistrow integration settings route/model, frontend VistrowOutboundSection + status pill component, tests. LOCAL COMMITS ONLY on staging-local (owner reviews before any push).
+
 
 
 
