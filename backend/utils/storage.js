@@ -119,15 +119,19 @@ async function put(key, buffer, contentType, { cacheSeconds = 31536000, orgId } 
  * to describe it; the caller is responsible for piping and for errors on the
  * stream itself.
  */
-async function getObject(key) {
+async function getObject(key, { range } = {}) {
   const out = await client().send(new GetObjectCommand({
     Bucket: process.env.B2_BUCKET,
     Key: key,
+    // "bytes=0-1023": only that part. Video players (Safari above all) ask
+    // for pieces and refuse to play a file served without range support.
+    ...(range ? { Range: range } : {}),
   }));
   return {
     body: out.Body,
     contentType: out.ContentType,
     contentLength: out.ContentLength,
+    contentRange: out.ContentRange,
     etag: out.ETag,
   };
 }
