@@ -1,3 +1,4 @@
+import '../artha/artha_sheet.dart';
 import 'package:flutter/material.dart';
 import 'lead_chat_panel.dart';
 import 'lead_origin.dart';
@@ -772,6 +773,20 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
+                  ),
+                  IconButton(
+                    tooltip: 'Ask Artha about this lead',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => showArthaSheet(
+                      context,
+                      navLabel: 'Leads',
+                      focus: ArthaFocus(
+                        id: '${lead['_id']}',
+                        kind: lead['_type'] == 'project' ? 'projectLead' : 'lead',
+                        name: lead['name'] as String? ?? 'this lead',
+                      ),
+                    ),
+                    icon: const CircleAvatar(radius: 12, backgroundImage: AssetImage('assets/images/ai_avatar.png')),
                   ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
