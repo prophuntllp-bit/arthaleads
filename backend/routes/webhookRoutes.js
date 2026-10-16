@@ -2,6 +2,10 @@
 const crypto  = require("crypto");
 const mongoose = require("mongoose");
 const rateLimit = require("express-rate-limit");
+const { noOperators } = require("../middlewares/noOperators");
+// A token is only ever a plain string. Anything else (an operator object such
+// as {"$regex":"^a"}) must never reach a Mongo filter: see middlewares/noOperators.js.
+const asToken = (v) => (typeof v === "string" || typeof v === "number" ? String(v).slice(0, 200) : "");
 const Lead = require("../models/Lead");
 const User = require("../models/User");
 const Automation = require("../models/Automation");
@@ -49,7 +53,7 @@ const websiteLeadLimiter = rateLimit({
 const WEBSITE_ROUTE_PLATFORMS = ["Website Form"];
 const LEAD_ROUTE_PLATFORMS = ["Custom", "Vistrow Voice", "WhatsApp"];
 async function rejectUnknownToken(res, label, token, ownPlatforms) {
-  const other = await Automation.findOne({ verifyToken: token, isActive: true }).select("platform").lean();
+  const other = asToken(token) ? await Automation.findOne({ verifyToken: asToken(token), isActive: true }).select("platform").lean() : null;
   const wrongRoute = other && !ownPlatforms.includes(other.platform)
     ? (WEBSITE_ROUTE_PLATFORMS.includes(other.platform) ? "/webhook/website" : LEAD_ROUTE_PLATFORMS.includes(other.platform) ? "/webhook/lead" : null)
     : null;
@@ -399,22 +403,27 @@ async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation,
 }
 
 router.get("/", async (req, res) => {
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
+  try {
+    const mode = req.query["hub.mode"];
+    const token = asToken(req.query["hub.verify_token"]);
+    const challenge = req.query["hub.challenge"];
 
-  const matchedAutomation = token
-    ? await Automation.findOne({ platform: "Facebook", verifyToken: token, isActive: true })
-    : null;
+    const matchedAutomation = token
+      ? await Automation.findOne({ platform: "Facebook", verifyToken: token, isActive: true })
+      : null;
 
-  if (mode === "subscribe" && (matchedAutomation || token === process.env.FB_VERIFY_TOKEN)) {
-    return res.status(200).send(challenge);
+    if (mode === "subscribe" && (matchedAutomation || token === process.env.FB_VERIFY_TOKEN)) {
+      return res.status(200).send(challenge);
+    }
+
+    return res.status(403).json({ success: false, message: "Webhook verification failed" });
+  } catch (err) {
+    logger.error(`[fb-webhook] verify failed: ${err.message}`);
+    return res.status(500).json({ success: false, message: "Webhook verification failed" });
   }
-
-  return res.status(403).json({ success: false, message: "Webhook verification failed" });
 });
 
-router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) => {
+router.post("/", express.json({ verify: verifyFbSignature }), noOperators, async (req, res) => {
   console.log("[webhook] POST received:", JSON.stringify(req.body).slice(0, 500));
   try {
     const entries = req.body.entry || [];
@@ -782,7 +791,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
 
 // ── Website / WordPress webhook ───────────────────────────────────────────────
 // POST /webhook/website  { token, name, phone, email, message, source_name, form_plugin, form_name, page_url, website_url }
-router.post("/website", express.json(), websiteLeadLimiter, async (req, res) => {
+router.post("/website", express.json(), noOperators, websiteLeadLimiter, async (req, res) => {
   try {
     const { token, name, phone, email, message, source_name, form_plugin, form_name, page_url, website_url, custom_fields } = req.body || {};
 
@@ -797,7 +806,7 @@ router.post("/website", express.json(), websiteLeadLimiter, async (req, res) => 
 
     if (!token) return res.status(400).json({ success: false, message: "Missing token" });
 
-    const automation = await Automation.findOne({ platform: "Website Form", verifyToken: token, isActive: true });
+    const automation = await Automation.findOne({ platform: "Website Form", verifyToken: asToken(token), isActive: true });
     if (!automation) return rejectUnknownToken(res, "website webhook", token, WEBSITE_ROUTE_PLATFORMS);
 
     const orgId = automation.orgId;
@@ -1043,7 +1052,7 @@ function mapVistrowExtractedFields(extractedData) {
   return out;
 }
 
-router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
+router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req, res) => {
   try {
     // Accept token from body or query string for sender flexibility
     const token = req.body?.token || req.query?.token;
@@ -1085,7 +1094,7 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
     const TOKEN_INGEST_PLATFORMS = ["Custom", "Vistrow Voice", "WhatsApp"];
     const automation = await Automation.findOne({
       platform: { $in: TOKEN_INGEST_PLATFORMS },
-      verifyToken: token,
+      verifyToken: asToken(token),
       isActive: true,
     });
     if (!automation) return rejectUnknownToken(res, "custom webhook", token, LEAD_ROUTE_PLATFORMS);
@@ -1557,7 +1566,7 @@ const googleLeadLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-router.post("/google", express.json(), googleLeadLimiter, async (req, res) => {
+router.post("/google", express.json(), noOperators, googleLeadLimiter, async (req, res) => {
   try {
     const {
       google_key, is_test, lead_id, campaign_id, campaign_name,
@@ -1566,7 +1575,7 @@ router.post("/google", express.json(), googleLeadLimiter, async (req, res) => {
 
     if (!google_key) return res.status(400).json({ success: false, message: "Missing google_key" });
 
-    const automation = await Automation.findOne({ platform: "Google", verifyToken: google_key, isActive: true });
+    const automation = await Automation.findOne({ platform: "Google", verifyToken: asToken(google_key), isActive: true });
     if (!automation) return res.status(401).json({ success: false, message: "Invalid google_key" });
 
     const orgId = automation.orgId;
@@ -1712,12 +1721,12 @@ router.post("/google", express.json(), googleLeadLimiter, async (req, res) => {
 
 // ── Website plugin registration (called when plugin saves settings) ───────────
 // POST /webhook/website/register  { token, site_name, site_url, forms: [] }
-router.post("/website/register", express.json(), async (req, res) => {
+router.post("/website/register", express.json(), noOperators, async (req, res) => {
   try {
     const { token, site_name, site_url, forms } = req.body || {};
     if (!token) return res.status(400).json({ success: false, message: "Missing token" });
 
-    const automation = await Automation.findOne({ platform: "Website Form", verifyToken: token, isActive: true });
+    const automation = await Automation.findOne({ platform: "Website Form", verifyToken: asToken(token), isActive: true });
     if (!automation) return res.status(401).json({ success: false, message: "Invalid token" });
 
     if (site_name) automation.siteName = site_name;

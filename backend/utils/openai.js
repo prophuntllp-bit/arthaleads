@@ -1104,6 +1104,7 @@ async function answerHelpQuestion(question, currentPage, userName, liveContext, 
 }
 
 module.exports = {
+  generateWhatsAppTemplate,
   draftWhatsAppMessage, answerHelpQuestion, answerMarketingQuestion, getClient,
   normaliseAction,
   // Exposed so scripts/verify-copilot-registry.js can prove the per-request
