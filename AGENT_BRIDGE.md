@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-16 IST: website videos to Backblaze (owner request, to cut Vercel deployment storage): /api/media Range support (backend/routes/mediaRoutes.js, utils/storage.js), one-off scripts/upload-site-videos.js, then frontend ProductTour.jsx, Features.jsx, IntroVideo.jsx, data/introFilm.js point at api.arthaleads.com/api/media/arthaleads/site/...; frontend/public/tour/*.mp4|webm and public/video/*.mp4 removed; frontend/vercel.json ignoreCommand (build only when frontend/ changes). Staging first.
+
 
 
 - [claude] 2026-10-16 IST: Artha Phase 4 (mobile). Done: sign-in renewal (main 9c5ade8), staging app (main 836efd0), Artha sheet (staging 08a97eb, NOT on main yet: waiting for the owner's check). Next: change cards (preview, edit, Apply, Undo) in mobile/lib/screens/artha/. No backend changes.
