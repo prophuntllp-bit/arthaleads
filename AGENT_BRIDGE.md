@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-16 IST: IndexNow (owner approved): key file frontend/public/<key>.txt, backend/services/indexNow.js, ping from backend/services/sanityBlogSync.js when a post goes live/changes/unpublishes.
+
 
 
 
