@@ -71,8 +71,8 @@ export default function WhatsAppCrm() {
   const { isDark } = usePublicTheme();
 
   useSEO({
-    title: "WhatsApp CRM for Real Estate Teams | Arthaleads",
-    description: "WhatsApp CRM for real estate teams in India: a shared inbox, an AI agent that replies to buyers 24/7, every chat saved as a lead, plus templates and campaigns.",
+    title: "WhatsApp CRM for Real Estate with AI Replies | Arthaleads",
+    description: "WhatsApp CRM for real estate in India: a shared team inbox, an AI agent that replies to buyers 24/7 in Hindi or English, and every chat saved as a lead.",
     canonical: "https://www.arthaleads.com/whatsapp-crm",
   });
 

@@ -74,6 +74,8 @@ export default function PublicFooter() {
                 ["Features",           "/features"],
                 ["Pricing",            "/pricing"],
                 ["WhatsApp CRM",       "/whatsapp-crm"],
+                ["AI CRM",             "/ai-crm"],
+                ["Builder CRM",        "/builder-crm"],
                 ["Download App",       "/download-app"],
                 ["WordPress Plugin",   "/wordpress-plugin"],
                 ["API Docs",           "/api-docs"],

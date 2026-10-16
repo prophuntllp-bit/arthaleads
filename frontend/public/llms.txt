@@ -17,6 +17,8 @@ Key facts:
 - [Home](https://www.arthaleads.com/): What Arthaleads does, who it is for, and answers to common questions
 - [Features](https://www.arthaleads.com/features): Every feature, in the order a sales team uses it
 - [WhatsApp CRM](https://www.arthaleads.com/whatsapp-crm): WhatsApp inbox, AI agent, templates and campaigns for real estate teams
+- [AI CRM for real estate](https://www.arthaleads.com/ai-crm): What the AI does (WhatsApp AI agent, AI-written follow-ups, CRM copilot, call transcripts) and which plan each feature is on
+- [Builder CRM](https://www.arthaleads.com/builder-crm): Project-wise lead management for real estate developers: Facebook and WhatsApp capture, portal imports, site QR codes, telecaller routing, site visits
 - [Pricing](https://www.arthaleads.com/pricing): Starter, Growth and Enterprise plans, cost calculator and pricing FAQ
 - [Product tour](https://www.arthaleads.com/product-tour): 2-minute film of the product with chapters and transcript
 - [Android app](https://www.arthaleads.com/download-app): The app for agents and how to install it

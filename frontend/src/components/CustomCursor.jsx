@@ -16,6 +16,8 @@ const MARKETING_PATHS = new Set([
   "/features",
   "/download-app",
   "/whatsapp-crm",
+  "/ai-crm",
+  "/builder-crm",
   "/compare/sell-do-alternative",
   "/compare/leadrat-alternative",
   "/compare/kylas-alternative",

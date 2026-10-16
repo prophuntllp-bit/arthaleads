@@ -124,6 +124,8 @@ const blogController = {
         { url: "/wordpress-plugin", priority: "0.6", changefreq: "monthly", lastmod: "2026-10-16" },
         { url: "/api-docs",         priority: "0.6", changefreq: "monthly", lastmod: "2026-10-14" },
         { url: "/download-app",     priority: "0.6", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/ai-crm",           priority: "0.9", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/builder-crm",      priority: "0.9", changefreq: "monthly", lastmod: "2026-10-16" },
         { url: "/whatsapp-crm",     priority: "0.9", changefreq: "monthly", lastmod: "2026-10-16" },
         { url: "/product-tour",     priority: "0.8", changefreq: "monthly", video: true, lastmod: "2026-10-16" },
         { url: "/refer",            priority: "0.5", changefreq: "monthly", lastmod: "2026-10-14" },

@@ -106,7 +106,7 @@ function Hero({ isDark }) {
           <h1 className="text-4xl sm:text-5xl lg:text-[3.6rem] xl:text-[4rem] font-black leading-[1.05] tracking-[-0.02em] mb-6"
             style={{ color: headingClr, textWrap: "balance" }}>
             {/* The keyword line is part of the h1 (it is what the page ranks for); the slogan follows as plain words, no sr-only copy, so the heading text is not doubled. */}
-            <span className="block text-sm sm:text-base font-semibold uppercase tracking-[0.18em] mb-5 text-[color:var(--brand-text)]">Real estate CRM software for India</span>
+            <span className="block text-sm sm:text-base font-semibold uppercase tracking-[0.18em] mb-5 text-[color:var(--brand-text)]">AI-powered real estate CRM for India</span>{" "}
             <span>
               {["Manage", "Every", "Lead."].map((w, i) => (
                 <span key={w} className="word-rise" style={{ animationDelay: `${80 + i * 90}ms` }}>{w}&nbsp;</span>
@@ -1342,8 +1342,8 @@ export default function Landing() {
   const { isDark } = usePublicTheme();
 
   useSEO({
-    title:       "Real Estate CRM Software in India | Arthaleads",
-    description: "Real estate CRM software for builders, developers and brokers in India. Capture leads from Facebook, Google and WhatsApp, and let AI reply to buyers 24/7.",
+    title:       "AI Real Estate CRM Software in India | Arthaleads",
+    description: "AI-powered real estate CRM for builders, developers and brokers in India. Capture Facebook, Google and WhatsApp leads, and let AI reply to buyers 24/7.",
     canonical:   "https://www.arthaleads.com/",
   });
 

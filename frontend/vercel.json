@@ -96,6 +96,14 @@
       "destination": "/whatsapp-crm.html"
     },
     {
+      "source": "/ai-crm",
+      "destination": "/ai-crm.html"
+    },
+    {
+      "source": "/builder-crm",
+      "destination": "/builder-crm.html"
+    },
+    {
       "source": "/compare/sell-do-alternative",
       "destination": "/compare/sell-do-alternative.html"
     },

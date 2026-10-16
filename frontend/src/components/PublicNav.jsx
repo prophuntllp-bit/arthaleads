@@ -5,7 +5,7 @@ import {
   BookOpen, BarChart2, Zap, HelpCircle,
   Building2, Briefcase, Puzzle,
   Code2, GitCompare, Shield, Gift,
-  Smartphone, Scale,
+  Smartphone, Scale, Bot,
 } from "lucide-react";
 import WhatsAppLogo from "./WhatsAppLogo";
 import { usePublicTheme } from "../context/PublicThemeContext";
@@ -27,6 +27,8 @@ function IdleChatBot() {
 
 const NAV_RESOURCES = [
   { label: "WhatsApp CRM",     href: "/whatsapp-crm",     desc: "AI replies and a team inbox for WhatsApp", icon: WhatsAppLogo },
+  { label: "AI CRM",           href: "/ai-crm",           desc: "What the AI does for your sales team", icon: Bot },
+  { label: "Builder CRM",      href: "/builder-crm",      desc: "Project-wise sales for developers",  icon: Building2 },
   { label: "Blog",             href: "/blog",             desc: "Guides, market notes & product news", icon: BookOpen },
   { label: "Case Studies",     href: "/case-studies",     desc: "Real results from real teams",       icon: BarChart2 },
   { label: "Product Updates",  href: "/product-updates",  desc: "What's new in Arthaleads",           icon: Zap },

@@ -27,6 +27,8 @@ import WordPressPlugin from "./pages/WordPressPlugin";
 import ApiDocs from "./pages/ApiDocs";
 import DownloadApp from "./pages/DownloadApp";
 import WhatsAppCrm from "./pages/WhatsAppCrm";
+import AiCrm from "./pages/AiCrm";
+import BuilderCrm from "./pages/BuilderCrm";
 import SellDoAlternative from "./pages/SellDoAlternative";
 import LeadratAlternative from "./pages/LeadratAlternative";
 import KylasAlternative from "./pages/KylasAlternative";
@@ -55,6 +57,8 @@ export const PAGES = {
   "/api-docs": ApiDocs,
   "/download-app": DownloadApp,
   "/whatsapp-crm": WhatsAppCrm,
+  "/ai-crm": AiCrm,
+  "/builder-crm": BuilderCrm,
   "/compare/sell-do-alternative": SellDoAlternative,
   "/compare/leadrat-alternative": LeadratAlternative,
   "/compare/kylas-alternative": KylasAlternative,
