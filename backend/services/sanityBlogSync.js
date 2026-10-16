@@ -14,6 +14,7 @@
 const BlogPost = require("../models/BlogPost");
 const BlogCategory = require("../models/BlogCategory");
 const logger = require("../config/logger");
+const indexNow = require("./indexNow");
 
 const PROJECT_ID = process.env.SANITY_PROJECT_ID || "2racdioq";
 const DATASET    = process.env.SANITY_DATASET    || "production";
@@ -170,6 +171,7 @@ async function fetchPublished() {
 async function sync() {
   const docs = await fetchPublished();
   const stats = { fetched: docs.length, created: 0, updated: 0, unchanged: 0, skipped: 0, unpublished: 0 };
+  const changed = [];   // /blog/<slug> paths to tell search engines about (IndexNow)
 
   for (const d of docs) {
     const slug = slugify(d.slug);
@@ -211,15 +213,21 @@ async function sync() {
     applySeo(post, d);
     post.sanityUpdatedAt = new Date(d._updatedAt);
     await post.save();
+    if (post.robots?.index !== false) changed.push(`/blog/${post.slug}`);
   }
 
   // Anything we copied earlier that is no longer live in Sanity goes back to draft.
   const liveIds = docs.map((d) => d._id);
+  const goingAway = await BlogPost.find({ sanityId: { $exists: true, $nin: liveIds }, status: "published" }).select("slug").lean();
   const gone = await BlogPost.updateMany(
     { sanityId: { $exists: true, $nin: liveIds }, status: "published" },
     { $set: { status: "draft" } }
   );
   stats.unpublished = gone.modifiedCount || 0;
+  goingAway.forEach((x) => changed.push(`/blog/${x.slug}`));
+
+  // The blog index changes with every post.
+  if (changed.length) await indexNow.submit([...changed, "/blog"]);
 
   if (stats.created || stats.updated || stats.unpublished) logger.info(`[sanity-sync] ${JSON.stringify(stats)}`);
   return stats;
