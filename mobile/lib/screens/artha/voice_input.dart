@@ -14,8 +14,15 @@ import '../../core/theme.dart';
 /// recogniser turns speech into text; nothing is recorded or sent anywhere by
 /// the app itself. What was heard lands in the message box to be read and
 /// edited before it is sent, never sent on its own.
+///
+/// The recogniser, not the app, decides when listening has ended (silence,
+/// an error, its own time limit): every way it stops ends the session here
+/// too, so the panel can never be left saying "Listening" over a dead mic.
 class ArthaVoice extends ChangeNotifier {
-  ArthaVoice();
+  ArthaVoice({required this.onHeard});
+
+  /// Receives what was heard when a session ends with words.
+  final ValueChanged<String> onHeard;
 
   static const _prefKey = 'artha_voice_locale';
 
@@ -25,6 +32,8 @@ class ArthaVoice extends ChangeNotifier {
 
   final _stt = SpeechToText();
   bool _ready = false;
+  bool _starting = false;
+  bool _ending = false;
 
   String locale = 'en_IN';
   bool listening = false;
@@ -33,7 +42,10 @@ class ArthaVoice extends ChangeNotifier {
   double level = 0;
   Duration elapsed = Duration.zero;
   Timer? _clock;
-  Completer<void>? _final;
+
+  /// A one-line note after a session that produced nothing ("Didn't catch
+  /// that"), cleared on the next hold.
+  String? notice;
 
   Future<void> loadLocale() async {
     try {
@@ -51,95 +63,145 @@ class ArthaVoice extends ChangeNotifier {
     } catch (_) {}
   }
 
-  /// Starts listening. Returns why it could not, or null when it started.
-  /// The first call shows Android's microphone permission prompt.
-  Future<VoiceProblem?> start() async {
-    if (listening) return null;
-    if (!_ready) {
-      try {
-        _ready = await _stt.initialize(onError: _onError, onStatus: _onStatus);
-      } on PlatformException {
-        _ready = false;
-      }
-      if (!_ready) {
-        return await _stt.hasPermission ? VoiceProblem.unavailable : VoiceProblem.noPermission;
-      }
-    }
-    words = '';
-    level = 0;
-    cancelling = false;
-    elapsed = Duration.zero;
-    listening = true;
-    _final = Completer<void>();
-    notifyListeners();
-    HapticFeedback.mediumImpact();
-    _clock = Timer.periodic(const Duration(seconds: 1), (_) {
-      elapsed += const Duration(seconds: 1);
-      notifyListeners();
-    });
-    await _stt.listen(
-      onResult: (r) {
-        words = r.recognizedWords;
-        if (r.finalResult && !(_final?.isCompleted ?? true)) _final!.complete();
-        notifyListeners();
-      },
-      onSoundLevelChange: (l) {
-        level = l;
-        notifyListeners();
-      },
-      listenOptions: SpeechListenOptions(
-        localeId: locale,
-        partialResults: true,
-        listenMode: ListenMode.dictation,
-        cancelOnError: true,
-        // A hold can be a long sentence with pauses while thinking.
-        listenFor: const Duration(minutes: 2),
-        pauseFor: const Duration(seconds: 8),
-      ),
-    );
-    return null;
-  }
-
-  /// The finger lifted: stop, and give back what was heard once the
-  /// recogniser has sent its final words (it arrives just after stopping).
-  Future<String> stop() async {
-    if (!listening) return '';
-    _clock?.cancel();
-    await _stt.stop();
+  /// Gets the recogniser ready. The first time, Android asks for the
+  /// microphone; that hold only asks (the finger has long left the button by
+  /// the time the person answers), the next hold talks.
+  Future<VoiceStart> _prepare() async {
+    if (_ready) return VoiceStart.ok;
     try {
-      await _final?.future.timeout(const Duration(milliseconds: 1500));
-    } catch (_) {}
-    listening = false;
-    level = 0;
-    notifyListeners();
-    return words.trim();
+      _ready = await _stt.initialize(onError: _onError, onStatus: _onStatus);
+    } on PlatformException {
+      _ready = false;
+    }
+    if (_ready) return VoiceStart.justAllowed;
+    return await _stt.hasPermission ? VoiceStart.unavailable : VoiceStart.noPermission;
   }
 
-  /// Slid off the mic: discard what was heard.
+  /// The finger went down on the mic.
+  Future<VoiceStart> start({required bool Function() stillHeld}) async {
+    if (listening || _starting) return VoiceStart.ok;
+    _starting = true;
+    notice = null;
+    try {
+      final firstTime = !_ready;
+      final prep = await _prepare();
+      if (prep != VoiceStart.ok && prep != VoiceStart.justAllowed) return prep;
+      if (firstTime && !stillHeld()) return VoiceStart.justAllowed;
+      if (!stillHeld()) return VoiceStart.ok; // a tap, not a hold
+
+      words = '';
+      level = 0;
+      cancelling = false;
+      elapsed = Duration.zero;
+      listening = true;
+      _ending = false;
+      notifyListeners();
+      HapticFeedback.mediumImpact();
+      _clock?.cancel();
+      _clock = Timer.periodic(const Duration(seconds: 1), (_) {
+        elapsed += const Duration(seconds: 1);
+        notifyListeners();
+      });
+      await _stt.listen(
+        onResult: (r) {
+          words = r.recognizedWords;
+          notifyListeners();
+          if (r.finalResult && listening && _stt.isNotListening) _finish();
+        },
+        onSoundLevelChange: (l) {
+          level = l;
+          notifyListeners();
+        },
+        listenOptions: SpeechListenOptions(
+          localeId: locale,
+          partialResults: true,
+          listenMode: ListenMode.dictation,
+          cancelOnError: true,
+          listenFor: const Duration(seconds: 60),
+          pauseFor: const Duration(seconds: 6),
+        ),
+      );
+      // Let go while the recogniser was still starting up.
+      if (!stillHeld() && listening) await stop();
+      return VoiceStart.ok;
+    } catch (_) {
+      _reset();
+      return VoiceStart.unavailable;
+    } finally {
+      _starting = false;
+    }
+  }
+
+  /// Let go, Done, or a tap on the mic while listening: stop and keep what
+  /// was heard. The recogniser sends its last words just after stopping.
+  Future<void> stop() async {
+    if (!listening || _ending) return;
+    _ending = true;
+    try {
+      await _stt.stop();
+    } catch (_) {}
+    // Wait briefly for the final result, then end regardless.
+    for (var i = 0; i < 15 && listening && !_stt.isNotListening; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    _finish();
+  }
+
+  /// Slid away, or Cancel: drop what was heard.
   Future<void> cancel() async {
-    _clock?.cancel();
-    await _stt.cancel();
-    listening = false;
+    _ending = true;
+    try {
+      await _stt.cancel();
+    } catch (_) {}
     words = '';
-    level = 0;
-    notifyListeners();
+    _reset();
   }
 
   void markCancelling(bool on) {
-    if (cancelling == on) return;
+    if (!listening || cancelling == on) return;
     cancelling = on;
     if (on) HapticFeedback.selectionClick();
     notifyListeners();
   }
 
+  void _finish() {
+    if (!listening) return;
+    final heard = words.trim();
+    if (cancelling) {
+      words = '';
+      _reset();
+      return;
+    }
+    notice = heard.isEmpty ? "Didn't catch that. Hold the mic and speak, then let go." : null;
+    _reset();
+    if (heard.isNotEmpty) onHeard(heard);
+  }
+
+  void _reset() {
+    _clock?.cancel();
+    listening = false;
+    cancelling = false;
+    _ending = false;
+    level = 0;
+    notifyListeners();
+  }
+
   void _onError(SpeechRecognitionError e) {
-    // "No match" just means nothing was heard; the panel says so.
-    if (!(_final?.isCompleted ?? true)) _final!.complete();
+    if (!listening) return;
+    if (e.errorMsg.contains('permission')) notice = 'Artha needs the microphone. Allow it in the app settings.';
+    _finish();
+    if (e.errorMsg == 'error_network' || e.errorMsg == 'error_network_timeout') {
+      notice = 'Voice typing needs the internet. Check the connection, or type instead.';
+      notifyListeners();
+    }
   }
 
   void _onStatus(String status) {
-    if ((status == 'done' || status == 'notListening') && !(_final?.isCompleted ?? true) && !listening) {
-      _final!.complete();
+    // "done" / "notListening": the recogniser has stopped, for whatever
+    // reason. End here too, with whatever it heard.
+    if ((status == 'done' || status == 'notListening') && listening) {
+      Future<void>.delayed(const Duration(milliseconds: 300), _finish);
     }
   }
 
@@ -151,18 +213,25 @@ class ArthaVoice extends ChangeNotifier {
   }
 }
 
-enum VoiceProblem { noPermission, unavailable }
+enum VoiceStart { ok, justAllowed, noPermission, unavailable }
 
 /// The mic beside the message box: hold to talk, let go to stop, slide
-/// away to cancel. A short tap explains that and lets the person pick the
-/// language.
-class VoiceMicButton extends StatelessWidget {
+/// away to cancel. While listening a tap stops it too. A short tap when idle
+/// explains the gesture and picks the language.
+class VoiceMicButton extends StatefulWidget {
   final ArthaVoice voice;
   final bool enabled;
-  final ValueChanged<String> onHeard;
-  const VoiceMicButton({super.key, required this.voice, required this.onHeard, this.enabled = true});
+  const VoiceMicButton({super.key, required this.voice, this.enabled = true});
 
+  @override
+  State<VoiceMicButton> createState() => _VoiceMicButtonState();
+}
+
+class _VoiceMicButtonState extends State<VoiceMicButton> {
   static const _cancelDistance = 90.0;
+  bool _held = false;
+
+  ArthaVoice get voice => widget.voice;
 
   @override
   Widget build(BuildContext context) {
@@ -173,19 +242,13 @@ class VoiceMicButton extends StatelessWidget {
         final on = voice.listening;
         return Semantics(
           button: true,
-          label: 'Hold to talk to Artha',
+          label: on ? 'Stop listening' : 'Hold to talk to Artha',
           child: GestureDetector(
-            onTap: enabled ? () => _showHelp(context) : null,
-            onLongPressStart: enabled ? (_) => _start(context) : null,
+            onTap: !widget.enabled ? null : (on ? voice.stop : () => _showHelp(context)),
+            onLongPressStart: widget.enabled && !on ? (_) => _begin(context) : null,
             onLongPressMoveUpdate: (d) => voice.markCancelling(d.offsetFromOrigin.distance > _cancelDistance),
-            onLongPressEnd: (_) async {
-              if (voice.cancelling) {
-                await voice.cancel();
-                return;
-              }
-              final heard = await voice.stop();
-              if (heard.isNotEmpty) onHeard(heard);
-            },
+            onLongPressEnd: (_) => _release(),
+            onLongPressCancel: _release,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               width: on ? 56 : 48,
@@ -199,7 +262,7 @@ class VoiceMicButton extends StatelessWidget {
                     ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.18), spreadRadius: 6 + voice.level.clamp(0, 10))]
                     : null,
               ),
-              child: Icon(Icons.mic_rounded,
+              child: Icon(on ? Icons.stop_rounded : Icons.mic_rounded,
                   size: 22, color: on ? Colors.white : (t.isDark ? const Color(0xFFFF8A3D) : const Color(0xFFC2410C))),
             ),
           ),
@@ -208,20 +271,35 @@ class VoiceMicButton extends StatelessWidget {
     );
   }
 
-  Future<void> _start(BuildContext context) async {
+  Future<void> _begin(BuildContext context) async {
+    _held = true;
     FocusManager.instance.primaryFocus?.unfocus();
-    final problem = await voice.start();
-    if (problem == null || !context.mounted) return;
     final messenger = ScaffoldMessenger.maybeOf(context);
-    if (problem == VoiceProblem.noPermission) {
-      messenger?.showSnackBar(SnackBar(
-        content: const Text('Artha needs the microphone to hear you. Allow it in the app settings.'),
-        action: SnackBarAction(label: 'Settings', onPressed: _openAppSettings),
-      ));
+    final result = await voice.start(stillHeld: () => _held);
+    switch (result) {
+      case VoiceStart.ok:
+        break;
+      case VoiceStart.justAllowed:
+        messenger?.showSnackBar(const SnackBar(content: Text('Microphone ready. Hold the mic again and speak.')));
+      case VoiceStart.noPermission:
+        messenger?.showSnackBar(SnackBar(
+          content: const Text('Artha needs the microphone to hear you. Allow it in the app settings.'),
+          action: SnackBarAction(label: 'Settings', onPressed: _openAppSettings),
+        ));
+      case VoiceStart.unavailable:
+        messenger?.showSnackBar(const SnackBar(
+          content: Text("Voice typing isn't available on this phone. Turn on Google voice typing, or type instead."),
+        ));
+    }
+  }
+
+  Future<void> _release() async {
+    _held = false;
+    if (!voice.listening) return;
+    if (voice.cancelling) {
+      await voice.cancel();
     } else {
-      messenger?.showSnackBar(const SnackBar(
-        content: Text("Voice typing isn't available on this phone. Install or turn on Google voice typing, or type instead."),
-      ));
+      await voice.stop();
     }
   }
 
@@ -252,8 +330,9 @@ class VoiceMicButton extends StatelessWidget {
                 Text('Hold the mic and speak', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: t.text)),
                 const SizedBox(height: 6),
                 Text(
-                  'Let go when you are done. What Artha heard goes into the message box so you can check it before '
-                  'sending. Slide your finger away from the mic to cancel.',
+                  'Keep your finger on the mic while you talk and let go when you are done. What Artha heard goes '
+                  'into the message box so you can check it before sending. Slide your finger away, or tap Cancel, '
+                  'to throw it away.',
                   style: TextStyle(fontSize: 14, height: 1.45, color: t.textSoft),
                 ),
                 const SizedBox(height: 16),
@@ -284,8 +363,9 @@ class VoiceMicButton extends StatelessWidget {
   }
 }
 
-/// Shown over the message box while the mic is held: what is being heard,
-/// live, with the time and how to stop or cancel.
+/// Shown over the message box while listening: what is being heard, live,
+/// with the time, and Cancel / Done so it can always be ended. After a
+/// session that heard nothing it shows a one-line note instead.
 class VoicePanel extends StatelessWidget {
   final ArthaVoice voice;
   const VoicePanel({super.key, required this.voice});
@@ -296,12 +376,20 @@ class VoicePanel extends StatelessWidget {
     return ListenableBuilder(
       listenable: voice,
       builder: (context, _) {
-        if (!voice.listening) return const SizedBox.shrink();
+        if (!voice.listening) {
+          if (voice.notice == null) return const SizedBox.shrink();
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+            decoration: BoxDecoration(border: Border(top: BorderSide(color: t.border))),
+            child: Text(voice.notice!, style: TextStyle(fontSize: 13, color: t.textSoft)),
+          );
+        }
         final accent = voice.cancelling ? AppColors.danger : (t.isDark ? const Color(0xFFFF8A3D) : const Color(0xFFC2410C));
         final secs = voice.elapsed.inSeconds;
         return Container(
           width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+          padding: const EdgeInsets.fromLTRB(16, 12, 8, 6),
           decoration: BoxDecoration(border: Border(top: BorderSide(color: t.border))),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,25 +397,38 @@ class VoicePanel extends StatelessWidget {
               Row(children: [
                 Container(width: 8, height: 8, decoration: BoxDecoration(color: accent, shape: BoxShape.circle)),
                 const SizedBox(width: 8),
-                Text(
-                  voice.cancelling ? 'LET GO TO CANCEL' : 'LISTENING · ${ArthaVoice.locales[voice.locale]!.toUpperCase()}',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1, color: accent),
+                Expanded(
+                  child: Text(
+                    voice.cancelling ? 'LET GO TO CANCEL' : 'LISTENING · ${ArthaVoice.locales[voice.locale]!.toUpperCase()}',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1, color: accent),
+                  ),
                 ),
-                const Spacer(),
                 Text('${secs ~/ 60}:${(secs % 60).toString().padLeft(2, '0')}',
                     style: TextStyle(fontSize: 12, color: t.textSoft, fontFeatures: const [FontFeature.tabularFigures()])),
+                const SizedBox(width: 8),
               ]),
               const SizedBox(height: 8),
-              Semantics(
-                liveRegion: true,
-                child: Text(
-                  voice.words.isEmpty ? 'Speak now…' : voice.words,
-                  style: TextStyle(fontSize: 15, height: 1.45, color: voice.words.isEmpty ? t.textSoft : t.text),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    voice.words.isEmpty ? 'Speak now…' : voice.words,
+                    style: TextStyle(fontSize: 15, height: 1.45, color: voice.words.isEmpty ? t.textSoft : t.text),
+                  ),
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(voice.cancelling ? 'Slide back to keep it' : 'Let go to stop · slide away to cancel',
-                  style: TextStyle(fontSize: 12, color: t.textSoft)),
+              Row(children: [
+                Expanded(
+                  child: Text(voice.cancelling ? 'Slide back to keep it' : 'Let go to stop · slide away to cancel',
+                      style: TextStyle(fontSize: 12, color: t.textSoft)),
+                ),
+                TextButton(onPressed: voice.cancel, child: Text('Cancel', style: TextStyle(color: t.textSoft))),
+                TextButton(
+                  onPressed: voice.stop,
+                  child: Text('Done', style: TextStyle(color: accent, fontWeight: FontWeight.w600)),
+                ),
+              ]),
             ],
           ),
         );
