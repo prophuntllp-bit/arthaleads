@@ -75,7 +75,7 @@ class _ArthaSheetState extends State<ArthaSheet> {
   final _input = TextEditingController();
   final _inputFocus = FocusNode();
   final List<_Msg> _msgs = [];
-  final _voice = ArthaVoice();
+  late final _voice = ArthaVoice(onHeard: _onHeard);
   List<String> _starters = [];
   String? _threadId;
   ArthaFocus? _focus;
@@ -862,7 +862,7 @@ class _ArthaSheetState extends State<ArthaSheet> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  VoiceMicButton(voice: _voice, enabled: !_busy, onHeard: _onHeard),
+                  VoiceMicButton(voice: _voice, enabled: !_busy),
                   const SizedBox(width: 8),
                   SizedBox(
                     width: 48,
