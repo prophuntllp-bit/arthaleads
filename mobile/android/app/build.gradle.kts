@@ -1,5 +1,6 @@
 import java.util.Properties
 import java.io.FileInputStream
+import java.util.Base64
 
 plugins {
     id("com.android.application")
@@ -32,6 +33,21 @@ val hasInjectedSigning = project.hasProperty("android.injected.signing.store.fil
 // where the message can say what is missing.
 val isBundleBuild = gradle.startParameter.taskNames.any { it.contains("bundle", ignoreCase = true) }
 
+// A build pointed at the staging API (--dart-define=API_BASE_URL=https://api-staging...)
+// becomes a separate app, "Arthaleads Staging" (com.arthaleads.crm.staging), so it
+// installs beside the live app instead of replacing it. Flutter hands the
+// dart-defines to Gradle base64-encoded. Firebase only knows the live package
+// name, so the staging app is built without it: no push, no Google sign-in
+// (lib/main.dart and push_service.dart skip Firebase when ApiClient.isStaging).
+val dartDefines = mutableMapOf<String, String>()
+for (encoded in (project.findProperty("dart-defines") as String? ?: "").split(",")) {
+    if (encoded.isEmpty()) continue
+    val define = try { String(Base64.getDecoder().decode(encoded)) } catch (e: IllegalArgumentException) { continue }
+    val eq = define.indexOf('=')
+    if (eq > 0) dartDefines[define.substring(0, eq)] = define.substring(eq + 1)
+}
+val isStagingBuild = dartDefines["API_BASE_URL"]?.contains("api-staging") == true
+
 android {
     namespace = "com.arthaleads.arthaleads_mobile"
     // file_picker's transitive flutter_plugin_android_lifecycle dependency requires
@@ -56,6 +72,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["appLabel"] = if (isStagingBuild) "Arthaleads Staging" else "Arthaleads"
+        if (isStagingBuild) applicationIdSuffix = ".staging"
     }
 
     signingConfigs {
@@ -127,6 +145,12 @@ android {
             isUniversalApk = true
         }
     }
+}
+
+if (isStagingBuild) {
+    // google-services.json has no client for the .staging package, and the
+    // plugin fails the build without one.
+    tasks.configureEach { if (name.contains("GoogleServices")) enabled = false }
 }
 
 kotlin {

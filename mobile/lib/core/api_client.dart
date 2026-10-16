@@ -17,6 +17,11 @@ class ApiClient {
     defaultValue: 'https://api.arthaleads.com/api',
   );
 
+  /// True for a build pointed at the staging API. Such a build is installed
+  /// as the separate "Arthaleads Staging" app, without Firebase
+  /// (android/app/build.gradle.kts).
+  static bool get isStaging => _baseUrl.contains('api-staging');
+
   String? _token;
   bool authInProgress = false;
 

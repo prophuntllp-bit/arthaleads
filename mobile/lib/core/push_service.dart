@@ -51,6 +51,7 @@ class PushService {
   }
 
   Future<void> init() async {
+    if (ApiClient.isStaging) return; // no Firebase in the staging app
     const androidChannel = AndroidNotificationChannel(
       _channelId,
       _channelName,

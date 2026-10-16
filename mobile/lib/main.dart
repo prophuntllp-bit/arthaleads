@@ -17,8 +17,11 @@ import 'widgets/update_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  // The staging app is built without Firebase (no config for its package).
+  if (!ApiClient.isStaging) {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  }
   // Refresh lead dropdown options from the backend (cached, offline-safe) so a
   // stale sideloaded build still offers exactly what the API accepts.
   // Deliberately not awaited — app start must not wait on it.
@@ -50,11 +53,17 @@ class ArthaleadsApp extends StatelessWidget {
       // that the fixed-size parts of the layout (app bar, chips, buttons)
       // stop fitting and text spills out of them, which is worse for the
       // reader than slightly smaller type.
-      builder: (context, child) => MediaQuery.withClampedTextScaling(
-        minScaleFactor: 0.9,
-        maxScaleFactor: 1.3,
-        child: child ?? const SizedBox.shrink(),
-      ),
+      builder: (context, child) {
+        final app = MediaQuery.withClampedTextScaling(
+          minScaleFactor: 0.9,
+          maxScaleFactor: 1.3,
+          child: child ?? const SizedBox.shrink(),
+        );
+        // Never mistake the staging app (test data) for the live one.
+        return ApiClient.isStaging
+            ? Banner(message: 'STAGING', location: BannerLocation.topEnd, child: app)
+            : app;
+      },
       // Wraps the whole app (not just the logged-in shell) so a mandatory
       // update applies even to someone sitting on the login screen.
       home: const UpdateGate(child: _AuthGate()),
