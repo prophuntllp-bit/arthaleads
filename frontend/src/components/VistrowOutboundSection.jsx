@@ -133,6 +133,7 @@ export default function VistrowOutboundSection() {
   const [adv, setAdv] = useState({ dedupeWindowHours: 24, maxLeadAgeMinutes: 15, defaultCountryCode: "91", emitImports: false });
   const [showAdv, setShowAdv] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [manualConn, setManualConn] = useState(false);
   const [confirm, setConfirm] = useState(null); // { title, message, run }
   const [draft, setDraft] = useState({ website: {}, facebook: {}, whatsapp: {}, google: {} });
   const [check, setCheck] = useState({ source: "website", pageUrl: "", projectId: "", adId: "", campaignId: "", result: null });
@@ -253,6 +254,10 @@ export default function VistrowOutboundSection() {
   const h = st.health;
   const s = st.stats24h;
   const configured = st.configured;
+  const linkedByVistrow = configured && st.config.linkedBy === "vistrow";
+  // Step 1 fills itself from Vistrow Voice (single-token handshake); the two
+  // fields are only shown when the owner asks to type them, or after a manual link.
+  const showConnFields = manualConn || (configured && !linkedByVistrow);
   const anySourceOn = SOURCES.some((x) => st.routing[x.key].enabled);
   const adName = (v) => ads.find((a) => a.value === v)?.label || `ad ${v}`;
   const campaignName = (v) => campaigns.find((a) => a.value === v)?.label || `campaign ${v}`;
@@ -284,17 +289,19 @@ export default function VistrowOutboundSection() {
 
       {/* 1 Connect */}
       <div className="space-y-3" data-testid="step-connect">
-        {stepHead(1, "Connect ArthaLeads to Vistrow", configured, configured ? "Connected. You can change this any time." : "Paste two things from your Vistrow account.")}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:pl-10">
+        {stepHead(1, "Connect ArthaLeads to Vistrow", configured, configured ? (linkedByVistrow ? `Connected to Vistrow account ${st.config.accountId}${st.config.linkedAccountName ? ` · ${st.config.linkedAccountName}` : ""}` : "Connected. You can change this any time.") : "In Vistrow Voice, open Integrations → ArthaLeads and paste the connection token from the Connection tab. This step then completes by itself.")}
+        {linkedByVistrow && <p className="text-xs text-app-soft md:pl-10" data-testid="linked-from-vistrow">Linked from Vistrow Voice on {when(st.config.linkedAt)}</p>}
+        {!showConnFields && <div className="md:pl-10"><button type="button" className="text-xs font-semibold underline text-app-soft hover:text-app" onClick={() => setManualConn(true)}>Enter details manually instead</button></div>}
+        {showConnFields && <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:pl-10">
           <div><label className="label">Vistrow account number</label>
             <input className="input" value={conn.accountId} onChange={(e) => setConn({ ...conn, accountId: e.target.value })} /></div>
           <div><label className="label">Connection key</label>
             <input className="input" type="password" autoComplete="new-password" value={conn.secret} onChange={(e) => setConn({ ...conn, secret: e.target.value })}
               placeholder={st.config.hasSecret ? "Saved - type a new one only to replace it" : "Paste the key from Vistrow"} /></div>
-        </div>
+        </div>}
         <div className="md:pl-10 space-y-3">
-          <div><button type="button" className="text-xs font-semibold underline text-app-soft hover:text-app" onClick={() => setShowHelp((v) => !v)}>{showHelp ? "Hide help" : "Where do I find these?"}</button></div>
-          {showHelp && <p className="text-xs text-app-soft rounded-xl px-3 py-2.5" style={{ background: "var(--app-surface-low)" }}>In Vistrow Voice, open your account's lead-import (ArthaLeads) settings. It shows the account number and a connection key to copy. Ask your Vistrow contact if you cannot see it. Never share the key in chat or email.</p>}
+          {showConnFields && <div><button type="button" className="text-xs font-semibold underline text-app-soft hover:text-app" onClick={() => setShowHelp((v) => !v)}>{showHelp ? "Hide help" : "Where do I find these?"}</button></div>}
+          {showConnFields && showHelp && <p className="text-xs text-app-soft rounded-xl px-3 py-2.5" style={{ background: "var(--app-surface-low)" }}>In Vistrow Voice, open your account's lead-import (ArthaLeads) settings. It shows the account number and a connection key to copy. Ask your Vistrow contact if you cannot see it. Never share the key in chat or email.</p>}
           {configured && (
             <p className="text-xs flex items-center gap-1.5" data-testid="connection-check" style={{ color: agentList.state === "ok" ? "#15803d" : agentList.state === "error" ? "#b45309" : "var(--app-text-soft)" }}>
               {agentList.state === "loading" && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Checking your Vistrow agents…</>}
@@ -302,7 +309,7 @@ export default function VistrowOutboundSection() {
               {agentList.state === "error" && <><AlertTriangle className="w-3.5 h-3.5" /> {agentList.problem?.message}</>}
             </p>
           )}
-          <div><button type="button" className="btn-primary rounded-xl" disabled={busy === "conn" || !conn.accountId || (!conn.secret && !st.config.hasSecret)} onClick={saveConn}>{busy === "conn" ? <Loader2 className="w-4 h-4 animate-spin" /> : configured ? "Save changes" : "Connect"}</button></div>
+          {showConnFields && <div><button type="button" className="btn-primary rounded-xl" disabled={busy === "conn" || !conn.accountId || (!conn.secret && !st.config.hasSecret)} onClick={saveConn}>{busy === "conn" ? <Loader2 className="w-4 h-4 animate-spin" /> : configured ? "Save changes" : "Connect"}</button></div>}
         </div>
       </div>
 

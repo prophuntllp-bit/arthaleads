@@ -51,6 +51,27 @@ The token is the existing "Vistrow Voice" connection token (the one used for `PO
 
 Show `name` in the picker; keep `id` on the Vistrow server. A lead's project reaches Vistrow as `project` (name) and `custom_fields.project_id` (this id) in `lead.created`.
 
+## Linking from Vistrow (single token, 16 Oct 2026)
+The customer pastes the organisation's "Vistrow Voice" connection token (Automation `verifyToken`, the one used for `POST /webhook/lead`) once, in Vistrow Voice → Integrations → ArthaLeads. Vistrow then calls ArthaLeads and step 1 of the Auto-call tab (web address, account number, key) fills itself; the same token is what ArthaLeads sends back in `X-Vistrow-Webhook-Token`. Routes: `backend/routes/vistrowLinkRoutes.js`, mounted at `/webhook/vistrow`, 60 requests per token per 15 min.
+
+    POST {ArthaLeads API}/webhook/vistrow/link
+    { "token": "AW-…", "account_id": "2", "base_url": "https://api.vistrowvoice.com", "account_name": "Vistrow Technologies" }
+
+    200 { "success": true, "org_id": "…", "org_name": "Prophunt LLP", "account_id": "2", "enabled": false, "switched_off": false, "linked_at": "2026-10-16T…Z" }
+    401 { "success": false, "code": "key_rejected" }   unknown or inactive token
+    403 { "success": false, "code": "plan" }           organisation below Enterprise
+    400 { "success": false, "code": "base_url" }       host not on VISTROW_OUTBOUND_ALLOWED_HOSTS (https, no path)
+    400 { "success": false, "code": "account_id" }     not [A-Za-z0-9_-]{1,64}
+
+Upserts `OutboundIntegration` (`baseUrl` = origin, `accountId`, `authMode` header, the token as the encrypted secret, `linkedAt`, `linkedBy: "vistrow"`, `linkedAccountName`, max 120 chars). Linking never enables: `POST /api/integrations/vistrow-outbound/enable` by a logged-in owner stays the only switch. If the integration was enabled and the address, account or token changed, it is switched off, pending deliveries are cancelled (`relinked`) and the reply carries `switched_off: true`; the same values again are a no-op.
+
+    POST {ArthaLeads API}/webhook/vistrow/unlink
+    { "token": "AW-…" }
+
+    200 { "success": true, "unlinked": true }   (same auth; also 200 when there was nothing to unlink)
+
+Unlink disables, cancels pending deliveries (`unlinked`) and clears the address, account, secret and link fields. `GET /api/integrations/vistrow-outbound` `config` now carries `linkedAt`, `linkedBy` (`""` | `vistrow` | `manual`) and `linkedAccountName`; the manual `PUT /config` sets `linkedBy: "manual"`. Test: `tests/vistrowLink.db.test.js`.
+
 ## "Call now via Vistrow" (lead page, 15 Oct 2026)
 An admin or manager (Enterprise, integration on) can press **Call now via Vistrow** on a lead. ArthaLeads sends the same `lead.created` body again as its own event: `id`/`event_id`/`enquiry_id` = `evt_call_<lead_id>_<ms>`, `lead_id` = the existing lead, `auto_call: true` + `agent_id` for the agent the lead's source routes to (refused with no event when nothing routes), `custom_fields.call_request: true`, `custom_fields.requested_by` (the person's name), `custom_fields.requested_at`, `Idempotency-Key: <org_id>:<lead_id>:<enquiry_id>`. Once per lead per minute. **Vistrow side:** a `call_request` must be dialled now even if this number was called in the last 24 h (the repeat-enquiry rule does not apply), and keyed on `enquiry_id` like a repeat. The request is audited on the lead ("<name> asked Vistrow Voice to call this lead now"), and Vistrow's answer is written there too (next section). Endpoint: `POST /api/integrations/vistrow-outbound/leads/:id/call`; `GET .../leads/:id/status` gives the lead page the newest delivery and whether the button applies.
 

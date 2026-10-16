@@ -65,6 +65,9 @@ async function buildStatus(orgId, doc) {
       emitImports: !!doc?.emitImports,
       hasSecret: !!doc?.secretEnc,
       secretUpdatedAt: doc?.secretUpdatedAt || null,
+      linkedAt: doc?.linkedAt || null,
+      linkedBy: doc?.linkedBy || "",
+      linkedAccountName: doc?.linkedAccountName || "",
     },
     // Per source: the opt-in switch and the route rows (what matches -> which agent).
     routing: Object.fromEntries(R.SOURCE_KEYS.map((k) => {
@@ -122,6 +125,8 @@ router.put("/config", async (req, res) => {
     }
     Object.assign(doc, rest);
     doc.updatedBy = req.user._id;
+    doc.linkedBy = "manual";
+    doc.linkedAt = new Date();
 
     // Re-pointing a live integration switches it off until the owner turns it on again.
     let disabledByChange = false;
