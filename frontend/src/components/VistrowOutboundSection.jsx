@@ -314,6 +314,7 @@ export default function VistrowOutboundSection() {
   };
   // Both ad pickers list every ad the org knows (ads.all), newest first (the server sorts), with the kind,
   // lead count and the AI agent it is routed to. "Enter an ID manually…" is always offered.
+  // (Shipped 16 Oct 2026; this line exists so the Vercel build that the ignore rule skipped runs.)
   const adOptions = allAds.map((a) => ({ value: a.value, label: [
     `${a.kind === "leadform" ? "Lead-form ad" : "WhatsApp ad"} · ${a.label}`,
     a.label !== a.value ? a.value : "",

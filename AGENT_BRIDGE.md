@@ -97,6 +97,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-16 17:25 IST: ad-picker UI redeploy on main (staging 5742258). Comment-only change in VistrowOutboundSection.jsx committed with this log line so the push's last commit touches frontend/. Cause: frontend/vercel.json `ignoreCommand: git diff --quiet HEAD^ HEAD -- .` checks only the last commit, so 24f6d2d's UI never built. Proposed fix (not applied, vercel.json is under another agent's claim): `[ -n "$VERCEL_GIT_PREVIOUS_SHA" ] && git diff --quiet "$VERCEL_GIT_PREVIOUS_SHA" HEAD -- .`.
 
 - [claude] 2026-10-16 IST (staging d1f0695, not on main yet): mobile voice fix after the owner found the panel stuck on Listening with no words and no way out (first hold raced the permission prompt; recogniser's own stop NO_SPEECH_DETECTED was ignored). ArthaVoice now ends on the recogniser's done/notListening status and on every error; first hold only prepares/asks; lift before start stops; onLongPressCancel stops; panel has Cancel and Done; mic is a stop button while listening; 'Didn't catch that' note. Verified silent holds on the staging app; speech needs a person.
 
