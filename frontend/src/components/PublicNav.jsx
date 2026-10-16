@@ -263,6 +263,7 @@ function NavInner({ onScrollTo }) {
                   single file would disappear on one of the two backgrounds. */}
               <img
                 src={isDark ? "/logo-lockup-dark.png" : "/logo-lockup.png"}
+                width={isDark ? 1515 : 1574} height={isDark ? 459 : 471}
                 alt="Arthaleads — Turning Opportunities Into Value"
                 className="h-9 w-auto"
               />

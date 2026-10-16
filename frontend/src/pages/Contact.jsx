@@ -8,6 +8,19 @@ import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
 import { getRecaptchaToken } from "../utils/recaptcha";
 
+const FAQS = [
+  ["How quickly do you respond?", "We reply within 24 hours on weekdays, usually much sooner."],
+  ["Can I get a free demo?", "Yes. Fill out the form and mention 'demo' in your message, or message us on WhatsApp."],
+  ["Is there a free trial?", "Yes. New accounts get a 14-day free trial of the Growth plan, no credit card needed."],
+];
+
+// In the markup (not added by an effect) so the prerendered HTML carries it for crawlers that run no JS.
+const FAQ_JSONLD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": FAQS.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
+}).replace(/</g, "\u003c");
+
 export default function Contact() {
   const { isDark } = usePublicTheme();
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", message: "" });
@@ -66,6 +79,7 @@ export default function Contact() {
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_JSONLD }} />
       <PublicNav />
 
       <main style={{ background: bg, minHeight: "100vh" }}>
@@ -123,11 +137,7 @@ export default function Contact() {
               <div className="mt-10 p-6 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
                 <h3 className="font-bold text-base mb-4" style={{ color: heading }}>Frequently Asked</h3>
                 <div className="space-y-4">
-                  {[
-                    ["How quickly do you respond?", "We reply within 24 hours on weekdays, usually much sooner."],
-                    ["Can I get a free demo?", "Absolutely - just fill out the form and mention 'demo' in your message."],
-                    ["Is there a free trial?", "Yes. New accounts get a 14-day free trial of the Growth plan, no credit card needed."],
-                  ].map(([q, a]) => (
+                  {FAQS.map(([q, a]) => (
                     <div key={q}>
                       <div className="text-sm font-semibold mb-0.5" style={{ color: heading }}>{q}</div>
                       <div className="text-xs leading-relaxed" style={{ color: body }}>{a}</div>

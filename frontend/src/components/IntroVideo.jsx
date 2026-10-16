@@ -10,6 +10,7 @@
 // (preload="metadata" + a ~40 KB poster). Visitors on Data Saver or with
 // reduced motion get a play button instead of autoplay.
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { Play, Volume2 } from "lucide-react";
 import { filmJsonLd } from "../data/introFilm";
 import { SITE_MEDIA } from "../data/siteMedia";
@@ -146,6 +147,9 @@ export default function IntroVideo({ isDark, id = "tour", chapters = false, seek
               Two minutes on how ArthaLeads replies on WhatsApp, qualifies the buyer, books the
               site visit and hands your team a lead with every answer already filled in.
             </p>
+            <Link to="/product-tour" className="inline-block mt-3 text-sm font-semibold underline underline-offset-4 text-[color:var(--brand-text)]">
+              Watch with chapters and a transcript
+            </Link>
           </div>
           )}
 

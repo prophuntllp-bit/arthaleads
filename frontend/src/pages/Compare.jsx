@@ -91,10 +91,10 @@ const CHOOSING = [
 ];
 
 function Cell({ val }) {
-  if (val === "y") return <Check className="w-4 h-4 mx-auto" style={{ color: "#22c55e" }} />;
+  if (val === "y") return <span><Check aria-hidden="true" className="w-4 h-4 mx-auto" style={{ color: "#22c55e" }} /><span className="sr-only">Yes</span></span>;
   if (val === "p") return <span className="text-xs font-medium" style={{ color: "#b45309" }}>Partial</span>;
   if (val === "u") return <span className="text-sm" style={{ color: "#6b7280" }} title="Not stated on their website"><span aria-hidden="true">–</span><span className="sr-only">Not stated</span></span>;
-  return <X className="w-4 h-4 mx-auto" style={{ color: "#ef4444" }} />;
+  return <span><X aria-hidden="true" className="w-4 h-4 mx-auto" style={{ color: "#ef4444" }} /><span className="sr-only">No</span></span>;
 }
 
 export default function Compare() {
