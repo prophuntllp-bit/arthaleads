@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+- [claude] 2026-10-16 IST: Vistrow single-token link handshake (POST /webhook/vistrow/link + /unlink). Files: backend/routes/vistrowLinkRoutes.js (new), backend/server.js (mount), backend/models/OutboundIntegration.js (linkedAt/linkedBy/linkedAccountName), backend/routes/vistrowOutboundRoutes.js (status + manual linkedBy), backend/tests/vistrowLink.db.test.js (new), frontend/src/components/VistrowOutboundSection.jsx (step 1 copy), docs/vistrow-outbound-lead-created.md.
 
 
 
