@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-16 IST: profile photos to file storage (owner approved): User pre-save uploads data-URI avatars to B2 (arthaleads/avatars/...), auth middleware stops reading avatar, scripts/move-avatars-to-storage.js for the 3 existing ones. On `staging` first. NOTE: staging and main have diverged on the Vistrow follow-up work (06c0327e on main vs 20edc8d9 on staging): merging main into staging conflicts in AGENT_BRIDGE.md, backend/routes/vistrowLeadRoutes.js, backend/services/vistrowOutbound/store.mongo.js. I did not resolve it; whoever owns the Vistrow work please reconcile.
+
 
 
 
