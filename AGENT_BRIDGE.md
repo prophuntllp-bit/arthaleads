@@ -60,6 +60,7 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-16 IST: SEO audit quick wins 1-12 (owner approved, audit https://claude.ai/artifact/CT8qpcquZEko2MsEG5XzvG), staging first: real 404 for unknown www paths, favicon, sitemap lastmod, contact trial 14-day, FAQ JSON-LD in markup (Landing/Pricing/HelpGuide), new buyer FAQs, llms.txt rewrite, Organization JSON-LD, nav dropdown links always in HTML + footer, home H1, About counters. Files: frontend/vercel.json, index.html, public/llms.txt, public/favicon.svg, src/pages/{Landing,Pricing,HelpGuide,Contact,AboutUs}.jsx, components/PublicNav.jsx + footer, backend/controllers/blogController.js (static lastmod). /product-tour stays out of nav/footer.
 - [claude] 2026-10-16 IST: SEO /product-tour watch page restored from f8793a8 (owner approved option 1) so Google indexes the intro film; not in nav/footer, no pill. Files: frontend/src/pages/ProductTour.jsx, data/introFilm.js, components/IntroVideo.jsx, App.jsx, entry-prerender.jsx, CustomCursor.jsx, vercel.json, backend/controllers/blogController.js (sitemap + video entry).
 
 
