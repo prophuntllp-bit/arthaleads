@@ -16,12 +16,13 @@ const { encryptField, decryptField } = require("../utils/fieldCrypto");
 // One row of a source's routing table: "a lead matching THIS goes to THAT
 // Vistrow agent", the same shape as the Website Widget's Page rules in Vistrow.
 // agentId is the Vistrow agent chosen by the owner; blank means "Unassigned",
-// which resolves to no call. There is no default agent anywhere.
+// which resolves to no call. A source's default agent is its one "any" row
+// (matchValue "*"), beaten by every specific rule (routing.js).
 const routeSchema = new mongoose.Schema(
   {
     label: { type: String, trim: true, maxlength: 120, default: "" },
-    // website -> url_contains; facebook -> project; whatsapp -> project | ad_id; google -> project | campaign_id
-    matchKind: { type: String, enum: ["url_contains", "project", "ad_id", "campaign_id"], required: true },
+    // website -> url_contains | any; facebook -> ad_id | campaign_id | project | any; whatsapp -> ad_id | project | any; google -> campaign_id | project | any
+    matchKind: { type: String, enum: ["url_contains", "project", "ad_id", "campaign_id", "any"], required: true },
     matchValue: { type: String, trim: true, required: true, maxlength: 300 },
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project", default: null },
     projectName: { type: String, trim: true, default: "" },

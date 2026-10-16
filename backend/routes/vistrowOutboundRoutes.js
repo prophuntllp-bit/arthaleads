@@ -186,7 +186,8 @@ router.post("/disable", async (req, res) => {
 // { website|facebook|whatsapp|google: { enabled?, routes?: [{ matchKind, matchValue|projectId, label?, agentId, agentLabel }] }, confirm }
 // Replaces the given sources' route rows and/or flips their switch. Every
 // source is OFF until switched on here, and turning one ON needs confirm:true.
-// There is no default agent: a row with no agent resolves to no call.
+// A source's default agent is its single "any" row; a row with no agent
+// resolves to no call.
 router.put("/routing", async (req, res) => {
   try {
     const { errors, value } = R.validateRoutingInput(req.body);

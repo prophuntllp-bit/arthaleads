@@ -382,12 +382,15 @@ const leadService = {
     // campaign in the org with its lead count.
     if (user.role === "agent") base.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
 
-    const fbField = async (metaKey) => Lead.aggregate([
+    // nameKey: the Meta name stored next to the id (adName / campaignName,
+    // 16 Oct 2026); older leads have none, so the lead's source label stands in.
+    const fbField = async (metaKey, nameKey) => Lead.aggregate([
       { $match: { ...base, source: "Facebook" } },
       { $unwind: "$activities" },
       { $match: { [`activities.meta.${metaKey}`]: { $nin: ["", null] } } },
       { $group: {
           _id: `$activities.meta.${metaKey}`,
+          name: { $max: nameKey ? `$activities.meta.${nameKey}` : "" },
           label: { $first: "$leadSourceLabel" },
           count: { $sum: 1 },
           lastSeen: { $max: "$createdAt" },
@@ -398,9 +401,9 @@ const leadService = {
 
     const [formId, campaignId, adsetId, adId, waAdId, googleCampaignId] = await Promise.all([
       fbField("formId"),
-      fbField("campaignId"),
+      fbField("campaignId", "campaignName"),
       fbField("adsetId"),
-      fbField("adId"),
+      fbField("adId", "adName"),
       Lead.aggregate([
         { $match: { ...base, source: "WhatsApp", "campaignRef.adId": { $nin: ["", null] } } },
         { $group: {
@@ -435,7 +438,7 @@ const leadService = {
       { $sort: { lastSeen: -1 } },
     ]);
 
-    const shape = (rows) => rows.map((r) => ({ value: r._id, label: r.label || r._id, count: r.count }));
+    const shape = (rows) => rows.map((r) => ({ value: r._id, label: r.name || r.label || r._id, count: r.count, lastSeenAt: r.lastSeen || null }));
     return {
       facebook: { form_id: shape(formId), campaign_id: shape(campaignId), adset_id: shape(adsetId), ad_id: shape(adId) },
       whatsapp: { ad_id: shape(waAdId), no_ad: shape(waNoAd) },

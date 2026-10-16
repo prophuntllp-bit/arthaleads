@@ -3,26 +3,30 @@
 // This is deliberately the opposite of "call everyone":
 //   * a source (Website / Facebook / WhatsApp / Google) must be switched ON by the owner;
 //   * the lead must match a route row -- Website: page URL contains X;
-//     Facebook: project; WhatsApp: project or ad id; Google: project or
-//     campaign id -- and that row must name an agent. Several matches resolve
-//     to the most specific one;
+//     Facebook: ad id, campaign id or project; WhatsApp: ad id or project;
+//     Google: campaign id or project; any source: "any" (the source's default
+//     agent, at most one row) -- and that row must name an agent. Several
+//     matches resolve to the most specific one (ad > campaign > project >
+//     page > any), so a specific rule always beats the default;
 //   * anything else (source off, no matching row, an ambiguous tie, a row with
 //     no agent, a source that is not one of these) is still sent to Vistrow
 //     so it exists as a tagged Contact, but with auto_call:false and NO agent.
 //
-// There is no default agent and no fallback of any kind. Pure functions: the
-// decision is made once, when the lead is created, from what the lead was at
-// that moment, and is never re-derived from later edits.
+// The only fallback is the owner's own "any" row for that source. Pure
+// functions: the decision is made once, when the lead is created, from what
+// the lead was at that moment, and is never re-derived from later edits.
 
 const SOURCE_KEYS = ["website", "facebook", "whatsapp", "google"];
 
 // What a route row may match on, per source.
 const KINDS_BY_SOURCE = {
-  website: ["url_contains"],
-  facebook: ["project"],
-  whatsapp: ["project", "ad_id"],
-  google: ["project", "campaign_id"],
+  website: ["url_contains", "any"],
+  facebook: ["ad_id", "campaign_id", "project", "any"],
+  whatsapp: ["ad_id", "project", "any"],
+  google: ["campaign_id", "project", "any"],
 };
+// The "any" row's matchValue, so it is never confused with a real id.
+const ANY_VALUE = "*";
 
 const AGENT_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const MAX_ROUTES_PER_SOURCE = 50;
@@ -43,24 +47,26 @@ function routeLabel(r) {
   if (r.matchKind === "project") return `Project: ${r.projectName || r.matchValue}`;
   if (r.matchKind === "ad_id") return `Ad ${r.matchValue}`;
   if (r.matchKind === "campaign_id") return `Campaign ${r.matchValue}`;
+  if (r.matchKind === "any") return "Default agent";
   return "Route";
 }
 
-// Higher = more specific. 0 = does not match. Ad id is the narrowest thing a
-// WhatsApp lead can match on, then project, and a longer URL fragment is a more
-// specific page than a shorter one.
+// Higher = more specific. 0 = does not match. An ad is the narrowest thing a
+// lead can match on, then its campaign, then the project; a longer URL fragment
+// is a more specific page than a shorter one (3..200); "any" matches every lead
+// of the source and is below everything, so it only wins when nothing else does.
 function specificity(source, route, inputs) {
   if (!(KINDS_BY_SOURCE[source] || []).includes(route.matchKind)) return 0;
   const v = String(route.matchValue || "");
   if (!v) return 0;
+  if (route.matchKind === "any") return 1;
   if (route.matchKind === "url_contains") {
     const needle = v.toLowerCase();
     return pageForMatch(inputs.sourcePage).includes(needle) ? needle.length : 0;
   }
   if (route.matchKind === "project") return inputs.projectId && String(inputs.projectId) === v ? 10000 : 0;
-  if (route.matchKind === "ad_id") return inputs.adId && String(inputs.adId) === v ? 20000 : 0;
-  // A Google campaign is narrower than a project, like an ad is for WhatsApp.
   if (route.matchKind === "campaign_id") return inputs.campaignId && String(inputs.campaignId) === v ? 20000 : 0;
+  if (route.matchKind === "ad_id") return inputs.adId && String(inputs.adId) === v ? 30000 : 0;
   return 0;
 }
 
@@ -169,6 +175,9 @@ function validateRoutingInput(body) {
           const v = String(r.matchValue || "").trim();
           if (!/^[A-Za-z0-9_-]{4,64}$/.test(v)) { errors.push(`${where}: enter the campaign id`); return; }
           row.matchValue = v;
+        } else if (r.matchKind === "any") {
+          if (rows.some((x) => x.matchKind === "any")) { errors.push(`${where}: only one default agent per source`); return; }
+          row.matchValue = ANY_VALUE;
         }
 
         // The browser never holds a Vistrow agent id: it names an agent by an opaque `agentRef`
@@ -197,6 +206,6 @@ function validateRoutingInput(body) {
 }
 
 module.exports = {
-  SOURCE_KEYS, KINDS_BY_SOURCE, AGENT_ID_RE, MAX_ROUTES_PER_SOURCE,
+  SOURCE_KEYS, KINDS_BY_SOURCE, ANY_VALUE, AGENT_ID_RE, MAX_ROUTES_PER_SOURCE,
   normalizeSourceLabel, pageForMatch, routeLabel, resolveRouting, routingInputsFrom, validateRoutingInput,
 };

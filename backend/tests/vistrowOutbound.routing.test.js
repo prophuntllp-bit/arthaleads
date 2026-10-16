@@ -2,7 +2,9 @@
 //   * every source is OFF until switched on;
 //   * a call needs a matching route row that names an agent;
 //   * the most specific matching row wins; ties between different agents refuse;
-//   * no default agent, ever -- an unmatched lead is a Contact only.
+//   * no built-in default -- an unmatched lead is a Contact only, unless the
+//     owner added the source's own "any" row (default agent), which every
+//     specific rule beats (16 Oct 2026: ad > campaign > project > page > any).
 
 const { test, run, assert } = require("./helpers/harness");
 const R = require("../services/vistrowOutbound/routing");
@@ -146,10 +148,9 @@ test("facebook: a lead with no project is a Contact only", () => {
 });
 test("facebook: rows of a kind facebook does not support are ignored", () => {
   const c = cfg({ facebook: { enabled: true, routes: [
-    { id: "bad1", matchKind: "ad_id", matchValue: "999999", agentId: "agent_x" },
     { id: "bad2", matchKind: "url_contains", matchValue: "/khopoli/", agentId: "agent_y" },
   ] } });
-  assert.equal(R.resolveRouting(c, { routeSource: "facebook", projectId: KHOPOLI, adId: "999999", sourcePage: "/khopoli/" }).autoCall, false);
+  assert.equal(R.resolveRouting(c, { routeSource: "facebook", projectId: KHOPOLI, sourcePage: "/khopoli/" }).autoCall, false);
 });
 
 // ── whatsapp: project / campaign match -> agent ────────────────────────────
@@ -245,7 +246,8 @@ test("validate: sources not mentioned are left alone", () => {
 test("validate: a route kind the source does not support is rejected", () => {
   assert.ok(R.validateRoutingInput({ website: { routes: [{ matchKind: "project", projectId: KHOPOLI, agentId: "a" }] } }).errors.length);
   assert.ok(R.validateRoutingInput({ facebook: { routes: [row()] } }).errors.length);
-  assert.ok(R.validateRoutingInput({ facebook: { routes: [{ matchKind: "ad_id", matchValue: "12345678", agentId: "a" }] } }).errors.length);
+  assert.ok(R.validateRoutingInput({ facebook: { routes: [{ matchKind: "url_contains", matchValue: "/khopoli/", agentId: "a" }] } }).errors.length);
+  assert.ok(R.validateRoutingInput({ website: { routes: [{ matchKind: "ad_id", matchValue: "12345678", agentId: "a" }] } }).errors.length);
   assert.ok(R.validateRoutingInput({ whatsapp: { routes: [row()] } }).errors.length);
 });
 test("validate: a page match that would catch nearly every page is rejected", () => {
@@ -301,6 +303,102 @@ test("validate: website rule accepts a blank or valid projectId, rejects a malfo
   assert.equal(ok.value.website.routes[0].projectId, KHOPOLI);
   assert.equal(R.validateRoutingInput({ website: { routes: [row({ projectId: "" })] } }).errors.length, 0);
   assert.ok(R.validateRoutingInput({ website: { routes: [row({ projectId: "nope" })] } }).errors.length);
+});
+
+// ── default agent ("any" row) and Facebook ad / campaign rules (16 Oct 2026) ──
+const FB_AD = "120252242040050286";
+const FB_CAMPAIGN = "120252242040050200";
+const anyRow = (agentId, id = "any1") => ({ id, matchKind: "any", matchValue: "*", agentId, agentLabel: `Default ${agentId}` });
+const fbCfg = (routes) => cfg({ facebook: { enabled: true, routes } });
+
+test("KINDS_BY_SOURCE: every source may have a default; facebook may match an ad or a campaign", () => {
+  assert.deepEqual(R.KINDS_BY_SOURCE.facebook, ["ad_id", "campaign_id", "project", "any"]);
+  assert.deepEqual(R.KINDS_BY_SOURCE.whatsapp, ["ad_id", "project", "any"]);
+  assert.deepEqual(R.KINDS_BY_SOURCE.google, ["campaign_id", "project", "any"]);
+  assert.deepEqual(R.KINDS_BY_SOURCE.website, ["url_contains", "any"]);
+  assert.equal(R.ANY_VALUE, "*");
+});
+test("default agent: used when no rule matches, for every source", () => {
+  const c = cfg({
+    website: { enabled: true, routes: [...cfg().routing.website.routes, anyRow("agent_web_default")] },
+    facebook: { enabled: true, routes: [...cfg().routing.facebook.routes, anyRow("agent_fb_default")] },
+    whatsapp: { enabled: true, routes: [...cfg().routing.whatsapp.routes, anyRow("agent_wa_default")] },
+    google: { enabled: true, routes: [anyRow("agent_g_default")] },
+  });
+  let d = R.resolveRouting(c, web("https://x.com/some-other-page/"));
+  assert.equal(d.autoCall, true); assert.equal(d.agentId, "agent_web_default"); assert.equal(d.route.kind, "any"); assert.equal(d.route.label, "Default agent");
+  d = R.resolveRouting(c, { routeSource: "facebook", projectId: "" });
+  assert.equal(d.autoCall, true); assert.equal(d.agentId, "agent_fb_default");
+  d = R.resolveRouting(c, { routeSource: "facebook", projectId: OTHER, adId: "nope", campaignId: "nope" });
+  assert.equal(d.agentId, "agent_fb_default");
+  d = R.resolveRouting(c, { routeSource: "whatsapp", adId: "nope", projectId: OTHER });
+  assert.equal(d.agentId, "agent_wa_default");
+  d = R.resolveRouting(c, { routeSource: "google", campaignId: "nope" });
+  assert.equal(d.agentId, "agent_g_default");
+});
+test("default agent: every specific rule beats it, so it never ties (no ambiguous_route)", () => {
+  const c = cfg({
+    website: { enabled: true, routes: [...cfg().routing.website.routes, anyRow("agent_web_default")] },
+    facebook: { enabled: true, routes: [...cfg().routing.facebook.routes, anyRow("agent_fb_default")] },
+    whatsapp: { enabled: true, routes: [...cfg().routing.whatsapp.routes, anyRow("agent_wa_default")] },
+  });
+  assert.equal(R.resolveRouting(c, web("https://x.com/shapoorji-pallonji-khopoli/")).agentId, "agent_khopoli");
+  assert.equal(R.resolveRouting(c, { routeSource: "facebook", projectId: KHOPOLI }).agentId, "agent_khopoli");
+  assert.equal(R.resolveRouting(c, { routeSource: "whatsapp", adId: "120252242040050286" }).agentId, "agent_ad");
+  assert.equal(R.resolveRouting(c, { routeSource: "whatsapp", projectId: KHOPOLI }).agentId, "agent_proj");
+});
+test("default agent: still subject to the source switch and to an empty agent", () => {
+  const offc = cfg({ facebook: { enabled: false, routes: [anyRow("agent_fb_default")] } });
+  assert.equal(R.resolveRouting(offc, { routeSource: "facebook" }).reason, "source_disabled");
+  const d = R.resolveRouting(fbCfg([anyRow("")]), { routeSource: "facebook", projectId: OTHER });
+  assert.equal(d.autoCall, false); assert.equal(d.reason, "agent_missing"); assert.equal(d.route.kind, "any");
+});
+test("default agent: a page rule that matches with no agent still blocks the default (most specific wins, then agent check)", () => {
+  const c = cfg({ website: { enabled: true, routes: [...cfg().routing.website.routes, anyRow("agent_web_default")] } });
+  assert.equal(R.resolveRouting(c, web("https://x.com/treetopia/")).reason, "agent_missing");
+});
+test("facebook: an ad rule beats the default agent", () => {
+  const c = fbCfg([anyRow("agent_fb_default"), { id: "fa1", matchKind: "ad_id", matchValue: FB_AD, agentId: "agent_fb_ad" }]);
+  const d = R.resolveRouting(c, { routeSource: "facebook", adId: FB_AD, campaignId: FB_CAMPAIGN, projectId: KHOPOLI });
+  assert.equal(d.autoCall, true); assert.equal(d.agentId, "agent_fb_ad"); assert.equal(d.route.kind, "ad_id");
+  assert.equal(R.resolveRouting(c, { routeSource: "facebook", adId: "other" }).agentId, "agent_fb_default");
+});
+test("facebook: campaign rule beats project rule; ad rule beats campaign rule", () => {
+  const c = fbCfg([
+    { id: "fp", matchKind: "project", matchValue: KHOPOLI, projectName: "SP Khopoli", agentId: "agent_fb_proj" },
+    { id: "fc", matchKind: "campaign_id", matchValue: FB_CAMPAIGN, agentId: "agent_fb_campaign" },
+    { id: "fa", matchKind: "ad_id", matchValue: FB_AD, agentId: "agent_fb_ad" },
+  ]);
+  assert.equal(R.resolveRouting(c, { routeSource: "facebook", projectId: KHOPOLI, campaignId: FB_CAMPAIGN }).agentId, "agent_fb_campaign");
+  assert.equal(R.resolveRouting(c, { routeSource: "facebook", projectId: KHOPOLI, campaignId: FB_CAMPAIGN, adId: FB_AD }).agentId, "agent_fb_ad");
+  assert.equal(R.resolveRouting(c, { routeSource: "facebook", projectId: KHOPOLI, campaignId: "other", adId: "other" }).agentId, "agent_fb_proj");
+  assert.equal(R.resolveRouting(c, { routeSource: "facebook", projectId: OTHER }).reason, "no_route");
+});
+test("facebook: two ad rules for different ads send each ad to its own agent (3 ads, 3 projects)", () => {
+  const c = fbCfg([
+    { id: "a1", matchKind: "ad_id", matchValue: "1001", agentId: "agent_p1" },
+    { id: "a2", matchKind: "ad_id", matchValue: "1002", agentId: "agent_p2" },
+    { id: "a3", matchKind: "ad_id", matchValue: "1003", agentId: "agent_p3" },
+  ]);
+  for (const [ad, agent] of [["1001", "agent_p1"], ["1002", "agent_p2"], ["1003", "agent_p3"]]) assert.equal(R.resolveRouting(c, { routeSource: "facebook", adId: ad }).agentId, agent);
+});
+test("ties at the same specificity are still ambiguous, including two ad rules with the same ad", () => {
+  const c = fbCfg([anyRow("agent_fb_default"), { id: "x", matchKind: "ad_id", matchValue: FB_AD, agentId: "a1" }, { id: "y", matchKind: "ad_id", matchValue: FB_AD, agentId: "a2" }]);
+  assert.equal(R.resolveRouting(c, { routeSource: "facebook", adId: FB_AD }).reason, "ambiguous_route");
+});
+test("validate: one 'any' row per source is accepted with matchValue '*'; a second is rejected", () => {
+  const ok = R.validateRoutingInput({ facebook: { routes: [{ matchKind: "any", agentId: "a" }, { matchKind: "ad_id", matchValue: FB_AD, agentId: "b" }] } });
+  assert.equal(ok.errors.length, 0, ok.errors.join(";"));
+  assert.equal(ok.value.facebook.routes[0].matchValue, "*");
+  const two = R.validateRoutingInput({ facebook: { routes: [{ matchKind: "any", agentId: "a" }, { matchKind: "any", matchValue: "whatever", agentId: "b" }] } });
+  assert.equal(two.errors.length, 1);
+  assert.match(two.errors[0], /only one default agent/);
+  for (const source of ["website", "whatsapp", "google"]) assert.equal(R.validateRoutingInput({ [source]: { routes: [{ matchKind: "any", agentId: "a" }] } }).errors.length, 0, source);
+});
+test("validate: facebook accepts ad and campaign rules; routeLabel names them", () => {
+  const v = R.validateRoutingInput({ facebook: { routes: [{ matchKind: "ad_id", matchValue: FB_AD, agentId: "a" }, { matchKind: "campaign_id", matchValue: FB_CAMPAIGN, agentId: "a" }] } });
+  assert.equal(v.errors.length, 0, v.errors.join(";"));
+  assert.equal(R.routeLabel({ matchKind: "any", matchValue: "*" }), "Default agent");
 });
 
 run("Vistrow outbound - routing (source toggles and route rows)");
