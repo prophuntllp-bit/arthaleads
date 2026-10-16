@@ -20,12 +20,13 @@ export default function PublicFooter() {
             <div className="flex items-center gap-2.5 mb-4">
               <img
                 src={isDark ? "/logo-lockup-dark.png" : "/logo-lockup.png"}
+                width={isDark ? 1515 : 1574} height={isDark ? 459 : 471}
                 alt="Arthaleads — Turning Opportunities Into Value"
                 className="h-8 w-auto"
               />
             </div>
             <p style={{ color: text }} className="text-sm leading-relaxed max-w-xs">
-              India's real estate CRM for developers, brokers &amp; channel partners. Built in Pune, trusted across Maharashtra.
+              India's real estate CRM for developers, brokers &amp; channel partners. Built in Pune.
             </p>
             <a
               href="mailto:contact@arthaleads.com"

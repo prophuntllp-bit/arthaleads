@@ -134,13 +134,24 @@ const FAQS = [
   },
 ];
 
+// In the markup (not added by an effect) so the prerendered HTML carries it for crawlers that run no JS.
+const FAQ_JSONLD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": FAQS.map(({ q, a }) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
+}).replace(/</g, "\u003c");
+
 // ── Animated counter ──────────────────────────────────────────────────────────
+const REDUCED_MOTION = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 function Counter({ target, suffix = "" }) {
-  const [count, setCount] = useState(0);
+  // Reduced motion (and the prerender, which renders with it) shows the real number, never "0".
+  const [count, setCount] = useState(() => (REDUCED_MOTION() ? target : 0));
   const ref = useRef(null);
   const started = useRef(false);
 
   useEffect(() => {
+    if (REDUCED_MOTION()) return undefined;
     const obs = new IntersectionObserver(([e]) => {
       if (e.isIntersecting && !started.current) {
         started.current = true;
@@ -292,6 +303,7 @@ function WordPressPluginInner() {
 
   return (
     <div style={{ background: bg, color: text, fontFamily: "Inter, sans-serif" }} className="min-h-screen">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_JSONLD }} />
       <PublicNav />
 
       {/* ── Hero ── */}

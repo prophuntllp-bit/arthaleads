@@ -62,6 +62,13 @@ const FAQS = [
   },
 ];
 
+// In the markup (not added by an effect) so the prerendered HTML carries it for crawlers that run no JS.
+const FAQ_JSONLD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": FAQS.map(({ q, a }) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
+}).replace(/</g, "\u003c");
+
 function FAQItem({ q, a, isDark }) {
   const [open, setOpen] = useState(false);
   const border = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
@@ -76,9 +83,8 @@ function FAQItem({ q, a, isDark }) {
         <ChevronDown className="w-4 h-4 flex-shrink-0 transition-transform"
           style={{ color: soft, transform: open ? "rotate(180deg)" : "none" }} />
       </button>
-      {open && (
-        <p className="px-5 pb-4 text-sm leading-relaxed" style={{ color: soft }}>{a}</p>
-      )}
+      {/* Always in the HTML (hidden when closed) so the FAQPage data matches the page. */}
+      <p hidden={!open} className="px-5 pb-4 text-sm leading-relaxed" style={{ color: soft }}>{a}</p>
     </div>
   );
 }
@@ -122,6 +128,7 @@ function DownloadAppInner() {
 
   return (
     <div style={{ background: bg, color: text, fontFamily: "Inter, sans-serif" }} className="min-h-screen">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_JSONLD }} />
       <PublicNav />
 
       {/* ── Hero ── */}
