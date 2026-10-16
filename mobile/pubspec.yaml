@@ -80,6 +80,7 @@ dependencies:
   # flow) for WhatsApp's one-click connect (Settings tab) — the app has no JS
   # runtime of its own to run the FB SDK in.
   webview_flutter: ^4.10.0
+  speech_to_text: ^7.5.0
 
 dev_dependencies:
   flutter_test:

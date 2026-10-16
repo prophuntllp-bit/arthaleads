@@ -11,6 +11,7 @@ import '../../core/push_service.dart';
 import '../../core/theme.dart';
 import '../../widgets/report_message_button.dart';
 import 'change_card.dart';
+import 'voice_input.dart';
 
 /// The lead Artha is looking at ("summarise this", "log a call").
 class ArthaFocus {
@@ -74,6 +75,7 @@ class _ArthaSheetState extends State<ArthaSheet> {
   final _input = TextEditingController();
   final _inputFocus = FocusNode();
   final List<_Msg> _msgs = [];
+  final _voice = ArthaVoice();
   List<String> _starters = [];
   String? _threadId;
   ArthaFocus? _focus;
@@ -99,11 +101,13 @@ class _ArthaSheetState extends State<ArthaSheet> {
       }
     });
     _loadStarters();
+    _voice.loadLocale();
   }
 
   @override
   void dispose() {
     _cancel?.cancel();
+    _voice.dispose();
     _sheet.dispose();
     _input.dispose();
     _inputFocus.dispose();
@@ -222,6 +226,15 @@ class _ArthaSheetState extends State<ArthaSheet> {
   }
 
   void _stop() => _cancel?.cancel();
+
+  /// What the mic heard goes into the box, after anything already typed, to
+  /// be read and sent by the person; it is never sent by itself.
+  void _onHeard(String heard) {
+    final before = _input.text.trimRight();
+    _input.text = before.isEmpty ? heard : '$before $heard';
+    _input.selection = TextSelection.collapsed(offset: _input.text.length);
+    setState(() {});
+  }
 
   static List<Map<String, dynamic>> _maps(dynamic v) =>
       v is List ? [for (final x in v) if (x is Map) x.cast<String, dynamic>()] : [];
@@ -821,7 +834,12 @@ class _ArthaSheetState extends State<ArthaSheet> {
     return '${days[ist.weekday - 1]} ${ist.day} ${months[ist.month - 1]}, $h:$mm ${ist.hour < 12 ? 'am' : 'pm'}';
   }
 
-  Widget _composer(AppTheme t) => Container(
+  Widget _composer(AppTheme t) => Column(mainAxisSize: MainAxisSize.min, children: [
+        VoicePanel(voice: _voice),
+        _composerBox(t),
+      ]);
+
+  Widget _composerBox(AppTheme t) => Container(
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
         decoration: BoxDecoration(border: Border(top: BorderSide(color: t.border))),
         child: SafeArea(
@@ -843,6 +861,8 @@ class _ArthaSheetState extends State<ArthaSheet> {
                       decoration: const InputDecoration(hintText: 'Ask or tell Artha what to do…'),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  VoiceMicButton(voice: _voice, enabled: !_busy, onHeard: _onHeard),
                   const SizedBox(width: 8),
                   SizedBox(
                     width: 48,
