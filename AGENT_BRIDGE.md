@@ -63,7 +63,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 
-- [claude] 2026-10-16 IST: SEO /product-tour watch page restored from f8793a8 (owner approved option 1) so Google indexes the intro film; not in nav/footer, no pill. Files: frontend/src/pages/ProductTour.jsx, data/introFilm.js, components/IntroVideo.jsx, App.jsx, entry-prerender.jsx, CustomCursor.jsx, vercel.json, backend/controllers/blogController.js (sitemap + video entry).
+- [claude] 2026-10-16 IST: SEO audit leftovers (after 38c8c92): FAQPage JSON-LD on contact/download-app/wordpress-plugin, WordPress counters prerender real values, compare grid ticks as text, home film links to /product-tour, app-shell default meta says India not Pune, logo width/height. Files: pages/Contact.jsx, DownloadApp.jsx, WordPressPlugin.jsx, Compare.jsx, components/IntroVideo.jsx, PublicNav.jsx, PublicFooter.jsx, frontend/index.html.
   - Note [claude] 2026-10-16 17:40 IST: the owner approved editing ONLY frontend/vercel.json `ignoreCommand` (deploy skip bug); nothing else in this claim is touched.
 
 
