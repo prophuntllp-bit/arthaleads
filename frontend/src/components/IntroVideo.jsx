@@ -11,33 +11,20 @@
 // reduced motion get a play button instead of autoplay.
 import { useEffect, useRef, useState } from "react";
 import { Play, Volume2 } from "lucide-react";
+import { filmJsonLd } from "../data/introFilm";
 
 export const INTRO_VIDEOS = {
   en: { label: "English", src: "/video/arthaleads-intro-en.mp4", poster: "/video/arthaleads-intro-en-poster.jpg" },
   hi: { label: "हिन्दी",   src: "/video/arthaleads-intro-hi.mp4", poster: "/video/arthaleads-intro-hi-poster.jpg" },
 };
 
-// VideoObject structured data, so the film can appear in Google video results.
-// Rendered in the markup (not added by an effect) so the prerendered HTML that
-// crawlers read first already carries it. uploadDate needs a time and timezone:
-// a bare date is flagged by Search Console. Only the /product-tour watch page
-// sends it (jsonLd prop): Google indexes a video only where it is the main
-// content, and on the home page it is one section of many.
-export const INTRO_VIDEO_JSONLD = JSON.stringify({
-  "@context": "https://schema.org",
-  "@type": "VideoObject",
-  name: "ArthaLeads in 2 minutes",
-  description:
-    "How ArthaLeads answers a buyer on WhatsApp at 1 AM, qualifies them, books the site visit and puts every answer into the lead for your sales team.",
-  thumbnailUrl: ["https://www.arthaleads.com/video/arthaleads-intro-en-poster.jpg"],
-  uploadDate: "2026-10-07T12:00:00+05:30",
-  duration: "PT2M17S",
-  contentUrl: "https://www.arthaleads.com/video/arthaleads-intro-en.mp4",
-  inLanguage: "en-IN",
-});
-
-// bare: player and language toggle only, for a page that brings its own heading.
-export default function IntroVideo({ isDark, id = "tour", jsonLd = false, bare = false }) {
+// `chapters` (the /product-tour watch page only): player and language toggle
+// without the home-page heading, the VideoObject structured data with its key
+// moments, the film starting at ?t=N, and `seek` ({ t, n }, n bumps on every
+// click) jumping to a chapter. The home page sends no structured data: Google
+// indexes a video only where it is the main content of the page.
+export default function IntroVideo({ isDark, id = "tour", chapters = false, seek = null }) {
+  const bare = chapters;
   const [lang, setLang]         = useState("en");
   const [started, setStarted]   = useState(false);   // has played at least once: show the player controls
   const [blocked, setBlocked]   = useState(false);   // autoplay refused or disabled: show the big play button
@@ -47,6 +34,7 @@ export default function IntroVideo({ isDark, id = "tour", jsonLd = false, bare =
   const visible    = useRef(false);
   const userPaused = useRef(false);   // the visitor paused it themselves: do not restart on scroll
   const ourPause   = useRef(false);   // a pause we caused by scrolling away
+  const pendingSeek = useRef(null);   // a chapter clicked while the Hindi film was showing
 
   const v = INTRO_VIDEOS[lang];
 
@@ -103,6 +91,31 @@ export default function IntroVideo({ isDark, id = "tour", jsonLd = false, bare =
     el.play().then(() => { setStarted(true); setBlocked(false); }).catch(() => {});
   };
 
+  // Jump to a time: from ?t=N on arrival, or a chapter click (a click is a
+  // gesture, so sound is allowed). English only: the chapters are timed to it.
+  const seekTo = (t, withSound) => {
+    const el = videoRef.current;
+    if (!el || !Number.isFinite(t)) return;
+    if (lang !== "en") { pendingSeek.current = { t, withSound }; setLang("en"); return; }
+    const go = () => {
+      el.currentTime = Math.max(0, t);
+      userPaused.current = false;
+      if (withSound) { el.muted = false; setMuted(false); }
+      el.play().then(() => { setStarted(true); setBlocked(false); }).catch(() => {});
+    };
+    if (el.readyState >= 1) go(); else el.addEventListener("loadedmetadata", go, { once: true });
+  };
+  useEffect(() => {
+    if (!chapters) return;
+    const t = Number(new URLSearchParams(window.location.search).get("t"));
+    if (t > 0) seekTo(t, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapters]);
+  useEffect(() => {
+    if (seek) { sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); seekTo(seek.t, true); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seek]);
+
   const soundOn = () => { setMuted(false); if (videoRef.current) videoRef.current.muted = false; };
 
   const switchLang = (next) => { if (next !== lang) setLang(next); };
@@ -118,7 +131,8 @@ export default function IntroVideo({ isDark, id = "tour", jsonLd = false, bare =
     <section id={id} ref={sectionRef}
       className={bare ? "relative scroll-mt-20" : "relative py-16 lg:py-24 overflow-hidden scroll-mt-20"}
       style={bare ? undefined : { background: bg, borderTop: `1px solid ${rail}`, borderBottom: `1px solid ${rail}` }}>
-      {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: INTRO_VIDEO_JSONLD }} />}
+      {/* In the markup, not an effect, so the prerendered HTML carries it. */}
+      {chapters && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: filmJsonLd({ chapters: true }) }} />}
       <div className={bare ? "relative" : "relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8"}>
         <div className={`flex flex-col md:flex-row md:items-end gap-6 ${bare ? "md:justify-end mb-4" : "md:justify-between mb-8 lg:mb-10"}`}>
           {!bare && (
@@ -167,7 +181,11 @@ export default function IntroVideo({ isDark, id = "tour", jsonLd = false, bare =
             controls={started}
             className="absolute inset-0 w-full h-full object-cover" style={{ transform: "scale(1.01)" }}
             aria-label={`ArthaLeads product tour (${v.label})`}
-            onLoadedData={() => { if (visible.current) tryPlay(); }}
+            onLoadedData={() => {
+              const p = pendingSeek.current;
+              if (p) { pendingSeek.current = null; seekTo(p.t, p.withSound); }
+              else if (visible.current) tryPlay();
+            }}
             onPause={() => { if (ourPause.current) ourPause.current = false; else if (started && !document.hidden) userPaused.current = true; }}
             onPlay={() => { userPaused.current = false; }}
           />
