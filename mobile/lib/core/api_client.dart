@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Mirrors frontend/src/services/api.js:
 /// - base URL from --dart-define=API_BASE_URL (defaults to prod)
 /// - Bearer token on every request
+/// - X-Renewed-Token on a response replaces the stored token (sliding session)
 /// - 401 → clear session + notify listener (session expired)
 /// - 403 ORGANISATION_INACTIVE / TRIAL_EXPIRED / ORG_PENDING_DELETION surfaced
 ///   as typed events
@@ -43,7 +44,14 @@ class ApiClient {
           }
           handler.next(options);
         },
+        onResponse: (response, handler) {
+          _adoptRenewedToken(response);
+          handler.next(response);
+        },
         onError: (err, handler) {
+          // The server renews before the route runs, so an error reply can
+          // carry a fresh token too.
+          if (err.response != null) _adoptRenewedToken(err.response!);
           final status = err.response?.statusCode;
           final path = err.requestOptions.path;
           final msg = _messageOf(err.response?.data);
@@ -65,6 +73,27 @@ class ApiClient {
         },
       ),
     );
+
+  /// The server renews a sign-in once it is a day old: that response carries
+  /// X-Renewed-Token, and keeping it is what stops a phone being signed out
+  /// 7 days after sign-in (backend/middlewares/auth.js, renewSession).
+  void _adoptRenewedToken(Response response) {
+    final sent = response.requestOptions.headers['Authorization'];
+    adoptRenewedToken(
+      response.headers.value('x-renewed-token'),
+      sentToken: sent is String && sent.startsWith('Bearer ') ? sent.substring(7) : null,
+    );
+  }
+
+  /// Keeps [renewed] when it renews the session in use. A reply to a request
+  /// sent with an older token (the person signed out or switched account
+  /// while it was in flight) is ignored. Public for requests made outside
+  /// [dio], such as the streamed Artha chat.
+  void adoptRenewedToken(String? renewed, {required String? sentToken}) {
+    if (renewed == null || renewed.isEmpty) return;
+    if (sentToken == null || sentToken != _token || renewed == _token) return;
+    setToken(renewed);
+  }
 
   static String? _messageOf(dynamic data) {
     if (data is Map && data['message'] is String) return data['message'] as String;
