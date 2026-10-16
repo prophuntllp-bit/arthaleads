@@ -130,6 +130,8 @@ function planOutcome(current, outcome, now = new Date()) {
     const to = STATUS_ORDER.indexOf(status);
     if (to > from) {
       set.status = status;
+      // Lets the UI show this status as set by an AI call (see Lead.statusSetBy).
+      set.statusSetBy = { by: "vistrow_voice", status, at: now };
       activities.push({ type: "status_changed", description: `Status changed from ${curStatus} to ${status} by a Vistrow Voice call`, performedByName: by, meta: { from: curStatus, to: status } });
       lines.push(`Status: ${curStatus} -> ${status}`);
     }

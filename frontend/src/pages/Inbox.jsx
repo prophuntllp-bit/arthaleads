@@ -745,7 +745,7 @@ export default function Inbox() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-sm font-bold text-app truncate">{displayName(activeConv)}</p>
-                {lead?.status && <StatusBadge status={lead.status} />}
+                {lead?.status && <StatusBadge status={lead.status} lead={lead} />}
                 {lead?._score != null && (
                   <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
                     style={{ color: scoreTier(lead._score)?.color, background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>

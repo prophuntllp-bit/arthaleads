@@ -84,6 +84,10 @@ const voiceCallSchema = new mongoose.Schema(
     attempts:        { type: Number, default: undefined },
     followUpKind:    { type: String, trim: true, default: undefined },
     result:          { type: String, trim: true, default: undefined },
+    // The caller asked for the brochure on this call (crm_outcome.brochure_requested).
+    // Set once, atomically, before the team is told, so a re-sent webhook
+    // never creates a second task (routes/webhookRoutes.js).
+    brochureRequestedAt: { type: Date, default: undefined },
   },
   { timestamps: true }
 );
@@ -151,6 +155,20 @@ const leadSchema = new mongoose.Schema(
         message: "Invalid status",
       },
       default: "New",
+    },
+    // Who set the current status when it was not a person: { by: "vistrow_voice",
+    // status, at } from a Vistrow Voice call result. The UI shows the pill as an
+    // AI-call status only while `status` here still equals the lead's status, so
+    // any later change (by anyone, on any path) makes it a normal pill again;
+    // leadService.update and bulkUpdateStatus also clear it.
+    statusSetBy: {
+      type: {
+        by:     { type: String },
+        status: { type: String },
+        at:     { type: Date },
+      },
+      default: undefined,
+      _id: false,
     },
     priority: {
       type: String,
@@ -277,6 +295,9 @@ const leadSchema = new mongoose.Schema(
         fields:    { type: mongoose.Schema.Types.Mixed, default: undefined }, // { preferredLocation: "Wakad", bhk: "3BHK", budget: {min,max}, ... }
         at:        { type: Date },
         dismissed: { type: mongoose.Schema.Types.Mixed, default: undefined }, // { preferredLocation: ["Wakad"] }
+        // Where a suggestion came from when it was not the WhatsApp chat:
+        // { propertyType: "vistrow_voice" }. Absent = WhatsApp.
+        from:      { type: mongoose.Schema.Types.Mixed, default: undefined },
       },
       default: undefined,
     },

@@ -737,7 +737,7 @@ async function maybeSendAwayMessage(org, agent, conversation) {
 // (booking, siteVisitDone, activities, notes, followUpDate, firstContactedAt).
 // One shared field list rather than a separate one per route, so the two
 // views can never quietly drift into scoring a lead on incomplete data.
-const LEAD_SCORE_FIELDS = "name status priority propertyType bhk preferredLocation budget source phone arthaSuggest "
+const LEAD_SCORE_FIELDS = "name status statusSetBy priority propertyType bhk preferredLocation budget source phone arthaSuggest "
   + "booking siteVisitDone activities notes followUpDate firstContactedAt";
 
 // Attaches the same rule-based hotness score the Dashboard's "Hot Today"
@@ -1894,25 +1894,8 @@ function scheduleLeadEnrich(org, conversationId) {
   enrichTimers.set(id, timer);
 }
 
-// Fields the customer stated that differ from a real value already on the
-// lead, minus anything the team dismissed before.
-const SUGGESTABLE = ["propertyType", "purpose", "bhk", "preferredLocation", "budget"];
-const sameValue = (a, b) => (a && typeof a === "object")
-  ? (a.min || 0) === (b?.min || 0) && (a.max || 0) === (b?.max || 0)
-  : String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
-const isBlank = (k, v) => k === "budget" ? !(v?.min || v?.max) : (!v || v === "N/A");
-function suggestionsFrom(lead, mapped, setOps) {
-  const out = {};
-  const dismissed = lead.arthaSuggest?.dismissed || {};
-  for (const k of SUGGESTABLE) {
-    const said = mapped[k];
-    if (said === undefined || isBlank(k, said) || k in setOps) continue;
-    if (isBlank(k, lead[k]) || sameValue(said, lead[k])) continue;
-    if ((dismissed[k] || []).some((d) => sameValue(said, d))) continue;
-    out[k] = k === "budget" ? { min: said.min || 0, max: said.max || 0 } : said;
-  }
-  return out;
-}
+// Fill/suggest rules are shared with the Vistrow Voice call result.
+const { planFieldFill, suggestionsFrom } = require("../utils/leadFieldFill");
 
 // The first read of a chat is also the moment a new WhatsApp lead is handed to
 // Vistrow (if it is still waiting): the payload then carries what was read.
@@ -1971,17 +1954,8 @@ async function readLeadDetailsFromChat(conversation, recentMsgs, { org } = {}) {
 
     // Only fill fields still at their neutral default — never overwrite a
     // real value, whichever earlier message or agent edit put it there.
-    const setOps = {};
-    // The customer's own words win over the project's type (which only ever
-    // fills an empty field), so "I want a flat" after a plot ad corrects it.
-    const typeWasGuessed = lead.propertyType === "N/A" || (projectType && lead.propertyType === projectType);
-    if (mapped.propertyType && typeWasGuessed && mapped.propertyType !== lead.propertyType) setOps.propertyType = mapped.propertyType;
-    else if (!mapped.propertyType && lead.propertyType === "N/A" && projectType) setOps.propertyType = projectType;
     if (mapped.preferredLocation && !typedByCustomer(mapped.preferredLocation, laterInbound)) delete mapped.preferredLocation;
-    if (mapped.purpose && lead.purpose === "N/A")               setOps.purpose = mapped.purpose;
-    if (mapped.bhk && lead.bhk === "N/A")                       setOps.bhk = mapped.bhk;
-    if (mapped.preferredLocation && !lead.preferredLocation)    setOps.preferredLocation = mapped.preferredLocation;
-    if (mapped.budget && !lead.budget?.min && !lead.budget?.max) setOps.budget = mapped.budget;
+    const setOps = planFieldFill(lead, mapped, { projectType });
 
     const statedName = String(parsed.customer_name || "").trim().slice(0, 80);
     if (statedName && looksLikeRealName(statedName) && !looksLikeRealName(lead.name)) setOps.name = statedName;
@@ -1995,6 +1969,9 @@ async function readLeadDetailsFromChat(conversation, recentMsgs, { org } = {}) {
     const update = {};
     if (Object.keys(setOps).length || suggestOps) update.$set = { ...setOps, ...(suggestOps || {}) };
     if (!suggestOps && lead.arthaSuggest?.fields) update.$unset = { "arthaSuggest.fields": "" };
+    // This read replaces the whole suggestion set, so any per-field source
+    // (a Vistrow Voice call's suggestion) no longer applies.
+    if ((suggestOps || update.$unset) && lead.arthaSuggest?.from) update.$unset = { ...(update.$unset || {}), "arthaSuggest.from": "" };
     if (Object.keys(update).length) {
       await Lead.updateOne({ _id: conversation.leadId }, update);
     }

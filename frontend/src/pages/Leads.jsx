@@ -1288,7 +1288,7 @@ export default function Leads() {
                           )
                           : <span className="text-xs text-app-soft">-</span>}
                     </td>
-                    <td className="whitespace-nowrap"><StatusBadge status={lead.status} /></td>
+                    <td className="whitespace-nowrap"><StatusBadge status={lead.status} lead={lead} /></td>
                     <td className="whitespace-nowrap"><PriorityBadge priority={lead.priority} /></td>
                     <td>
                       {cleanRequirements(lead.requirements)

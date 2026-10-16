@@ -220,7 +220,11 @@ router.post("/suggestions/:leadId", async (req, res) => {
     const wanted = (Array.isArray(req.body?.fields) ? req.body.fields : Object.keys(pending)).filter((k) => SUGGEST_KEYS.includes(k) && k in pending);
     if (!wanted.length) return res.json({ success: true, applied: [], message: "Nothing to change." });
 
-    const unset = Object.fromEntries(wanted.map((k) => [`arthaSuggest.fields.${k}`, ""]));
+    const unset = Object.fromEntries(wanted.flatMap((k) => [[`arthaSuggest.fields.${k}`, ""], [`arthaSuggest.from.${k}`, ""]]));
+    // Suggestions come from the WhatsApp chat unless marked as from a Vistrow Voice call.
+    const fromCall = wanted.filter((k) => lead.arthaSuggest?.from?.[k] === "vistrow_voice").length;
+    const sourceText = fromCall === wanted.length ? "the customer's Vistrow Voice call"
+      : fromCall ? "the customer's WhatsApp messages and Vistrow Voice call" : "the customer's WhatsApp messages";
     if (action === "dismiss") {
       const push = Object.fromEntries(wanted.map((k) => [`arthaSuggest.dismissed.${k}`, pending[k]]));
       await Lead.updateOne({ _id: lead._id }, { $unset: unset, $push: push });
@@ -236,7 +240,7 @@ router.post("/suggestions/:leadId", async (req, res) => {
     const updated = await runWith({ via: "artha" }, async () => {
       const u = await leadService.update(String(lead._id), { ...updates }, req.user);
       // Field edits leave no history of their own, so the note is the record.
-      await leadService.addNote(String(lead._id), `Updated from the customer's WhatsApp messages. ${changes}.`, req.user);
+      await leadService.addNote(String(lead._id), `Updated from ${sourceText}. ${changes}.`, req.user);
       return u;
     });
     await Lead.updateOne({ _id: lead._id }, { $unset: unset });

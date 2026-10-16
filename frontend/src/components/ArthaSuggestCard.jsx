@@ -5,7 +5,7 @@ import api from "../services/api";
 import useArthaFeatures from "../hooks/useArthaFeatures";
 import { notifyDataChanged } from "../hooks/useAppRefresh";
 
-// Details the customer stated on WhatsApp that differ from what the lead holds
+// Details the customer stated on WhatsApp (or on a Vistrow Voice call) that differ from what the lead holds
 // (lead.arthaSuggest.fields, filled by the server's chat reader). Nothing is
 // changed until someone presses Save; Dismiss stops that value coming back.
 const LABEL = { propertyType: "Property type", purpose: "Purpose", bhk: "BHK", preferredLocation: "Location", budget: "Budget" };
@@ -28,6 +28,10 @@ export default function ArthaSuggestCard({ lead, onChanged, compact = false }) {
   const [picked, setPicked] = useState(() => new Set(ORDER));
   const [busy, setBusy] = useState(null);
   if (!on || !lead?._id || lead._type === "project" || !keys.length) return null;
+  // Suggestions come from the WhatsApp chat unless the server marked them as
+  // from a Vistrow Voice call (lead.arthaSuggest.from).
+  const fromCall = keys.filter((k) => lead.arthaSuggest?.from?.[k] === "vistrow_voice").length;
+  const where = fromCall === keys.length ? "on the Vistrow Voice call" : fromCall ? "in the WhatsApp chat and the call" : "in the WhatsApp chat";
 
   const act = async (action) => {
     // Save: the ticked rows. Dismiss: everything still shown.
@@ -46,10 +50,10 @@ export default function ArthaSuggestCard({ lead, onChanged, compact = false }) {
   };
 
   return (
-    <div className={`rounded-2xl ${compact ? "px-3 py-2" : "p-3"}`} role="group" aria-label="Artha suggestions from the WhatsApp chat"
+    <div className={`rounded-2xl ${compact ? "px-3 py-2" : "p-3"}`} role="group" aria-label={`Artha suggestions ${where}`}
       style={{ background: "rgba(249,115,22,0.07)", border: "1px solid rgba(249,115,22,0.28)" }}>
       <p className="flex items-center gap-1.5 text-xs font-bold" style={{ color: "#ea580c" }}>
-        <Sparkles className="h-3.5 w-3.5" /> Artha found in the WhatsApp chat
+        <Sparkles className="h-3.5 w-3.5" /> Artha found {where}
       </p>
       <div className={`mt-1.5 flex ${compact ? "flex-wrap gap-x-4 gap-y-1" : "flex-col gap-1"}`}>
         {keys.map((k) => (
