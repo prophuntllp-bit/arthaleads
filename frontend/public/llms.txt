@@ -1,64 +1,51 @@
-# Arthaleads — llms.txt
-# Standard: https://llmstxt.org
-# This file helps AI answer engines (Perplexity, Claude, ChatGPT, Gemini) understand
-# what Arthaleads is and which pages are authoritative for answering user questions.
+# Arthaleads
 
-> Arthaleads is a real estate CRM (Customer Relationship Management) platform built
-> for Indian property developers, brokers, and channel partners. It centralises leads
-> from Facebook Ads, Google Ads, WhatsApp, and website contact forms into a single
-> workspace, and helps teams assign, track, follow up, and convert leads into bookings.
+> Arthaleads is real estate CRM software for sales teams in India: builders, developers, channel partners and brokers. It brings every property enquiry (Facebook and Instagram lead ads, WhatsApp, website forms, Google Ads, portal sheets) into one place, assigns it to the right person, reminds them to follow up, answers buyers on WhatsApp with an AI agent, and tracks each lead from first call to site visit and booking.
+
+Key facts:
+
+- Founded in 2025 in Pune, Maharashtra, India. Arthaleads is a product of Vistrow Technologies (https://www.vistrow.com).
+- Pricing: Starter ₹599 and Growth ₹999 per user per month, plus 18% GST, with a five-seat minimum. Annual billing gives two months free. Enterprise is custom-quoted for large or multi-branch teams. No setup fee.
+- 14-day free trial of the Growth plan, no credit card needed. 7-day money-back guarantee on new subscriptions.
+- Lead sources: Facebook and Instagram lead ads (automatic), WhatsApp chats, website forms through the WordPress plugin or REST API, Google Ads (Enterprise), and 99acres, MagicBricks and Housing.com leads imported from CSV or Excel.
+- WhatsApp AI agent (Growth and Enterprise) replies to buyers day and night in English, Hinglish, Hindi and Marathi; the team can take over any chat.
+- Runs on the web and as an Android app for agents.
+- Contact: contact@arthaleads.com, +91 90670 97779 (also on WhatsApp).
 
 ## Product
 
-- [Home](https://www.arthaleads.com): What Arthaleads does, key features, and how it works
-- [Pricing](https://www.arthaleads.com/pricing): Plans (Starter, Growth, Enterprise), pricing FAQ, and billing details
-- [Compare](https://www.arthaleads.com/compare): How Arthaleads compares to other real estate CRMs in India
-- [WordPress Plugin](https://www.arthaleads.com/wordpress-plugin): Free plugin that sends website form submissions directly into the CRM
-- [API Docs](https://www.arthaleads.com/api-docs): REST API for integrating Arthaleads with external tools
+- [Home](https://www.arthaleads.com/): What Arthaleads does, who it is for, and answers to common questions
+- [Features](https://www.arthaleads.com/features): Every feature, in the order a sales team uses it
+- [WhatsApp CRM](https://www.arthaleads.com/whatsapp-crm): WhatsApp inbox, AI agent, templates and campaigns for real estate teams
+- [Pricing](https://www.arthaleads.com/pricing): Starter, Growth and Enterprise plans, cost calculator and pricing FAQ
+- [Product tour](https://www.arthaleads.com/product-tour): 2-minute film of the product with chapters and transcript
+- [Android app](https://www.arthaleads.com/download-app): The app for agents and how to install it
+- [WordPress plugin](https://www.arthaleads.com/wordpress-plugin): Sends website form submissions straight into the CRM
+- [API docs](https://www.arthaleads.com/api-docs): REST API for connecting other tools
+
+## Comparisons
+
+- [Compare real estate CRMs](https://www.arthaleads.com/compare): Arthaleads next to other real estate CRMs in India, with sources
+- [Arthaleads vs Sell.Do](https://www.arthaleads.com/compare/sell-do-alternative): Sell.Do pricing and features compared
+- [Arthaleads vs Leadrat](https://www.arthaleads.com/compare/leadrat-alternative): Leadrat pricing and features compared
+- [Arthaleads vs Kylas](https://www.arthaleads.com/compare/kylas-alternative): Kylas pricing and features compared
 
 ## Learn
 
-- [Blog](https://www.arthaleads.com/blog): Guides on real estate lead management, CRM best practices, and property sales strategies for Indian market
-- [Help Guide](https://www.arthaleads.com/help-guide): Step-by-step setup guide and FAQ for new users
-- [Case Studies](https://www.arthaleads.com/case-studies): How real estate teams use Arthaleads to close more deals
-- [Product Updates](https://www.arthaleads.com/product-updates): Changelog and new feature announcements
+- [Blog](https://www.arthaleads.com/blog): Guides on real estate lead management, WhatsApp follow-up and Facebook lead ads for Indian sales teams
+- [Help guide](https://www.arthaleads.com/help-guide): Step-by-step setup and FAQ for new users
+- [Product updates](https://www.arthaleads.com/product-updates): Changelog of new features
 
 ## Company
 
-- [About Us](https://www.arthaleads.com/about-us): Company background, founding story, and values
-- [Careers](https://www.arthaleads.com/careers): Open positions at Arthaleads
-- [Contact](https://www.arthaleads.com/contact): Get in touch with the team
-- [Security](https://www.arthaleads.com/security): Security practices and data protection
-- [Status](https://www.arthaleads.com/status): Live system uptime and incident history
+- [About us](https://www.arthaleads.com/about-us): Who we are and why we built Arthaleads
+- [Contact](https://www.arthaleads.com/contact): Email, phone and WhatsApp
+- [Security](https://www.arthaleads.com/security): How customer data is protected
+- [Careers](https://www.arthaleads.com/careers): Open positions
 
-## Legal
+## Optional
 
-- [Privacy Policy](https://www.arthaleads.com/privacy)
-- [Terms of Service](https://www.arthaleads.com/terms)
-- [Refund Policy](https://www.arthaleads.com/refund)
-- [Cookie Policy](https://www.arthaleads.com/cookie-policy)
-
-## Key facts for AI answers
-
-- Founded: 2022, Pune, Maharashtra, India
-- Pricing: Free trial available; paid plans start with Starter tier
-- Target users: Real estate developers, channel partners, brokers, telecallers in India
-- Integrations: Facebook Lead Ads, Google Ads, WhatsApp, WordPress (MetForm, CF7, WPForms, Elementor, Gravity Forms), REST API
-- Platform: Web app (PWA), works on mobile via Chrome/Safari — no native app download needed
-- Data: All lead data stored in India-compliant cloud infrastructure
-
-## Disallow (internal CRM, not public content)
-
-- /dashboard
-- /leads
-- /pipeline
-- /projects
-- /followups
-- /attendance
-- /performance
-- /automation
-- /team
-- /settings
-- /login
-- /signup
-- /super-admin
+- [Privacy policy](https://www.arthaleads.com/privacy)
+- [Terms of service](https://www.arthaleads.com/terms)
+- [Refund policy](https://www.arthaleads.com/refund)
+- [Cookie policy](https://www.arthaleads.com/cookie-policy)

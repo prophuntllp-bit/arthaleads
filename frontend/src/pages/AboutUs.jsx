@@ -64,12 +64,15 @@ function useVisible(threshold = 0.15) {
   return [ref, visible];
 }
 
+const REDUCED_MOTION = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 function AnimCounter({ to, suffix = "", dur = 1600 }) {
   const ref = useRef(null);
-  const [val, setVal] = useState(0);
+  // Reduced motion (and the prerender, which renders with it) shows the real number, never "0".
+  const [val, setVal] = useState(() => (REDUCED_MOTION() ? to : 0));
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || REDUCED_MOTION()) return;
     const obs = new IntersectionObserver(([e]) => {
       if (!e.isIntersecting) return;
       obs.disconnect();
@@ -202,7 +205,7 @@ export default function AboutUs() {
               Hot leads would go cold because no one followed up in time. Telecallers would call the same number three times from different lists. Managers had no way to see what the team was actually doing.
             </p>
             <p style={{ fontSize: 15, lineHeight: 1.8, color: body }}>
-              We built Arthaleads to be the single workspace where every property enquiry lands, gets assigned, gets called, and gets tracked. From first contact to closed deal.
+              We started Arthaleads in Pune in 2025, as a product of Vistrow Technologies, to be the single workspace where every property enquiry lands, gets assigned, gets called, and gets tracked. From first contact to closed deal.
             </p>
           </div>
 

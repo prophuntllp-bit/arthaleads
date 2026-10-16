@@ -126,7 +126,7 @@ export default function Contact() {
                   {[
                     ["How quickly do you respond?", "We reply within 24 hours on weekdays, usually much sooner."],
                     ["Can I get a free demo?", "Absolutely - just fill out the form and mention 'demo' in your message."],
-                    ["Is there a free trial?", "Yes, new accounts get a 7-day free trial with full access."],
+                    ["Is there a free trial?", "Yes. New accounts get a 14-day free trial of the Growth plan, no credit card needed."],
                   ].map(([q, a]) => (
                     <div key={q}>
                       <div className="text-sm font-semibold mb-0.5" style={{ color: heading }}>{q}</div>

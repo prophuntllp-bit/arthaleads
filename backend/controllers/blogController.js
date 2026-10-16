@@ -106,32 +106,34 @@ const blogController = {
       // Every public marketing page. Keep in step with the public routes in
       // frontend/src/App.jsx and frontend/scripts/seo-pages.mjs; a URL here
       // that the site does not serve is reported by Google as a soft 404.
+      // lastmod is the date the page's content last changed (git log of its
+      // page file); bump it when you edit a page, Google ignores it if it lies.
       const staticPages = [
-        { url: "/",                 priority: "1.0", changefreq: "weekly"  },
-        { url: "/features",         priority: "0.9", changefreq: "monthly" },
-        { url: "/pricing",          priority: "0.9", changefreq: "monthly" },
-        { url: "/compare",          priority: "0.8", changefreq: "monthly" },
-        { url: "/compare/sell-do-alternative", priority: "0.7", changefreq: "monthly" },
-        { url: "/compare/leadrat-alternative", priority: "0.7", changefreq: "monthly" },
-        { url: "/compare/kylas-alternative",   priority: "0.7", changefreq: "monthly" },
+        { url: "/",                 priority: "1.0", changefreq: "weekly", lastmod: "2026-10-16" },
+        { url: "/features",         priority: "0.9", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/pricing",          priority: "0.9", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/compare",          priority: "0.8", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/compare/sell-do-alternative", priority: "0.7", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/compare/leadrat-alternative", priority: "0.7", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/compare/kylas-alternative",   priority: "0.7", changefreq: "monthly", lastmod: "2026-10-16" },
         { url: "/blog",             priority: "0.8", changefreq: "weekly"  },
-        { url: "/about-us",         priority: "0.7", changefreq: "monthly" },
+        { url: "/about-us",         priority: "0.7", changefreq: "monthly", lastmod: "2026-10-16" },
         // /case-studies is noindex while it has no case studies (see pages/CaseStudies.jsx).
-        { url: "/product-updates",  priority: "0.7", changefreq: "weekly"  },
-        { url: "/help-guide",       priority: "0.6", changefreq: "monthly" },
-        { url: "/wordpress-plugin", priority: "0.6", changefreq: "monthly" },
-        { url: "/api-docs",         priority: "0.6", changefreq: "monthly" },
-        { url: "/download-app",     priority: "0.6", changefreq: "monthly" },
-        { url: "/whatsapp-crm",     priority: "0.9", changefreq: "monthly" },
-        { url: "/product-tour",     priority: "0.8", changefreq: "monthly", video: true },
-        { url: "/refer",            priority: "0.5", changefreq: "monthly" },
-        { url: "/careers",          priority: "0.5", changefreq: "monthly" },
-        { url: "/contact",          priority: "0.6", changefreq: "monthly" },
-        { url: "/security",         priority: "0.5", changefreq: "monthly" },
-        { url: "/privacy",          priority: "0.3", changefreq: "yearly"  },
-        { url: "/terms",            priority: "0.3", changefreq: "yearly"  },
-        { url: "/refund",           priority: "0.3", changefreq: "yearly"  },
-        { url: "/cookie-policy",    priority: "0.3", changefreq: "yearly"  },
+        { url: "/product-updates",  priority: "0.7", changefreq: "weekly", lastmod: "2026-10-14" },
+        { url: "/help-guide",       priority: "0.6", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/wordpress-plugin", priority: "0.6", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/api-docs",         priority: "0.6", changefreq: "monthly", lastmod: "2026-10-14" },
+        { url: "/download-app",     priority: "0.6", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/whatsapp-crm",     priority: "0.9", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/product-tour",     priority: "0.8", changefreq: "monthly", video: true, lastmod: "2026-10-16" },
+        { url: "/refer",            priority: "0.5", changefreq: "monthly", lastmod: "2026-10-14" },
+        { url: "/careers",          priority: "0.5", changefreq: "monthly", lastmod: "2026-10-14" },
+        { url: "/contact",          priority: "0.6", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/security",         priority: "0.5", changefreq: "monthly", lastmod: "2026-10-14" },
+        { url: "/privacy",          priority: "0.3", changefreq: "yearly", lastmod: "2026-10-08" },
+        { url: "/terms",            priority: "0.3", changefreq: "yearly", lastmod: "2026-06-25" },
+        { url: "/refund",           priority: "0.3", changefreq: "yearly", lastmod: "2026-10-09" },
+        { url: "/cookie-policy",    priority: "0.3", changefreq: "yearly", lastmod: "2026-10-08" },
       ];
 
       const blogEntries = posts.map((p) => ({
@@ -143,6 +145,10 @@ const blogController = {
         // customer-facing, so it stays off the IST helpers.
         lastmod: (p.updatedAt || p.publishedAt || new Date()).toISOString().split("T")[0],
       }));
+
+      // The blog index changes whenever a post does.
+      const blogIndex = staticPages.find((e) => e.url === "/blog");
+      if (blogEntries.length) blogIndex.lastmod = blogEntries.map((e) => e.lastmod).sort().pop();
 
       const allEntries = [...staticPages, ...blogEntries];
 
