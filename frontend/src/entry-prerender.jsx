@@ -30,6 +30,7 @@ import WhatsAppCrm from "./pages/WhatsAppCrm";
 import SellDoAlternative from "./pages/SellDoAlternative";
 import LeadratAlternative from "./pages/LeadratAlternative";
 import KylasAlternative from "./pages/KylasAlternative";
+import ProductTour from "./pages/ProductTour";
 import ReferEarn from "./pages/ReferEarn";
 import Careers from "./pages/Careers";
 import Contact from "./pages/Contact";
@@ -57,6 +58,7 @@ export const PAGES = {
   "/compare/sell-do-alternative": SellDoAlternative,
   "/compare/leadrat-alternative": LeadratAlternative,
   "/compare/kylas-alternative": KylasAlternative,
+  "/product-tour": ProductTour,
   "/refer": ReferEarn,
   "/careers": Careers,
   "/contact": Contact,
