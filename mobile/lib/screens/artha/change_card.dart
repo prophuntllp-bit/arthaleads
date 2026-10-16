@@ -41,6 +41,14 @@ class ChangeProposal extends ChangeNotifier {
   bool scopeConfirmed = true;
   bool busy = false;
 
+  /// Bulk cards show the first few leads; the rest on request, inline, so
+  /// the card never scrolls inside the chat.
+  bool showAllRows = false;
+  void expandRows() {
+    showAllRows = true;
+    notifyListeners();
+  }
+
   /// Applied: the server's message and, when it can be put back, the key.
   String? doneMessage;
   String? undoKey;
@@ -252,15 +260,15 @@ class ChangeCard extends StatelessWidget {
             ]),
           ),
           Divider(height: 1, color: t.border),
-          if (bulk)
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 240),
-              child: ListView(
-                shrinkWrap: true,
-                padding: EdgeInsets.zero,
-                children: [for (final r in rows) _row(t, r)],
+          if (bulk) ...[
+            for (final r in p.showAllRows ? rows : rows.take(_rowsShown)) _row(t, r),
+            if (!p.showAllRows && rows.length > _rowsShown)
+              TextButton(
+                onPressed: p.expandRows,
+                child: Text('Show all ${rows.length}', style: TextStyle(color: _accent(t), fontWeight: FontWeight.w600)),
               ),
-            ),
+            Divider(height: 1, color: t.border),
+          ],
           for (final f in fields) _field(context, t, f),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
@@ -300,6 +308,8 @@ class ChangeCard extends StatelessWidget {
       ),
     );
   }
+
+  static const _rowsShown = 6;
 
   Color _accent(AppTheme t) => t.isDark ? const Color(0xFFFF8A3D) : const Color(0xFFC2410C);
 
