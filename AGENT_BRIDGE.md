@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-16 IST: Vistrow step 3 ad pickers list every ad the org knows (ads.all: CTWA lead ads, AI-agent routed ads, lead-form ads). Files: backend/services/leadService.js (getCampaignOptions), frontend/src/components/VistrowOutboundSection.jsx, backend/tests/vistrowAdsAll.db.test.js (new), backend/package.json (test:vistrow).
+
 - [claude] 2026-10-16 IST: SEO /product-tour watch page restored from f8793a8 (owner approved option 1) so Google indexes the intro film; not in nav/footer, no pill. Files: frontend/src/pages/ProductTour.jsx, data/introFilm.js, components/IntroVideo.jsx, App.jsx, entry-prerender.jsx, CustomCursor.jsx, vercel.json, backend/controllers/blogController.js (sitemap + video entry).
 
 
