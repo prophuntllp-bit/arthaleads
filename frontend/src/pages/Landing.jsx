@@ -105,8 +105,9 @@ function Hero({ isDark }) {
         <div className="text-center max-w-3xl mx-auto">
           <h1 className="text-4xl sm:text-5xl lg:text-[3.6rem] xl:text-[4rem] font-black leading-[1.05] tracking-[-0.02em] mb-6"
             style={{ color: headingClr, textWrap: "balance" }}>
-            <span className="sr-only">Manage Every Lead. Close More Deals.</span>
-            <span aria-hidden="true">
+            {/* The keyword line is part of the h1 (it is what the page ranks for); the slogan follows as plain words, no sr-only copy, so the heading text is not doubled. */}
+            <span className="block text-sm sm:text-base font-semibold uppercase tracking-[0.18em] mb-5 text-[color:var(--brand-text)]">Real estate CRM software for India</span>
+            <span>
               {["Manage", "Every", "Lead."].map((w, i) => (
                 <span key={w} className="word-rise" style={{ animationDelay: `${80 + i * 90}ms` }}>{w}&nbsp;</span>
               ))}
@@ -1074,7 +1075,7 @@ function TrustFacts({ isDark }) {
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">count on</span>
           </h2>
           <p className="text-base sm:text-lg leading-relaxed" style={{ color: body }}>
-            Plain promises about how ArthaLeads works, before you hand it your leads.
+            Plain promises about how Arthaleads works, before you hand it your leads.
           </p>
         </Reveal>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-10">
@@ -1130,7 +1131,7 @@ function PlansStrip({ isDark }) {
           <div className="p-7 sm:p-8 flex flex-col border-t md:border-t-0 md:border-l" style={{ borderColor: rule }}>
             <h2 className="text-xl font-bold mb-2" style={{ color: heading }}>Switching from another CRM?</h2>
             <p className="text-[15px] leading-relaxed mb-5 flex-1" style={{ color: body }}>
-              See how ArthaLeads compares on price, trial, WhatsApp and features, with every competitor detail linked to its source.
+              See how Arthaleads compares on price, trial, WhatsApp and features, with every competitor detail linked to its source.
             </p>
             <div className="flex flex-wrap gap-x-5 gap-y-2">
               {COMPARE.map(([name, to]) => (
@@ -1201,11 +1202,31 @@ const HOME_FAQS = [
    "Yes. On Growth and Enterprise the WhatsApp AI agent answers buyer questions day and night and follows the buyer's language, including English, Hinglish, Hindi and Marathi. Your team can take over any chat at any time."],
   ["Is there a mobile app for my sales team?",
    "Yes. Agents get an Android app for calling leads, logging outcomes and seeing today's follow-ups, and the web app works on any phone or computer."],
-  ["How much does it cost?",
-   `Starter is ${formatINR(PLAN_PRICING.starter.monthly)} and Growth is ${formatINR(PLAN_PRICING.growth.monthly)} per user per month, plus 18% GST, with a five-seat minimum. Enterprise is quoted on team size. Every team can start with a 14-day free trial, no credit card needed.`],
+  ["Which is the best real estate CRM in India?",
+   "There is no single best one: it depends on your team size, lead sources and budget. Look for automatic Facebook and portal lead capture, WhatsApp follow-up, site visit tracking, an app for agents and clear per-user pricing. Arthaleads is built for Indian builders, channel partners and brokers whose buyers enquire on WhatsApp and Facebook."],
+  ["Does Arthaleads work with 99acres, MagicBricks and Housing.com?",
+   "Yes, through import rather than a live connection. Download your portal leads as a sheet and import the CSV or Excel file, or add them one by one. Once inside, they are assigned, followed up and tracked like every other lead, next to your Facebook, WhatsApp and website enquiries."],
+  ["How much does a real estate CRM cost in India?",
+   `Most real estate CRMs in India charge per user per month. Arthaleads Starter is ${formatINR(PLAN_PRICING.starter.monthly)} and Growth is ${formatINR(PLAN_PRICING.growth.monthly)} per user per month, plus 18% GST, with a five-seat minimum. Enterprise is quoted on team size. Every team can start with a 14-day free trial, no credit card needed.`],
   ["Can I take my data with me?",
    "Yes. On Growth and Enterprise you can export your leads to CSV or Excel whenever you like. Read how we protect your data on our Security page."],
 ];
+
+const HOME_JSONLD = JSON.stringify([
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to manage real estate leads with Arthaleads",
+    "description": "Get your entire real estate team capturing, assigning, and converting leads in four steps.",
+    "totalTime": "PT5M",
+    "step": HOW_STEPS.map((s) => ({ "@type": "HowToStep", "position": s.num, "name": s.title, "text": s.desc })),
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": HOME_FAQS.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
+  },
+]).replace(/</g, "\\u003c");
 
 function FAQ({ isDark }) {
   const [open, setOpen] = useState(0);
@@ -1257,7 +1278,8 @@ function FAQ({ isDark }) {
                       <p className="px-5 pb-5 text-sm leading-relaxed" style={{ color: body }}>
                         {a}{i === HOME_FAQS.length - 1 && <> <Link to="/security" className="text-[color:var(--brand-text)] font-semibold hover:underline">Open Security</Link></>}
                         {/^Can the WhatsApp AI/.test(q) && <> <Link to="/whatsapp-crm" className="text-[color:var(--brand-text)] font-semibold hover:underline">See how the WhatsApp CRM works</Link></>}
-                        {/^How much does it cost/.test(q) && <> <Link to="/pricing" className="text-[color:var(--brand-text)] font-semibold hover:underline">See plans and pricing</Link></>}
+                        {/^Which is the best/.test(q) && <> <Link to="/compare" className="text-[color:var(--brand-text)] font-semibold hover:underline">Compare Arthaleads with Sell.Do, Leadrat and Kylas</Link></>}
+                        {/^How much does a real estate CRM cost/.test(q) && <> <Link to="/pricing" className="text-[color:var(--brand-text)] font-semibold hover:underline">See plans and pricing</Link></>}
                       </p>
                     </div>
                   </div>
@@ -1333,38 +1355,11 @@ export default function Landing() {
     return () => clearTimeout(t);
   }, []);
 
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.id   = "howto-jsonld-landing";
-    script.type = "application/ld+json";
-    script.textContent = JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "HowTo",
-      "name": "How to manage real estate leads with Arthaleads",
-      "description": "Get your entire real estate team capturing, assigning, and converting leads in four steps.",
-      "totalTime": "PT5M",
-      "step": HOW_STEPS.map((s) => ({
-        "@type": "HowToStep",
-        "position": s.num,
-        "name": s.title,
-        "text": s.desc,
-      })),
-    });
-    document.head.appendChild(script);
-    const faq = document.createElement("script");
-    faq.id = "faq-jsonld-landing";
-    faq.type = "application/ld+json";
-    faq.textContent = JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": HOME_FAQS.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
-    });
-    document.head.appendChild(faq);
-    return () => { document.getElementById("howto-jsonld-landing")?.remove(); document.getElementById("faq-jsonld-landing")?.remove(); };
-  }, []);
 
   return (
     <div className="min-h-screen" style={{ fontFamily: "Inter, sans-serif" }}>
+      {/* In the markup (not added by an effect) so the prerendered HTML carries it for crawlers that run no JS. */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: HOME_JSONLD }} />
       <PublicNav onScrollTo={scrollTo} />
       <Hero isDark={isDark} />
       <SourcesStrip isDark={isDark} />

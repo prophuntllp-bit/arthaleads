@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { Reveal, Spotlight } from "../components/motion/Motion";
@@ -21,6 +21,13 @@ const FAQS = [
   ["Which payment methods do you accept?", "We accept all major credit/debit cards, UPI, and net banking for Indian businesses. Enterprise customers can also pay via invoice."],
 ];
 
+// In the markup (not added by an effect) so the prerendered HTML carries it for crawlers that run no JS.
+const FAQ_JSONLD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": FAQS.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
+}).replace(/</g, "\\u003c");
+
 export default function Pricing() {
   const { isDark } = usePublicTheme();
   const [members, setMembers] = useState(5);
@@ -33,23 +40,6 @@ export default function Pricing() {
     description: "Simple, transparent Arthaleads pricing. Starter, Growth and Enterprise plans for real estate teams of every size. 14-day free trial, no credit card needed.",
     canonical:   "https://www.arthaleads.com/pricing",
   });
-
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.id   = "faq-jsonld-pricing";
-    script.type = "application/ld+json";
-    script.textContent = JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": FAQS.map(([q, a]) => ({
-        "@type": "Question",
-        "name": q,
-        "acceptedAnswer": { "@type": "Answer", "text": a },
-      })),
-    });
-    document.head.appendChild(script);
-    return () => { document.getElementById("faq-jsonld-pricing")?.remove(); };
-  }, []);
 
   const bg         = isDark ? "#0d0d1a" : "#ffffff";
   const altBg      = isDark ? "#080810" : "#f9fafb";
@@ -85,6 +75,7 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen" style={{ background: bg, color: heading, fontFamily: "Inter, sans-serif" }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_JSONLD }} />
       <PublicNav />
 
       {/* Hero */}

@@ -13,10 +13,10 @@ export default function PublicFooter() {
   return (
     <footer style={{ background: bg, borderTop: `1px solid ${border}` }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 mb-10">
 
           {/* Brand */}
-          <div className="col-span-2 md:col-span-2">
+          <div className="col-span-2 md:col-span-4 lg:col-span-2">
             <div className="flex items-center gap-2.5 mb-4">
               <img
                 src={isDark ? "/logo-lockup-dark.png" : "/logo-lockup.png"}
@@ -71,12 +71,28 @@ export default function PublicFooter() {
             <h2 style={{ color: heading }} className="font-semibold text-sm mb-4">Product</h2>
             <div className="space-y-2.5">
               {[
+                ["Features",           "/features"],
                 ["Pricing",            "/pricing"],
                 ["WhatsApp CRM",       "/whatsapp-crm"],
+                ["Download App",       "/download-app"],
                 ["WordPress Plugin",   "/wordpress-plugin"],
                 ["API Docs",           "/api-docs"],
-                ["Feature Comparison", "/compare"],
                 ["Refer & Earn",       "/refer"],
+              ].map(([label, href]) => (
+                <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Compare */}
+          <div>
+            <h2 style={{ color: heading }} className="font-semibold text-sm mb-4">Compare</h2>
+            <div className="space-y-2.5">
+              {[
+                ["All comparisons",        "/compare"],
+                ["Arthaleads vs Sell.Do",  "/compare/sell-do-alternative"],
+                ["Arthaleads vs Leadrat",  "/compare/leadrat-alternative"],
+                ["Arthaleads vs Kylas",    "/compare/kylas-alternative"],
               ].map(([label, href]) => (
                 <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
               ))}
@@ -91,6 +107,7 @@ export default function PublicFooter() {
                 ["About Us",      "/about-us"],
                 ["Careers",       "/careers"],
                 ["Blog",          "/blog"],
+                ["Product Updates", "/product-updates"],
                 ["Help Guide",    "/help-guide"],
                 ["Security",      "/security"],
                 ["Contact Us",    "/contact"],

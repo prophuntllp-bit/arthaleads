@@ -40,9 +40,9 @@ const NAV_RESOURCES = [
 // (and as a card in the "Detailed comparisons" section of pages/Compare.jsx).
 const NAV_COMPARE = [
   { label: "All comparisons",       href: "/compare",                     desc: "Feature table: Leadrat, Sell.Do, Kylas", icon: GitCompare },
-  { label: "ArthaLeads vs Sell.Do", href: "/compare/sell-do-alternative", desc: "Sell.Do pricing and features compared",  icon: Scale },
-  { label: "ArthaLeads vs Leadrat", href: "/compare/leadrat-alternative", desc: "Leadrat pricing and features compared",  icon: Scale },
-  { label: "ArthaLeads vs Kylas",   href: "/compare/kylas-alternative",   desc: "Kylas pricing and features compared",    icon: Scale },
+  { label: "Arthaleads vs Sell.Do", href: "/compare/sell-do-alternative", desc: "Sell.Do pricing and features compared",  icon: Scale },
+  { label: "Arthaleads vs Leadrat", href: "/compare/leadrat-alternative", desc: "Leadrat pricing and features compared",  icon: Scale },
+  { label: "Arthaleads vs Kylas",   href: "/compare/kylas-alternative",   desc: "Kylas pricing and features compared",    icon: Scale },
 ];
 
 const NAV_COMPANY = [
@@ -52,7 +52,8 @@ const NAV_COMPANY = [
 ];
 
 // ── Reusable dropdown panel ───────────────────────────────────────────────────
-function DropdownPanel({ items, onClose, isDark, width = 268 }) {
+// Always rendered (hidden when closed) so its links are in the prerendered HTML for crawlers.
+function DropdownPanel({ open, items, onClose, isDark, width = 268 }) {
   const bg     = isDark ? "rgba(18,18,30,0.99)" : "#ffffff";
   const border = isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
   const shadow = isDark
@@ -66,6 +67,7 @@ function DropdownPanel({ items, onClose, isDark, width = 268 }) {
 
   return (
     <div
+      hidden={!open}
       style={{
         position: "absolute",
         top: "calc(100% + 12px)",
@@ -294,14 +296,13 @@ function NavInner({ onScrollTo }) {
                 textMuted={textMuted}
                 textActive={textActive}
               />
-              {cmpOpen && (
-                <DropdownPanel
-                  items={NAV_COMPARE}
-                  onClose={() => setCmpOpen(false)}
-                  isDark={isDark}
-                  width={276}
-                />
-              )}
+              <DropdownPanel
+                open={cmpOpen}
+                items={NAV_COMPARE}
+                onClose={() => setCmpOpen(false)}
+                isDark={isDark}
+                width={276}
+              />
             </div>
 
             {/* Resources dropdown */}
@@ -313,14 +314,13 @@ function NavInner({ onScrollTo }) {
                 textMuted={textMuted}
                 textActive={textActive}
               />
-              {resOpen && (
-                <DropdownPanel
-                  items={NAV_RESOURCES}
-                  onClose={() => setResOpen(false)}
-                  isDark={isDark}
-                  width={272}
-                />
-              )}
+              <DropdownPanel
+                open={resOpen}
+                items={NAV_RESOURCES}
+                onClose={() => setResOpen(false)}
+                isDark={isDark}
+                width={272}
+              />
             </div>
 
             {/* Company dropdown */}
@@ -332,14 +332,13 @@ function NavInner({ onScrollTo }) {
                 textMuted={textMuted}
                 textActive={textActive}
               />
-              {compOpen && (
-                <DropdownPanel
-                  items={NAV_COMPANY}
-                  onClose={() => setCompOpen(false)}
-                  isDark={isDark}
-                  width={248}
-                />
-              )}
+              <DropdownPanel
+                open={compOpen}
+                items={NAV_COMPANY}
+                onClose={() => setCompOpen(false)}
+                isDark={isDark}
+                width={248}
+              />
             </div>
 
             <NavLink href="/contact" label="Contact" />

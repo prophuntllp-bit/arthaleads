@@ -136,7 +136,7 @@ function DownloadAppInner() {
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] mb-6" style={{ color: text }}>
-            Your Pipeline,<br />
+            Your Pipeline,{" "}<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
               In Your Pocket
             </span>

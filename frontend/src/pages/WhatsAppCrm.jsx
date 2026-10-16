@@ -54,7 +54,7 @@ const FAQS = [
   ["Can the AI reply in Hindi or Marathi?",
    "Yes. On the Growth and Enterprise plans the WhatsApp AI agent follows the buyer's language, including English, Hinglish, Hindi and Marathi. Your team can take over any conversation at any time."],
   ["How are WhatsApp messages charged?",
-   "Meta charges for WhatsApp business messages. In ArthaLeads these are paid from a prepaid credit balance that you top up online, with a statement of every charge and a free monthly allowance of service replies used first."],
+   "Meta charges for WhatsApp business messages. In Arthaleads these are paid from a prepaid credit balance that you top up online, with a statement of every charge and a free monthly allowance of service replies used first."],
   ["Does it work with click-to-WhatsApp ads?",
    "Yes. Chats that start from a Facebook or Instagram click-to-WhatsApp ad become leads with the ad name saved, so you can see which campaign produced which buyer. The guided button flow for these ads is on the Enterprise plan."],
   ["Which plan do I need?",
@@ -71,7 +71,7 @@ export default function WhatsAppCrm() {
   const { isDark } = usePublicTheme();
 
   useSEO({
-    title: "WhatsApp CRM for Real Estate Teams | ArthaLeads",
+    title: "WhatsApp CRM for Real Estate Teams | Arthaleads",
     description: "WhatsApp CRM for real estate teams in India: a shared inbox, an AI agent that replies to buyers 24/7, every chat saved as a lead, plus templates and campaigns.",
     canonical: "https://www.arthaleads.com/whatsapp-crm",
   });
@@ -103,8 +103,7 @@ export default function WhatsAppCrm() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-12 items-center">
           <div>
             <h1 className="text-4xl sm:text-5xl font-black leading-[1.08] mb-6" style={{ color: text, textWrap: "balance" }}>
-              <span className="sr-only">The WhatsApp CRM for real estate teams</span>
-              <span aria-hidden="true">
+              <span>
                 {["The", "WhatsApp", "CRM"].map((w, i) => (
                   <span key={w} className="word-rise" style={{ animationDelay: `${80 + i * 90}ms` }}>{w}&nbsp;</span>
                 ))}
@@ -117,7 +116,7 @@ export default function WhatsAppCrm() {
               </span>
             </h1>
             <p className="text-lg leading-relaxed mb-8 max-w-xl" style={{ color: soft }}>
-              Buyers message you on WhatsApp first. ArthaLeads answers them in seconds with an AI agent, saves every chat
+              Buyers message you on WhatsApp first. Arthaleads answers them in seconds with an AI agent, saves every chat
               as a lead with the buyer's budget and needs filled in, and gives your whole team one inbox to follow up from.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
@@ -139,7 +138,7 @@ export default function WhatsAppCrm() {
           <Reveal delay={250} y={32} className="relative">
             <div className="rounded-3xl overflow-hidden border shadow-2xl motion-safe:animate-[float-soft_7s_ease-in-out_infinite]" style={{ borderColor: cardBorder }}>
               <img src="/tour/inbox.webp" width="2000" height="1125" loading="eager" decoding="async"
-                alt="The ArthaLeads WhatsApp inbox: an AI agent replying to a property buyer on phone and web"
+                alt="The Arthaleads WhatsApp inbox: an AI agent replying to a property buyer on phone and web"
                 className="w-full h-auto block" />
             </div>
             {/* What happens behind that chat, as two small status chips */}
@@ -245,7 +244,7 @@ export default function WhatsAppCrm() {
                   <Minus className="w-4 h-4 mt-0.5 shrink-0" style={{ color: muted }} /><span><span className="font-medium">Business app:</span> {app}</span>
                 </p>
                 <p className="flex gap-2 text-sm" style={{ color: soft }}>
-                  <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: green }} /><span><span className="font-medium">ArthaLeads:</span> {crm}</span>
+                  <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: green }} /><span><span className="font-medium">Arthaleads:</span> {crm}</span>
                 </p>
               </Reveal>
             ))}
@@ -256,7 +255,7 @@ export default function WhatsAppCrm() {
                 <tr style={{ borderBottom: `1px solid ${cardBorder}` }}>
                   <th scope="col" className="text-left font-semibold p-4" style={{ color: muted }}> </th>
                   <th scope="col" className="text-left font-semibold p-4" style={{ color: text }}>WhatsApp Business app</th>
-                  <th scope="col" className="text-left font-semibold p-4" style={{ color: text }}>ArthaLeads WhatsApp CRM</th>
+                  <th scope="col" className="text-left font-semibold p-4" style={{ color: text }}>Arthaleads WhatsApp CRM</th>
                 </tr>
               </thead>
               <tbody>

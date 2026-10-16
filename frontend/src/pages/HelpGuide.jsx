@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useState } from "react";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import { ChevronDown, ArrowRight, Mail } from "lucide-react";
 import PublicNav from "../components/PublicNav";
@@ -49,6 +49,23 @@ const faqs = [
   },
 ];
 
+// In the markup (not added by an effect) so the prerendered HTML carries it for crawlers that run no JS.
+const HELP_JSONLD = JSON.stringify([
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faqs.map(({ q, a }) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to get started with Arthaleads CRM",
+    "description": "Set up your Arthaleads account and start managing real estate leads in minutes.",
+    "totalTime": "PT10M",
+    "step": steps.map((s, i) => ({ "@type": "HowToStep", "position": i + 1, "name": s.title, "text": s.desc })),
+  },
+]).replace(/</g, "\\u003c");
+
 function FAQItem({ q, a, isDark }) {
   const [open, setOpen] = useState(false);
   const borderColor = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
@@ -60,6 +77,7 @@ function FAQItem({ q, a, isDark }) {
     <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${borderColor}` }}>
       <button
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
         className="w-full flex items-center justify-between gap-4 px-6 py-4 text-left transition-colors"
         style={{ color: textColor }}
         onMouseEnter={e => (e.currentTarget.style.background = hoverBg)}
@@ -68,11 +86,10 @@ function FAQItem({ q, a, isDark }) {
         <span className="font-medium text-sm leading-snug">{q}</span>
         <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} style={{ color: bodyColor }} />
       </button>
-      {open && (
-        <div className="px-6 pb-5" style={{ borderTop: `1px solid ${borderColor}` }}>
-          <p className="text-sm leading-relaxed pt-4" style={{ color: bodyColor }}>{a}</p>
-        </div>
-      )}
+      {/* Always in the HTML (hidden when closed) so the answer matches the FAQ schema for crawlers. */}
+      <div className="px-6 pb-5" hidden={!open} style={{ borderTop: `1px solid ${borderColor}` }}>
+        <p className="text-sm leading-relaxed pt-4" style={{ color: bodyColor }}>{a}</p>
+      </div>
     </div>
   );
 }
@@ -86,45 +103,6 @@ function HelpGuideInner() {
     canonical: "https://www.arthaleads.com/help-guide",
   });
 
-  useEffect(() => {
-    const faqScript = document.createElement("script");
-    faqScript.id   = "faq-jsonld-help";
-    faqScript.type = "application/ld+json";
-    faqScript.textContent = JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": faqs.map(({ q, a }) => ({
-        "@type": "Question",
-        "name": q,
-        "acceptedAnswer": { "@type": "Answer", "text": a },
-      })),
-    });
-    document.head.appendChild(faqScript);
-
-    const howtoScript = document.createElement("script");
-    howtoScript.id   = "howto-jsonld-help";
-    howtoScript.type = "application/ld+json";
-    howtoScript.textContent = JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "HowTo",
-      "name": "How to get started with Arthaleads CRM",
-      "description": "Set up your Arthaleads account and start managing real estate leads in minutes.",
-      "totalTime": "PT10M",
-      "step": steps.map((s, i) => ({
-        "@type": "HowToStep",
-        "position": i + 1,
-        "name": s.title,
-        "text": s.desc,
-      })),
-    });
-    document.head.appendChild(howtoScript);
-
-    return () => {
-      document.getElementById("faq-jsonld-help")?.remove();
-      document.getElementById("howto-jsonld-help")?.remove();
-    };
-  }, []);
-
   const bg         = isDark ? "#0d0d1a" : "#ffffff";
   const altBg      = isDark ? "#080810" : "#f9fafb";
   const textColor  = isDark ? "#ffffff" : "#111827";
@@ -134,6 +112,7 @@ function HelpGuideInner() {
 
   return (
     <div className="min-h-screen" style={{ background: bg, color: textColor, fontFamily: "Inter, sans-serif" }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: HELP_JSONLD }} />
       <PublicNav />
 
       {/* Hero */}

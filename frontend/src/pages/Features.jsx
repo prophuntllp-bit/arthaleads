@@ -235,7 +235,7 @@ export default function Features() {
           </h1>
           <p className="text-lg leading-relaxed max-w-2xl mx-auto mb-8" style={{ color: t.body }}>
             Real estate CRM software built for Indian sales teams, from small channel partner offices to large builder and developer sales floors.
-            Here is everything ArthaLeads does, in the order your team uses it.
+            Here is everything Arthaleads does, in the order your team uses it.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}

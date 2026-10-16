@@ -102,13 +102,13 @@ export default function CompetitorComparison({ c }) {
               </ol>
             </nav>
             <h1 className="text-4xl sm:text-5xl font-black leading-[1.08] mb-6" style={{ color: text, textWrap: "balance" }}>
-              <span className="sr-only">{c.name} pricing and alternative: ArthaLeads vs {c.name}</span>
+              <span className="sr-only">{c.name} pricing and alternative: Arthaleads vs {c.name}</span>
               <span aria-hidden="true">
                 {[c.name, "pricing", "and", "alternative"].map((w, i) => (
                   <span key={w + i} className="word-rise" style={{ animationDelay: `${80 + i * 90}ms` }}>{w}&nbsp;</span>
                 ))}
                 <span className="block">
-                  {["ArthaLeads", "vs", c.name].map((w, i) => (
+                  {["Arthaleads", "vs", c.name].map((w, i) => (
                     <span key={w + i} className="word-rise text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00] pb-1"
                       style={{ animationDelay: `${440 + i * 90}ms` }}>{w}{i < 2 ? " " : ""}</span>
                   ))}
@@ -140,7 +140,7 @@ export default function CompetitorComparison({ c }) {
               <p className="text-sm font-semibold mb-5" style={{ color: muted }}>{c.priceCardTitle || "Price per user, per month"}</p>
               <div className="rounded-2xl p-5 mb-4 border" style={{ borderColor: "rgba(255,107,0,0.35)", background: isDark ? "rgba(255,107,0,0.08)" : "#fff7f0" }}>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-bold" style={{ color: text }}>ArthaLeads</span>
+                  <span className="font-bold" style={{ color: text }}>Arthaleads</span>
                   <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: isDark ? "#4ade80" : "#15803d" }}>
                     <Check className="w-3.5 h-3.5" /> Published
                   </span>
@@ -207,7 +207,7 @@ export default function CompetitorComparison({ c }) {
                   <span className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: isDark ? "rgba(255,107,0,0.15)" : "#fff3ea" }}>
                     <Receipt className="w-5 h-5" style={{ color: orange }} />
                   </span>
-                  <h3 className="text-xl font-bold" style={{ color: text }}>How ArthaLeads prices</h3>
+                  <h3 className="text-xl font-bold" style={{ color: text }}>How Arthaleads prices</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mb-5">
                   {[["Starter", PLAN_PRICING.starter], ["Growth", PLAN_PRICING.growth]].map(([n, p]) => (
@@ -243,7 +243,7 @@ export default function CompetitorComparison({ c }) {
             <h2 className="text-3xl font-black mb-8 text-center" style={{ color: text }}>Which one fits your team?</h2>
           </Reveal>
           <div className="grid md:grid-cols-2 gap-6">
-            {[[`Choose ${c.name} if`, c.chooseThem, muted], ["Choose ArthaLeads if", c.chooseUs, orange]].map(([title, items, accent], i) => (
+            {[[`Choose ${c.name} if`, c.chooseThem, muted], ["Choose Arthaleads if", c.chooseUs, orange]].map(([title, items, accent], i) => (
               <Reveal key={title} delay={i * 120} className="flex">
                 <Spotlight className="w-full rounded-2xl border p-7 transition-transform duration-300 hover:-translate-y-1"
                   style={{ background: cardBg, borderColor: i === 1 ? "rgba(255,107,0,0.45)" : cardBorder }}>
@@ -266,7 +266,7 @@ export default function CompetitorComparison({ c }) {
       <section className="py-14" style={{ background: altBg }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <Reveal>
-            <h2 className="text-3xl font-black mb-3" style={{ color: text }}>ArthaLeads vs {c.name}, side by side</h2>
+            <h2 className="text-3xl font-black mb-3" style={{ color: text }}>Arthaleads vs {c.name}, side by side</h2>
             <p className="text-base mb-8" style={{ color: soft }}>Each {c.name} entry links to the page it comes from.</p>
           </Reveal>
 
@@ -275,7 +275,7 @@ export default function CompetitorComparison({ c }) {
             {c.rows.map(([row, artha, them, s], i) => (
               <Reveal key={row} delay={i * 40} y={14} className="rounded-2xl border p-4" style={{ background: cardBg, borderColor: cardBorder }}>
                 <h3 className="font-semibold mb-2" style={{ color: text }}>{row}</h3>
-                <p className="text-sm mb-1.5" style={{ color: soft }}><span className="font-semibold" style={{ color: text }}>ArthaLeads:</span> {artha}</p>
+                <p className="text-sm mb-1.5" style={{ color: soft }}><span className="font-semibold" style={{ color: text }}>Arthaleads:</span> {artha}</p>
                 <p className="text-sm" style={{ color: soft }}><span className="font-semibold" style={{ color: text }}>{c.name}:</span> {them} {src(s)}</p>
               </Reveal>
             ))}
@@ -286,7 +286,7 @@ export default function CompetitorComparison({ c }) {
               <thead>
                 <tr style={{ borderBottom: `1px solid ${cardBorder}` }}>
                   <th scope="col" className="text-left p-4 w-[20%] font-semibold" style={{ color: muted }}><span className="sr-only">Topic</span></th>
-                  <th scope="col" className="text-left p-4 w-[40%] font-bold" style={{ color: orange }}>ArthaLeads</th>
+                  <th scope="col" className="text-left p-4 w-[40%] font-bold" style={{ color: orange }}>Arthaleads</th>
                   <th scope="col" className="text-left p-4 w-[40%] font-bold" style={{ color: text }}>{c.name}</th>
                 </tr>
               </thead>
@@ -308,7 +308,7 @@ export default function CompetitorComparison({ c }) {
       <section className="py-14" style={{ background: bg }}>
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <Reveal>
-            <h2 className="text-3xl font-black mb-5" style={{ color: text }}>What moving to ArthaLeads looks like</h2>
+            <h2 className="text-3xl font-black mb-5" style={{ color: text }}>What moving to Arthaleads looks like</h2>
           </Reveal>
           <ol className="space-y-4">
             {SWITCH_STEPS.map(([t, d], i) => (
@@ -346,7 +346,7 @@ export default function CompetitorComparison({ c }) {
             ))}
           </div>
           <p className="text-xs mt-10 leading-relaxed" style={{ color: muted }}>
-            {c.name} is a trademark of its owner, used here only to identify the product being compared. ArthaLeads is not
+            {c.name} is a trademark of its owner, used here only to identify the product being compared. Arthaleads is not
             affiliated with or endorsed by {c.name}. {c.name} information is taken from{" "}
             <a href={c.home.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{c.home.label}</a> and{" "}
             <a href={c.pricing.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{c.pricing.label}</a> as of {c.checked}.
@@ -357,7 +357,7 @@ export default function CompetitorComparison({ c }) {
       {/* ── Close ── */}
       <section className="py-20 text-center" style={{ background: bg }}>
         <Reveal className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-black mb-4" style={{ color: text }}>Try ArthaLeads on your own leads</h2>
+          <h2 className="text-3xl font-black mb-4" style={{ color: text }}>Try Arthaleads on your own leads</h2>
           <p className="text-base mb-8" style={{ color: soft }}>Fourteen days, no credit card, prices you can see today.</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Magnetic>

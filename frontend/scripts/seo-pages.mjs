@@ -49,7 +49,11 @@ const base = readFileSync(join(dist, "index.html"), "utf8");
 // index.html is about to become the home page's file. Keep an untouched copy as
 // the fallback for the CRM host and for unknown URLs (vercel.json rewrites
 // everything else to /app.html), so they never claim to be the home page.
-writeFileSync(join(dist, "app.html"), base);
+// It is also what a mistyped www URL gets (status 200), so it carries noindex
+// in the raw HTML; otherwise Google sees a soft 404. Marketing pages reached
+// from it in the browser set their own robots tag through useSEO.
+writeFileSync(join(dist, "app.html"), base.replace(/(<meta name="description"[^>]*>)/, `$1
+    <meta name="robots" content="noindex, follow" />`));
 
 function render({ title, description, canonical, robots }) {
   let html = base
