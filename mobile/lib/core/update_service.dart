@@ -51,6 +51,8 @@ class UpdateService {
   static const _skipCooldown = Duration(days: 3);
 
   static Future<UpdateInfo?> check() async {
+    // The staging app is installed by hand; never offer it the live APK.
+    if (ApiClient.isStaging) return null;
     try {
       final info = await PackageInfo.fromPlatform();
       final currentBuild = trueBuildNumber(info.buildNumber);
@@ -181,6 +183,7 @@ class UpdateService {
   /// block app launch). Longer timeout too: nothing here is blocking startup,
   /// so it's worth waiting out a cold Railway backend rather than giving up.
   static Future<ManualCheckOutcome> checkManual() async {
+    if (ApiClient.isStaging) return const ManualCheckOutcome(ManualCheckResult.upToDate);
     try {
       final info = await PackageInfo.fromPlatform();
       final currentBuild = trueBuildNumber(info.buildNumber);
