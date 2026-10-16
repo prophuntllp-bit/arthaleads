@@ -662,6 +662,8 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
                 campaignId: leadData.campaign_id || "",
                 adsetId:    leadData.adset_id    || leadDetails.adset_id    || "",
                 adId:       leadData.ad_id       || leadDetails.ad_id       || "",
+                // Names, so the Vistrow routing pickers can show "Ad name (id)".
+                campaignName, adName,
               },
             },
           ],
