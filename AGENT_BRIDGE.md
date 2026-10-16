@@ -60,7 +60,7 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
-- [claude] 2026-10-16 IST: Artha Phase 4 (mobile) start. Step 1: app keeps X-Renewed-Token (7-day sign-out fix), mobile/lib/core/api_client.dart only. Then the Artha bottom sheet in mobile/ (no backend changes planned).
+- [claude] 2026-10-16 IST: Artha Phase 4 (mobile) start. Step 1 done (staging 63a95da, main 9c5ade8). Next: the Artha bottom sheet in mobile/ (no backend changes planned).
 
 
 
@@ -93,6 +93,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-16 IST (staging 63a95da, main 9c5ade8): mobile keeps X-Renewed-Token (Artha Phase 4 step 1, the 7-day sign-out fix from docs/ARTHA_MOBILE_HANDOFF.md). mobile/lib/core/api_client.dart: dio onResponse and onError store the header via adoptRenewedToken, only when the request's Bearer token is still the one in use (a late reply after sign-out/account switch is ignored); public adoptRenewedToken for the coming SSE chat client. New test/api_client_renewal_test.dart (5 cases, 2 fail on the old client); flutter test 35/35, analyze clean. Not released: ships with the next APK (unreleased 1.0.14 batch). NOT VERIFIED on a phone: needs a session over a day old to see the renewal.
 
 - [claude] 2026-10-16 IST (staging 7ab72eb4 + 2e87363c, cherry-picked to main): /product-tour watch page LIVE, restored from f8793a8 with owner approval (it was removed 12 Oct in 751dce3). pages/ProductTour.jsx + data/introFilm.js (9 chapters, transcript from the film's voice cues), IntroVideo `chapters`/`seek` props (player only, VideoObject with Clip key moments, ?t=N seeks); home page keeps the film WITHOUT structured data. vercel.json: /product-tour redirect replaced by a rewrite to product-tour.html. Sitemap: /product-tour with a <video:video> entry. Not in nav/footer, no eyebrow pill. Reason: Search Console "Video isn't on a watch page" (0 of 3 videos indexed).
 
