@@ -11,11 +11,11 @@ name: Backend tests
 # no secrets and never touch real data.
 
 on:
+  # Every push, not only ones that touch backend/: Railway deploys the newest
+  # commit of the branch, so a later website-only or notes-only push with no
+  # test run would otherwise deploy server code that failed its tests.
   push:
     branches: [main, staging]
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend-tests.yml"
   pull_request:
     paths:
       - "backend/**"
