@@ -834,18 +834,18 @@ async function treatAsKnownNumber(org, lead, campaignRef) {
   await markRepeatEnquiry(org, lead, campaignRef).catch((err) => console.error("[WhatsApp Lead Capture] repeat enquiry hand-off failed:", err.message));
 }
 
-// An existing chat whose lead was deleted, archived or is gone (or never had
-// one) used to just continue: a returning buyer got no lead, no Vistrow call
-// (lost in a live test, 17 Oct 2026). Link it to the number's live lead if
-// there is one, else create a lead exactly as a new chat would. The chat, its
-// history and its bot settings stay as they are. Runs inside withConvSetupLock.
+// An existing chat whose lead was deleted, archived or is gone used to just
+// continue: a returning buyer got no lead, no Vistrow call (lost in a live
+// test, 17 Oct 2026). Link it to the number's live lead if there is one, else
+// create a lead exactly as a new chat would. The chat, its history and its bot
+// settings stay as they are. A chat that never had a lead (leadId null, e.g. a
+// broadcast recipient replying) is left exactly as before (owner decision).
+// Runs inside withConvSetupLock.
 async function relinkConversationLead(org, conv, { phone, name, referral }) {
-  let reason = "no_lead";
-  if (conv.leadId) {
-    const linked = await Lead.findById(conv.leadId).select("isDeleted isArchived").lean();
-    if (linked && !linked.isDeleted && !linked.isArchived) return; // live lead: nothing to do
-    reason = !linked || linked.isDeleted ? "deleted" : "archived";
-  }
+  if (!conv.leadId) return;
+  const linked = await Lead.findById(conv.leadId).select("isDeleted isArchived").lean();
+  if (linked && !linked.isDeleted && !linked.isArchived) return; // live lead: nothing to do
+  const reason = !linked || linked.isDeleted ? "deleted" : "archived";
   const campaignRef = campaignRefFromReferral(referral);
   let lead = await findLiveLeadByPhone(org._id, phone);
   if (lead) {
@@ -859,10 +859,8 @@ async function relinkConversationLead(org, conv, { phone, name, referral }) {
     }
     await Lead.updateOne({ _id: lead._id }, { $push: { activities: {
       type: "created",
-      description: reason === "no_lead"
-        ? "Lead created: this number messaged on WhatsApp again and its chat had no lead"
-        : `Lead re-created: this number messaged on WhatsApp after its previous lead was ${reason}`,
-      meta: { previousLeadId: conv.leadId || null, reason },
+      description: `Lead re-created: this number messaged on WhatsApp after its previous lead was ${reason}`,
+      meta: { previousLeadId: conv.leadId, reason },
     } } });
   }
   await WaConversation.updateOne({ _id: conv._id }, { $set: { leadId: lead._id } });
