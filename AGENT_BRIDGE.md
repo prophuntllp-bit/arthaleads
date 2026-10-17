@@ -65,7 +65,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 
-- [claude] 2026-10-16 IST: Artha Phase 4 (mobile). Done: sign-in renewal (main 9c5ade8), staging app (main 836efd0); on staging only, waiting for the owner's check: Artha sheet (08a97eb, af72a0c), change cards (c9a9a34, 3c56b14), team-member choice buttons (backend, 3f6e4df). voice (e822aa3 + fix d1f0695, waiting for the owner to speak-test). Morning brief (ae39c6f). Draft reply + suggestion card (2448e17), staging Google button hidden + old helpbot removed. Next: owner check on staging, then all staging work to main together and APK release (owner's go-ahead).
+- [claude] 2026-10-17 IST: Artha Phase 4 (mobile) staging -> main (owner: push all together): cherry-picking only my commits (mobile/ Artha + backend/copilot/tools.js, prompt.js and their tests). Then APK 1.0.14 on the owner's go-ahead.
 
 
 
