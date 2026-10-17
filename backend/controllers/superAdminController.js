@@ -367,7 +367,7 @@ const superAdminController = {
       }
       res.json({
         success: true,
-        message: `Backup sent to ${process.env.BACKUP_EMAIL}`,
+        message: `Backup saved to file storage (${result.key})`,
         stats:   result.stats,
         size:    result.gzipSize,
         docs:    result.totalDocs,
