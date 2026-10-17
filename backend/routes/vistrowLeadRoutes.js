@@ -86,14 +86,18 @@ router.get("/:id/status", async (req, res) => {
     const enabled = !!doc?.enabled;
     let canCall = false;
     let whyNot = "";
+    // The agent that would make the NEXT call (current routing), which can
+    // differ from the one on the last delivery after the owner re-routes.
+    let nextAgentLabel = "";
     if (enabled && lead.phone) {
       const ctx = await routingContext(lead);
       const decision = R.resolveRouting(toConfig(doc), R.routingInputsFrom(lead, ctx));
       canCall = decision.autoCall === true;
+      if (canCall) nextAgentLabel = decision.agentLabel || "";
       if (!canCall) whyNot = notRoutedText(decision.reason);
     } else if (!enabled) whyNot = "Vistrow Voice calling is not switched on";
     else whyNot = "This lead has no phone number";
-    res.json({ success: true, enabled, canCall, whyNot, lastDelivery: deliveryView(last) });
+    res.json({ success: true, enabled, canCall, whyNot, nextAgentLabel, lastDelivery: deliveryView(last) });
   } catch (err) { fail(res, err, "lead status"); }
 });
 

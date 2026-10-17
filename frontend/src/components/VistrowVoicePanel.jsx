@@ -63,7 +63,8 @@ export function useVistrowCall(lead, onUpdated) {
     st, calling, requestCall, mayCall, queuedAt, inFlight,
     busy: inFlight || !!queuedAt,
     canAiCall: !!leadId && mayCall && !!st?.canCall,
-    agentLabel: d?.agentLabel || "",
+    // Who the next AI call would come from (current routing), else the last one.
+    agentLabel: st?.nextAgentLabel || d?.agentLabel || "",
   };
 }
 
