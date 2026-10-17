@@ -170,8 +170,17 @@ export default function DateRangePicker({ value, onChange, label, compact = fals
   const popoverRef = useRef(null);
 
   const isCustomObj = value && typeof value === "object" && value.preset === "custom";
-  const selectedLabel = isCustomObj
-    ? "Custom Range"
+  // A custom range shows its dates ("1 Oct – 10 Oct", year added when it is
+  // not this year) instead of a bare "Custom Range".
+  const customLabel = () => {
+    const s = fromKey(value.from), e = value.to ? fromKey(value.to) : s;
+    const thisYear = new Date().getFullYear();
+    const fmt = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", ...(d.getFullYear() !== thisYear ? { year: "numeric" } : {}) });
+    return fmtKey(s) === fmtKey(e) ? fmt(s) : `${fmt(s)} – ${fmt(e)}`;
+  };
+  const selectedLabel = isCustomObj && value.from
+    ? customLabel()
+    : isCustomObj ? "Custom Range"
     : (PRESETS.find((p) => p.value === value)?.label || LEGACY_LABELS[value] || "Date Range");
 
   const normView = (y, m) => ({ year: y + Math.floor(m / 12), month: ((m % 12) + 12) % 12 });
