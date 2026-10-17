@@ -13,6 +13,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # The hosted runner's disk now fills up during the Android build ("No
+      # space left on device", 17 Oct 2026), which also held back the backend
+      # deploy (Railway waits for every check). Drop toolchains this job never
+      # uses; the Android SDK and Java stay.
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/share/swift             /usr/local/share/powershell /usr/local/share/chromium /usr/local/lib/node_modules             /opt/hostedtoolcache/CodeQL /opt/hostedtoolcache/go /opt/hostedtoolcache/PyPy /opt/hostedtoolcache/Ruby
+          sudo docker image prune --all --force > /dev/null 2>&1 || true
+          df -h /
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
