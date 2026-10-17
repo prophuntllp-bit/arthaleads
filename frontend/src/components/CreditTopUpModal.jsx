@@ -12,7 +12,7 @@ const PRESETS = [500, 1000, 2500, 5000];
 const SUGGESTED = 1000;
 
 const rupees = (paise) =>
-  `₹${((paise || 0) / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  `${(paise || 0) < 0 ? "−" : ""}₹${(Math.abs(paise || 0) / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function CreditTopUpModal({ open, onClose, onSuccess, orgName }) {
   const [amount, setAmount]   = useState(SUGGESTED);   // rupees
@@ -107,7 +107,10 @@ export default function CreditTopUpModal({ open, onClose, onSuccess, orgName }) 
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs text-app-soft">Current balance</p>
-                <p className="text-2xl font-bold text-app tabular-nums">{rupees(balance.availablePaise)}</p>
+                <p className="text-2xl font-bold tabular-nums" style={{ color: balance.availablePaise < 0 ? "#b91c1c" : undefined }}>{rupees(balance.availablePaise)}</p>
+                {balance.owedPaise > 0 && (
+                  <p className="text-xs text-app-soft mt-0.5">You owe {rupees(balance.owedPaise)}. This top-up pays that off first.</p>
+                )}
               </div>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
                 style={{ background: "rgba(34,197,94,0.12)", color: "#15803d" }}>Prepaid wallet</span>

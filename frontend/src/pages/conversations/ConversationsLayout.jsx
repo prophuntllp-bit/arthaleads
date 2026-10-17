@@ -27,7 +27,7 @@ import { useAuth } from "../../context/AuthContext";
  */
 
 const TABS = [
-  { to: "/conversations",           label: "Inbox",     icon: Mail, end: true },
+  { to: "/conversations",           label: "WhatsApp",  icon: Mail, end: true },
   { to: "/conversations/templates", label: "Templates", icon: FileText, minPlan: "growth" },
   { to: "/conversations/campaigns", label: "Campaigns", icon: Megaphone, minPlan: "growth" },
   { to: "/conversations/credits",   label: "Credits",   icon: Wallet,       roles: ["admin", "manager", "super_admin"] },

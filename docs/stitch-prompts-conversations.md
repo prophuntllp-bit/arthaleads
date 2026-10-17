@@ -65,7 +65,7 @@ Tone
 Design the section header for a WhatsApp workspace inside a CRM.
 
 A horizontal tab strip sits directly under the app's top bar, left aligned,
-full width, with page padding. Tabs, in order: Inbox, Templates, Campaigns,
+full width, with page padding. Tabs, in order: WhatsApp (the chats), Templates, Campaigns,
 Credits, Settings. Each tab is a pill with a 16px line icon and a label.
 
 Active tab: rgba(255,107,0,0.12) fill with #ff6b00 text.
@@ -82,7 +82,7 @@ Show light and dark.
 
 ---
 
-## 2 · Inbox
+## 2 · WhatsApp (chats)
 
 ```
 [paste design system]
@@ -91,7 +91,7 @@ Design a two-panel WhatsApp inbox that fills the height below the tab strip,
 inside one rounded 20px container with a 1px border.
 
 Left panel, 320px fixed:
-  header row — WhatsApp glyph in #25D366, "Inbox" in bold, then on the right a
+  header row — WhatsApp glyph in #25D366, "WhatsApp" in bold, then on the right a
   credit pill showing "₹1,240", a settings gear, and a refresh icon
   filter row — four small pills: All, Bot, Open, Done. Active pill is #ff6b00
   fill with white text

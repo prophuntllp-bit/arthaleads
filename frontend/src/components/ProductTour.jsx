@@ -18,7 +18,7 @@ const STEPS = [
   { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", path: "dashboard",
     title: "Your whole business on one screen",
     desc: "New leads, follow-ups due today, hot leads to call first and how each source is performing, the moment you log in." },
-  { id: "inbox", icon: MessageCircle, label: "WhatsApp Inbox", path: "conversations",
+  { id: "inbox", icon: MessageCircle, label: "WhatsApp", path: "conversations",
     title: "Every WhatsApp chat, answered",
     desc: "The AI agent replies day and night, asks the right questions, sends photos, the brochure and location, and books the site visit. Your team steps in any time." },
   { id: "lead", icon: UserRound, label: "Lead record", path: "leads",

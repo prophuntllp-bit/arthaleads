@@ -57,7 +57,7 @@ router.get("/balance", async (req, res) => {
       // Roughly how many more replies they can send. The composer uses this to
       // warn before it hard-stops, which is friendlier than a 402 mid-sentence.
       serviceMessagesLeft: rates.service > 0
-        ? Math.floor(bal.availablePaise / rates.service) + Math.max(0, credits.FREE_SERVICE_PER_MONTH - freeUsed)
+        ? Math.floor(bal.spendablePaise / rates.service) + Math.max(0, credits.FREE_SERVICE_PER_MONTH - freeUsed)
         : null,
       paymentsConfigured: rzp.isConfigured(),
       minTopUpPaise: topUp.MIN_TOPUP_PAISE,

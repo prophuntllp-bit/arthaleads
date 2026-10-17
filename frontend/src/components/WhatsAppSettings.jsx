@@ -34,7 +34,7 @@ const PROVIDERS = [
     name: "Arthaleads WhatsApp API",
     badge: "Official",
     tagline: "Direct · No middleman",
-    pricing: "Templates, campaigns and inbox",
+    pricing: "Templates, campaigns and chats",
     color: "#1877F2",
     fields: ["apiKey", "wabaId", "phoneNumberId", "webhookVerifyToken"],
     signupUrl: "https://developers.facebook.com/docs/whatsapp/cloud-api/get-started",
@@ -620,7 +620,7 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
         <StepHead n={2}>Set your webhook URL in {prov.name}</StepHead>
         <p className="text-sm text-app-soft pl-8">
           In your {prov.name} dashboard → {prov.webhookPath}, paste this URL so incoming messages,
-          delivery updates and read receipts reach your inbox:
+          delivery updates and read receipts reach your WhatsApp chats:
         </p>
         <div className="pl-8 space-y-3">
           <div className="flex items-center gap-2 rounded-xl px-3 py-2.5"

@@ -9,6 +9,8 @@ import CreditTopUpModal from "../../components/CreditTopUpModal";
 const TZ = "Asia/Kolkata";
 const rupees = (paise) =>
   `₹${(Math.abs(paise || 0) / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+// For balances, which go below zero when a company is using its overdraft.
+const signedRupees = (paise) => `${(paise || 0) < 0 ? "−" : ""}${rupees(paise)}`;
 
 const CATEGORY_TEXT = {
   marketing: "Marketing message", utility: "Utility message",
@@ -345,13 +347,23 @@ export default function CreditsPage() {
       <div className="grid gap-3 sm:grid-cols-3 mb-5">
         <div className="card p-5 flex flex-col">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-app-soft">Available balance</p>
+            <p className="text-xs text-app-soft">{credits?.availablePaise < 0 ? "Balance (overdraft)" : "Available balance"}</p>
             {credits && (
               <span className="w-2 h-2 rounded-full"
                 style={{ background: credits.availablePaise > 0 ? "#22c55e" : "#b91c1c" }} />
             )}
           </div>
-          <p className="text-3xl font-bold text-app mt-2 tabular-nums">{credits ? rupees(credits.availablePaise) : "—"}</p>
+          <p className="text-3xl font-bold mt-2 tabular-nums"
+            style={{ color: credits?.availablePaise < 0 ? "#b91c1c" : "var(--app-text)" }}>
+            {credits ? signedRupees(credits.availablePaise) : "—"}
+          </p>
+          {credits?.availablePaise < 0 && (
+            <p className="text-xs text-app-soft mt-1">
+              {credits.spendablePaise > 0
+                ? <>You owe {rupees(credits.owedPaise)}. {rupees(credits.spendablePaise)} left before messages pause (limit {rupees(credits.overdraftLimitPaise)}). Add credits to clear it.</>
+                : <>Overdraft limit of {rupees(credits.overdraftLimitPaise)} reached: messages are paused until you add credits.</>}
+            </p>
+          )}
           <div className="mt-auto pt-4">
             {credits?.reservedPaise > 0 ? (
               <p className="text-[11px] text-app-soft flex items-center gap-1.5">

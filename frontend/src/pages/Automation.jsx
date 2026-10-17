@@ -1850,7 +1850,7 @@ export default function Automation() {
             </div>
             <h3 className="mt-3 text-sm font-semibold text-app">WhatsApp Business</h3>
             <p className="mt-1 text-xs text-app-soft">
-              {waStatus?.connected ? "Connected · manage provider & profile" : "Connect your number for Inbox, templates & the AI agent"}
+              {waStatus?.connected ? "Connected · manage provider & profile" : "Connect your number for WhatsApp chats, templates & the AI agent"}
             </p>
             {waStatus?.connected && (
               <span className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-500">

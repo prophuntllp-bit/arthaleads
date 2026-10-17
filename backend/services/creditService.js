@@ -1,10 +1,13 @@
 // services/creditService.js
 //
-// WhatsApp Conversation Credits — strictly prepaid, with a hard cap.
+// WhatsApp Conversation Credits — prepaid, with a small overdraft.
 //
 // Arthaleads holds the Meta credit line, which means Meta bills *us* for every
-// tenant's messages. A tenant must therefore never be able to send a message we
-// have not already collected the money for. That is the whole job of this file.
+// tenant's messages. Since 17 Oct 2026 (owner's call) a tenant who runs out may
+// keep sending into a negative balance, down to an overdraft limit (default
+// ₹500, per-org override credits.overdraftLimitPaise); they owe that back and
+// their next top-up clears it first. Past the limit sends stop, exactly as they
+// used to at ₹0. The limit caps what any one tenant can owe us.
 //
 // The awkward part: Meta only tells us what a message actually cost in the
 // status webhook, which arrives *after* the send. So a naive "check balance,
@@ -22,8 +25,8 @@
 //      release()  — send failed, or Meta says it was not billable; hand the
 //                   hold back untouched.
 //
-// available balance = balancePaise - reservedPaise. A tenant can only ever
-// spend what is actually sitting there.
+// available balance = balancePaise - reservedPaise (negative when in debt).
+// spendable = available + overdraft limit. A send needs spendable >= its price.
 //
 // All amounts are integer PAISE, ex-GST. GST is charged once at top-up, never
 // per message — see docs/whatsapp-embedded-signup-plan.md Part 2.
@@ -61,6 +64,15 @@ const DEFAULT_SELL_RATES_PAISE = { marketing: 112, utility: 15, authentication: 
 // month, from 1 Oct 2026. No rollover.
 const FREE_SERVICE_PER_MONTH = 1000;
 
+// How far below zero a tenant may go before sends stop: ₹500 unless the org has
+// its own credits.overdraftLimitPaise (0 = strictly prepaid).
+const DEFAULT_OVERDRAFT_PAISE = 50_000;
+
+function overdraftFor(org) {
+  const v = org?.credits?.overdraftLimitPaise;
+  return Number.isFinite(v) && v >= 0 ? v : DEFAULT_OVERDRAFT_PAISE;
+}
+
 function currentYyyyMm(d = new Date()) {
   // Billing months follow Meta's UTC calendar month, not IST — using local time
   // here would double-count or skip a day's worth of free messages at every
@@ -91,10 +103,18 @@ async function getBalance(orgId) {
   const org = await Organization.findById(orgId).select("credits").lean();
   const balancePaise  = org?.credits?.balancePaise  || 0;
   const reservedPaise = org?.credits?.reservedPaise || 0;
+  const overdraftLimitPaise = overdraftFor(org);
+  const availablePaise = balancePaise - reservedPaise;
   return {
     balancePaise,
     reservedPaise,
-    availablePaise: Math.max(0, balancePaise - reservedPaise),
+    // Negative when the org is using its overdraft.
+    availablePaise,
+    overdraftLimitPaise,
+    // What can still be spent before sends stop.
+    spendablePaise: Math.max(0, availablePaise + overdraftLimitPaise),
+    // Owed to Arthaleads; the next top-up pays this off first.
+    owedPaise: Math.max(0, -balancePaise),
   };
 }
 
@@ -136,7 +156,8 @@ async function quote(orgId, category, count = 1) {
  * leak under any real concurrency.
  *
  * Returns the amount held (0 when fully covered by the free allowance).
- * Throws InsufficientCreditsError and holds nothing if it does not fit.
+ * Fits when balance - reserved + overdraft limit covers it. Throws
+ * InsufficientCreditsError and holds nothing if it does not.
  */
 async function reserve(orgId, { category, count = 1 } = {}) {
   if (!VALID_CATEGORIES.includes(category)) {
@@ -173,7 +194,12 @@ async function reserve(orgId, { category, count = 1 } = {}) {
       _id: orgId,
       $expr: {
         $gte: [
-          { $subtract: ["$credits.balancePaise", "$credits.reservedPaise"] },
+          {
+            $add: [
+              { $subtract: [{ $ifNull: ["$credits.balancePaise", 0] }, { $ifNull: ["$credits.reservedPaise", 0] }] },
+              { $ifNull: ["$credits.overdraftLimitPaise", DEFAULT_OVERDRAFT_PAISE] },
+            ],
+          },
           q.totalPaise,
         ],
       },
@@ -184,8 +210,8 @@ async function reserve(orgId, { category, count = 1 } = {}) {
 
   if (!updated) {
     await giveBackFree();   // nothing was sent, so the free replies are not used up
-    const { availablePaise } = await getBalance(orgId);
-    throw new InsufficientCreditsError(q.totalPaise, availablePaise);
+    const { spendablePaise } = await getBalance(orgId);
+    throw new InsufficientCreditsError(q.totalPaise, spendablePaise);
   }
 
   return q.totalPaise;
@@ -240,7 +266,7 @@ async function settle(orgId, {
   const ratePaise = freeTierApplied ? 0 : rateFor(org, billedCategory);
 
   const balanceBefore = org.credits?.balancePaise || 0;
-  const balanceAfter  = Math.max(0, balanceBefore - ratePaise);
+  const balanceAfter  = balanceBefore - ratePaise; // may go negative (overdraft)
 
   // Belt and braces on the unique index below. The index is the real guard
   // against a genuine race, but this catches the ordinary repeat-webhook case
@@ -333,9 +359,11 @@ async function topUp(orgId, { amountPaise, gstPaise = 0, razorpayPaymentId = nul
 async function canAfford(orgId, category, count = 1) {
   const [q, bal] = await Promise.all([quote(orgId, category, count), getBalance(orgId)]);
   return {
-    ok: bal.availablePaise >= q.totalPaise,
+    ok: bal.spendablePaise >= q.totalPaise,
     needPaise: q.totalPaise,
     availablePaise: bal.availablePaise,
+    spendablePaise: bal.spendablePaise,
+    overdraftLimitPaise: bal.overdraftLimitPaise,
     ...q,
   };
 }
@@ -351,7 +379,7 @@ async function recomputeBalance(orgId) {
     { $group: { _id: null, total: { $sum: "$amountPaise" } } },
   ]);
   const total = agg?.total || 0;
-  await Organization.updateOne({ _id: orgId }, { $set: { "credits.balancePaise": Math.max(0, total) } });
+  await Organization.updateOne({ _id: orgId }, { $set: { "credits.balancePaise": total } }); // may be negative
   return total;
 }
 
@@ -359,6 +387,8 @@ module.exports = {
   InsufficientCreditsError,
   FREE_SERVICE_PER_MONTH,
   DEFAULT_SELL_RATES_PAISE,
+  DEFAULT_OVERDRAFT_PAISE,
+  overdraftFor,
   rateFor,
   ratesFor,
   getBalance,

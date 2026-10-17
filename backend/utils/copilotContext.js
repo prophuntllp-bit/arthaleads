@@ -229,12 +229,12 @@ ${members.map(m => `- ${m.name} (${m.role})`).join("\n")}`);
           WaCampaign.find({ orgId }).sort({ createdAt: -1 }).limit(3).select("name status stats").lean(),
           Organization.findById(orgId).select("credits whatsapp.provider whatsapp.enabled whatsapp.billedDirectlyByMeta").lean(),
         ]);
-        const avail = Math.max(0, (org?.credits?.balancePaise || 0) - (org?.credits?.reservedPaise || 0));
+        const avail = (org?.credits?.balancePaise || 0) - (org?.credits?.reservedPaise || 0); // negative = owes (overdraft)
         const free = org?.credits?.freeService || {};
-        parts.push(`LIVE WHATSAPP INBOX DATA:
+        parts.push(`LIVE WHATSAPP DATA:
 - WhatsApp connected: ${org?.whatsapp?.enabled ? "yes" : "no"}${org?.whatsapp?.billedDirectlyByMeta ? " (messages are billed directly to the customer's own account, not from the credit wallet)" : ""}
 - Conversations: ${open} open, ${resolved} resolved, ${botOn} with the AI assistant on, ${unread} unread
-- Wallet balance: ₹${(avail / 100).toFixed(2)}${free.remaining != null ? `, free replies left this month: ${free.remaining}` : ""}
+- Wallet balance: ₹${(avail / 100).toFixed(2)}${avail < 0 ? ` (in overdraft: the company owes ₹${(-avail / 100).toFixed(2)}; sending pauses at -₹${(require("../services/creditService").overdraftFor(org) / 100).toFixed(0)}, a top-up clears the debt first)` : ""}${free.remaining != null ? `, free replies left this month: ${free.remaining}` : ""}
 - AI agents: ${agents.length ? agents.map((a) => `${a.name} (${a.status}${a.isDefault ? ", default" : ""})`).join(" | ") : "none yet"}
 - Recent campaigns: ${campaigns.length ? campaigns.map((c) => `${c.name} (${c.status})`).join(" | ") : "none yet"}`);
       } catch { /* non-critical */ }

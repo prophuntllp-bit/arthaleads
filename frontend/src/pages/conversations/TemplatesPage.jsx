@@ -269,7 +269,7 @@ export default function TemplatesPage() {
                   {err.reconnect && (
                     <p className="text-xs text-app-soft mt-1.5">
                       Your access token has expired. Reconnect WhatsApp from settings — templates,
-                      campaigns and the inbox all use it.
+                      campaigns and WhatsApp chats all use it.
                     </p>
                   )}
                   {err.settingsFix && !isAdmin && (

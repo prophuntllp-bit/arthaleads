@@ -247,16 +247,20 @@ const orgSchema = new mongoose.Schema(
     },
 
     // ── WhatsApp Conversation Credits ─────────────────────────────────────────
-    // Strictly prepaid. Meta bills Arthaleads for every tenant's messages, so a
-    // tenant must never be able to spend money we have not already collected —
-    // see services/creditService.js for the reserve/settle flow that guarantees
-    // it, and docs/whatsapp-embedded-signup-plan.md Part 2 for the commercials.
+    // Prepaid with a small overdraft (17 Oct 2026): a tenant may run the balance
+    // negative down to overdraftLimitPaise (default ₹500) and pays it back on
+    // the next top-up. See services/creditService.js for the reserve/settle flow
+    // and docs/whatsapp-embedded-signup-plan.md Part 2 for the commercials.
     //
     // All amounts are integer PAISE, ex-GST. GST is charged once at top-up on
     // the invoice, never per message: buying ₹1,000 of credit costs ₹1,180 and
     // adds 100000 paise here.
     credits: {
-      balancePaise:  { type: Number, default: 0, min: 0 },
+      // Negative while the tenant is in its overdraft (what it owes us).
+      balancePaise:  { type: Number, default: 0 },
+      // How far below zero this org may go before sends stop. Unset = ₹500
+      // (creditService.DEFAULT_OVERDRAFT_PAISE); 0 = strictly prepaid.
+      overdraftLimitPaise: { type: Number, min: 0 },
       // Held against sends that are in flight. Meta only tells us the real
       // price in the status webhook, which arrives after the send — so we hold
       // worst case up front and settle when the number comes back.

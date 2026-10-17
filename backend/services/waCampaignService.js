@@ -139,7 +139,7 @@ async function preview(org, { templateName, filter }) {
   }
 
   if (!cost.ok) {
-    blockers.push(`Not enough credits — need ₹${(cost.needPaise / 100).toFixed(2)}, have ₹${(cost.availablePaise / 100).toFixed(2)}.`);
+    blockers.push(`Not enough credits: this campaign needs ₹${(cost.needPaise / 100).toFixed(2)} and you can spend ₹${(cost.spendablePaise / 100).toFixed(2)} (balance plus your ₹${(cost.overdraftLimitPaise / 100).toFixed(0)} overdraft). Top up to send it.`);
   }
 
   return {
@@ -150,6 +150,7 @@ async function preview(org, { templateName, filter }) {
     costPaise: cost.needPaise,
     ratePaise: cost.ratePaise,
     availablePaise: cost.availablePaise,
+    spendablePaise: cost.spendablePaise,
     creditCategory: category,
     billedDirectlyByMeta: !!org.whatsapp?.billedDirectlyByMeta,
     tierCap: tierCap === Infinity ? null : tierCap,

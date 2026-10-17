@@ -75,7 +75,7 @@ export default function CommandMenu({ open, onClose, pages, user, navigate, loca
     { id: "a-lead", icon: UserPlus, label: "Add a lead", run: () => navigate("/leads", { state: { openAddLead: true } }) },
     ...(["admin", "manager", "super_admin"].includes(user?.role) ? [{ id: "a-task", icon: ListPlus, label: "Add a task", run: () => navigate("/tasks?new=1") }] : []),
     { id: "a-fu", icon: CalendarClock, label: "Follow-ups due today", run: () => navigate("/leads", { state: { presetFollowUpToday: true } }) },
-    { id: "a-inbox", icon: MessageCircle, label: "Open WhatsApp inbox", run: () => navigate("/conversations") },
+    { id: "a-inbox", icon: MessageCircle, label: "Open WhatsApp", run: () => navigate("/conversations") },
     { id: "a-theme", icon: isDark ? SunMedium : MoonStar, label: isDark ? "Switch to light mode" : "Switch to dark mode", run: onToggleTheme, keepOpen: true },
   ], [user?.role, isDark]); // eslint-disable-line react-hooks/exhaustive-deps
 
