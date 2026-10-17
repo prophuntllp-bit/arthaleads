@@ -218,6 +218,8 @@ test("call now: admin request re-emits with auto_call:true for the routed agent;
   const st = await api("GET", `/leads/${lead._id}/status`, agentUser);
   assert.equal(st.status, 200, JSON.stringify(st.body));
   assert.deepEqual([st.body.enabled, st.body.canCall], [true, true]);
+  // The button names the agent the NEXT call comes from (current routing).
+  assert.equal(st.body.nextAgentLabel, "Siya KHOPOLI");
 
   vistrow.replies.push({ ok: true, queued: true, queued_until: "2026-10-16T03:30:00Z" });
   const r = await api("POST", `/leads/${lead._id}/call`, admin);
