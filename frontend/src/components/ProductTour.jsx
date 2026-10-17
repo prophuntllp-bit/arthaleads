@@ -4,7 +4,10 @@
 // the real CRM (demo account, fake data) and moves to the next tab when the
 // clip ends. Once the visitor picks a tab themselves, auto-advance stops and
 // that clip loops. The clip only downloads for the active tab; the still image
-// is the poster, so nothing is blank while it loads.
+// is the poster, so nothing is blank while it loads. No clip downloads until
+// the page has finished loading and the browser is idle: the first clip is
+// 2.4 MB and used to compete with the page's own text and images (audit,
+// 17 Oct: home 3.4 MB, lab LCP 4.1 s). Until then the tour holds on the still.
 //
 // Posters live in /public/tour as <id>.webp; the clips (<id>.mp4, <id>.webm)
 // are in file storage (data/siteMedia.js), not in every Vercel deployment.
@@ -48,6 +51,7 @@ function useTour() {
   const [inView, setInView]   = useState(false);
   const [reduced, setReduced] = useState(false);
   const [failed, setFailed]   = useState({});     // step ids whose clip could not play
+  const [ready, setReady]     = useState(false);  // page loaded and idle: clips may download
   const rootRef = useRef(null);
 
   useEffect(() => {
@@ -63,25 +67,42 @@ function useTour() {
     return () => io.disconnect();
   }, []);
 
+  useEffect(() => {
+    let t, idle;
+    const go = () => {
+      t = setTimeout(() => {
+        if (window.requestIdleCallback) idle = window.requestIdleCallback(() => setReady(true), { timeout: 2000 });
+        else setReady(true);
+      }, 1500);
+    };
+    if (document.readyState === "complete") go(); else window.addEventListener("load", go, { once: true });
+    return () => {
+      window.removeEventListener("load", go);
+      clearTimeout(t);
+      if (idle && window.cancelIdleCallback) window.cancelIdleCallback(idle);
+    };
+  }, []);
+
   const next = () => setActive((a) => (a + 1) % STEPS.length);
   const step = STEPS[active];
-  const clipPlays = !reduced && !failed[step.id];
+  const clipPlays = ready && !reduced && !failed[step.id];
 
   // Fallback timer. With a working clip the `ended` event advances sooner; this
   // only fires for stills or if a clip stalls.
   useEffect(() => {
-    if (!auto || !inView) return;
+    // Hold on the first still until clips may load, so the first clip is not skipped.
+    if (!auto || !inView || (!ready && !reduced)) return;
     const t = setTimeout(next, clipPlays ? STALL_MS : STILL_MS);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auto, inView, active, clipPlays]);
+  }, [auto, inView, active, clipPlays, ready, reduced]);
 
   // Warm the next poster so a still never flashes blank.
   useEffect(() => { const img = new Image(); img.src = STEPS[(active + 1) % STEPS.length].image; }, [active]);
 
   const pick = (i) => { setActive(i); setAuto(false); };
   const markFailed = () => setFailed((f) => ({ ...f, [step.id]: true }));
-  return { active, auto, inView, reduced, clipPlays, rootRef, pick, next, step, markFailed };
+  return { active, auto, inView, reduced, ready, clipPlays, rootRef, pick, next, step, markFailed };
 }
 
 const TOUR_CSS = `
@@ -150,7 +171,7 @@ function TourScreen({ step, isDark, playClip, loop, inView, onEnded, onFail }) {
 
 /** Tabs above a wide frame, with the caption underneath. */
 export function HeroTour({ isDark }) {
-  const { active, auto, inView, clipPlays, rootRef, pick, next, step, markFailed } = useTour();
+  const { active, auto, inView, reduced, ready, clipPlays, rootRef, pick, next, step, markFailed } = useTour();
   const heading = isDark ? "#ffffff" : "#111827";
   const body    = isDark ? "rgba(255,255,255,0.6)" : "#6b7280";
   const chipBg  = isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.85)";
@@ -180,7 +201,7 @@ export function HeroTour({ isDark }) {
                 <Icon className="w-3.5 h-3.5" style={{ color: on ? "#fff" : body }} />
               </span>
               {s.label}
-              {on && auto && inView && (
+              {on && auto && inView && (ready || reduced) && (
                 <span className="absolute left-3 right-3 bottom-0 h-[2px] rounded-full overflow-hidden" style={{ background: track }}>
                   <span key={active} className="tour-anim block h-full origin-left bg-[#ff6b00]"
                     style={{ animation: `tourFill ${clipPlays ? CLIP_MS : STILL_MS}ms linear forwards` }} />
