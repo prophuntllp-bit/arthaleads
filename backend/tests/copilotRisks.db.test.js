@@ -92,6 +92,17 @@ const check = (ok, msg, d = "") => { console.log(`  ${ok ? "ok  " : "FAIL"}  ${m
   const mb = await buildBrief(M, now);
   check(mb.team.find((x) => x.name === "Soniya")?.atRisk >= 5, "the team table counts each person's at-risk leads", JSON.stringify(mb.team));
 
+  // The summary line is not a record: it must never become a link (a saved
+  // chat rejects it, which turned "who should I call first" into an error).
+  const { linkable } = require("../copilot/tools");
+  const kinds = linkable([...mb.risks.list, ...mb.items]).map((x) => x.kind);
+  check(mb.risks.list.some((x) => x.kind === "summary") && !kinds.includes("summary") && !kinds.includes("chat"), "only leads, project leads and tasks become links", JSON.stringify(kinds));
+  const CopilotThread = require("../models/CopilotThread");
+  const t = new CopilotThread({ orgId: org, userId: M._id, title: "t", turns: [{ role: "assistant", text: "x", records: linkable(mb.risks.list).map((r) => ({ id: r.id, kind: r.kind, name: r.name })) }] });
+  check(!t.validateSync(), "a chat holding the brief's links saves", String(t.validateSync()));
+  const bad = new CopilotThread({ orgId: org, userId: M._id, title: "t", turns: [{ role: "assistant", text: "x", records: mb.risks.list.map((r) => ({ id: r.id || "x", kind: r.kind, name: r.name })) }] });
+  check(!!bad.validateSync(), "(without the filter the same chat is rejected, as on staging)");
+
   console.log(failures ? `\n  ${failures} FAILED\n` : "\n  all risk alert checks passed\n");
   await mongoose.disconnect(); await mongod.stop();
   process.exit(failures ? 1 : 0);
