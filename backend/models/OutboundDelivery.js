@@ -67,6 +67,9 @@ const outboundDeliverySchema = new mongoose.Schema(
     callReason: { type: String, default: "" },
     // Vistrow's queued_until: the call is scheduled for this time (calling window closed).
     callQueuedUntil: { type: Date, default: null },
+    // When the WhatsApp "a call is coming" message was claimed for this delivery
+    // (utils/vistrowWhatsAppHeadsUp.js); set once, so a re-sent answer never repeats it.
+    waHeadsUpAt: { type: Date, default: null },
 
     payload: { type: mongoose.Schema.Types.Mixed, select: false },
     phoneKey: { type: String, default: "" }, // E.164, for the repeat-phone window

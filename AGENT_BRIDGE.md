@@ -61,6 +61,8 @@ only be verified live so Claude Code or the owner can check it on production.
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 - [claude] 2026-10-17 12:45 IST: lead integrity (audit item 6): Facebook lead dedupe, Google Ads webhook 5xx, one phone key, routing skips inactive users. backend/routes/webhookRoutes.js, backend/utils/routingRules.js, phone helpers, tests
 
+- [claude] 2026-10-17 IST: WhatsApp heads-up before the Vistrow AI call; then Vistrow call name onto nickname leads. Files: backend/utils/vistrowWhatsAppHeadsUp.js, services/vistrowOutbound/{index,service}.js, models/OutboundDelivery.js, routes/whatsappRoutes.js (export only + looksLikeRealName move), routes/webhookRoutes.js, tests. Local only.
+
 
 
 
@@ -97,6 +99,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-17 IST (staging-local, not pushed): WhatsApp heads-up before the Vistrow AI call. When Vistrow answers queued:true for a WhatsApp hand-off (origin whatsapp-*, not manual-call), the assistant sends one Hinglish notice via sendBotNotice (billed, stored in the Inbox, isNotice) saying the advisor calls in ~1 minute, or at the IST time of queued_until when later. Only inside the 24 h window, org connected, lead not tagged "Not a buyer"; once per delivery (OutboundDelivery.waHeadsUpAt claim). Files: backend/utils/vistrowWhatsAppHeadsUp.js, services/vistrowOutbound/{index,service}.js, models/OutboundDelivery.js, routes/whatsappRoutes.js (export), tests/vistrowWhatsAppHeadsUp.db.test.js. Not verified with a live Meta send.
 
 - [claude] 2026-10-17 IST: Lead page call buttons split into "You call" (Call from my phone, Call in browser) and an indigo "AI call · <agent>" (admins/managers, when Vistrow canCall); "Call now via Vistrow" removed from the panel, now "Vistrow AI calls" status only; status fetched once via useVistrowCall. Person calls ask to confirm while an AI call is in flight/queued. Files: frontend/src/components/LeadDetail.jsx, VistrowVoicePanel.jsx. Local only, not pushed; build passes, not clicked through in a browser.
 - [claude] 2026-10-17 IST (staging 81abe32a, NOT on main yet, owner to check staging): comparison pages internal links. CompetitorComparison.jsx: COMPARISONS list + "Also compared: Arthaleads vs X and Arthaleads vs Y." under the closing links (each compare page now links its two siblings; add new competitors to COMPARISONS). Features.jsx closing CTA: "Moving from another CRM?" line linking all three. Sanity (live, via scratchpad add-link.js): real-estate-crm-lead-management "choosing a CRM for your real estate business" -> /compare; inbound links to the 17 Oct Facebook lead ads post from real-estate-lead-management-enquiry-to-site-visit ("Facebook and Instagram lead forms") and real-estate-crm-lead-management ("Facebook ad response"). Google indexing requested for the Facebook lead ads post. Note: in Git Bash run add-link.js with MSYS_NO_PATHCONV=1 when the target starts with "/".
