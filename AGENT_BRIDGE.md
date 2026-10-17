@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-17 IST: SEO/perf (owner approved 2-4): lazy-load the CRM shell out of the marketing entry bundle (frontend/src/App.jsx, new src/crmShell.js, new components/Spinner.jsx, components/UI.jsx re-export); blog post HTML with full nav/footer links (frontend/api/blog-post.js); BreadcrumbList on marketing pages (frontend/scripts/seo-pages.mjs). Plus Vercel Skew Protection (dashboard).
+
 
 
 
