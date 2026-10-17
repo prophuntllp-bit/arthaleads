@@ -138,7 +138,7 @@ function Workflow({ group, index, isDark, t }) {
       <div className={`grid ${spec ? "lg:grid-cols-2 items-center" : "max-w-3xl mx-auto text-center"} gap-8 lg:gap-16 mb-10 lg:mb-14`}>
         <div ref={textRef} style={reveal(textShown, flip ? "translateX(24px)" : "translateX(-24px)")} className={flip ? "lg:order-2" : ""}>
           <div className={`flex items-center gap-3 mb-4 ${spec ? "" : "justify-center"}`}>
-            <span className="w-9 h-9 rounded-full bg-[#ff6b00] text-white text-sm font-bold flex items-center justify-center tabular-nums">{index + 1}</span>
+            <span className="w-9 h-9 rounded-full bg-[color:var(--brand-btn)] text-white text-sm font-bold flex items-center justify-center tabular-nums">{index + 1}</span>
             <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--brand-text)]">{group.label}</span>
           </div>
           <h2 id={`group-${group.id}-title`} className="text-3xl sm:text-4xl lg:text-[2.6rem] font-black leading-[1.1] tracking-tight mb-4" style={{ color: t.heading, textWrap: "balance" }}>
@@ -240,7 +240,7 @@ export default function Features() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-              className="inline-flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-7 py-3.5 rounded-2xl shadow-xl shadow-orange-500/30 hover:-translate-y-0.5 transition-all">
+              className="inline-flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-7 py-3.5 rounded-2xl shadow-xl shadow-orange-500/30 hover:-translate-y-0.5 transition-all">
               Start Free Trial <ArrowRight className="w-4 h-4" />
             </a>
             <Link to="/pricing" className="inline-flex items-center px-7 py-3.5 rounded-2xl border font-medium transition-colors hover:border-[#ff6b00]"
@@ -260,7 +260,7 @@ export default function Features() {
                 <div key={g.id} className="flex items-center shrink-0">
                   <button type="button" data-id={g.id} onClick={() => jump(g.id)} aria-current={on ? "step" : undefined}
                     className="flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 rounded-full text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ff6b00]"
-                    style={{ background: on ? (isDark ? "rgba(255,107,0,0.16)" : "#fff0e3") : "transparent", color: on ? "#e85d04" : t.body }}>
+                    style={{ background: on ? (isDark ? "rgba(255,107,0,0.16)" : "#fff0e3") : "transparent", color: on ? "var(--brand-text)" : t.body }}>
                     <span className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold tabular-nums transition-colors"
                       style={{ background: on || done ? "#ff6b00" : (isDark ? "rgba(255,255,255,0.10)" : "#efeae3"), color: on || done ? "#fff" : t.body }}>
                       {done ? <Check className="w-3 h-3" strokeWidth={3} /> : i + 1}
@@ -289,7 +289,7 @@ export default function Features() {
             <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight mb-3" style={{ textWrap: "balance" }}>See it running on your own leads</h2>
             <p className="text-white/85 text-lg mb-8 max-w-xl mx-auto">Request your workspace, import your existing leads, and have your team calling the same day.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-white text-[#e85d04] font-bold hover:-translate-y-0.5 transition-transform">
+              <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-white text-[#c2410c] font-bold hover:-translate-y-0.5 transition-transform">
                 Start Free Trial <ArrowRight className="w-4 h-4" />
               </a>
               <Link to="/pricing" className="inline-flex items-center px-7 py-3.5 rounded-2xl border border-white/50 text-white font-semibold hover:bg-white/10 transition-colors">View Pricing</Link>

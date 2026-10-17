@@ -7,8 +7,8 @@ import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
 
 const METHOD_COLORS = {
-  GET:  "#22c55e",
-  POST: "#ff6b00",
+  GET:  "#15803d",
+  POST: "#cc4b00",
   PUT:  "#3b82f6",
   DELETE: "#ef4444",
 };
@@ -284,10 +284,10 @@ export default function ApiDocs() {
             get you set up.
           </p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
-            <a href="mailto:contact@arthaleads.com?subject=API%20Integration" className="inline-flex items-center gap-2 font-semibold px-6 py-3 rounded-xl" style={{ background: "rgba(255,107,0,0.10)", color: "var(--brand-text)", border: "1px solid rgba(255,107,0,0.40)" }}>
+            <a href="mailto:contact@arthaleads.com?subject=API%20Integration" className="inline-flex items-center gap-2 font-semibold px-6 py-3 rounded-xl" style={{ background: "rgba(255,107,0,0.06)", color: "var(--brand-text)", border: "1px solid rgba(255,107,0,0.40)" }}>
               <Mail className="w-4 h-4" /> contact@arthaleads.com
             </a>
-            <Link to="/wordpress-plugin" className="inline-flex items-center gap-2 font-semibold px-6 py-3 rounded-xl text-white bg-[#ff6b00] hover:bg-[#e05f00] transition-colors">
+            <Link to="/wordpress-plugin" className="inline-flex items-center gap-2 font-semibold px-6 py-3 rounded-xl text-white bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] transition-colors">
               WordPress Plugin <ArrowRight className="w-4 h-4" />
             </Link>
           </div>

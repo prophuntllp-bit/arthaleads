@@ -61,7 +61,7 @@ function RefundChecker() {
           </span>
         </div>
       )}
-      <p style={{ fontSize: 11, color: isDark ? "rgba(255,255,255,0.4)" : "#9ca3af", marginTop: 10 }}>
+      <p style={{ fontSize: 11, color: isDark ? "rgba(255,255,255,0.55)" : "#6b7280", marginTop: 10 }}>
         This tool is for guidance only. Final eligibility is confirmed by our team.
       </p>
     </div>
@@ -159,13 +159,13 @@ export default function Refund() {
           <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Arthaleads — Billing Support</p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Email:{" "}
-            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--app-primary)" }} className="hover:underline">
+            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">
               contact@arthaleads.com
             </a>
           </p>
           <p style={{ color: "var(--app-text-soft)" }}>
             WhatsApp:{" "}
-            <a href={waLink(WA_MESSAGES.support)} target="_blank" rel="noopener noreferrer" style={{ color: "var(--app-primary)" }} className="hover:underline">
+            <a href={waLink(WA_MESSAGES.support)} target="_blank" rel="noopener noreferrer" style={{ color: "var(--brand-text)" }} className="hover:underline">
               +91 90670 97779
             </a>
           </p>

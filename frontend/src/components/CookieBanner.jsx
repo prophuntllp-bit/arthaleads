@@ -33,7 +33,7 @@ export default function CookieBanner() {
       style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border-strong)", boxShadow: "0 16px 48px rgba(0,0,0,0.18)" }}>
       <div className="flex items-start gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-          style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>
+          style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--brand-text)" }}>
           <Cookie className="h-[18px] w-[18px]" />
         </span>
         <div className="min-w-0">
@@ -54,7 +54,7 @@ export default function CookieBanner() {
         </button>
         <button type="button" onClick={() => choose("accepted")}
           className="rounded-xl px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90"
-          style={{ background: "var(--app-primary)" }}>
+          style={{ background: "var(--brand-btn)" }}>
           Accept all
         </button>
       </div>

@@ -22,7 +22,7 @@ export default function LegalLayout({ title, badge, updated, children }) {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         {/* Title card */}
         <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: "1rem", padding: "2rem", marginBottom: "2rem" }}>
-          <span style={{ background: "#ff6b00", color: "#fff", fontSize: "11px", fontWeight: 700, padding: "3px 10px", borderRadius: "20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <span style={{ background: "var(--brand-btn)", color: "#fff", fontSize: "11px", fontWeight: 700, padding: "3px 10px", borderRadius: "20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
             {badge}
           </span>
           <h1 style={{ color: heading, fontSize: "2rem", fontWeight: 900, marginTop: "0.75rem", marginBottom: "0.25rem" }}>{title}</h1>

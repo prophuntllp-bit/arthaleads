@@ -364,7 +364,7 @@ function NavInner({ onScrollTo }) {
               Login
             </a>
             <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-              className="bg-[#ff6b00] hover:bg-[#e05f00] text-white text-sm font-semibold px-5 py-2.5 rounded-xl whitespace-nowrap transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-0.5"
+              className="bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white text-sm font-semibold px-5 py-2.5 rounded-xl whitespace-nowrap transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-0.5"
             >
               Get Started Free
             </a>
@@ -455,7 +455,7 @@ function NavInner({ onScrollTo }) {
                 Login
               </a>
               <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} onClick={() => setMobileOpen(false)}
-                className="text-center bg-[#ff6b00] text-white py-2.5 rounded-xl text-sm font-semibold">
+                className="text-center bg-[color:var(--brand-btn)] text-white py-2.5 rounded-xl text-sm font-semibold">
                 Get Started Free
               </a>
             </div>

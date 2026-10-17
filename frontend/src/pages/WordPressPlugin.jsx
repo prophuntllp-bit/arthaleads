@@ -37,7 +37,7 @@ const FORM_PLUGINS = [
     logo: "https://ps.w.org/metform/assets/icon-256x256.png",
   },
   {
-    name: "Gravity Forms", users: "1M+", color: "#f97316",
+    name: "Gravity Forms", users: "1M+", color: "#c2410c",
     logo: null, // premium plugin, not on wp.org
   },
 ];
@@ -278,7 +278,7 @@ function LiveNotification({ isDark }) {
         <p className="text-xs font-bold truncate" style={{ color: isDark ? "#ededed" : "#111" }}>New lead: {lead.name}</p>
         <p className="text-[11px] truncate" style={{ color: isDark ? "rgba(255,255,255,0.45)" : "#6b7280" }}>{lead.form} · {lead.site}</p>
       </div>
-      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: "rgba(34,197,94,0.15)", color: "#16a34a" }}>Live</span>
+      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: "rgba(34,197,94,0.15)", color: isDark ? "#4ade80" : "#166534" }}>Live</span>
     </div>
   );
 }
@@ -425,7 +425,7 @@ function WordPressPluginInner() {
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4" style={{ background: "rgba(255,107,0,0.12)", border: "1px solid rgba(255,107,0,0.22)" }}>
                   <Icon className="w-5 h-5 text-[#ff6b00]" />
                 </div>
-                <span className="text-xs font-black mb-2" style={{ color: "rgba(255,107,0,0.5)" }}>{n}</span>
+                <span className="text-xs font-black mb-2" style={{ color: "var(--brand-text)" }}>{n}</span>
                 <h3 className="text-base font-bold mb-2" style={{ color: text }}>{title}</h3>
                 <p className="text-sm leading-relaxed" style={{ color: soft }}>{desc}</p>
               </div>

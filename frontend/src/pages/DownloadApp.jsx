@@ -73,7 +73,7 @@ function FAQItem({ q, a, isDark }) {
   const [open, setOpen] = useState(false);
   const border = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
   const text = isDark ? "#fff" : "#111827";
-  const soft = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
+  const soft = isDark ? "rgba(255,255,255,0.55)" : "#4b5563";
   return (
     <div className="border rounded-2xl overflow-hidden" style={{ borderColor: border }}>
       <button type="button" onClick={() => setOpen((v) => !v)}
@@ -122,7 +122,7 @@ function DownloadAppInner() {
   const bg = isDark ? "#0d0d1a" : "#ffffff";
   const altBg = isDark ? "#0a0a14" : "#f9fafb";
   const text = isDark ? "#ffffff" : "#111827";
-  const soft = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
+  const soft = isDark ? "rgba(255,255,255,0.55)" : "#4b5563";
   const cardBg = isDark ? "rgba(255,255,255,0.04)" : "#ffffff";
   const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
 

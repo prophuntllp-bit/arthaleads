@@ -196,7 +196,7 @@ export default function AboutUs() {
             <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--brand-text)", marginBottom: 12 }}>Our Story</div>
             <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 900, color: heading, lineHeight: 1.15, marginBottom: 20 }}>
               Why we built{" "}
-              <span style={{ color: "#ff6b00" }}>Arthaleads</span>
+              <span style={{ color: "var(--brand-text)" }}>Arthaleads</span>
             </h2>
             <p style={{ fontSize: 15, lineHeight: 1.8, color: body, marginBottom: 16 }}>
               Real estate sales teams in India work across multiple channels simultaneously: Facebook lead ads, Google campaigns, WhatsApp enquiries, walk-ins, and housing portals, all at once. Before Arthaleads, managing this meant juggling six different tabs, three WhatsApp groups, and a shared Excel sheet that nobody trusted.
@@ -382,7 +382,7 @@ export default function AboutUs() {
                 href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 8,
-                  background: "#ff6b00", color: "#fff",
+                  background: "var(--brand-btn)", color: "#fff",
                   borderRadius: 12, padding: "13px 24px", fontSize: 15, fontWeight: 700,
                   textDecoration: "none",
                   boxShadow: "0 8px 28px rgba(255,107,0,0.38)",
