@@ -183,7 +183,7 @@ function InstallBanner() {
             href="https://www.arthaleads.com/download-app"
             target="_blank" rel="noopener noreferrer"
             onClick={dismiss}
-            className="flex-shrink-0 rounded-xl bg-orange-500 px-3 py-1.5 text-xs font-bold text-white"
+            className="flex-shrink-0 rounded-xl bg-[color:var(--brand-btn)] px-3 py-1.5 text-xs font-bold text-white"
           >
             Get app
           </a>
@@ -233,7 +233,7 @@ function InstallBanner() {
           <p className="text-xs text-white/60">Add to home screen for quick access</p>
         </div>
         <button onClick={install}
-          className="flex-shrink-0 rounded-xl bg-orange-500 px-3 py-1.5 text-xs font-bold text-white">
+          className="flex-shrink-0 rounded-xl bg-[color:var(--brand-btn)] px-3 py-1.5 text-xs font-bold text-white">
           Install
         </button>
         <button onClick={dismiss} aria-label="Dismiss" className="flex-shrink-0 text-white/40 hover:text-white/70">
@@ -333,7 +333,7 @@ function NotificationBanner() {
           <button
             onClick={handleEnable}
             disabled={enabling}
-            className="flex-shrink-0 rounded-xl bg-orange-500 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
+            className="flex-shrink-0 rounded-xl bg-[color:var(--brand-btn)] px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
           >
             {enabling ? "…" : "Enable"}
           </button>
