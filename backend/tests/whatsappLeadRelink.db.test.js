@@ -1,6 +1,7 @@
 // An existing WhatsApp chat whose lead was deleted, archived or is gone used to
 // just continue on a new message: no lead in the CRM, no Vistrow hand-off, no
-// AI call (owner's live test, 17 Oct 2026). Against a real in-memory MongoDB,
+// AI call (owner's live test, 17 Oct 2026). A chat that never had a lead
+// (leadId null) behaves exactly as before: no lead, no hand-off (owner decision). Against a real in-memory MongoDB,
 // the real inbound route and the real Vistrow delivery service; only Vistrow
 // itself (fetch to api.vistrowvoice.com) and OpenAI (axios.post) are stubbed.
 process.env.NODE_ENV = "test";
@@ -113,6 +114,20 @@ test("(d) deleted lead but another live lead with the same number: relinked to i
   await settle();
   assert.equal(sent.length, 1);
   assert.ok(sent[0].body.event_id.startsWith(`evt_re_${other._id}_`), sent[0].body.event_id);
+});
+
+test("(e) existing chat with no lead (leadId null, e.g. a broadcast recipient replying): no lead, no hand-off", async () => {
+  await wa._vistrowEmit.sweepDueWhatsAppEmits({ now: later(61e3) }); // earlier cases' hand-offs
+  await settle();
+  sent.length = 0;
+  const phone = nextPhone();
+  const conv = await WaConversation.create({ orgId: ORG, leadId: null, contactPhone: phone, contactName: "Ravi", waContactId: phone, botEnabled: false, status: "open" });
+  await inbound(phone, "Interested, please share details");
+  assert.equal(await Lead.countDocuments({ orgId: ORG, phone }), 0, "no lead created");
+  assert.equal((await WaConversation.findById(conv._id).lean()).leadId, null, "chat still has no lead");
+  await wa._vistrowEmit.sweepDueWhatsAppEmits({ now: later(61e3) });
+  await settle();
+  assert.equal(sent.length, 0, "nothing handed to Vistrow");
 });
 
 (async () => {
