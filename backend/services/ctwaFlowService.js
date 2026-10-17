@@ -29,6 +29,7 @@
 // private closures in that file, and reaching into a route file from a
 // service would invert the codebase's normal dependency direction.
 const { levelOf } = require("../middlewares/planGate");
+const { noDashes } = require("../utils/botText");
 const { normalizePurpose, parseIndianCurrencyRange, normalizeBhk, normalizePropertyType, normalizeTimeline, fillTemplate: fill } = require("../utils/formFieldMapper");
 
 module.exports = function createCtwaFlowService({
@@ -109,6 +110,7 @@ module.exports = function createCtwaFlowService({
    * every other bot send.
    */
   async function sendFlowStep(org, conversation, botName, { bodyText, buttons, list, previewLabel }) {
+    bodyText = noDashes(bodyText);
     const q = await credits.quote(org._id, "service", 1);
     let held = 0;
     try {
