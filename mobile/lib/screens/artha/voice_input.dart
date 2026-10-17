@@ -30,22 +30,42 @@ class ArthaVoice extends ChangeNotifier {
   /// is what Artha reads best; hi_IN writes Devanagari.
   static const locales = {'en_IN': 'English (India)', 'hi_IN': 'हिन्दी'};
 
+  /// One hold never runs longer than this, however many pauses it has.
+  static const _maxHold = Duration(seconds: 90);
+
   final _stt = SpeechToText();
   bool _ready = false;
   bool _starting = false;
   bool _ending = false;
+  bool Function()? _stillHeld;
+
+  /// The phone's own id for each language ("en-IN", "en_IN"...), looked up
+  /// once; null means the phone does not list it.
+  final Map<String, String?> _phoneLocale = {};
 
   String locale = 'en_IN';
   bool listening = false;
+
+  /// The recogniser is actually taking sound. Until then the panel says
+  /// "Getting ready" so nobody starts talking into a mic that is not open
+  /// yet, which is how the first words of a sentence went missing.
+  bool armed = false;
   bool cancelling = false;
-  String words = '';
   double level = 0;
   Duration elapsed = Duration.zero;
   Timer? _clock;
 
+  /// Speech is heard in turns: the phone's recogniser ends a turn at a
+  /// pause. Finished turns collect in [_done]; [_turn] is the current one.
+  String _done = '';
+  String _turn = '';
+  String get words => _join(_done, _turn);
+
   /// A one-line note after a session that produced nothing ("Didn't catch
   /// that"), cleared on the next hold.
   String? notice;
+
+  static String _join(String a, String b) => [a.trim(), b.trim()].where((x) => x.isNotEmpty).join(' ');
 
   Future<void> loadLocale() async {
     try {
@@ -73,9 +93,26 @@ class ArthaVoice extends ChangeNotifier {
     } on PlatformException {
       _ready = false;
     }
-    if (_ready) return VoiceStart.justAllowed;
+    if (_ready) {
+      await _loadPhoneLocales();
+      return VoiceStart.justAllowed;
+    }
     return await _stt.hasPermission ? VoiceStart.unavailable : VoiceStart.noPermission;
   }
+
+  Future<void> _loadPhoneLocales() async {
+    try {
+      final listed = await _stt.locales();
+      String norm(String x) => x.replaceAll('-', '_').toLowerCase();
+      for (final id in locales.keys) {
+        _phoneLocale[id] = listed.where((l) => norm(l.localeId) == norm(id)).firstOrNull?.localeId;
+      }
+    } catch (_) {}
+  }
+
+  /// The phone's own spelling of the language, or the plain id when the
+  /// phone did not list it (most recognisers still accept it).
+  String _localeForPhone() => _phoneLocale[locale] ?? locale;
 
   /// The finger went down on the mic.
   Future<VoiceStart> start({required bool Function() stillHeld}) async {
@@ -89,38 +126,23 @@ class ArthaVoice extends ChangeNotifier {
       if (firstTime && !stillHeld()) return VoiceStart.justAllowed;
       if (!stillHeld()) return VoiceStart.ok; // a tap, not a hold
 
-      words = '';
+      _stillHeld = stillHeld;
+      _done = '';
+      _turn = '';
       level = 0;
+      armed = false;
       cancelling = false;
       elapsed = Duration.zero;
       listening = true;
       _ending = false;
       notifyListeners();
-      HapticFeedback.mediumImpact();
       _clock?.cancel();
       _clock = Timer.periodic(const Duration(seconds: 1), (_) {
         elapsed += const Duration(seconds: 1);
         notifyListeners();
+        if (elapsed >= _maxHold) stop();
       });
-      await _stt.listen(
-        onResult: (r) {
-          words = r.recognizedWords;
-          notifyListeners();
-          if (r.finalResult && listening && _stt.isNotListening) _finish();
-        },
-        onSoundLevelChange: (l) {
-          level = l;
-          notifyListeners();
-        },
-        listenOptions: SpeechListenOptions(
-          localeId: locale,
-          partialResults: true,
-          listenMode: ListenMode.dictation,
-          cancelOnError: true,
-          listenFor: const Duration(seconds: 60),
-          pauseFor: const Duration(seconds: 6),
-        ),
-      );
+      await _listenTurn();
       // Let go while the recogniser was still starting up.
       if (!stillHeld() && listening) await stop();
       return VoiceStart.ok;
@@ -132,6 +154,51 @@ class ArthaVoice extends ChangeNotifier {
     }
   }
 
+  Future<void> _listenTurn() async {
+    _turn = '';
+    await _stt.listen(
+      onResult: (r) {
+        _turn = r.recognizedWords;
+        if (r.finalResult) {
+          _done = _join(_done, _turn);
+          _turn = '';
+        }
+        notifyListeners();
+      },
+      onSoundLevelChange: (l) {
+        level = l;
+        notifyListeners();
+      },
+      listenOptions: SpeechListenOptions(
+        localeId: _localeForPhone(),
+        partialResults: true,
+        listenMode: ListenMode.dictation,
+        cancelOnError: true,
+        listenFor: _maxHold,
+        // The finger says when the sentence is over, not the silence: a
+        // pause keeps the turn going instead of ending it mid-thought.
+        pauseFor: const Duration(seconds: 10),
+      ),
+    );
+  }
+
+  /// The recogniser ended a turn (a pause, "no match", its own limit) while
+  /// the finger is still on the mic: listen again and keep adding.
+  bool _shouldContinue() =>
+      listening && !_ending && !cancelling && (_stillHeld?.call() ?? false) && elapsed < _maxHold;
+
+  void _continueTurn() {
+    Future<void>.delayed(const Duration(milliseconds: 120), () async {
+      if (!_shouldContinue() || !_stt.isNotListening) return;
+      _done = _join(_done, _turn);
+      try {
+        await _listenTurn();
+      } catch (_) {
+        _finish();
+      }
+    });
+  }
+
   /// Let go, Done, or a tap on the mic while listening: stop and keep what
   /// was heard. The recogniser sends its last words just after stopping.
   Future<void> stop() async {
@@ -140,11 +207,11 @@ class ArthaVoice extends ChangeNotifier {
     try {
       await _stt.stop();
     } catch (_) {}
-    // Wait briefly for the final result, then end regardless.
-    for (var i = 0; i < 15 && listening && !_stt.isNotListening; i++) {
+    // Wait for the turn's final words (up to 2 s), then end regardless.
+    for (var i = 0; i < 20 && listening && _turn.isNotEmpty; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     }
-    await Future<void>.delayed(const Duration(milliseconds: 250));
+    await Future<void>.delayed(const Duration(milliseconds: 200));
     _finish();
   }
 
@@ -154,7 +221,8 @@ class ArthaVoice extends ChangeNotifier {
     try {
       await _stt.cancel();
     } catch (_) {}
-    words = '';
+    _done = '';
+    _turn = '';
     _reset();
   }
 
@@ -167,13 +235,14 @@ class ArthaVoice extends ChangeNotifier {
 
   void _finish() {
     if (!listening) return;
-    final heard = words.trim();
+    final heard = tidySpokenCrm(words);
     if (cancelling) {
-      words = '';
+      _done = '';
+      _turn = '';
       _reset();
       return;
     }
-    notice = heard.isEmpty ? "Didn't catch that. Hold the mic and speak, then let go." : null;
+    notice = heard.isEmpty ? "Didn't catch that. Hold the mic, wait for the buzz, then speak." : null;
     _reset();
     if (heard.isNotEmpty) onHeard(heard);
   }
@@ -181,27 +250,51 @@ class ArthaVoice extends ChangeNotifier {
   void _reset() {
     _clock?.cancel();
     listening = false;
+    armed = false;
     cancelling = false;
     _ending = false;
+    _stillHeld = null;
     level = 0;
     notifyListeners();
   }
 
   void _onError(SpeechRecognitionError e) {
     if (!listening) return;
-    if (e.errorMsg.contains('permission')) notice = 'Artha needs the microphone. Allow it in the app settings.';
+    // Silence or nothing recognisable in one turn is normal while the finger
+    // is still down (thinking, a pause): keep listening.
+    if ((e.errorMsg == 'error_no_match' || e.errorMsg == 'error_speech_timeout') && _shouldContinue()) {
+      _continueTurn();
+      return;
+    }
+    String? keep;
+    if (e.errorMsg.contains('permission')) {
+      keep = 'Artha needs the microphone. Allow it in the app settings.';
+    } else if (e.errorMsg == 'error_network' || e.errorMsg == 'error_network_timeout' || e.errorMsg == 'error_server') {
+      keep = 'Voice typing needs the internet. Check the connection, or type instead.';
+    }
     _finish();
-    if (e.errorMsg == 'error_network' || e.errorMsg == 'error_network_timeout') {
-      notice = 'Voice typing needs the internet. Check the connection, or type instead.';
+    if (keep != null) {
+      notice = keep;
       notifyListeners();
     }
   }
 
   void _onStatus(String status) {
-    // "done" / "notListening": the recogniser has stopped, for whatever
-    // reason. End here too, with whatever it heard.
+    if (status == 'listening' && listening && !armed) {
+      // The mic is really open now: buzz, and the panel says "Speak now".
+      armed = true;
+      HapticFeedback.mediumImpact();
+      notifyListeners();
+      return;
+    }
+    // "done" / "notListening": the recogniser ended its turn. Still held:
+    // listen again. Otherwise end here too, with whatever it heard.
     if ((status == 'done' || status == 'notListening') && listening) {
-      Future<void>.delayed(const Duration(milliseconds: 300), _finish);
+      if (_shouldContinue()) {
+        _continueTurn();
+      } else if (!_ending) {
+        Future<void>.delayed(const Duration(milliseconds: 300), _finish);
+      }
     }
   }
 
@@ -211,6 +304,30 @@ class ArthaVoice extends ChangeNotifier {
     _stt.cancel();
     super.dispose();
   }
+}
+
+/// Tidies the words CRM speech is full of, as the phone's recogniser tends to
+/// mishear or spell them: "to BHK" / "two b h k" -> "2 BHK", "lac" -> "lakh",
+/// "side visit" -> "site visit", "followup" -> "follow up". Deliberately
+/// small: everything else stays exactly as heard.
+String tidySpokenCrm(String input) {
+  var s = input.replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (s.isEmpty) return s;
+  const numbers = {
+    'one': '1', 'two': '2', 'to': '2', 'too': '2', 'three': '3', 'four': '4', 'five': '5',
+    'ek': '1', 'do': '2', 'teen': '3', 'char': '4', 'paanch': '5',
+  };
+  const bhk = r'b\.?\s?h\.?\s?k\.?s?';
+  s = s.replaceAllMapped(
+    RegExp('\\b(one|two|to|too|three|four|five|ek|do|teen|char|paanch|[1-5])\\s*(?:$bhk)(?![a-z])', caseSensitive: false),
+    (m) => '${numbers[m[1]!.toLowerCase()] ?? m[1]} BHK',
+  );
+  s = s.replaceAll(RegExp('\\b$bhk(?![a-z])', caseSensitive: false), 'BHK');
+  s = s.replaceAll(RegExp(r'\b(?:side|sight|cite)\s+visit', caseSensitive: false), 'site visit');
+  s = s.replaceAll(RegExp(r'\bfollow\s?-?\s?up', caseSensitive: false), 'follow up');
+  s = s.replaceAll(RegExp(r'\b(?:lacs?|lakhs|lack|laakh)\b', caseSensitive: false), 'lakh');
+  s = s.replaceAll(RegExp(r'\b(?:crores|karod|karor)\b', caseSensitive: false), 'crore');
+  return s;
 }
 
 enum VoiceStart { ok, justAllowed, noPermission, unavailable }
@@ -330,9 +447,9 @@ class _VoiceMicButtonState extends State<VoiceMicButton> {
                 Text('Hold the mic and speak', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: t.text)),
                 const SizedBox(height: 6),
                 Text(
-                  'Keep your finger on the mic while you talk and let go when you are done. What Artha heard goes '
-                  'into the message box so you can check it before sending. Slide your finger away, or tap Cancel, '
-                  'to throw it away.',
+                  'Keep your finger on the mic, wait for the short buzz, then talk; pauses are fine. Let go when '
+                  'you are done. What Artha heard goes into the message box so you can check it before sending. '
+                  'Slide your finger away, or tap Cancel, to throw it away.',
                   style: TextStyle(fontSize: 14, height: 1.45, color: t.textSoft),
                 ),
                 const SizedBox(height: 16),
@@ -399,7 +516,11 @@ class VoicePanel extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    voice.cancelling ? 'LET GO TO CANCEL' : 'LISTENING · ${ArthaVoice.locales[voice.locale]!.toUpperCase()}',
+                    voice.cancelling
+                        ? 'LET GO TO CANCEL'
+                        : voice.armed
+                            ? 'LISTENING · ${ArthaVoice.locales[voice.locale]!.toUpperCase()}'
+                            : 'STARTING THE MIC',
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1, color: accent),
                   ),
                 ),
@@ -413,7 +534,7 @@ class VoicePanel extends StatelessWidget {
                 child: Semantics(
                   liveRegion: true,
                   child: Text(
-                    voice.words.isEmpty ? 'Speak now…' : voice.words,
+                    voice.words.isNotEmpty ? voice.words : (voice.armed ? 'Speak now…' : 'Getting ready…'),
                     style: TextStyle(fontSize: 15, height: 1.45, color: voice.words.isEmpty ? t.textSoft : t.text),
                   ),
                 ),
