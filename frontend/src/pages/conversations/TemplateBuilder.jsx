@@ -507,7 +507,7 @@ export default function TemplateBuilder() {
             <div>
               <p className="stitch-kicker mb-1">Buttons (optional)</p>
               <p className="text-xs text-app-soft">
-                Quick replies come back into your inbox as a message. Link and call buttons open on the recipient's phone.
+                Quick replies come back into your WhatsApp chats as a message. Link and call buttons open on the recipient's phone.
               </p>
             </div>
 

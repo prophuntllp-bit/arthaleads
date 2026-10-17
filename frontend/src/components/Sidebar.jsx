@@ -54,7 +54,7 @@ const navItems = [
   // Flat on purpose. The section navigates itself with in-page tabs — a
   // sidebar flyout for five WhatsApp screens buried the ones that matter and
   // put nav in two places at once.
-  { to: "/conversations", label: "Inbox", icon: WhatsAppIcon, hint: "WhatsApp chats, templates, campaigns, credits and AI agents" },
+  { to: "/conversations", label: "WhatsApp", icon: WhatsAppIcon, hint: "WhatsApp chats, templates, campaigns, credits and AI agents" },
   {
     label: "Tasks", icon: ClipboardList, hint: "Tasks for you and your team",
     children: [
@@ -1110,7 +1110,7 @@ export default function Sidebar() {
     // Pages below a menu entry.
     const rest = base ? here.slice(base.length).replace(/^\/|\/$/g, "") : "";
     if (rest) {
-      // Inbox tabs and the pages under them, each step clickable back up.
+      // WhatsApp tabs and the pages under them, each step clickable back up.
       const C = "/conversations";
       const named = [
         [/^templates$/, [{ label: "Templates" }]],

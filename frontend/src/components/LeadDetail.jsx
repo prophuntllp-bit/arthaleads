@@ -967,7 +967,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
             ) : (
               <div className="rounded-[1.25rem] p-4 space-y-1 stitch-surface-muted" style={{ maxHeight: 480, overflowY: "auto" }}>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-3 flex items-center gap-1.5">
-                  <AlertCircle className="w-3 h-3 opacity-60" /> Read-only — for context before you call. Reply from the Inbox.
+                  <AlertCircle className="w-3 h-3 opacity-60" /> Read-only — for context before you call. Reply from WhatsApp.
                 </p>
                 {waMessages.map((msg, i) => {
                   const isOut = msg.direction === "outbound";

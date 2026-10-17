@@ -274,7 +274,7 @@ const FILTERS = [["all", "All"], ["bot", "Bot"], ["open", "Open"], ["resolved", 
 
 // ── Main inbox page ──────────────────────────────────────────────────────────
 export default function Inbox() {
-  useEffect(() => { document.title = "Inbox - Arthaleads CRM"; }, []);
+  useEffect(() => { document.title = "WhatsApp - Arthaleads CRM"; }, []);
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -326,8 +326,10 @@ export default function Inbox() {
   // Free monthly replies count as spendable — a tenant on zero balance can
   // still use those before anything is blocked.
   const freeLeft = credits?.freeService?.remaining || 0;
+  // spendablePaise includes the overdraft (balance may be negative); older
+  // API responses only had availablePaise.
   const canSend = !credits
-    || credits.availablePaise >= (credits.ratesPaise?.service || 0)
+    || (credits.spendablePaise ?? credits.availablePaise) >= (credits.ratesPaise?.service || 0)
     || freeLeft > 0;
 
   // WhatsApp's customer-service window: a normal reply is only allowed within
@@ -639,7 +641,7 @@ export default function Inbox() {
         <div className="flex items-center justify-between gap-2 px-4 py-3" style={{ borderBottom: "1px solid var(--app-border)" }}>
           <div className="flex items-center gap-2">
             <WhatsAppIcon className="w-5 h-5 shrink-0" style={{ color: "#25D366" }} />
-            <span className="text-sm font-bold text-app">Inbox</span>
+            <span className="text-sm font-bold text-app">WhatsApp</span>
           </div>
           <div className="flex items-center gap-1">
             {credits && (
@@ -649,7 +651,7 @@ export default function Inbox() {
                   ? { background: "rgba(34,197,94,0.12)", color: "#15803d", border: "1px solid rgba(34,197,94,0.25)" }
                   : { background: "rgba(239,68,68,0.10)", color: "#b91c1c", border: "1px solid rgba(239,68,68,0.3)" }}>
                 <Wallet className="w-3 h-3" />
-                ₹{(credits.availablePaise / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                {credits.availablePaise < 0 ? "−" : ""}₹{(Math.abs(credits.availablePaise) / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
               </button>
             )}
             {/* Only an admin can save WhatsApp settings; hide the gear rather

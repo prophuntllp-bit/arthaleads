@@ -768,7 +768,7 @@ export function WhatsAppLink({ phone, name, leadId, projectId, onContact }) {
                 : <InboxIcon className="h-3.5 w-3.5" style={{ color: "var(--app-primary)" }} />}
             </span>
             <div className="text-left">
-              <p className="font-semibold">Message from CRM Inbox</p>
+              <p className="font-semibold">Message from CRM WhatsApp</p>
               <p className="text-[10px] text-app-soft">Tracked, shared with your team</p>
             </div>
           </button>

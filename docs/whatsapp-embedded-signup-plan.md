@@ -402,7 +402,7 @@ This guard is what caps the default risk in §13.
 |---|---|
 | **Not connected** | Onboarding chooser — two cards (§17) |
 | **Connecting** | ES popup, or virtual-number wizard |
-| **Connected, zero credits** | Inbox renders **read-only**; composer disabled with "Add credits to reply"; prominent top-up banner |
+| **Connected, zero credits** | WhatsApp chats render **read-only**; composer disabled with "Add credits to reply"; prominent top-up banner |
 | **Connected, low credits** | Amber banner + auto-recharge prompt; sending still works |
 | **Connected, healthy** | Normal inbox; **₹ balance pill** in the header |
 

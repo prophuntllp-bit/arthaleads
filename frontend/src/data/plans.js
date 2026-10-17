@@ -26,7 +26,7 @@ export const PLANS = [
         "Facebook Lead Ads auto-import",
         "WhatsApp capture",
         "Website / WordPress plugin",
-        "WhatsApp Inbox with manual replies",
+        "WhatsApp chats with manual replies",
         "2 projects",
         "2 GB file storage, call recordings kept 30 days",
       ] },

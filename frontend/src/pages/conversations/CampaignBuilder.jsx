@@ -7,7 +7,7 @@ import CustomSelect from "../../components/CustomSelect";
 import { AppDatePicker } from "../../components/UI";
 import { STATUS_OPTIONS, SOURCE_OPTIONS } from "../../utils/constants";
 
-const rupees = (p) => `₹${((p || 0) / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const rupees = (p) => `${(p || 0) < 0 ? "−" : ""}₹${(Math.abs(p || 0) / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const FORM_SELECT = { width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 };
 // Must stay in step with LEAD_FIELD in backend/services/waCampaignService.js —
 // a value not in that map is sent as literal text rather than resolved, which
