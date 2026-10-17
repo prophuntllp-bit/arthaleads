@@ -4,15 +4,8 @@ import { Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CopilotProvider } from "./context/CopilotContext";
 import { PublicThemeProvider } from "./context/PublicThemeContext";
-import { SoftPhoneProvider } from "./context/SoftPhoneContext";
-import SoftPhoneWidget from "./components/SoftPhoneWidget";
-import Sidebar from "./components/Sidebar";
-import AdminSidebar from "./components/AdminSidebar";
-import ImpersonationBanner from "./components/ImpersonationBanner";
-import HelpBot from "./components/HelpBot";
-import OnboardingGate from "./components/OnboardingGate";
 import CookieBanner from "./components/CookieBanner";
-import { Spinner } from "./components/UI";
+import { Spinner } from "./components/Spinner";
 import ErrorBoundary from "./components/ErrorBoundary";
 import CustomCursor from "./components/CustomCursor";
 import { Download, X, Bell, Share } from "lucide-react";
@@ -395,7 +388,18 @@ const ConversationSettings  = lazy(() => import("./pages/conversations/Conversat
 const AgentsPage            = lazy(() => import("./pages/conversations/AgentsPage"));
 const AgentBuilder          = lazy(() => import("./pages/conversations/AgentBuilder"));
 import PlanOnly from "./components/PlanOnly";
-import StorageWarningPopup from "./components/StorageWarningPopup";
+// The signed-in frame is one lazy chunk (crmShell.js): the marketing site never
+// loads the sidebars, help bot, soft phone or the UI kit they pull in.
+const crmShell = () => import("./crmShell");
+const shellPart = (name) => lazy(() => crmShell().then((m) => ({ default: m[name] })));
+const SoftPhoneProvider   = shellPart("SoftPhoneProvider");
+const SoftPhoneWidget     = shellPart("SoftPhoneWidget");
+const Sidebar             = shellPart("Sidebar");
+const AdminSidebar        = shellPart("AdminSidebar");
+const ImpersonationBanner = shellPart("ImpersonationBanner");
+const HelpBot             = shellPart("HelpBot");
+const OnboardingGate      = shellPart("OnboardingGate");
+const StorageWarningPopup = shellPart("StorageWarningPopup");
 const TemplatesPage         = lazy(() => import("./pages/conversations/TemplatesPage"));
 const TemplateBuilder       = lazy(() => import("./pages/conversations/TemplateBuilder"));
 const CampaignsPage         = lazy(() => import("./pages/conversations/CampaignsPage"));
@@ -606,6 +610,7 @@ function RequireAuth() {
   );
 
   return (
+    <Suspense fallback={<PageFallback />}>
     <SoftPhoneProvider>
     <div className="flex h-screen overflow-hidden text-app" style={{ background: "transparent" }}>
       <ImpersonationBanner />
@@ -640,6 +645,7 @@ function RequireAuth() {
       {!pendingDeletion && !isInactive && !trialExpired && !needsOnboarding && <StorageWarningPopup />}
     </div>
     </SoftPhoneProvider>
+    </Suspense>
   );
 }
 
@@ -682,12 +688,16 @@ function RequireAppHost() {
 // Clean layout for the super admin panel — sidebar + scrollable main
 function AdminLayout() {
   return (
+    <Suspense fallback={<PageFallback />}>
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--app-bg)" }}>
       <AdminSidebar />
       <main className="flex-1 min-w-0 overflow-y-auto">
-        <Outlet />
+        <Suspense fallback={<PageFallback />}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
+    </Suspense>
   );
 }
 

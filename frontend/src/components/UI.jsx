@@ -119,10 +119,8 @@ export function SourceBadge({ source }) {
   );
 }
 
-export function Spinner({ size = "md" }) {
-  const sz = size === "sm" ? "w-4 h-4" : size === "lg" ? "w-8 h-8" : "w-5 h-5";
-  return <Loader2 className={`${sz} animate-spin text-orange-500`} />;
-}
+import { Spinner } from "./Spinner";
+export { Spinner };
 
 export function PageLoader() {
   return (

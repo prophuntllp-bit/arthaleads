@@ -104,13 +104,34 @@ function blockHtml(b) {
   }
 }
 
+// The site menu and footer, as plain links, so the first HTML a crawler gets
+// links to the main pages the way every other page on the site does (the live
+// page draws the real PublicNav/PublicFooter over it). Keep in step with
+// components/PublicNav.jsx and PublicFooter.jsx; only pages that are live.
+const link = ([href, text]) => `<a href="${href}">${text}</a>`;
+const SITE_NAV = [["/", "Home"], ["/features", "Features"], ["/whatsapp-crm", "WhatsApp CRM"], ["/pricing", "Pricing"],
+  ["/compare", "Compare"], ["/blog", "Blog"], ["/contact", "Contact"]];
+const SITE_FOOTER = [
+  ["Product", [["/features", "Features"], ["/pricing", "Pricing"], ["/whatsapp-crm", "WhatsApp CRM"], ["/product-tour", "Product tour"],
+    ["/download-app", "Download App"], ["/wordpress-plugin", "WordPress Plugin"], ["/api-docs", "API Docs"]]],
+  ["Compare", [["/compare", "All comparisons"], ["/compare/sell-do-alternative", "Arthaleads vs Sell.Do"],
+    ["/compare/leadrat-alternative", "Arthaleads vs Leadrat"], ["/compare/kylas-alternative", "Arthaleads vs Kylas"]]],
+  ["Company", [["/about-us", "About Us"], ["/careers", "Careers"], ["/blog", "Blog"], ["/product-updates", "Product Updates"],
+    ["/help-guide", "Help Guide"], ["/security", "Security"], ["/contact", "Contact Us"]]],
+  ["Legal", [["/privacy", "Privacy Policy"], ["/terms", "Terms of Service"], ["/refund", "Refund Policy"], ["/cookie-policy", "Cookie Policy"]]],
+];
+const siteNav = () => `<header><nav aria-label="Main">${SITE_NAV.map(link).join(" · ")}</nav></header>`;
+const siteFooter = () => `<footer>${SITE_FOOTER.map(([h, items]) =>
+  `<section><p><strong>${h}</strong></p><ul>${items.map((i) => `<li>${link(i)}</li>`).join("")}</ul></section>`).join("\n")}</footer>`;
+
 function articleHtml(post) {
   const author = post.byline || post.author?.name || "Arthaleads Team";
   const date = post.publishedAt
     ? new Date(post.publishedAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "long", year: "numeric" })
     : "";
   const image = abs(post.featuredImage);
-  return `<main><article>
+  return `${siteNav()}
+<main><article>
 <nav aria-label="Breadcrumb"><a href="/">Home</a> › <a href="/blog">Blog</a>${post.category?.name ? ` › ${esc(post.category.name)}` : ""}</nav>
 <h1>${esc(post.title)}</h1>
 ${post.excerpt ? `<p>${esc(post.excerpt)}</p>` : ""}
@@ -118,7 +139,8 @@ ${post.excerpt ? `<p>${esc(post.excerpt)}</p>` : ""}
 ${image ? `<img src="${esc(image)}" alt="${esc(post.featuredImageAlt || post.title)}">` : ""}
 ${(post.blocks || []).map(blockHtml).join("\n")}
 <p><a href="/blog">More guides on the Arthaleads blog</a> · <a href="/features">Arthaleads features</a> · <a href="/pricing">Pricing</a></p>
-</article></main>`;
+</article></main>
+${siteFooter()}`;
 }
 
 // Same switches the prerendered marketing pages use: the copy stays hidden and

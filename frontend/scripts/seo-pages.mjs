@@ -33,7 +33,9 @@ function readSeo(file) {
   };
   const canonical = pick("canonical");
   if (!canonical || !canonical.startsWith(SITE)) return null;
-  return { file, title: pick("title"), description: pick("description"), canonical, robots: pick("robots") };
+  // Pages that write their own BreadcrumbList (compare/*, solution pages) keep it.
+  const ownCrumbs = /BreadcrumbList|CompetitorComparison|SolutionPage/.test(src);
+  return { file, title: pick("title"), description: pick("description"), canonical, robots: pick("robots"), ownCrumbs };
 }
 
 const entries = readdirSync(pages).filter((f) => f.endsWith(".jsx")).map(readSeo).filter(Boolean);
@@ -55,7 +57,33 @@ const base = readFileSync(join(dist, "index.html"), "utf8");
 writeFileSync(join(dist, "app.html"), base.replace(/(<meta name="description"[^>]*>)/, `$1
     <meta name="robots" content="noindex, follow" />`));
 
-function render({ title, description, canonical, robots }) {
+// Breadcrumb names: short, as in the menu. Anything not listed uses the part
+// of its <title> before " | " / " - ".
+const CRUMB = {
+  "/features": "Features", "/pricing": "Pricing", "/compare": "Compare", "/whatsapp-crm": "WhatsApp CRM",
+  "/product-tour": "Product tour", "/blog": "Blog", "/about-us": "About us", "/contact": "Contact",
+  "/careers": "Careers", "/security": "Security", "/help-guide": "Help guide", "/product-updates": "Product updates",
+  "/download-app": "Download the app", "/wordpress-plugin": "WordPress plugin", "/api-docs": "API docs",
+  "/refer": "Refer and earn", "/privacy": "Privacy policy", "/terms": "Terms of service", "/refund": "Refund policy",
+  "/cookie-policy": "Cookie policy",
+};
+const crumbName = (path, title) => CRUMB[path] || String(title || "").split(/ \| | - /)[0].trim();
+
+// BreadcrumbList for every indexable page below the home page, in the raw HTML,
+// so Google can show "Arthaleads > Pricing" in results.
+function breadcrumbLd(path, title) {
+  const parts = path.split("/").filter(Boolean);
+  const items = [{ name: "Home", item: `${SITE}/` }];
+  parts.forEach((_, i) => {
+    const p = "/" + parts.slice(0, i + 1).join("/");
+    items.push({ name: crumbName(p, i === parts.length - 1 ? title : ""), item: `${SITE}${p}` });
+  });
+  const ld = { "@context": "https://schema.org", "@type": "BreadcrumbList",
+    itemListElement: items.map((x, i) => ({ "@type": "ListItem", position: i + 1, name: x.name, item: x.item })) };
+  return `    <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>\n`;
+}
+
+function render({ title, description, canonical, robots, ownCrumbs }) {
   let html = base
     .replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(title)}</title>`)
     .replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${esc(description)}" />`)
@@ -71,6 +99,8 @@ function render({ title, description, canonical, robots }) {
   // A page that asks for it in useSEO({ robots }) (e.g. "noindex, follow") gets the tag in the HTML too.
   if (robots) html = html.replace(/(<meta name="description"[^>]*>)/, `$1\n    <meta name="robots" content="${esc(robots)}" />`);
   // The blog and contact form talk to the API, blog images come from Sanity's CDN.
+  const path = new URL(canonical).pathname.replace(/\/+$/, "");
+  if (path && !ownCrumbs && !/noindex/.test(robots || "")) html = html.replace("</head>", `${breadcrumbLd(path, title)}  </head>`);
   html = html.replace("</head>", `    <link rel="preconnect" href="https://api.arthaleads.com" crossorigin />\n    <link rel="preconnect" href="https://cdn.sanity.io" />\n  </head>`);
   return html;
 }
