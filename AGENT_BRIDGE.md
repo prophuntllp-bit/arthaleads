@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
-- [claude] 2026-10-17 IST: WhatsApp heads-up before the Vistrow AI call; then Vistrow call name onto nickname leads. Files: backend/utils/vistrowWhatsAppHeadsUp.js, services/vistrowOutbound/{index,service}.js, models/OutboundDelivery.js, routes/whatsappRoutes.js (export only + looksLikeRealName move), routes/webhookRoutes.js, tests. Local only.
 
 
 
@@ -99,6 +98,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-17 IST (staging-local, not pushed; heads-up is bb26ee4): Vistrow call result names a WhatsApp lead. On an existing lead (new call_id), the name said on the call replaces the lead name only when the lead's is not a name (no letters: emoji, "+91...") and the call's is (looksLikeCallerName: letters, 2+, not just filler like ji/hello/haan ji); same for WaConversation.contactName; activity "Name updated from Vistrow Voice call: old → new". looksLikeRealName moved unchanged to backend/utils/personName.js (WhatsApp reader identical). Note: a nickname with letters (e.g. "Rocky") counts as a real name and is kept. Files: routes/webhookRoutes.js, routes/whatsappRoutes.js, utils/personName.js, tests/vistrowCallResult.db.test.js.
 - [claude] 2026-10-17 IST (staging-local, not pushed): WhatsApp heads-up before the Vistrow AI call. When Vistrow answers queued:true for a WhatsApp hand-off (origin whatsapp-*, not manual-call), the assistant sends one Hinglish notice via sendBotNotice (billed, stored in the Inbox, isNotice) saying the advisor calls in ~1 minute, or at the IST time of queued_until when later. Only inside the 24 h window, org connected, lead not tagged "Not a buyer"; once per delivery (OutboundDelivery.waHeadsUpAt claim). Files: backend/utils/vistrowWhatsAppHeadsUp.js, services/vistrowOutbound/{index,service}.js, models/OutboundDelivery.js, routes/whatsappRoutes.js (export), tests/vistrowWhatsAppHeadsUp.db.test.js. Not verified with a live Meta send.
 - [claude] 2026-10-17 IST: main gets the comparison-page internal links (staging 81abe32a -> main a0996f6, owner approved): each /compare/* page links its siblings ("Also compared"), /features closing banner links all three. Blog links (Sanity) were already live.
 - [claude] 2026-10-17 IST (staging bb434a40 + 2d76f7e3 -> main c3a6afe8 + 3c9ad520, owner approved): daily database backup now goes to Backblaze, not email. utils/backup.js writes every collection as Extended JSON lines, gzipped, to arthaleads/backups/db/<IST date>.ndjson.gz (cron 02:00 IST, unchanged); keeps 30 daily + oldest of each of 12 months, prunes only after the new copy is confirmed by size. /api/media refuses arthaleads/backups/. No email on success; BACKUP_EMAIL gets an alert only on failure. storage.list(prefix) added. scripts/restore-backup.js: --list, check, --download, --into <uri> --apply [--replace]; refuses incomplete copies, non-empty targets, and MONGO_URI without --overwrite-production. tests/backup.db.test.js (19 checks) in npm test. Production copy ~1.3 MB.

@@ -1841,15 +1841,9 @@ function mapWhatsAppExtractedFields(extracted) {
 // Only ever called for a lead this bot itself auto-captured (source
 // "WhatsApp"), and short-circuits once every field is already filled in — so
 // a fully-enriched lead never triggers another billed extraction call.
-// A WhatsApp contact's display name is whatever they set on their own
-// phone — sometimes an emoji, a nickname, or blank, none of which is
-// something worth keeping once the customer actually introduces themselves
-// in the chat (see enrichWhatsAppLead below). "Real" here just means it has
-// at least one letter — good enough to tell "😊" or a bare phone number
-// apart from an actual name, in any script.
-function looksLikeRealName(name) {
-  return /[a-zA-Zऀ-ॿ]/.test(String(name || ""));
-}
+// A WhatsApp contact's display name is whatever they set on their own phone
+// (an emoji, a nickname, blank): see utils/personName.js.
+const { looksLikeRealName } = require("../utils/personName");
 
 // The project a chat is about, for its property type: the assistant's only
 // project, else the one its ad or source label names (resolveSourceProject).

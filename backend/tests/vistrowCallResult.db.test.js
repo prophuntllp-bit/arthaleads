@@ -161,6 +161,50 @@ test("an org below Enterprise still gets the plan 403", async () => {
   await mongoose.connection.collection("organizations").updateOne({ _id: ORG }, { $set: { plan: "enterprise" } });
 });
 
+// ---------------------------------------------------------------- caller's name (17 Oct 2026)
+// A WhatsApp lead is named after the profile ("😊", "+91..."). The AI agent
+// asks the caller's name; a real one replaces a name that is not one.
+let nameSeq = 0;
+async function nameCase(leadName, callName, contactName = leadName) {
+  const phone = `98123${String(70000 + ++nameSeq)}`;
+  const lead = await Lead.create({ name: leadName, phone, source: "WhatsApp", orgId: ORG, status: "New" });
+  const conv = await mongoose.connection.collection("waconversations").insertOne({ orgId: ORG, leadId: lead._id, contactPhone: `91${phone}`, contactName });
+  const r = await post(call(5100 + nameSeq, { name: callName, phone: `+91${phone}`, arthaleads_lead_id: String(lead._id) }));
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  return {
+    lead: await Lead.findById(lead._id).lean(),
+    conv: await mongoose.connection.collection("waconversations").findOne({ _id: conv.insertedId }),
+  };
+}
+const renamed = (lead) => lead.activities.filter((a) => /^Name updated from Vistrow Voice call/.test(a.description));
+
+test("a WhatsApp lead named by an emoji or its number takes the real name said on the call", async () => {
+  for (const before of ["🙏🙏", "+919812370099"]) {
+    const { lead, conv } = await nameCase(before, "  Priya   Sharma ");
+    assert.equal(lead.name, "Priya Sharma", before);
+    assert.equal(conv.contactName, "Priya Sharma", "the chat's display name too");
+    assert.deepEqual(renamed(lead).map((a) => a.type), ["vistrow_voice"]);
+    assert.deepEqual(renamed(lead).map((a) => a.description), [`Name updated from Vistrow Voice call: ${before} → Priya Sharma`]);
+    assert.equal(lead.voiceCalls.length, 1, "the call is still added");
+  }
+});
+
+test("a real name on the lead is never replaced by the call's name", async () => {
+  const { lead, conv } = await nameCase("Rakesh Pal", "Priya Sharma");
+  assert.equal(lead.name, "Rakesh Pal");
+  assert.equal(conv.contactName, "Rakesh Pal");
+  assert.equal(renamed(lead).length, 0);
+});
+
+test("filler or an emoji heard as the name on the call changes nothing", async () => {
+  for (const said of ["ji", "hello", "Haan ji", "😊😊"]) {
+    const { lead, conv } = await nameCase("+919812370098", said);
+    assert.equal(lead.name, "+919812370098", said);
+    assert.equal(conv.contactName, "+919812370098", said);
+    assert.equal(renamed(lead).length, 0, said);
+  }
+});
+
 (async () => {
   mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri());
