@@ -27,14 +27,14 @@ class ArthaFocus {
 /// screen 1). Mirrors the web panel, frontend/src/components/HelpBot.jsx:
 /// streamed answers from POST /copilot/chat with the lookups shown as steps,
 /// names linked to their records, saved chats, starter buttons, ratings.
-Future<void> showArthaSheet(BuildContext context, {String? navLabel, ArthaFocus? focus}) {
+Future<void> showArthaSheet(BuildContext context, {String? navLabel, ArthaFocus? focus, String? ask}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.40),
-    builder: (_) => ArthaSheet(navLabel: navLabel, focus: focus),
+    builder: (_) => ArthaSheet(navLabel: navLabel, focus: focus, ask: ask),
   );
 }
 
@@ -64,7 +64,10 @@ class _Msg {
 class ArthaSheet extends StatefulWidget {
   final String? navLabel;
   final ArthaFocus? focus;
-  const ArthaSheet({super.key, this.navLabel, this.focus});
+
+  /// A question to ask as soon as the sheet opens ("Plan my day").
+  final String? ask;
+  const ArthaSheet({super.key, this.navLabel, this.focus, this.ask});
 
   @override
   State<ArthaSheet> createState() => _ArthaSheetState();
@@ -102,6 +105,7 @@ class _ArthaSheetState extends State<ArthaSheet> {
     });
     _loadStarters();
     _voice.loadLocale();
+    if (widget.ask != null) WidgetsBinding.instance.addPostFrameCallback((_) => _ask(widget.ask));
   }
 
   @override
