@@ -64,7 +64,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 
-- [claude] 2026-10-16 IST: Artha Phase 4 (mobile). Done: sign-in renewal (main 9c5ade8), staging app (main 836efd0); on staging only, waiting for the owner's check: Artha sheet (08a97eb, af72a0c), change cards (c9a9a34, 3c56b14), team-member choice buttons (backend, 3f6e4df). voice (e822aa3 + fix d1f0695, waiting for the owner to speak-test). Morning brief (ae39c6f). Next: WhatsApp draft reply + suggestion card.
+- [claude] 2026-10-16 IST: Artha Phase 4 (mobile). Done: sign-in renewal (main 9c5ade8), staging app (main 836efd0); on staging only, waiting for the owner's check: Artha sheet (08a97eb, af72a0c), change cards (c9a9a34, 3c56b14), team-member choice buttons (backend, 3f6e4df). voice (e822aa3 + fix d1f0695, waiting for the owner to speak-test). Morning brief (ae39c6f). Draft reply + suggestion card (2448e17), staging Google button hidden + old helpbot removed. Next: owner check on staging, then all staging work to main together and APK release (owner's go-ahead).
 
 
 
@@ -97,6 +97,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-17 IST (staging 2448e17 + follow-up, not on main yet): mobile Phase 4 step 6. WhatsApp chat: 'Draft reply with Artha' above the composer (features.drafts && window open && empty box) -> POST /copilot/draft-reply into the box, tag 'Draft by Artha · edit, then send' + Clear. ArthaSuggestCard (screens/artha/suggest_card.dart) on the lead Info tab and above the chat, POST /copilot/suggestions/:id save/dismiss. core/artha_features.dart caches /copilot/features per token. Removed lib/screens/help/artha_chat_screen.dart (old /help/ask helpbot; server endpoint kept for old app versions). Staging app hides Google sign-in/sign-up. flutter test 51/51. Not yet seen on the phone: needs scripts/staging-artha-demo.js re-run (Railway staging console) to reopen the demo chat window and set a pending suggestion.
 
 - [claude] 2026-10-17 IST (main, cherry-picked from staging bd3abb2 + f22a5fc, owner approved: brochure task to the lead owner only, and this): Lead page call buttons split into "You call" (Call from my phone, Call in browser) and an indigo "AI call · <agent>" (admins/managers, when Vistrow canCall); "Call now via Vistrow" removed from the panel, now "Vistrow AI calls" status only; status fetched once via useVistrowCall. Person calls ask to confirm while an AI call is in flight/queued. Files: frontend/src/components/LeadDetail.jsx, VistrowVoicePanel.jsx. Local only, not pushed; build passes, not clicked through in a browser.
 - [claude] 2026-10-17 IST (staging 0e534fd + ae39c6f, not on main yet): (1) BACKEND BUG, also on live: Artha's morning_brief tool linked the managers' 'unassigned new leads' summary row (kind summary); CopilotThread.records.kind only allows lead/projectLead/task, so saving the turn threw and 'Who should I call first today?' answered 'Something went wrong' for any company with unassigned new leads. backend/copilot/tools.js remember() now filters through linkable(). copilotRisks.db.test.js +3 checks. Verified on api-staging: Plan my day answers. Recommend moving 0e534fd to main soon (owner's call). (2) mobile morning brief, Phase 4 step 5: screens/dashboard/morning_brief.dart under the Dashboard greeting; saved per user for offline; risks first 3 / items first 4 + Show all; rows open lead/project/chat; Call + WhatsApp; Plan my day -> showArthaSheet(ask:); team table; refresh throttled to 2 min. flutter test 49/49.
