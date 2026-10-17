@@ -29,6 +29,8 @@ const logger = require("../config/logger");
 // A year. Every key that can change carries a version or a random segment, so
 // a cached response can only ever be the bytes that URL was created for.
 const CACHE = "public, max-age=31536000, immutable";
+// Where utils/backup.js writes the daily database copies (same bucket).
+const BACKUP_PREFIX = "arthaleads/backups/";
 
 router.get("/*", async (req, res) => {
   // Everything after /api/media/ is the object key. Express gives it back
@@ -41,7 +43,8 @@ router.get("/*", async (req, res) => {
 
   // A key is built by this codebase, never by a user, so anything trying to
   // climb out of the prefix is someone poking at it.
-  if (!key || key.includes("..") || !key.startsWith("arthaleads/")) {
+  // Database backups live in the same bucket and are never served here.
+  if (!key || key.includes("..") || !key.startsWith("arthaleads/") || key.startsWith(BACKUP_PREFIX)) {
     return res.status(404).end();
   }
 

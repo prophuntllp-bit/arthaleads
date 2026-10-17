@@ -26,7 +26,7 @@
 // hosts out of the page entirely, and avoids Backblaze's payment requirement
 // for public buckets.
 
-const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
 const logger = require("../config/logger");
 
 const REQUIRED = ["B2_KEY_ID", "B2_APP_KEY", "B2_BUCKET", "B2_ENDPOINT"];
@@ -158,6 +158,22 @@ async function removeStrict(key) {
   await require("./storageLedger").forget(key);
 }
 
+/** Every object whose key starts with `prefix`: [{ key, size, lastModified }]. */
+async function list(prefix) {
+  const out = [];
+  let ContinuationToken;
+  do {
+    const page = await client().send(new ListObjectsV2Command({
+      Bucket: process.env.B2_BUCKET,
+      Prefix: prefix,
+      ContinuationToken,
+    }));
+    for (const o of page.Contents || []) out.push({ key: o.Key, size: o.Size, lastModified: o.LastModified });
+    ContinuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (ContinuationToken);
+  return out;
+}
+
 /** True when the env is complete enough to upload. Callers use this to fail
  *  with a clear message instead of an SDK error from three layers down. */
 function isConfigured() {
@@ -170,6 +186,7 @@ module.exports = {
   remove,
   removeStrict,
   getObject,
+  list,
   publicUrl,
   decodeDataUri,
   isConfigured,

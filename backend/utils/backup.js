@@ -1,130 +1,164 @@
-﻿// utils/backup.js - Daily MongoDB backup → gzip → email via Resend
+﻿// utils/backup.js - daily copy of the whole database into file storage (Backblaze).
+//
+// Every collection is written, one document per line, as Extended JSON: ids,
+// dates and numbers come back as the same types on restore, which plain JSON
+// cannot do. The file is gzipped and stored at
+//   arthaleads/backups/db/<YYYY-MM-DD IST>.ndjson.gz
+// in the media bucket. /api/media refuses that prefix, so a backup is never
+// served to anyone; only scripts/restore-backup.js reads it back.
+//
+// Before 17 Oct 2026 this emailed 8 of the collections as plain JSON. Now the
+// email (when BACKUP_EMAIL is set) is a short report with no attachment, so a
+// copy of every company's data no longer sits in a mailbox.
+//
+// File layout, line by line:
+//   {"_meta": {version: 2, createdAt}}
+//   {"c": "<collection>", "d": <document>}      (repeated)
+//   {"_end": {collections: [{name, count}], totalDocs}}
+// A file without the _end line was cut short and must not be restored.
+//
+// Kept: the newest 30 daily copies, plus the oldest copy of each of the last
+// 12 months. Older ones are deleted only after the new copy is confirmed stored.
 const zlib     = require("zlib");
 const mongoose = require("mongoose");
-const { Resend } = require("resend");
 const logger   = require("../config/logger");
+const storage  = require("./storage");
 const { istDateKey } = require("./datetime");
-const { layout, panel, row, paragraph, HEADING } = require("./emailLayout");
+const { layout, panel, row, paragraph } = require("./emailLayout");
 
-// Collections to back up (in order)
-const COLLECTIONS = [
-  "organizations",
-  "users",
-  "leads",
-  "projects",
-  "projectleads",
-  "routingrules",
-  "pushsubscriptions",
-  "attendances",
-];
+const PREFIX = "arthaleads/backups/db/";
+const KEEP_DAILY = 30;
+const KEEP_MONTHS = 12;
+const { EJSON } = mongoose.mongo.BSON;
 
-// ── gzip helper (promisified) ─────────────────────────────────────────────────
-function gzip(str) {
-  return new Promise((resolve, reject) => {
-    zlib.gzip(Buffer.from(str, "utf8"), (err, buf) => {
-      if (err) reject(err); else resolve(buf);
-    });
-  });
-}
-
-// ── Format bytes nicely ───────────────────────────────────────────────────────
 function fmtBytes(n) {
   if (n < 1024)        return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-// ── Build the backup email HTML ───────────────────────────────────────────────
-function buildEmail(date, stats, rawSize, gzipSize) {
-  const total = stats.reduce((sum, c) => sum + c.count, 0);
-  const rows  = stats.map(({ name, count }) => row(name, count.toLocaleString())).join("");
+const keyFor = (date) => `${PREFIX}${date}.ndjson.gz`;
+const dateOf = (key) => (String(key).slice(PREFIX.length).match(/^(\d{4}-\d{2}-\d{2})\.ndjson\.gz$/) || [])[1] || null;
 
-  return layout({
-    preheader: `${total.toLocaleString()} documents, ${fmtBytes(gzipSize)} compressed.`,
-    eyebrow: "Daily backup",
-    title: `Backup for ${date}`,
-    bodyHtml: `
-      ${paragraph(`${strongDocs(total)} across ${stats.length} collections. The archive is attached.`)}
-      ${panel(
-        row("Uncompressed", fmtBytes(rawSize)) +
-        row("Compressed", fmtBytes(gzipSize)) +
-        row("Saving", `${Math.round((1 - gzipSize / rawSize) * 100)}%`, true)
-      )}
-      ${panel(rows)}`,
-    footerNote: "Sent to Arthaleads platform administrators.",
-  });
-}
+/** Write every collection into one gzipped buffer. */
+async function dumpDatabase(db) {
+  const gz = zlib.createGzip();
+  const chunks = [];
+  gz.on("data", (c) => chunks.push(c));
+  const finished = new Promise((resolve, reject) => { gz.on("end", resolve); gz.on("error", reject); });
+  let rawSize = 0;
+  const write = async (line) => {
+    rawSize += Buffer.byteLength(line) + 1;
+    if (!gz.write(line + "\n")) await new Promise((r) => gz.once("drain", r));
+  };
 
-const strongDocs = (n) =>
-  `<strong style="color:${HEADING};">${n.toLocaleString()} documents</strong>`;
-
-// ── Main backup function ──────────────────────────────────────────────────────
-async function runBackup() {
-  const BACKUP_EMAIL = process.env.BACKUP_EMAIL;
-  if (!BACKUP_EMAIL) {
-    logger.warn("[backup] BACKUP_EMAIL not set - skipping backup");
-    return { skipped: true, reason: "BACKUP_EMAIL not configured" };
-  }
-  if (!process.env.RESEND_API_KEY) {
-    logger.warn("[backup] RESEND_API_KEY not set - skipping backup");
-    return { skipped: true, reason: "RESEND_API_KEY not configured" };
-  }
-
-  const db     = mongoose.connection.db;
-  const date   = istDateKey(); // YYYY-MM-DD in IST
-  const backup = { _meta: { createdAt: new Date().toISOString(), version: "1.0" } };
-  const stats  = [];
-
-  logger.info("[backup] Starting daily backup…");
-
-  // Export each collection
-  for (const name of COLLECTIONS) {
-    try {
-      const docs = await db.collection(name).find({}).toArray();
-      backup[name] = docs;
-      stats.push({ name, count: docs.length });
-      logger.info(`[backup] ${name}: ${docs.length} docs`);
-    } catch (err) {
-      // Collection may not exist yet - skip gracefully
-      logger.warn(`[backup] skipping ${name}: ${err.message}`);
-      stats.push({ name, count: 0 });
+  await write(JSON.stringify({ _meta: { version: 2, createdAt: new Date().toISOString() } }));
+  const names = (await db.listCollections({}, { nameOnly: true }).toArray())
+    .map((c) => c.name)
+    .filter((n) => !n.startsWith("system."))
+    .sort();
+  const stats = [];
+  for (const name of names) {
+    let count = 0;
+    for await (const doc of db.collection(name).find({})) {
+      await write(EJSON.stringify({ c: name, d: doc }, { relaxed: false }));
+      count++;
     }
+    stats.push({ name, count });
   }
-
-  // Serialize + compress
-  const json      = JSON.stringify(backup);
-  const rawSize   = Buffer.byteLength(json, "utf8");
-  const compressed = await gzip(json);
-  const gzipSize  = compressed.length;
-
-  logger.info(`[backup] Raw: ${fmtBytes(rawSize)} → Compressed: ${fmtBytes(gzipSize)}`);
-
-  // Send email with attachment
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const fromAddress = process.env.SMTP_FROM || "Arthaleads <onboarding@resend.dev>";
-
-  const { error } = await resend.emails.send({
-    from:    fromAddress,
-    to:      BACKUP_EMAIL,
-    subject: `[Arthaleads Backup] ${date} - ${stats.reduce((s, c) => s + c.count, 0).toLocaleString()} total docs`,
-    html:    buildEmail(date, stats, rawSize, gzipSize),
-    attachments: [
-      {
-        filename: `arthaleads-backup-${date}.json.gz`,
-        content:  compressed.toString("base64"),
-      },
-    ],
-  });
-
-  if (error) {
-    logger.error(`[backup] ❌ email failed: ${error.message}`);
-    throw new Error(error.message);
-  }
-
   const totalDocs = stats.reduce((s, c) => s + c.count, 0);
-  logger.info(`[backup] ✅ backup sent to ${BACKUP_EMAIL} - ${totalDocs} docs, ${fmtBytes(gzipSize)}`);
-
-  return { success: true, date, totalDocs, rawSize, gzipSize, stats };
+  await write(JSON.stringify({ _end: { collections: stats, totalDocs } }));
+  gz.end();
+  await finished;
+  return { buffer: Buffer.concat(chunks), rawSize, stats, totalDocs };
 }
 
-module.exports = { runBackup, buildEmail };
+/**
+ * Backup keys to delete: all but the newest KEEP_DAILY copies and the oldest
+ * copy of each of the last KEEP_MONTHS months (today's month included).
+ */
+function pickExpired(keys, today = istDateKey()) {
+  const dated = keys
+    .map((key) => ({ key, date: dateOf(key) }))
+    .filter((x) => x.date)
+    .sort((a, b) => b.date.localeCompare(a.date)); // newest first
+  const keep = new Set(dated.slice(0, KEEP_DAILY).map((x) => x.key));
+  const [y, m] = today.split("-").map(Number);
+  const cutoff = new Date(Date.UTC(y, m - 1 - KEEP_MONTHS, 1)).toISOString().slice(0, 7); // months after this are kept
+  const oldestInMonth = new Map();
+  for (const x of dated) {
+    const month = x.date.slice(0, 7);
+    if (month > cutoff) oldestInMonth.set(month, x.key); // later entries are older, so the last one wins
+  }
+  for (const key of oldestInMonth.values()) keep.add(key);
+  return dated.filter((x) => !keep.has(x.key)).map((x) => x.key);
+}
+
+async function sendReport(subject, bodyHtml, preheader) {
+  if (!process.env.BACKUP_EMAIL || !process.env.RESEND_API_KEY) return;
+  try {
+    const { Resend } = require("resend");
+    const { error } = await new Resend(process.env.RESEND_API_KEY).emails.send({
+      from: process.env.SMTP_FROM || "Arthaleads <onboarding@resend.dev>",
+      to: process.env.BACKUP_EMAIL,
+      subject,
+      html: layout({ preheader, eyebrow: "Daily backup", title: subject.replace(/^\[Arthaleads Backup\] /, ""), bodyHtml, footerNote: "Sent to Arthaleads platform administrators." }),
+    });
+    if (error) logger.warn(`[backup] report email failed: ${error.message}`);
+  } catch (err) {
+    logger.warn(`[backup] report email failed: ${err.message}`);
+  }
+}
+
+let running = false;
+
+async function runBackup() {
+  if (!storage.isConfigured()) {
+    logger.warn("[backup] file storage (B2_*) is not configured - skipping backup");
+    return { skipped: true, reason: "File storage is not configured" };
+  }
+  if (running) return { skipped: true, reason: "A backup is already running" };
+  running = true;
+  const date = istDateKey();
+  const key = keyFor(date);
+  try {
+    logger.info("[backup] starting");
+    const { buffer, rawSize, stats, totalDocs } = await dumpDatabase(mongoose.connection.db);
+    await storage.put(key, buffer, "application/gzip", { cacheSeconds: 0 });
+
+    // Confirm the copy is really there before anything old is deleted.
+    const stored = await storage.list(PREFIX);
+    const mine = stored.find((o) => o.key === key);
+    if (!mine || Number(mine.size) !== buffer.length) {
+      throw new Error(`stored copy not found or wrong size (${mine ? mine.size : "missing"} vs ${buffer.length})`);
+    }
+
+    const deleted = [];
+    for (const old of pickExpired(stored.map((o) => o.key), date)) {
+      try { await storage.removeStrict(old); deleted.push(old); }
+      catch (err) { logger.warn(`[backup] could not delete ${old}: ${err.message}`); }
+    }
+    const kept = stored.length - deleted.length;
+
+    logger.info(`[backup] stored ${key}: ${totalDocs} docs in ${stats.length} collections, ${fmtBytes(rawSize)} -> ${fmtBytes(buffer.length)}, ${kept} copies kept`);
+    await sendReport(
+      `[Arthaleads Backup] ${date} - ${totalDocs.toLocaleString()} documents saved`,
+      paragraph(`All ${stats.length} collections were saved to file storage (${fmtBytes(buffer.length)} compressed). ${kept} daily and monthly copies are kept.`)
+        + panel(stats.map(({ name, count }, i) => row(name, count.toLocaleString(), i === stats.length - 1)).join("")),
+      `${totalDocs.toLocaleString()} documents, ${fmtBytes(buffer.length)}.`,
+    );
+    return { success: true, date, key, totalDocs, rawSize, gzipSize: buffer.length, stats, deleted, kept };
+  } catch (err) {
+    logger.error(`[backup] FAILED: ${err.message}`);
+    await sendReport(
+      `[Arthaleads Backup] ${date} - FAILED`,
+      paragraph(`Today's database backup did not complete: ${String(err.message).replace(/</g, "&lt;")}. Earlier copies were not touched.`),
+      "Today's backup failed.",
+    );
+    throw err;
+  } finally {
+    running = false;
+  }
+}
+
+module.exports = { runBackup, dumpDatabase, pickExpired, PREFIX, keyFor, dateOf };
