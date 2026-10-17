@@ -44,6 +44,13 @@ const SWITCH_STEPS = [
  *   chooseThem, chooseUs, rows: [[row, artha, them, src]], faqs: [[q, a]],
  * }
  */
+// Every comparison page links to the others, so each one is reachable from its siblings.
+const COMPARISONS = [
+  ["Sell.Do", "/compare/sell-do-alternative"],
+  ["Leadrat", "/compare/leadrat-alternative"],
+  ["Kylas", "/compare/kylas-alternative"],
+];
+
 export default function CompetitorComparison({ c }) {
   const { isDark } = usePublicTheme();
 
@@ -328,6 +335,14 @@ export default function CompetitorComparison({ c }) {
               the full <Link to="/pricing" className="font-semibold underline underline-offset-2" style={{ color: linkClr }}>pricing</Link>,
               how the <Link to="/whatsapp-crm" className="font-semibold underline underline-offset-2" style={{ color: linkClr }}>WhatsApp CRM</Link> works,
               or our guide on <Link to="/compare" className="font-semibold underline underline-offset-2" style={{ color: linkClr }}>how to choose a real estate CRM</Link>.
+            </p>
+            <p className="text-sm mt-3" style={{ color: soft }}>
+              Also compared:{" "}
+              {COMPARISONS.filter(([n]) => n !== c.name).map(([n, to], i, arr) => (
+                <span key={to}>
+                  <Link to={to} className="font-semibold underline underline-offset-2" style={{ color: linkClr }}>Arthaleads vs {n}</Link>{i < arr.length - 1 ? " and " : "."}
+                </span>
+              ))}
             </p>
           </Reveal>
         </div>

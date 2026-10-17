@@ -294,6 +294,12 @@ export default function Features() {
               </a>
               <Link to="/pricing" className="inline-flex items-center px-7 py-3.5 rounded-2xl border border-white/50 text-white font-semibold hover:bg-white/10 transition-colors">View Pricing</Link>
             </div>
+            <p className="text-white/90 text-sm mt-7">
+              Moving from another CRM? See how Arthaleads compares with{" "}
+              <Link to="/compare/sell-do-alternative" className="font-semibold underline underline-offset-2 text-white">Sell.Do</Link>,{" "}
+              <Link to="/compare/leadrat-alternative" className="font-semibold underline underline-offset-2 text-white">Leadrat</Link> and{" "}
+              <Link to="/compare/kylas-alternative" className="font-semibold underline underline-offset-2 text-white">Kylas</Link>.
+            </p>
           </div>
         </div>
       </section>
