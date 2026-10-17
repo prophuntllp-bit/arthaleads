@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+- [claude] 2026-10-17 IST: website buttons to WCAG AA (owner approved): white-on-orange and white-on-WhatsApp-green buttons get --brand-btn #cc4b00 / --wa-btn #0f7f72 (styles.css) on marketing pages and public components only; CRM untouched.
 
 
 
