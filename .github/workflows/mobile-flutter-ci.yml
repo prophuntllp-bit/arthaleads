@@ -63,12 +63,19 @@ jobs:
           path: mobile/build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 14
 
-      # ── Signed release build (only when the keystore secret is present) ────────
+      # ── Signed release build: only when started by hand (Run workflow) ────────
+      # Since the repo went private (17 Oct 2026) the runner is the small
+      # private one, and the release build (R8, every ABI, then the bundle)
+      # is killed partway (exit 143). It never fed a release anyway: this
+      # secret is not the key installed phones carry, so public APKs are built
+      # locally (see MOBILE_APP_HANDOFF.md). Analyze + debug build stay the
+      # check on every push, and Railway's "Wait for CI" sees a green result.
       # Uses the standard Flutter key.properties file (read by
       # mobile/android/app/build.gradle.kts) rather than Gradle -P flags, since
       # `flutter build` doesn't reliably forward arbitrary -P properties.
       - name: Write release signing config
         id: keystore
+        if: github.event_name == 'workflow_dispatch'
         working-directory: mobile
         run: |
           if [ -n "$KEYSTORE_B64" ]; then
