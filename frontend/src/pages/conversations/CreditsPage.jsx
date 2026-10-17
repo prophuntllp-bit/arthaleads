@@ -36,8 +36,12 @@ function describe(r) {
   const who = c?.contactName || (c?.contactPhone ? `+${c.contactPhone}` : "");
   if (r.type === "topup")      return r.razorpayPaymentId ? `Credits added · ${r.razorpayPaymentId}` : (r.note || "Credits added");
   if (r.type === "refund")     return `Refund${who ? ` · ${who}` : ""}`;
-  if (r.type === "adjustment") return r.note || "Adjustment";
-  return `${CATEGORY_TEXT[r.category] || "Message"}${who ? ` to ${who}` : ""}`;
+  // Back-billed adjustments carry the message id in brackets for the script; not for people.
+  if (r.type === "adjustment") return (r.note || "Adjustment").replace(/\s*\[wamid\.[^\]]*\]/, "");
+  // A charge added after the fact (back-billing) is dated when the message went
+  // out and says when it was billed.
+  const billed = /^Billed /.test(r.note || "") ? ` · ${r.note.toLowerCase()}` : "";
+  return `${CATEGORY_TEXT[r.category] || "Message"}${who ? ` to ${who}` : ""}${billed}`;
 }
 
 // Colours validated for both themes (see the dataviz palette check): marketing
@@ -515,9 +519,11 @@ export default function CreditsPage() {
               <tbody>
                 {rows.map((r) => {
                   const credit = r.amountPaise >= 0 && r.type !== "debit";
-                  // On a directly-billed account a send costs the wallet nothing:
-                  // say who does bill it instead of a bare "−₹0.00".
-                  const metaBilled = credits?.billedDirectlyByMeta && r.type === "debit" && !r.amountPaise;
+                  // A send recorded at ₹0 that was not a free reply was billed by
+                  // Meta directly (the account was on direct billing then): say
+                  // so instead of a bare "−₹0.00". Read off the row itself, so
+                  // old rows keep their meaning after an account switches.
+                  const metaBilled = r.type === "debit" && !r.amountPaise && !r.freeTierApplied;
                   return (
                     <tr key={r._id} style={{
                       borderBottom: "1px solid var(--app-border)",
@@ -540,8 +546,9 @@ export default function CreditsPage() {
                         style={{ color: credit ? "#15803d" : metaBilled ? "var(--app-text-soft)" : "var(--app-text)", fontWeight: metaBilled ? 500 : undefined }}>
                         {metaBilled ? "Billed by Meta" : `${credit ? "+" : "−"}${rupees(r.amountPaise)}`}
                       </td>
-                      <td className="px-5 py-3 text-right text-xs text-app-soft whitespace-nowrap tabular-nums">
-                        {metaBilled ? "—" : rupees(r.balanceAfterPaise)}
+                      <td className="px-5 py-3 text-right text-xs whitespace-nowrap tabular-nums"
+                        style={{ color: !metaBilled && r.balanceAfterPaise < 0 ? "#b91c1c" : "var(--app-text-soft)" }}>
+                        {metaBilled ? "—" : signedRupees(r.balanceAfterPaise)}
                       </td>
                     </tr>
                   );

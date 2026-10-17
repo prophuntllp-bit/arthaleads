@@ -679,6 +679,15 @@ const superAdminController = {
           botEnabled: org.whatsapp?.botEnabled ?? true,
           creditsPaise: org.credits?.balancePaise || 0,
           creditsReservedPaise: org.credits?.reservedPaise || 0,
+          // Per-company settings (null = the platform default shown alongside).
+          freeRepliesPerMonth: org.credits?.freeServicePerMonth ?? null,
+          overdraftLimitPaise: org.credits?.overdraftLimitPaise ?? null,
+          ratesPaise: org.credits?.sellRatesPaise || null,
+          defaults: {
+            freeRepliesPerMonth: require("../services/creditService").DEFAULT_FREE_SERVICE_PER_MONTH,
+            overdraftLimitPaise: require("../services/creditService").DEFAULT_OVERDRAFT_PAISE,
+            ratesPaise: require("../services/creditService").DEFAULT_SELL_RATES_PAISE,
+          },
           freeUsedMonth: org.credits?.freeService?.yyyymm === new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }).slice(0, 7).replace("-", "") ? (org.credits?.freeService?.used || 0) : 0,
           ...(wa || {}),
         },
@@ -739,6 +748,61 @@ const superAdminController = {
       invalidateOrgCache(req.params.id);
       await logAudit("storage_updated", req, { targetOrg: org._id, targetOrgName: org.name, details: { extraGb, limitGb, recordingDays, note } });
       res.json({ success: true, storage: await summaryFor(org) });
+    } catch (err) { next(err); }
+  },
+
+  // PATCH /api/super-admin/orgs/:id/whatsapp-credits — per-company WhatsApp
+  // billing. Body (all optional; null or "" returns that field to the default):
+  //   freeRepliesPerMonth  0..100000
+  //   overdraftLimitRupees 0..1000000 (0 = strictly prepaid)
+  //   rates: { service, marketing, utility, authentication } in rupees per message
+  async updateWhatsAppCredits(req, res, next) {
+    try {
+      const { freeRepliesPerMonth, overdraftLimitRupees, rates, note } = req.body || {};
+      const set = {}, unset = {};
+      const blank = (v) => v === null || v === "";
+      if (freeRepliesPerMonth !== undefined) {
+        if (blank(freeRepliesPerMonth)) unset["credits.freeServicePerMonth"] = "";
+        else {
+          const n = Math.round(Number(freeRepliesPerMonth));
+          if (!Number.isFinite(n) || n < 0 || n > 100000) return next(new AppError("Free replies must be 0 to 100000 a month", 400));
+          set["credits.freeServicePerMonth"] = n;
+        }
+      }
+      if (overdraftLimitRupees !== undefined) {
+        if (blank(overdraftLimitRupees)) unset["credits.overdraftLimitPaise"] = "";
+        else {
+          const n = Number(overdraftLimitRupees);
+          if (!Number.isFinite(n) || n < 0 || n > 1000000) return next(new AppError("Overdraft limit must be ₹0 to ₹10,00,000", 400));
+          set["credits.overdraftLimitPaise"] = Math.round(n * 100);
+        }
+      }
+      if (rates !== undefined && rates !== null) {
+        if (typeof rates !== "object") return next(new AppError("rates must be an object", 400));
+        for (const cat of ["service", "marketing", "utility", "authentication"]) {
+          if (rates[cat] === undefined) continue;
+          if (blank(rates[cat])) { unset[`credits.sellRatesPaise.${cat}`] = ""; continue; }
+          const n = Number(rates[cat]);
+          if (!Number.isFinite(n) || n < 0 || n > 100) return next(new AppError(`The ${cat} rate must be ₹0 to ₹100 a message`, 400));
+          set[`credits.sellRatesPaise.${cat}`] = Math.round(n * 100 * 1000) / 1000; // paise, up to 3 decimals
+        }
+      }
+      const update = {};
+      if (Object.keys(set).length) update.$set = set;
+      if (Object.keys(unset).length) update.$unset = unset;
+      if (!Object.keys(update).length) return next(new AppError("Nothing to change", 400));
+
+      const org = await Organization.findByIdAndUpdate(req.params.id, update, { new: true }).select("name credits").lean();
+      if (!org) return next(new AppError("Organisation not found", 404));
+      invalidateOrgCache(req.params.id);
+      await logAudit("whatsapp_credits_updated", req, { targetOrg: org._id, targetOrgName: org.name, details: { freeRepliesPerMonth, overdraftLimitRupees, rates, note: String(note || "").slice(0, 300) } });
+      const credits = require("../services/creditService");
+      res.json({
+        success: true,
+        freeRepliesPerMonth: credits.freeAllowanceFor(org),
+        overdraftLimitPaise: credits.overdraftFor(org),
+        ratesPaise: credits.ratesFor(org),
+      });
     } catch (err) { next(err); }
   },
 

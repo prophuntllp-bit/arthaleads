@@ -701,7 +701,7 @@ export default function SuperAdminOrgDetail() {
 function WhatsAppFacts({ wa }) {
   // 11 facts fill two rows of six
   const facts = [
-    ["Credit balance", fmtRupees(wa.creditsPaise)],
+    ["Credit balance", `${wa.creditsPaise < 0 ? "−" : ""}${fmtRupees(Math.abs(wa.creditsPaise || 0))}${wa.creditsPaise < 0 ? " (owes)" : ""}`],
     ["On hold", fmtRupees(wa.creditsReservedPaise)],
     ["Free replies used (month)", (wa.freeUsedMonth ?? 0).toLocaleString("en-IN")],
     ["AI agents", `${wa.agentsActive ?? 0} active of ${wa.agentsTotal ?? 0}`],
@@ -721,6 +721,72 @@ function WhatsAppFacts({ wa }) {
           <p className="text-sm font-semibold text-app tabular-nums">{v}</p>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Per-company WhatsApp billing. Empty = the platform default shown as the
+// placeholder, so a company only differs where it was deliberately changed.
+function WhatsAppCreditSettings({ orgId, wa, onSaved }) {
+  const d = wa.defaults;
+  const rupeeStr = (p) => (p == null ? "" : String(p / 100));
+  const [free, setFree] = useState(wa.freeRepliesPerMonth == null ? "" : String(wa.freeRepliesPerMonth));
+  const [overdraft, setOverdraft] = useState(rupeeStr(wa.overdraftLimitPaise));
+  const [rates, setRates] = useState(() => Object.fromEntries(
+    ["service", "marketing", "utility", "authentication"].map((k) => [k, rupeeStr(wa.ratesPaise?.[k])]),
+  ));
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.patch(`/super-admin/orgs/${orgId}/whatsapp-credits`, {
+        freeRepliesPerMonth: free === "" ? null : Number(free),
+        overdraftLimitRupees: overdraft === "" ? null : Number(overdraft),
+        rates: Object.fromEntries(Object.entries(rates).map(([k, v]) => [k, v === "" ? null : Number(v)])),
+        note,
+      });
+      toast.success("WhatsApp credit settings saved");
+      onSaved();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not save");
+    } finally { setSaving(false); }
+  };
+
+  const RATE_LABELS = { service: "Reply rate (₹)", marketing: "Marketing rate (₹)", utility: "Utility rate (₹)", authentication: "Authentication rate (₹)" };
+  return (
+    <div className="card overflow-hidden lg:col-span-2">
+      <div className="px-4 py-3 border-b font-bold text-app text-sm" style={{ borderColor: "var(--app-border)" }}>WhatsApp credit settings</div>
+      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div>
+          <label className="text-xs font-semibold text-app">Free replies per month</label>
+          <input className="input mt-1" type="number" min="0" step="1" value={free} placeholder={String(d.freeRepliesPerMonth)} onChange={(e) => setFree(e.target.value)} />
+          <p className="text-[11px] text-app-soft mt-1">Empty = {d.freeRepliesPerMonth.toLocaleString("en-IN")}. Resets on the 1st; never pays off a negative balance.</p>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-app">Overdraft limit (₹)</label>
+          <input className="input mt-1" type="number" min="0" step="any" value={overdraft} placeholder={String(d.overdraftLimitPaise / 100)} onChange={(e) => setOverdraft(e.target.value)} />
+          <p className="text-[11px] text-app-soft mt-1">How far below ₹0 they may go before messages pause. Empty = ₹{(d.overdraftLimitPaise / 100).toLocaleString("en-IN")}; 0 = prepaid only.</p>
+        </div>
+        {Object.keys(RATE_LABELS).map((k) => (
+          <div key={k}>
+            <label className="text-xs font-semibold text-app">{RATE_LABELS[k]}</label>
+            <input className="input mt-1" type="number" min="0" step="any" value={rates[k]} placeholder={String(d.ratesPaise[k] / 100)}
+              onChange={(e) => setRates((r) => ({ ...r, [k]: e.target.value }))} />
+            <p className="text-[11px] text-app-soft mt-1">Per message, excl. GST. Empty = ₹{(d.ratesPaise[k] / 100).toFixed(2)}.</p>
+          </div>
+        ))}
+        <div className="sm:col-span-2 lg:col-span-3">
+          <label className="text-xs font-semibold text-app">Note</label>
+          <input className="input mt-1" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Why this was changed (kept in the audit log)" maxLength={300} />
+        </div>
+        <div className="sm:col-span-2 lg:col-span-3">
+          <button onClick={save} disabled={saving} className="btn-primary gap-2 cursor-pointer">
+            {saving ? <Spinner size="sm" /> : <Save className="w-4 h-4" />} Save
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -809,6 +875,7 @@ function StorageUsageTab({ orgId, storage, wa, org, onSaved }) {
           <WhatsAppFacts wa={wa} />
         </div>
       )}
+      {wa?.connected && wa.defaults && <WhatsAppCreditSettings orgId={orgId} wa={wa} onSaved={onSaved} />}
     </div>
   );
 }
