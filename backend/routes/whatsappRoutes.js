@@ -819,6 +819,57 @@ async function withConvSetupLock(key, fn) {
   }
 }
 
+// A number already in the CRM (a live lead) messaging in: attribute an ad it
+// clicked and hand it to Vistrow as a repeat enquiry.
+async function treatAsKnownNumber(org, lead, campaignRef) {
+  if (campaignRef && !lead.campaignRef?.adId) {
+    // A phone number already in the CRM (some other source) just clicked a
+    // WhatsApp ad for the first time — attribute it, but never overwrite an
+    // earlier campaign this lead was already tied to.
+    await Lead.updateOne(
+      { _id: lead._id },
+      { $set: { campaignRef, leadSourceLabel: lead.leadSourceLabel || campaignLabel(campaignRef) } }
+    );
+  }
+  await markRepeatEnquiry(org, lead, campaignRef).catch((err) => console.error("[WhatsApp Lead Capture] repeat enquiry hand-off failed:", err.message));
+}
+
+// An existing chat whose lead was deleted, archived or is gone (or never had
+// one) used to just continue: a returning buyer got no lead, no Vistrow call
+// (lost in a live test, 17 Oct 2026). Link it to the number's live lead if
+// there is one, else create a lead exactly as a new chat would. The chat, its
+// history and its bot settings stay as they are. Runs inside withConvSetupLock.
+async function relinkConversationLead(org, conv, { phone, name, referral }) {
+  let reason = "no_lead";
+  if (conv.leadId) {
+    const linked = await Lead.findById(conv.leadId).select("isDeleted isArchived").lean();
+    if (linked && !linked.isDeleted && !linked.isArchived) return; // live lead: nothing to do
+    reason = !linked || linked.isDeleted ? "deleted" : "archived";
+  }
+  const campaignRef = campaignRefFromReferral(referral);
+  let lead = await findLiveLeadByPhone(org._id, phone);
+  if (lead) {
+    await treatAsKnownNumber(org, lead, campaignRef);
+  } else {
+    try {
+      lead = await autoCaptureWhatsAppLead(org, phone, name, campaignRef);
+    } catch (err) {
+      console.error("[WhatsApp Lead Capture] re-create failed:", err.message);
+      return;
+    }
+    await Lead.updateOne({ _id: lead._id }, { $push: { activities: {
+      type: "created",
+      description: reason === "no_lead"
+        ? "Lead created: this number messaged on WhatsApp again and its chat had no lead"
+        : `Lead re-created: this number messaged on WhatsApp after its previous lead was ${reason}`,
+      meta: { previousLeadId: conv.leadId || null, reason },
+    } } });
+  }
+  await WaConversation.updateOne({ _id: conv._id }, { $set: { leadId: lead._id } });
+  await Lead.updateOne({ _id: lead._id }, { $set: { whatsappConversationId: conv._id } });
+  conv.leadId = lead._id;
+}
+
 async function handleInbound(org, parsed) {
   const { phone, name, msgId, msgText, msgType, referral, interactiveId } = parsed;
   if (!phone || !msgText) return;
@@ -839,16 +890,7 @@ async function handleInbound(org, parsed) {
         console.error("[WhatsApp Lead Capture] auto-create failed:", err.message);
       }
     } else {
-      if (campaignRef && !lead.campaignRef?.adId) {
-        // A phone number already in the CRM (some other source) just clicked a
-        // WhatsApp ad for the first time — attribute it, but never overwrite an
-        // earlier campaign this lead was already tied to.
-        await Lead.updateOne(
-          { _id: lead._id },
-          { $set: { campaignRef, leadSourceLabel: lead.leadSourceLabel || campaignLabel(campaignRef) } }
-        );
-      }
-      await markRepeatEnquiry(org, lead, campaignRef).catch((err) => console.error("[WhatsApp Lead Capture] repeat enquiry hand-off failed:", err.message));
+      await treatAsKnownNumber(org, lead, campaignRef);
     }
     // One value for both fields. They used to be derived separately — `?? true`
     // for the flag but a plain ternary for the status — so an org document
@@ -873,6 +915,8 @@ async function handleInbound(org, parsed) {
     // first message — the handoff moment in triggerBotReply never fires for
     // it otherwise.
     if (!conv.botEnabled) autoAssignConversation(org, conv).catch(() => {});
+  } else {
+    await relinkConversationLead(org, conv, { phone, name, referral });
   }
   return { conv, isNewConversation };
   });
