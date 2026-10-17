@@ -75,6 +75,12 @@ router.get("/ledger", authorize("admin", "manager", "super_admin"), async (req, 
     const { page = 1, limit = 50, type } = req.query;
     const filter = { orgId: req.orgId };
     if (type) filter.type = type;
+    const win = pickerWindow(req.query);
+    if (win && (win.since || win.until)) {
+      filter.createdAt = {};
+      if (win.since) filter.createdAt.$gte = win.since;
+      if (win.until) filter.createdAt.$lte = win.until;
+    }
 
     const [rows, total] = await Promise.all([
       CreditLedger.find(filter)
@@ -114,20 +120,49 @@ const UTIL_CATEGORIES = [
 const DAY_MS = 86400000;
 const IST_MS = 5.5 * 3600000;
 
+// The window a report or statement covers, from the shared date picker:
+// ?dateRange=<preset> (today, last30days, thismonth, ..., "all") or
+// ?from=YYYY-MM-DD&to=YYYY-MM-DD, IST days, resolved exactly like Leads and the
+// Dashboard. Returns null when none of those is given (callers fall back to
+// their older behaviour) and { since: null } for "all time".
+function pickerWindow(q) {
+  if (q.dateRange === undefined && !q.from && !q.to) return null;
+  const { getDateRangeFilter } = require("../services/leadService");
+  const preset = q.dateRange === "all" ? "" : String(q.dateRange || "");
+  const f = getDateRangeFilter(preset, q.from ? String(q.from) : "", q.to ? String(q.to) : "");
+  return { since: f?.$gte || null, until: f?.$lte || null };
+}
+
 router.get("/utilization", authorize("admin", "manager", "super_admin"), async (req, res) => {
   try {
-    const range = ["7", "30", "month"].includes(String(req.query.range)) ? String(req.query.range) : "30";
     const istNow = Date.now() + IST_MS;
-    const startOfIstDay = Math.floor(istNow / DAY_MS) * DAY_MS - IST_MS;
-    const monthStart = (() => { const d = new Date(istNow); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - IST_MS; })();
-    const since = new Date(range === "month" ? monthStart : startOfIstDay - (Number(range) - 1) * DAY_MS);
     const orgId = new mongoose.Types.ObjectId(String(req.orgId));
+    // The web app sends the date picker's choice; the Android app still sends
+    // ?range=7|30|month, which keeps working.
+    const range = ["7", "30", "month"].includes(String(req.query.range)) ? String(req.query.range) : "30";
+    const picked = pickerWindow(req.query);
+    let since, until = new Date();
+    if (picked) {
+      until = picked.until && picked.until < until ? picked.until : until;
+      since = picked.since;
+      if (!since) { // all time: from the first message or charge
+        const [firstMsg, firstRow] = await Promise.all([
+          WaMessage.findOne({ orgId, direction: "outbound" }).sort({ timestamp: 1 }).select("timestamp").lean(),
+          CreditLedger.findOne({ orgId }).sort({ createdAt: 1 }).select("createdAt").lean(),
+        ]);
+        since = new Date(Math.min(firstMsg?.timestamp?.getTime() ?? Date.now(), firstRow?.createdAt?.getTime() ?? Date.now()));
+      }
+    } else {
+      const startOfIstDay = Math.floor(istNow / DAY_MS) * DAY_MS - IST_MS;
+      const monthStart = (() => { const d = new Date(istNow); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - IST_MS; })();
+      since = new Date(range === "month" ? monthStart : startOfIstDay - (Number(range) - 1) * DAY_MS);
+    }
     const dayOf = { $dateToString: { format: "%Y-%m-%d", date: "$timestamp", timezone: "Asia/Kolkata" } };
 
     const [org, msgAgg, ledgerAgg] = await Promise.all([
       Organization.findById(orgId).select("credits whatsapp.billedDirectlyByMeta").lean(),
       WaMessage.aggregate([
-        { $match: { orgId, direction: "outbound", status: { $ne: "failed" }, timestamp: { $gte: since } } },
+        { $match: { orgId, direction: "outbound", status: { $ne: "failed" }, timestamp: { $gte: since, $lte: until } } },
         { $facet: {
           byCategory: [{ $group: { _id: { c: "$creditCategory", free: "$freeTierApplied" }, n: { $sum: 1 } } }],
           bySource: [{ $group: {
@@ -138,7 +173,9 @@ router.get("/utilization", authorize("admin", "manager", "super_admin"), async (
         } },
       ]),
       CreditLedger.aggregate([
-        { $match: { orgId, type: "debit", createdAt: { $gte: since } } },
+        // Adjustments too: a back-billed message charged at ₹0 first is an
+        // adjustment row, and it is money spent all the same.
+        { $match: { orgId, type: { $in: ["debit", "adjustment"] }, createdAt: { $gte: since, $lte: until } } },
         { $group: { _id: "$category", spentPaise: { $sum: { $multiply: ["$amountPaise", -1] } } } },
       ]),
     ]);
@@ -160,7 +197,7 @@ router.get("/utilization", authorize("admin", "manager", "super_admin"), async (
     const [priorInFirstMonth, perMonth] = await Promise.all([
       WaMessage.countDocuments({ ...serviceMatch, timestamp: { $gte: new Date(firstMonth), $lt: since } }),
       WaMessage.aggregate([
-        { $match: { ...serviceMatch, timestamp: { $gte: since } } },
+        { $match: { ...serviceMatch, timestamp: { $gte: since, $lte: until } } },
         { $group: { _id: { $dateToString: { format: "%Y-%m", date: "$timestamp", timezone: "Asia/Kolkata" } }, n: { $sum: 1 } } },
         { $sort: { _id: 1 } },
       ]),
@@ -201,7 +238,8 @@ router.get("/utilization", authorize("admin", "manager", "super_admin"), async (
     // One entry per IST day in the window, so a quiet day shows as a gap, not a missing bar.
     const days = [];
     const first = Math.floor((since.getTime() + IST_MS) / DAY_MS) * DAY_MS;
-    for (let t = first; t <= istNow; t += DAY_MS) {
+    const lastDay = Math.min(istNow, until.getTime() + IST_MS);
+    for (let t = first; t <= lastDay; t += DAY_MS) {
       days.push({ date: new Date(t).toISOString().slice(0, 10), marketing: 0, service: 0, other: 0 });
     }
     const dayIdx = Object.fromEntries(days.map((d, i) => [d.date, i]));
@@ -215,7 +253,7 @@ router.get("/utilization", authorize("admin", "manager", "super_admin"), async (
     const messages = categories.reduce((a, c) => a + c.messages, 0);
     const free = categories.reduce((a, c) => a + c.free, 0);
     res.json({
-      range, since,
+      range: picked ? null : range, since, until,
       billedDirectlyByMeta: !!org?.whatsapp?.billedDirectlyByMeta,
       totals: {
         messages, free, paid: messages - free,
