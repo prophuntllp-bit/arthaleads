@@ -7,9 +7,10 @@
 // in the media bucket. /api/media refuses that prefix, so a backup is never
 // served to anyone; only scripts/restore-backup.js reads it back.
 //
-// Before 17 Oct 2026 this emailed 8 of the collections as plain JSON. Now the
-// email (when BACKUP_EMAIL is set) is a short report with no attachment, so a
-// copy of every company's data no longer sits in a mailbox.
+// Before 17 Oct 2026 this emailed 8 of the collections as plain JSON every
+// night. Now nothing is emailed when a backup succeeds; BACKUP_EMAIL only gets
+// a short alert (no attachment) when one fails, so a copy of every company's
+// data no longer sits in a mailbox.
 //
 // File layout, line by line:
 //   {"_meta": {version: 2, createdAt}}
@@ -24,7 +25,7 @@ const mongoose = require("mongoose");
 const logger   = require("../config/logger");
 const storage  = require("./storage");
 const { istDateKey } = require("./datetime");
-const { layout, panel, row, paragraph } = require("./emailLayout");
+const { layout, paragraph } = require("./emailLayout");
 
 const PREFIX = "arthaleads/backups/db/";
 const KEEP_DAILY = 30;
@@ -94,6 +95,7 @@ function pickExpired(keys, today = istDateKey()) {
   return dated.filter((x) => !keep.has(x.key)).map((x) => x.key);
 }
 
+/** Alert email to BACKUP_EMAIL (failures only). */
 async function sendReport(subject, bodyHtml, preheader) {
   if (!process.env.BACKUP_EMAIL || !process.env.RESEND_API_KEY) return;
   try {
@@ -141,12 +143,6 @@ async function runBackup() {
     const kept = stored.length - deleted.length;
 
     logger.info(`[backup] stored ${key}: ${totalDocs} docs in ${stats.length} collections, ${fmtBytes(rawSize)} -> ${fmtBytes(buffer.length)}, ${kept} copies kept`);
-    await sendReport(
-      `[Arthaleads Backup] ${date} - ${totalDocs.toLocaleString()} documents saved`,
-      paragraph(`All ${stats.length} collections were saved to file storage (${fmtBytes(buffer.length)} compressed). ${kept} daily and monthly copies are kept.`)
-        + panel(stats.map(({ name, count }, i) => row(name, count.toLocaleString(), i === stats.length - 1)).join("")),
-      `${totalDocs.toLocaleString()} documents, ${fmtBytes(buffer.length)}.`,
-    );
     return { success: true, date, key, totalDocs, rawSize, gzipSize: buffer.length, stats, deleted, kept };
   } catch (err) {
     logger.error(`[backup] FAILED: ${err.message}`);
