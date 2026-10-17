@@ -296,7 +296,7 @@ function createService({
       });
       await store.recordIntegrationOutcome(job.orgId, { lastSuccessAt: t1, clearError: true, ...(job.autoCall && !callNotQueued ? { clearWarning: true } : {}) });
       if (job.autoCall && verdict.queued === true) {
-        track(Promise.resolve().then(() => onCallQueued(job)).catch((e) => logger.error(`[vistrow-outbound] call-queued hook failed: ${safeErr(e)}`)));
+        track(Promise.resolve().then(() => onCallQueued(job, { queuedUntil: verdict.queuedUntil || null })).catch((e) => logger.error(`[vistrow-outbound] call-queued hook failed: ${safeErr(e)}`)));
       }
       if (job.autoCall && typeof verdict.queued === "boolean") {
         const result = { queued: verdict.queued, reason: verdict.reason || "", reasonText: verdict.queued ? "" : notQueuedText(verdict.reason), queuedUntil: verdict.queuedUntil || null };

@@ -4207,6 +4207,7 @@ router._handleInbound = handleInbound;
 router._noteWhyDetailsEmpty = noteWhyDetailsEmpty;   // also used by one-off backfills
 router._matchByMessageText = matchByMessageText;
 router._triggerBotReply = triggerBotReply;
+router._sendBotNotice = sendBotNotice;            // the Vistrow call heads-up (utils/vistrowWhatsAppHeadsUp.js)
 router._resolveAgentForConversation = resolveAgentForConversation;
 
 // For tests only (tests/whatsappLeadCapture.db.test.js).

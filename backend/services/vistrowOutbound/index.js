@@ -30,10 +30,16 @@ async function notifyAdmins(cfg, { code }) {
 }
 
 // Vistrow queued a call for a WhatsApp lead: the WhatsApp bot stops replying to
-// that chat until the call result arrives (utils/vistrowBotPause.js).
-async function onCallQueued(job) {
+// that chat until the call result arrives (utils/vistrowBotPause.js), and the
+// customer is told on WhatsApp that the call is coming
+// (utils/vistrowWhatsAppHeadsUp.js; never throws).
+async function onCallQueued(job, { queuedUntil = null } = {}) {
   if (!String(job.origin || "").startsWith("whatsapp-") || !job.leadId) return;
-  await require("../../utils/vistrowBotPause").pauseBotForCall({ orgId: job.orgId, leadId: job.leadId });
+  try {
+    await require("../../utils/vistrowBotPause").pauseBotForCall({ orgId: job.orgId, leadId: job.leadId });
+  } finally {
+    await require("../../utils/vistrowWhatsAppHeadsUp").sendCallHeadsUp(job, { queuedUntil });
+  }
 }
 
 // Vistrow answered a call we asked for: scheduled (queued_until), calling now,
