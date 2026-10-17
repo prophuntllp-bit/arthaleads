@@ -5,7 +5,7 @@ import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMisse
 import api from "../services/api";
 import useAppRefresh from "../hooks/useAppRefresh";
 import ArthaSuggestCard from "./ArthaSuggestCard";
-import VistrowVoicePanel from "./VistrowVoicePanel";
+import VistrowVoicePanel, { useVistrowCall } from "./VistrowVoicePanel";
 import fetchLeadToOpen from "../utils/fetchLeadToOpen";
 import { ConfirmDialog, Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
 import { useSoftPhone } from "../context/SoftPhoneContext";
@@ -310,9 +310,16 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   }, [tab, lead?._id, lead?._type, lead?.projectId, waMessages]);
 
   const sp = useSoftPhone();   // null outside the authed CRM shell
+  // Vistrow AI call status, loaded once for the header "AI call" button and the panel.
+  const vistrow = useVistrowCall(lead, onUpdated);
+
+  // A person calling while the Vistrow AI is already ringing this lead would
+  // double-call the customer, so ask first.
+  const aiCallingNow = () => vistrow.busy && !window.confirm("Vistrow AI is calling this lead right now. Call anyway?");
 
   const callLead = async () => {
     if (!lead?._id || calling) return;
+    if (aiCallingNow()) return;
     setCalling(true);
     try {
       const payload = lead._type === "project" ? { projectLeadId: lead._id } : { leadId: lead._id };
@@ -330,6 +337,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   // routing as the PSTN "Call" button above.
   const callInBrowser = () => {
     if (!lead?._id) return;
+    if (aiCallingNow()) return;
     sp?.startCall({
       leadId:        lead._type === "project" ? undefined : lead._id,
       projectLeadId: lead._type === "project" ? lead._id : undefined,
@@ -486,10 +494,10 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                     disabled={calling}
                     className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition cursor-pointer"
                     style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
-                    title="Call this lead via EnableX"
+                    title="Rings your phone first, then connects the customer"
                   >
                     {calling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Phone className="h-3.5 w-3.5 text-orange-500" />}
-                    {calling ? "Calling…" : "Call"}
+                    {calling ? "Calling…" : "Call from my phone"}
                   </button>
                 )}
                 {lead.phone && sp?.enabled && (
@@ -504,6 +512,22 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                     <Headphones className="h-3.5 w-3.5 text-orange-500" />
                     Call in browser
                   </button>
+                )}
+                {/* AI call: the Vistrow AI agent calls the customer (indigo, like the AI-call status pill). Kept apart from the "you call" buttons above. */}
+                {lead.phone && vistrow.canAiCall && (
+                  <>
+                    <span className="h-5 w-px" style={{ background: "var(--app-border)" }} aria-hidden="true" />
+                    <button
+                      type="button"
+                      onClick={vistrow.requestCall}
+                      disabled={vistrow.calling || vistrow.busy}
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition cursor-pointer disabled:opacity-60 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-300"
+                      title="Your Vistrow AI agent calls the customer now. The result, transcript and details land on this lead."
+                    >
+                      {vistrow.calling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PhoneOutgoing className="h-3.5 w-3.5" />}
+                      {vistrow.busy ? "AI calling…" : vistrow.agentLabel ? `AI call · ${vistrow.agentLabel}` : "AI call"}
+                    </button>
+                  </>
                 )}
                 {lead.phone && !isProjectLead && (
                   <button
@@ -597,8 +621,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
         <ArthaSuggestCard key={`${lead._id}:${lead.arthaSuggest?.at || ""}`} lead={lead}
           onChanged={(r) => { if (r?.lead) onUpdated?.({ ...lead, ...r.lead, arthaSuggest: undefined }); }} />
 
-        {/* Vistrow Voice: last call, tries, next scheduled call, "call now". Pipeline leads only (project copies have no delivery of their own). */}
-        {!isProjectLead && <VistrowVoicePanel lead={lead} onUpdated={onUpdated} />}
+        {/* Vistrow AI calls: last AI call, tries, next scheduled AI call. Pipeline leads only (project copies have no delivery of their own). */}
+        {!isProjectLead && <VistrowVoicePanel lead={lead} vistrow={vistrow} />}
 
         <div className="flex flex-wrap gap-2 border-b pb-3" style={{ borderColor: "var(--app-border)" }}>
           {tabList.map((item) => (
