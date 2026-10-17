@@ -21,6 +21,7 @@ const { samePhone } = require("../utils/phone");
 const OPTS = require("../constants/leadOptions");
 const { planOutcome, phoneFilter, cleanEmail, cleanName, FOLLOW_UP_LABELS, followUpKindOf, attemptsOf, reportedBooking, callDescription } = require("../utils/vistrowCallResult");
 const { applyCallDetails, notifyBrochureRequest } = require("../utils/vistrowLeadDetails");
+const { looksLikeRealName, looksLikeCallerName } = require("../utils/personName");
 
 const router = express.Router();
 
@@ -1303,8 +1304,10 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
       }
 
       // 2) New call, existing lead (matched by phone) — append as a new call.
-      //    Deliberately never touches the lead's other top-level fields (name,
-      //    propertyType, etc.) - only ever appends new call history.
+      //    Deliberately never touches the lead's other top-level fields
+      //    (propertyType, etc.) - only ever appends new call history. One
+      //    exception: a lead whose name is not a name (a WhatsApp profile
+      //    emoji or "+91...") takes the real name the caller gave on the call.
       //    The lead is the one Vistrow called for (arthaleads_lead_id, same
       //    org), else the newest lead with the same last 10 digits - the CRM's
       //    own duplicate rule; an exact string match turned "+919812345678"
@@ -1341,6 +1344,13 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
           performedByName: "Vistrow Voice",
           meta: { callId: callIdNum, direction: direction || "", followUpKind, attempts: callAttempts, booking: callResult },
         };
+        // Same rule as the WhatsApp chat reader: never over a real name.
+        const callName = cleanName(name);
+        const rename = looksLikeCallerName(callName) && !looksLikeRealName(existingByPhone.name) ? callName : "";
+        const renameActivity = rename
+          ? [{ type: "vistrow_voice", description: `Name updated from Vistrow Voice call: ${existingByPhone.name} → ${rename}`, performedByName: "Vistrow Voice", meta: { callId: callIdNum } }]
+          : [];
+        const setOnLead = { ...plan.set, ...(rename ? { name: rename } : {}) };
         let pushed;
         try {
           // The $ne guard makes the append idempotent inside one document,
@@ -1351,9 +1361,9 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
               $push: {
                 voiceCalls: newCallEntry,
                 notes: { text: [noteText, ...plan.lines, ...details.noteLines].join("\n"), addedByName: "Vistrow Voice" },
-                activities: { $each: [callActivity, ...plan.activities] },
+                activities: { $each: [callActivity, ...plan.activities, ...renameActivity] },
               },
-              ...(Object.keys(plan.set).length ? { $set: plan.set } : {}),
+              ...(Object.keys(setOnLead).length ? { $set: setOnLead } : {}),
             }
           );
         } catch (pushErr) {
@@ -1381,13 +1391,20 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
           return res.status(200).json({ success: true, message: "Call updated", leadId: existingByPhone._id });
         }
         if (brochureRequested) await notifyBrochureRequest({ orgId, leadId: existingByPhone._id, callId: callIdNum, projectName: brochureProject });
+        if (rename) {
+          try {
+            const WaConversation = require("../models/WaConversation");
+            const convs = await WaConversation.find({ orgId, leadId: existingByPhone._id }).select("contactName").lean();
+            for (const c of convs) if (!looksLikeRealName(c.contactName)) await WaConversation.updateOne({ _id: c._id }, { contactName: rename });
+          } catch (e) { logger.warn(`[custom webhook] chat name from call ${callIdNum} failed: ${e.message}`); }
+        }
         automation.status = "connected";
         automation.lastSyncAt = new Date();
         await automation.save();
         if (existingByPhone.assignedTo) {
           sendPushToUser(existingByPhone.assignedTo, {
             type: "lead_assigned",
-            title: `Vistrow Voice call: ${existingByPhone.name || cleanName(name)}`,
+            title: `Vistrow Voice call: ${rename || existingByPhone.name || cleanName(name)}`,
             body: plan.lines.length ? plan.lines.join(" · ") : "New call on this lead",
             data: { url: "/leads", leadId: String(existingByPhone._id) },
           }).catch(() => {});

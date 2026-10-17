@@ -61,7 +61,6 @@ only be verified live so Claude Code or the owner can check it on production.
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 - [claude] 2026-10-17 12:45 IST: lead integrity (audit item 6): Facebook lead dedupe, Google Ads webhook 5xx, one phone key, routing skips inactive users. backend/routes/webhookRoutes.js, backend/utils/routingRules.js, phone helpers, tests
 
-- [claude] 2026-10-17 IST: WhatsApp heads-up before the Vistrow AI call; then Vistrow call name onto nickname leads. Files: backend/utils/vistrowWhatsAppHeadsUp.js, services/vistrowOutbound/{index,service}.js, models/OutboundDelivery.js, routes/whatsappRoutes.js (export only + looksLikeRealName move), routes/webhookRoutes.js, tests. Local only.
 
 
 
@@ -99,6 +98,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-17 IST (staging-local, not pushed; heads-up is bb26ee4): Vistrow call result names a WhatsApp lead. On an existing lead (new call_id), the name said on the call replaces the lead name only when the lead's is not a name (no letters: emoji, "+91...") and the call's is (looksLikeCallerName: letters, 2+, not just filler like ji/hello/haan ji); same for WaConversation.contactName; activity "Name updated from Vistrow Voice call: old → new". looksLikeRealName moved unchanged to backend/utils/personName.js (WhatsApp reader identical). Note: a nickname with letters (e.g. "Rocky") counts as a real name and is kept. Files: routes/webhookRoutes.js, routes/whatsappRoutes.js, utils/personName.js, tests/vistrowCallResult.db.test.js.
 - [claude] 2026-10-17 IST (staging-local, not pushed): WhatsApp heads-up before the Vistrow AI call. When Vistrow answers queued:true for a WhatsApp hand-off (origin whatsapp-*, not manual-call), the assistant sends one Hinglish notice via sendBotNotice (billed, stored in the Inbox, isNotice) saying the advisor calls in ~1 minute, or at the IST time of queued_until when later. Only inside the 24 h window, org connected, lead not tagged "Not a buyer"; once per delivery (OutboundDelivery.waHeadsUpAt claim). Files: backend/utils/vistrowWhatsAppHeadsUp.js, services/vistrowOutbound/{index,service}.js, models/OutboundDelivery.js, routes/whatsappRoutes.js (export), tests/vistrowWhatsAppHeadsUp.db.test.js. Not verified with a live Meta send.
 
 - [claude] 2026-10-17 IST: Lead page call buttons split into "You call" (Call from my phone, Call in browser) and an indigo "AI call · <agent>" (admins/managers, when Vistrow canCall); "Call now via Vistrow" removed from the panel, now "Vistrow AI calls" status only; status fetched once via useVistrowCall. Person calls ask to confirm while an AI call is in flight/queued. Files: frontend/src/components/LeadDetail.jsx, VistrowVoicePanel.jsx. Local only, not pushed; build passes, not clicked through in a browser.
