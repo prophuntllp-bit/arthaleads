@@ -275,54 +275,125 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  Widget _draftRow(WaTheme wa) => ValueListenableBuilder<TextEditingValue>(
+  /// After Artha drafted: a slim line above the box saying so, with Clear.
+  Widget _draftTag(WaTheme wa) => ValueListenableBuilder<TextEditingValue>(
         valueListenable: _inputCtrl,
         builder: (context, value, _) {
-          final empty = value.text.trim().isEmpty;
-          if (empty && _drafted) _drafted = false;
-          const accent = Color(0xFFC2410C);
-          final fg = wa.isDark ? const Color(0xFFFF8A3D) : accent;
+          if (value.text.trim().isEmpty) {
+            _drafted = false;
+            return const SizedBox.shrink();
+          }
+          if (!_drafted) return const SizedBox.shrink();
+          final fg = wa.isDark ? const Color(0xFFFF8A3D) : const Color(0xFFC2410C);
           return Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            padding: const EdgeInsets.fromLTRB(16, 6, 6, 0),
             child: Row(children: [
-              if (_drafted && !empty) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.30)),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const CircleAvatar(radius: 8, backgroundImage: AssetImage('assets/images/ai_avatar.png')),
-                    const SizedBox(width: 6),
-                    Text('Draft by Artha · edit, then send', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg)),
-                  ]),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    _inputCtrl.clear();
-                    setState(() => _drafted = false);
-                  },
-                  child: Text('Clear', style: TextStyle(color: wa.timeText, fontWeight: FontWeight.w600)),
-                ),
-              ] else if (empty)
-                OutlinedButton.icon(
-                  onPressed: _drafting ? null : _draftReply,
-                  icon: _drafting
-                      ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: fg))
-                      : Icon(Icons.auto_awesome_rounded, size: 16, color: fg),
-                  label: Text(_drafting ? 'Drafting…' : 'Draft reply with Artha',
-                      style: TextStyle(color: fg, fontWeight: FontWeight.w600, fontSize: 13)),
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.08),
-                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.30)),
-                    minimumSize: const Size(0, 38),
-                    shape: const StadiumBorder(),
-                  ),
-                ),
+              const CircleAvatar(radius: 8, backgroundImage: AssetImage('assets/images/ai_avatar.png')),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text('Draft by Artha · edit it, then send',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg)),
+              ),
+              TextButton(
+                onPressed: () {
+                  _inputCtrl.clear();
+                  setState(() => _drafted = false);
+                },
+                style: TextButton.styleFrom(minimumSize: const Size(0, 32), visualDensity: VisualDensity.compact),
+                child: Text('Clear', style: TextStyle(color: wa.timeText, fontWeight: FontWeight.w600)),
+              ),
             ]),
+          );
+        },
+      );
+
+  /// One rounded box like WhatsApp's: Artha's draft button on the left (where
+  /// WhatsApp has emoji), the text, attach and template inside on the right,
+  /// and the round Send outside. While typing, the buttons the person no
+  /// longer needs step aside (draft and template), as WhatsApp hides its
+  /// payment and camera buttons.
+  Widget _composerBar(WaTheme wa, bool windowOpen) => ValueListenableBuilder<TextEditingValue>(
+        valueListenable: _inputCtrl,
+        builder: (context, value, _) {
+          final typing = value.text.trim().isNotEmpty;
+          final artha = wa.isDark ? const Color(0xFFFF8A3D) : const Color(0xFFC2410C);
+          final iconColor = wa.timeText;
+          Widget inside(IconData icon, String tip, VoidCallback onTap, {Color? color}) => IconButton(
+                tooltip: tip,
+                onPressed: onTap,
+                visualDensity: VisualDensity.compact,
+                icon: Icon(icon, size: 22, color: color ?? iconColor),
+              );
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    decoration: BoxDecoration(color: wa.composerPillBg, borderRadius: BorderRadius.circular(24)),
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (_canDraft && windowOpen && !typing)
+                          _drafting
+                              ? Padding(
+                                  padding: const EdgeInsets.all(14),
+                                  child: SizedBox(
+                                      width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: artha)),
+                                )
+                              : inside(Icons.auto_awesome_rounded, 'Draft a reply with Artha', _draftReply, color: artha)
+                        else
+                          const SizedBox(width: 14),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            child: TextField(
+                              controller: _inputCtrl,
+                              style: TextStyle(color: wa.isDark ? Colors.white : Colors.black87, fontSize: 15),
+                              decoration: InputDecoration(
+                                hintText: _drafting ? 'Artha is writing a reply…' : 'Message',
+                                hintStyle: TextStyle(color: wa.timeText, fontSize: 15),
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                filled: false,
+                                contentPadding: EdgeInsets.zero,
+                                isDense: true,
+                              ),
+                              minLines: 1,
+                              maxLines: 5,
+                              textCapitalization: TextCapitalization.sentences,
+                            ),
+                          ),
+                        ),
+                        if (_isMeta && windowOpen) inside(Icons.attach_file_rounded, 'Send project files', _openMediaSheet),
+                        if (_isMeta && !typing) inside(Icons.bolt_rounded, 'Send a template', _openTemplateSheet,
+                            color: const Color(0xFFF59E0B)),
+                        const SizedBox(width: 4),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: _sending ? null : _send,
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(color: wa.sendGreen, shape: BoxShape.circle),
+                    child: _sending
+                        ? const Padding(
+                            padding: EdgeInsets.all(14),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.send_rounded, color: Colors.white, size: 21),
+                  ),
+                ),
+              ],
+            ),
           );
         },
       );
@@ -922,6 +993,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
           ],
         ),
         actions: [
+          if (_conv != null && !resolved)
+            IconButton(
+              tooltip: 'Mark resolved',
+              onPressed: () => _setStatus('resolved'),
+              icon: Icon(Icons.check_circle_outline_rounded, color: wa.headerFg),
+            ),
           if (lead != null)
             IconButton(
               tooltip: 'Open linked lead',
@@ -973,10 +1050,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
         children: [
           if (lead != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
               child: ArthaSuggestCard(
                 key: ValueKey('${lead['_id']}:${(lead['arthaSuggest'] as Map?)?['at'] ?? ''}'),
                 lead: {...lead, '_type': 'lead'},
+                compact: true,
                 onChanged: (updated) {
                   if (updated != null && mounted) {
                     setState(() => _conv = {...?_conv, 'leadId': {...lead, ...updated}});
@@ -1246,98 +1324,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                               ],
                             ),
                           ),
-                        if (_canDraft && windowOpen) _draftRow(wa),
-                        Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          if (_isMeta && windowOpen)
-                            IconButton(
-                              icon: const Icon(Icons.attach_file_rounded),
-                              tooltip: 'Send project files',
-                              onPressed: _openMediaSheet,
-                            ),
-                          if (_isMeta)
-                            IconButton(
-                              icon: const Icon(Icons.bolt, color: Color(0xFFF59E0B)),
-                              tooltip: 'Send a template',
-                              onPressed: _openTemplateSheet,
-                            ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.check_circle_outline,
-                              color: wa.sendGreen,
-                            ),
-                            tooltip: 'Mark resolved',
-                            onPressed: () => _setStatus('resolved'),
-                          ),
-                          Expanded(
-                            child: Container(
-                              constraints: const BoxConstraints(minHeight: 44),
-                              decoration: BoxDecoration(
-                                color: wa.composerPillBg,
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 4,
-                              ),
-                              child: TextField(
-                                controller: _inputCtrl,
-                                style: TextStyle(
-                                  color: wa.isDark
-                                      ? Colors.white
-                                      : Colors.black87,
-                                  fontSize: 14.5,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: 'Type a message…',
-                                  hintStyle: TextStyle(
-                                    color: wa.timeText,
-                                    fontSize: 14.5,
-                                  ),
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  filled: false,
-                                  contentPadding: EdgeInsets.zero,
-                                  isDense: true,
-                                ),
-                                minLines: 1,
-                                maxLines: 4,
-                                onSubmitted: (_) => _send(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: _sending ? null : _send,
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: wa.sendGreen,
-                                shape: BoxShape.circle,
-                              ),
-                              child: _sending
-                                  ? const Padding(
-                                      padding: EdgeInsets.all(12),
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Icon(
-                                      Icons.send_rounded,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                        if (_canDraft && windowOpen) _draftTag(wa),
+                        _composerBar(wa, windowOpen),
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
                           child: Align(
