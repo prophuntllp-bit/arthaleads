@@ -7,9 +7,9 @@
 // (lead.arthaSuggest, marked as from the call) and a "Not changed" note line.
 //
 // Brochure: the caller asked for it (crm_outcome.brochure_requested === true).
-// Nothing is sent to the buyer (owner decision 16 Oct 2026); the team gets a
-// task due now (the lead's assignee, else every active admin), a push and an
-// activity. Claimed atomically on the call's own voiceCalls entry, so a re-sent
+// Nothing is sent to the buyer (owner decision 16 Oct 2026); the lead's owner
+// gets a task due now, a push and an activity (owner only, 17 Oct 2026; an
+// unassigned lead gets an activity saying to assign it). Claimed atomically on the call's own voiceCalls entry, so a re-sent
 // webhook, or two arriving together, never creates a second task.
 
 const Lead = require("../models/Lead");
@@ -94,12 +94,12 @@ async function notifyBrochureRequest({ orgId, leadId, callId, projectName = "" }
       const u = await User.findOne({ _id: lead.assignedTo, orgId, isActive: { $ne: false } }).select("name").lean();
       if (u) people = [u];
     }
-    if (!people.length) people = await User.find({ orgId, role: "admin", isActive: { $ne: false } }).select("name").lean();
-    if (!people.length) throw new Error("no assignee and no active admin to give the task to");
+    // Owner decision 17 Oct 2026: the lead's owner only, never every admin.
+    if (!people.length) throw new Error("this lead has no owner yet - assign it, then send the brochure");
 
     const project = String(projectName || "").trim().slice(0, 100);
     const title = "Send brochure (asked on Vistrow Voice call)";
-    const description = `${lead?.name || "The caller"} asked for the brochure${project ? ` of ${project}` : ""} on a Vistrow Voice call. The AI agent said it will be sent on WhatsApp after the call.`;
+    const description = `${lead?.name || "The caller"} asked for the brochure${project ? ` of ${project}` : ""} on a Vistrow Voice call. The AI agent told them our team will share it on WhatsApp shortly.`;
     const now = new Date();
     for (const p of people) {
       const task = await Task.create({
