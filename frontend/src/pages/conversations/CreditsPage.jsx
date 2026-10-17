@@ -160,7 +160,7 @@ function UtilizationSection() {
                       <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "var(--app-text-soft)" }} axisLine={false} tickLine={false} />
                       <Tooltip content={<UtilTooltip />} cursor={{ fill: "rgba(128,128,128,0.10)" }} />
                       {["service", "marketing", "other"].map((k) => (
-                        <Bar key={k} dataKey={k} stackId="m" fill={UTIL_COLORS[k]} stroke="var(--app-surface-solid)" strokeWidth={2} isAnimationActive={false} />
+                        <Bar key={k} dataKey={k} stackId="m" fill={UTIL_COLORS[k]} stroke="var(--app-surface-solid)" strokeWidth={2} isAnimationActive={false} maxBarSize={36} />
                       ))}
                     </BarChart>
                   </ResponsiveContainer>
