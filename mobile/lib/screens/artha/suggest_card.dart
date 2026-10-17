@@ -15,7 +15,11 @@ class ArthaSuggestCard extends StatefulWidget {
 
   /// After Save or Dismiss, with the server's updated lead when it sent one.
   final void Function(Map<String, dynamic>? updated)? onChanged;
-  const ArthaSuggestCard({super.key, required this.lead, this.onChanged});
+
+  /// In a chat: one line ("Artha found 2 details in this chat · Review") that
+  /// opens into the card, so the messages keep their room.
+  final bool compact;
+  const ArthaSuggestCard({super.key, required this.lead, this.onChanged, this.compact = false});
 
   @override
   State<ArthaSuggestCard> createState() => _ArthaSuggestCardState();
@@ -35,6 +39,7 @@ class _ArthaSuggestCardState extends State<ArthaSuggestCard> {
   final Set<String> _handled = {};
   final Set<String> _picked = {..._order};
   String? _busy;
+  bool _open = false;
 
   @override
   void initState() {
@@ -95,6 +100,36 @@ class _ArthaSuggestCardState extends State<ArthaSuggestCard> {
     final t = AppTheme.of(context);
     final accent = t.isDark ? const Color(0xFFFF8A3D) : const Color(0xFFC2410C);
     final canSave = keys.any(_picked.contains);
+    if (widget.compact && !_open) {
+      return Material(
+        color: AppColors.primary.withValues(alpha: t.isDark ? 0.14 : 0.08),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => setState(() => _open = true),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(children: [
+                Icon(Icons.auto_awesome_rounded, size: 16, color: accent),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Artha found ${keys.length} ${keys.length == 1 ? 'detail' : 'details'} in this chat',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t.text),
+                  ),
+                ),
+                Text('Review', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: accent)),
+                Icon(Icons.expand_more_rounded, size: 18, color: accent),
+              ]),
+            ),
+          ),
+        ),
+      );
+    }
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -111,7 +146,19 @@ class _ArthaSuggestCardState extends State<ArthaSuggestCard> {
             child: Row(children: [
               Icon(Icons.auto_awesome_rounded, size: 15, color: accent),
               const SizedBox(width: 6),
-              Text('Artha found in the WhatsApp chat', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: accent)),
+              Expanded(
+                child: Text('Artha found in the WhatsApp chat',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: accent)),
+              ),
+              if (widget.compact)
+                InkWell(
+                  onTap: () => setState(() => _open = false),
+                  customBorder: const CircleBorder(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(Icons.expand_less_rounded, size: 20, color: accent, semanticLabel: 'Fold'),
+                  ),
+                ),
             ]),
           ),
           const SizedBox(height: 4),

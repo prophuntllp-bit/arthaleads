@@ -66,6 +66,23 @@ void main() {
     expect(find.textContaining('₹75 L to ₹85 L'), findsOneWidget);
   });
 
+  testWidgets('in a chat it is one line that opens into the card', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await ApiClient.instance.setToken('t-compact-${DateTime.now().microsecondsSinceEpoch}');
+    ApiClient.instance.dio.httpClientAdapter = _Server(true);
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTheme(Brightness.light),
+      home: Scaffold(body: ArthaSuggestCard(lead: _lead, compact: true)),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Artha found 2 details in this chat'), findsOneWidget);
+    expect(find.byType(Checkbox), findsNothing);
+    await tester.tap(find.text('Review'));
+    await tester.pumpAndSettle();
+    expect(find.text('Artha found in the WhatsApp chat'), findsOneWidget);
+    expect(find.byType(Checkbox), findsNWidgets(2));
+  });
+
   testWidgets('hidden when the company does not have suggestions', (tester) async {
     await _pump(tester, on: false);
     expect(find.text('Artha found in the WhatsApp chat'), findsNothing);
