@@ -1,3 +1,5 @@
+import '../../core/artha_features.dart';
+import '../artha/suggest_card.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -56,6 +58,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
   @override
   void initState() {
     super.initState();
+    ArthaFeatures.drafts().then((on) {
+      if (mounted) setState(() => _canDraft = on);
+    });
     _loadConv();
     _loadChannel();
     _load();
@@ -237,6 +242,90 @@ class _ConversationScreenState extends State<ConversationScreen> {
       if (mounted) setState(() => _loading = false);
     }
   }
+
+  // ── Artha reply draft ────────────────────────────────────────────────────
+  // POST /copilot/draft-reply writes a reply from the chat so far, in the
+  // customer's language, into the box. It is never sent by itself: the person
+  // reads it, edits it and presses Send. Offered only when the company has
+  // drafts, the 24-hour window is open and the box is empty (as on the web).
+  bool _canDraft = false;
+  bool _drafting = false;
+  bool _drafted = false;
+
+  Future<void> _draftReply() async {
+    if (_drafting || _inputCtrl.text.trim().isNotEmpty) return;
+    final forId = widget.conversationId;
+    setState(() => _drafting = true);
+    try {
+      final res = await _api.dio.post('/copilot/draft-reply', data: {'conversationId': forId});
+      if (!mounted || forId != widget.conversationId) return;
+      final text = '${res.data['text'] ?? ''}'.trim();
+      if (text.isEmpty) return;
+      _inputCtrl.text = text;
+      _inputCtrl.selection = TextSelection.collapsed(offset: text.length);
+      setState(() => _drafted = true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.errorMessage(e, "Artha couldn't write a reply right now."))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _drafting = false);
+    }
+  }
+
+  Widget _draftRow(WaTheme wa) => ValueListenableBuilder<TextEditingValue>(
+        valueListenable: _inputCtrl,
+        builder: (context, value, _) {
+          final empty = value.text.trim().isEmpty;
+          if (empty && _drafted) _drafted = false;
+          const accent = Color(0xFFC2410C);
+          final fg = wa.isDark ? const Color(0xFFFF8A3D) : accent;
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Row(children: [
+              if (_drafted && !empty) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.30)),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const CircleAvatar(radius: 8, backgroundImage: AssetImage('assets/images/ai_avatar.png')),
+                    const SizedBox(width: 6),
+                    Text('Draft by Artha · edit, then send', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg)),
+                  ]),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () {
+                    _inputCtrl.clear();
+                    setState(() => _drafted = false);
+                  },
+                  child: Text('Clear', style: TextStyle(color: wa.timeText, fontWeight: FontWeight.w600)),
+                ),
+              ] else if (empty)
+                OutlinedButton.icon(
+                  onPressed: _drafting ? null : _draftReply,
+                  icon: _drafting
+                      ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: fg))
+                      : Icon(Icons.auto_awesome_rounded, size: 16, color: fg),
+                  label: Text(_drafting ? 'Drafting…' : 'Draft reply with Artha',
+                      style: TextStyle(color: fg, fontWeight: FontWeight.w600, fontSize: 13)),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.30)),
+                    minimumSize: const Size(0, 38),
+                    shape: const StadiumBorder(),
+                  ),
+                ),
+            ]),
+          );
+        },
+      );
 
   Future<void> _send() async {
     final text = _inputCtrl.text.trim();
@@ -882,6 +971,21 @@ class _ConversationScreenState extends State<ConversationScreen> {
       ),
       body: Column(
         children: [
+          if (lead != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+              child: ArthaSuggestCard(
+                key: ValueKey('${lead['_id']}:${(lead['arthaSuggest'] as Map?)?['at'] ?? ''}'),
+                lead: {...lead, '_type': 'lead'},
+                onChanged: (updated) {
+                  if (updated != null && mounted) {
+                    setState(() => _conv = {...?_conv, 'leadId': {...lead, ...updated}});
+                  } else {
+                    _load(silent: true);
+                  }
+                },
+              ),
+            ),
           Expanded(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -1142,6 +1246,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                               ],
                             ),
                           ),
+                        if (_canDraft && windowOpen) _draftRow(wa),
                         Padding(
                       padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
                       child: Row(

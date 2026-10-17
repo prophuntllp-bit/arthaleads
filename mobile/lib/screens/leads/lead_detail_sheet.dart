@@ -1,3 +1,4 @@
+import '../artha/suggest_card.dart';
 import '../artha/artha_sheet.dart';
 import '../artha/change_card.dart';
 import 'package:flutter/material.dart';
@@ -987,6 +988,11 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
               if (_tab == 'transcript' && _hasVoice) ..._transcriptTab(),
 
               if (_tab == 'info') ...[
+                ArthaSuggestCard(
+                  key: ValueKey('${lead['_id']}:${(lead['arthaSuggest'] as Map?)?['at'] ?? ''}'),
+                  lead: lead,
+                  onChanged: (updated) => _reloadAfterArtha(),
+                ),
                 LeadOriginCard(lead),
                 // ── Booking ──
                 Text(_bookingLabel, style: Theme.of(context).textTheme.labelLarge),
