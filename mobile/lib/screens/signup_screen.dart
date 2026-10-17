@@ -364,6 +364,7 @@ class _SignupScreenState extends State<SignupScreen> with WidgetsBindingObserver
             onPressed: _busy ? null : _sendCode,
             child: const Text('Send verification link'),
           ),
+          if (!ApiClient.isStaging) ...[
           const SizedBox(height: 18),
           Row(children: [
             Expanded(child: Divider(color: t.border)),
@@ -382,6 +383,7 @@ class _SignupScreenState extends State<SignupScreen> with WidgetsBindingObserver
             label: const Text('Sign up with Google'),
             style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
           ),
+          ],
           const SizedBox(height: 20),
           Center(
             child: TextButton(

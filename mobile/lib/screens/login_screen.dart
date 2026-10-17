@@ -275,6 +275,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
+                          // The staging app has no Google sign-in (its package is not registered
+                          // with Google), so the button would only fail there.
+                          if (!ApiClient.isStaging) ...[
                           const SizedBox(height: 16),
                           Row(
                             children: [
@@ -344,6 +347,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
+                          ],
                           const SizedBox(height: 20),
                           Center(
                             child: Wrap(
