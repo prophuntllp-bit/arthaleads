@@ -1829,3 +1829,5 @@ const leadService = {
 
 module.exports = leadService;
 module.exports.invalidateAnalyticsCache = invalidateAnalyticsCache;
+// The date picker's presets in IST, shared with the WhatsApp credits report.
+module.exports.getDateRangeFilter = getDateRangeFilter;

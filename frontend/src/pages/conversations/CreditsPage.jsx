@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import api from "../../services/api";
 import toast from "react-hot-toast";
 import CreditTopUpModal from "../../components/CreditTopUpModal";
+import DateRangePicker from "../../components/DateRangePicker";
 
 const TZ = "Asia/Kolkata";
 const rupees = (paise) =>
@@ -48,7 +49,10 @@ function describe(r) {
 // is the warm one because it is the one that costs the most per message.
 const UTIL_COLORS = { marketing: "#ea580c", service: "#2563eb", other: "#0d9488" };
 const UTIL_LABELS = { marketing: "Marketing", service: "Replies", other: "Utility & other" };
-const RANGES = [["7", "Last 7 days"], ["30", "Last 30 days"], ["month", "This month"]];
+// The shared date picker's value as API params: a preset name ("" = all time)
+// or { preset: "custom", from, to } in IST days.
+const rangeParams = (v) => (v && typeof v === "object" ? { from: v.from, to: v.to } : { dateRange: v || "all" });
+const rangeSlug = (v) => (v && typeof v === "object" ? `${v.from}_to_${v.to}` : v || "all-time");
 const num = (n) => (n || 0).toLocaleString("en-IN");
 // Per-message rates are fractions of a rupee (Meta's reply rate is ₹0.115), so they need a third decimal that the usual two-decimal money format would round away.
 const ratePerMessage = (paise) =>
@@ -79,13 +83,13 @@ function UtilTooltip({ active, payload, label }) {
 // Where the messages and the money went. The Statement below lists charges one
 // by one; this is the "what am I actually spending on" view.
 function UtilizationSection() {
-  const [range, setRange] = useState("30");
+  const [range, setRange] = useState("last30days");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    api.get("/credits/utilization", { params: { range } })
+    api.get("/credits/utilization", { params: rangeParams(range) })
       .then((r) => setData(r.data))
       .catch(() => toast.error("Could not load usage"))
       .finally(() => setLoading(false));
@@ -108,15 +112,7 @@ function UtilizationSection() {
             {direct ? "What your WhatsApp messages are costing you, by type and by who sent them" : "Where your credits are going, by message type and by who sent them"}
           </p>
         </div>
-        <div className="flex gap-1 p-1 rounded-full" style={{ background: "var(--app-surface-low)" }}>
-          {RANGES.map(([k, label]) => (
-            <button key={k} onClick={() => setRange(k)}
-              className="px-3 py-1 rounded-full text-xs font-semibold transition"
-              style={range === k ? { background: "var(--app-surface-solid)", color: "var(--app-text)", boxShadow: "0 1px 3px rgba(0,0,0,0.12)" } : { color: "var(--app-text-soft)" }}>
-              {label}
-            </button>
-          ))}
-        </div>
+        <DateRangePicker value={range} onChange={setRange} compact />
       </div>
 
       {loading && !data ? (
@@ -271,15 +267,19 @@ export default function CreditsPage() {
     if (credits?.autoRecharge && !ar) setAr({ ...credits.autoRecharge });
   }, [credits, ar]);
 
+  // The statement's own period (all time by default); the table and the CSV
+  // download both follow it.
+  const [stmtRange, setStmtRange] = useState("");
   const loadLedger = useCallback((p) => {
     setLoading(true);
-    api.get("/credits/ledger", { params: { page: p, limit: 25 } })
+    api.get("/credits/ledger", { params: { page: p, limit: 25, ...rangeParams(stmtRange) } })
       .then((r) => { setRows(r.data.rows || []); setTotal(r.data.total || 0); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [stmtRange]);
 
   useEffect(() => { loadLedger(page); }, [page, loadLedger]);
+  useEffect(() => { setPage(1); }, [stmtRange]);
 
   const saveAutoRecharge = async (next) => {
     setSavingAr(true);
@@ -300,7 +300,7 @@ export default function CreditsPage() {
     try {
       const all = [];
       for (let p = 1; p <= 50; p++) {
-        const { data } = await api.get("/credits/ledger", { params: { page: p, limit: 200 } });
+        const { data } = await api.get("/credits/ledger", { params: { page: p, limit: 200, ...rangeParams(stmtRange) } });
         all.push(...(data.rows || []));
         if (!data.rows?.length || all.length >= (data.total || 0)) break;
       }
@@ -315,7 +315,7 @@ export default function CreditsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `whatsapp-credits-statement-${dayKey(new Date())}.csv`;
+      a.download = `whatsapp-credits-statement-${rangeSlug(stmtRange)}-${dayKey(new Date())}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -484,13 +484,16 @@ export default function CreditsPage() {
                 : "Every top-up and every message charged"}
             </p>
           </div>
-          {total > 0 && (
-            <button onClick={exportCsv} disabled={exporting}
-              className="btn-secondary rounded-full px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
-              {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              Export CSV
-            </button>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            <DateRangePicker value={stmtRange} onChange={setStmtRange} compact />
+            {total > 0 && (
+              <button onClick={exportCsv} disabled={exporting}
+                className="btn-secondary rounded-full px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50">
+                {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                Export CSV
+              </button>
+            )}
+          </div>
         </div>
 
         {loading ? (
