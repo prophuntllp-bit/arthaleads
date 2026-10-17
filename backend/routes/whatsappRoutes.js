@@ -32,6 +32,7 @@ const { getNextAssignee } = require("../utils/assignLead");
 const RoutingRule = require("../models/RoutingRule");
 const { matchRoutingRule, fileLeadInRoutedProject } = require("../utils/routingRules");
 const { samePhone } = require("../utils/phone");
+const { noDashes } = require("../utils/botText");
 const { emitLeadCreated, routedProject } = require("../utils/emitLeadCreated");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { scoreLead, scoreLabel } = require("../utils/leadScorer");
@@ -846,7 +847,7 @@ async function maybeSendAwayMessage(org, agent, conversation) {
   }
   let msgId;
   try {
-    msgId = await sendProviderMessage(org, conversation.contactPhone, bh.awayMessage.trim());
+    msgId = await sendProviderMessage(org, conversation.contactPhone, noDashes(bh.awayMessage.trim()));
   } catch (err) {
     await credits.release(org._id, held);
     throw err;
@@ -854,11 +855,11 @@ async function maybeSendAwayMessage(org, agent, conversation) {
   await WaMessage.create({
     orgId: org._id, conversationId: conversation._id, waMsgId: msgId,
     direction: "outbound", sender: "bot", senderName: botName,
-    body: bh.awayMessage.trim(), status: "sent", timestamp: new Date(),
+    body: noDashes(bh.awayMessage.trim()), status: "sent", timestamp: new Date(),
     reservedPaise: held, creditCategory: "service", freeTierApplied: q.freeCount > 0,
   });
   await WaConversation.findByIdAndUpdate(conversation._id, {
-    lastMessageAt: new Date(), lastMessagePreview: bh.awayMessage.trim().slice(0, 80),
+    lastMessageAt: new Date(), lastMessagePreview: noDashes(bh.awayMessage.trim()).slice(0, 80),
     awayMessageSentAt: new Date(),
   });
 }
@@ -1379,6 +1380,7 @@ function noticeText(kind, lang, org, conversation) {
 
 /** Plain text from the bot, marked as a notice. Never throws; returns whether it went out. */
 async function sendBotNotice(org, conversation, text, botName = "Artha Assistant") {
+  text = noDashes(text);
   try {
     const q = await credits.quote(org._id, "service", 1);
     let held = 0;
@@ -1447,7 +1449,7 @@ async function firstContactFallback(org, conversation, inboundText) {
 // "{{name}}" sent to every real customer instead of their actual name.
 async function sendBotGreeting(org, agent, conversation) {
   try {
-    const greeting = fillTemplate(agent.greeting, { name: conversation.contactName || "there" }).trim();
+    const greeting = noDashes(fillTemplate(agent.greeting, { name: conversation.contactName || "there" }).trim());
     const botName = agent.name || "Artha Assistant";
     const q = await credits.quote(org._id, "service", 1);
     let held = 0;
@@ -2419,6 +2421,7 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     const wantsVideos    = reply.includes("[SHARE_VIDEO]")     || !!plan?.send.includes("videos");
     const wantsFloorPlan = reply.includes("[SHARE_FLOORPLAN]") || !!plan?.send.includes("floorplan");
     reply = reply.replace(/\[SHARE_(PHOTOS|BROCHURE|VIDEO|FLOORPLAN)\]/g, "").trim();
+    reply = noDashes(reply); // owner rule: no em dashes from the bot
 
     // The model came back with nothing to say. For a first message that must not
     // be silence; for a later one, saying nothing is the model's own call.
@@ -3416,6 +3419,7 @@ router.post("/agents/preview", authorize("admin", "super_admin"), async (req, re
     const wantsVideos = reply.includes("[SHARE_VIDEO]");
     const wantsFloorPlan = reply.includes("[SHARE_FLOORPLAN]");
     reply = reply.replace(/\[SHARE_(PHOTOS|BROCHURE|VIDEO|FLOORPLAN)\]/g, "").trim();
+    reply = noDashes(reply); // owner rule: no em dashes from the bot
     reply = reply.replace("[NEEDS_TEAM]", "").trim();
 
     // Counted with the same filter the prompt just used, so the number on
