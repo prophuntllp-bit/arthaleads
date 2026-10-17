@@ -276,7 +276,7 @@ function NavInner({ onScrollTo }) {
               // A quiet maker's credit, not a second brand: about half the
               // height of the Arthaleads lockup, no divider, greyed until hovered.
               // Side by side at full size the two read as a partnership.
-              className="group flex items-center gap-1 self-end mb-1.5 opacity-60 hover:opacity-100 transition-opacity"
+              className="group flex items-center gap-1 self-end mb-1.5 opacity-90 hover:opacity-100 transition-opacity"
             >
               <span className="text-[10px] font-medium" style={{ color: textMuted }}>by</span>
               <span className="text-[12px] sm:text-[13px] font-semibold tracking-tight leading-none" style={{ color: textMuted }}>Vistrow</span>

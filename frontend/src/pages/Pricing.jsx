@@ -28,6 +28,9 @@ const FAQ_JSONLD = JSON.stringify({
   "mainEntity": FAQS.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
 }).replace(/</g, "\\u003c");
 
+// Plan colours are too light for small text on white; these darker shades pass WCAG AA (4.5:1).
+const PLAN_TEXT = { "#3b82f6": "#2563eb", "#ff6b00": "#c2410c", "#a855f7": "#7e22ce" };
+
 export default function Pricing() {
   const { isDark } = usePublicTheme();
   const [members, setMembers] = useState(5);
@@ -128,7 +131,7 @@ export default function Pricing() {
             <div>
               <p className="text-sm" style={{ color: body }}>
                 Recommended plan:{" "}
-                <span className="font-bold" style={{ color: PLANS.find((p) => p.id === recommended).color }}>
+                <span className="font-bold" style={{ color: isDark ? PLANS.find((p) => p.id === recommended).color : PLAN_TEXT[PLANS.find((p) => p.id === recommended).color] }}>
                   {PLANS.find((p) => p.id === recommended).name}
                 </span>
               </p>
@@ -160,7 +163,7 @@ export default function Pricing() {
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer"
                   style={billing === id
                     ? { background: isDark ? "#1f1f33" : "#ffffff", color: heading, boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }
-                    : { color: body }}>
+                    : { color: isDark ? body : "#4b5563" }}>
                   {label}
                 </button>
               ))}

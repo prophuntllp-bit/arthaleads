@@ -133,7 +133,7 @@ const stripTags = (html) => String(html || "").replace(/<[^>]*>/g, "").trim();
 
 // ── Block renderer ─────────────────────────────────────────────────────────────
 function RenderBlock({ block, t, isDark }) {
-  const link = "[&_a]:text-[#e85d04] [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-[#ff6b00]/40 hover:[&_a]:decoration-[#ff6b00]";
+  const link = "[&_a]:text-[color:var(--brand-text)] [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-[#ff6b00]/40 hover:[&_a]:decoration-[#ff6b00]";
   switch (block.type) {
     case "paragraph":
       return <p className={`leading-[1.85] mb-5 text-[17px] ${link}`} style={{ color: t.text }}
@@ -177,7 +177,7 @@ function RenderBlock({ block, t, isDark }) {
         <ol className="space-y-3 my-6 pl-0">
           {(block.items || []).map((item, i) => (
             <li key={i} className="flex items-start gap-3.5 text-[17px] leading-relaxed" style={{ color: t.text }}>
-              <span className="w-7 h-7 rounded-full bg-[#ff6b00]/12 text-[#e85d04] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 tabular-nums">{i + 1}</span>
+              <span className="w-7 h-7 rounded-full bg-[#ff6b00]/12 text-[color:var(--brand-text)] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 tabular-nums">{i + 1}</span>
               <span className={link} dangerouslySetInnerHTML={{ __html: sanitizeHtml(item) }} />
             </li>
           ))}
@@ -228,7 +228,7 @@ function Contents({ headings, t }) {
               <a href={`#${h.id}`}
                 onClick={(e) => { e.preventDefault(); document.getElementById(h.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
                 className="flex gap-3 py-1.5 text-sm leading-snug transition-colors"
-                style={{ color: on ? "#e85d04" : t.body, fontWeight: on ? 600 : 400 }}>
+                style={{ color: on ? "var(--brand-text)" : t.body, fontWeight: on ? 600 : 400 }}>
                 <span className="font-bold tabular-nums text-[color:var(--brand-text)] shrink-0">{String(i + 1).padStart(2, "0")}</span>
                 <span>{h.text}</span>
               </a>
@@ -427,7 +427,9 @@ function BlogPostInner() {
 
           {post.featuredImage && (
             <figure className="mt-10 max-w-5xl">
+              {/* Sanity image URLs end in -<width>x<height>.<ext>: give the browser the size up front so nothing shifts. */}
               <img src={sizedImage(post.featuredImage, 1400)} alt={post.featuredImageAlt || post.title} loading="eager" fetchpriority="high"
+                {...imageSize(post.featuredImage)}
                 className="w-full rounded-[26px] sm:rounded-[32px] object-cover max-h-[520px]" />
             </figure>
           )}
@@ -451,7 +453,7 @@ function BlogPostInner() {
           )}
 
           <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
-            <Link to="/blog" className="inline-flex items-center gap-2 text-sm font-bold text-[#e85d04] hover:gap-3 transition-all">
+            <Link to="/blog" className="inline-flex items-center gap-2 text-sm font-bold text-[color:var(--brand-text)] hover:gap-3 transition-all">
               <ArrowLeft className="w-4 h-4" /> Back to all articles
             </Link>
             <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
@@ -489,6 +491,8 @@ function BlogPostInner() {
     </div>
   );
 }
+
+const imageSize = (url) => { const m = /-(\d+)x(\d+)\.\w+(?:\?|$)/.exec(url || ""); return m ? { width: Number(m[1]), height: Number(m[2]) } : {}; };
 
 export default function PublicBlogPost() {
   return <BlogPostInner />;

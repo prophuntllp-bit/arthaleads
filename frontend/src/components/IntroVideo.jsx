@@ -144,7 +144,7 @@ export default function IntroVideo({ isDark, id = "tour", chapters = false, seek
               A buyer messages at 1 AM. Here is what happens next.
             </h2>
             <p className="text-base sm:text-lg leading-relaxed mt-4" style={{ color: body }}>
-              Two minutes on how ArthaLeads replies on WhatsApp, qualifies the buyer, books the
+              Two minutes on how Arthaleads replies on WhatsApp, qualifies the buyer, books the
               site visit and hands your team a lead with every answer already filled in.
             </p>
             <Link to="/product-tour" className="inline-block mt-3 text-sm font-semibold underline underline-offset-4 text-[color:var(--brand-text)]">
@@ -185,7 +185,7 @@ export default function IntroVideo({ isDark, id = "tour", chapters = false, seek
             playsInline
             controls={started}
             className="absolute inset-0 w-full h-full object-cover" style={{ transform: "scale(1.01)" }}
-            aria-label={`ArthaLeads product tour (${v.label})`}
+            aria-label={`Arthaleads product tour (${v.label})`}
             onLoadedData={() => {
               const p = pendingSeek.current;
               if (p) { pendingSeek.current = null; seekTo(p.t, p.withSound); }
