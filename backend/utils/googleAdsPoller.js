@@ -158,7 +158,7 @@ async function pollOneGoogleAdsConnection(automation) {
       : null;
 
     let assignee = null;
-    if (ruleMatch) {
+    if (ruleMatch?.assignTo) {
       assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
     } else if (!isTestLead && org?.autoAssign !== false) {
       try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }

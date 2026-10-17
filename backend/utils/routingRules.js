@@ -21,11 +21,28 @@ async function matchRoutingRule(orgId, source, candidates) {
 
   // Both conditions must hold. Spreading the source's own $or next to the match $or
   // would let the second overwrite the first and match another source's rule.
-  return RoutingRule.findOne({
+  const rule = await RoutingRule.findOne({
     orgId,
     isActive: true,
     $and: [sourceClause, { $or: clauses }],
   });
+  return withActiveAgent(rule);
+}
+
+// A rule names one person. If they have been deactivated or deleted since, the
+// lead goes to the next active person by round-robin instead of to nobody who
+// will ever see it. The rule still files the lead into its project; the
+// project copy keeps the rule's owner as "imported by". If the company has no
+// active users at all, assignTo is null and callers leave the lead unassigned.
+async function withActiveAgent(rule) {
+  if (!rule) return null;
+  const User = require("../models/User");
+  if (rule.assignTo && await User.exists({ _id: rule.assignTo, orgId: rule.orgId, isActive: true })) return rule;
+  let next = null;
+  try { next = await require("./assignLead").getNextAssignee(rule.orgId); } catch { /* nobody active */ }
+  logger.warn(`[routing rule] "${rule.label}" names ${rule.assignToName || rule.assignTo}, who is not active - lead goes to ${next?.name || "nobody (unassigned)"}`);
+  const plain = typeof rule.toObject === "function" ? rule.toObject() : { ...rule };
+  return { ...plain, ruleOwner: plain.assignTo, assignTo: next?._id || null, assignToName: next?.name || "", agentReplaced: true };
 }
 
 // Website rule matching needs one extra behavior beyond an exact-value match:
@@ -46,7 +63,7 @@ async function matchWebsiteRoutingRule(orgId, { domain, pageUrl }) {
     matchField: "page_path",
   }).lean();
 
-  return pathRules.find((r) => r.matchValue && pageUrl.includes(r.matchValue)) || null;
+  return withActiveAgent(pathRules.find((r) => r.matchValue && pageUrl.includes(r.matchValue)) || null);
 }
 
 // When the matched rule names a project, also file the lead into that
@@ -79,7 +96,7 @@ async function fileLeadInRoutedProject(rule, lead) {
       campaignRef: lead.campaignRef || undefined,
       assignedTo: lead.assignedTo || (rule.keepUnassigned ? null : rule.assignTo) || null,
       assignedToName: lead.assignedToName || (rule.keepUnassigned ? "" : rule.assignToName) || "",
-      importedBy: rule.assignTo,
+      importedBy: rule.ruleOwner || rule.assignTo,
       orgId: lead.orgId,
     });
     notifyProjectTeam(rule.assignToProject, lead).catch(() => {});

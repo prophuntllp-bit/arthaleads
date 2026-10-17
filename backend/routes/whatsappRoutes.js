@@ -31,6 +31,7 @@ const onboarding = require("../services/whatsappOnboardingService");
 const { getNextAssignee } = require("../utils/assignLead");
 const RoutingRule = require("../models/RoutingRule");
 const { matchRoutingRule, fileLeadInRoutedProject } = require("../utils/routingRules");
+const { samePhone } = require("../utils/phone");
 const { emitLeadCreated, routedProject } = require("../utils/emitLeadCreated");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { scoreLead, scoreLabel } = require("../utils/leadScorer");
@@ -426,7 +427,7 @@ async function autoCaptureWhatsAppLead(org, phone, name, campaignRef) {
     : null;
 
   let assignee = null;
-  if (ruleMatch) {
+  if (ruleMatch?.assignTo) {
     assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
   } else if (org.autoAssign !== false) {
     try { assignee = await getNextAssignee(org._id); } catch { /* no active agents */ }
@@ -758,7 +759,7 @@ async function findLiveLeadByPhone(orgId, phone) {
   const cleaned = phone.replace(/^91/, "");
   return Lead.findOne({
     orgId,
-    phone: { $in: [phone, `+${phone}`, cleaned, `0${cleaned}`] },
+    phone: samePhone(phone) || { $in: [phone, `+${phone}`, cleaned, `0${cleaned}`] },
     isDeleted: { $ne: true },
     isArchived: { $ne: true },
   }).sort({ createdAt: -1 }).lean();

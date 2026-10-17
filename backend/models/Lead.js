@@ -370,6 +370,10 @@ leadSchema.index({ orgId: 1, createdAt: -1, isArchived: 1 });
 leadSchema.index({ orgId: 1, updatedAt: -1, isArchived: 1 });
 // phone dedup check
 leadSchema.index({ orgId: 1, phone: 1 });
+// One lead per Facebook lead id / Google lead id per company: Meta and Google
+// re-send a lead after a slow or failed answer (17 Oct 2026). Only set ids count.
+leadSchema.index({ orgId: 1, metaLeadId: 1 }, { unique: true, name: "orgId_metaLeadId_unique", partialFilterExpression: { metaLeadId: { $type: "string", $gt: "" } } });
+leadSchema.index({ orgId: 1, externalId: 1 }, { unique: true, name: "orgId_externalId_unique", partialFilterExpression: { externalId: { $type: "string", $gt: "" } } });
 // Only leads with a WhatsApp hand-off to Vistrow still waiting carry dueAt.
 leadSchema.index({ "vistrowEmit.dueAt": 1 }, { sparse: true });
 // domain filter

@@ -923,7 +923,8 @@ const leadService = {
     // Normalize phone to digits only so format differences don't create false
     // duplicates, e.g. "+91 98765-43210", "9876543210", "098765 43210" all match
     // (mirrors projectService.importLeads' Prospective-leads dedup logic)
-    const normalizePhone = (p) => String(p).replace(/\D/g, "").replace(/^91(\d{10})$/, "$1");
+    // "09876543210" and "+91 98765 43210" used to give different keys here.
+    const normalizePhone = (p) => require("../utils/phone").phoneKey(p) || String(p).replace(/\D/g, "");
 
     // Fetch every phone already in this org for O(1) lookup
     const existing = await Lead.find({ orgId: user.orgId, isDeleted: { $ne: true } }, "phone").lean();
