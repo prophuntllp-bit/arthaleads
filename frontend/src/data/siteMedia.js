@@ -5,6 +5,6 @@
 // Copied by backend/scripts/upload-site-videos.js. Poster images stay in
 // public/ (small, and needed for the first paint).
 //
-// Always the production API: staging has no file storage of its own, and these
-// are public, read-only files.
+// Always the production API, on staging too: staging has no file storage of
+// its own, and these are public, read-only files.
 export const SITE_MEDIA = "https://api.arthaleads.com/api/media/arthaleads/site";

@@ -11,11 +11,16 @@ name: Backend tests
 # no secrets and never touch real data.
 
 on:
-  # Every push, not only ones that touch backend/: Railway deploys the newest
-  # commit of the branch, so a later website-only or notes-only push with no
-  # test run would otherwise deploy server code that failed its tests.
+  # Only pushes that touch the server. That is safe: Railway compares each
+  # commit with the release it is running and skips it ("No changes to
+  # watched files") unless backend/ changed, so a website-only push never
+  # ships untested server code. The repo is private since 17 Oct 2026, so
+  # Actions minutes are limited; running on every push would use them up.
   push:
     branches: [main, staging]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-tests.yml"
   pull_request:
     paths:
       - "backend/**"
