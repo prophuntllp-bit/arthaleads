@@ -98,6 +98,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-17 IST: main gets the home hero tour clip deferral (staging 507bc33e -> main 9f3a3cb, owner approved). Details in the staging log entry.
 - [claude] 2026-10-17 IST (staging a2fec93e -> main, owner approved): (1) WhatsApp credits OVERDRAFT: balance may go negative down to Organization.credits.overdraftLimitPaise (unset = ₹500, 0 = strictly prepaid), then sends stop (InsufficientCreditsError as before). creditService: reserve() admits while balance - reserved + limit >= cost (atomic $expr); settle/recomputeBalance no longer clamp at 0; getBalance adds spendablePaise, owedPaise, overdraftLimitPaise and availablePaise is now SIGNED. Use spendablePaise for "can they send". tests/creditOverdraft.db.test.js. Prophunt moved onto standard rates (owner's call) from today, no back-billing. (2) The visible name "Inbox" is now "WhatsApp" (sidebar, breadcrumb, first tab, title, help, plans, Artha knowledge, docs); /conversations and code names unchanged.
 - [claude] 2026-10-17 IST, FOR THE APK SESSION: (a) rename the drawer item and first tab "Inbox" to "WhatsApp" to match the web (keep notification URL -> tab matching working); (b) /credits/balance availablePaise can now be NEGATIVE (overdraft); show it signed (−₹45.30) and use the new spendablePaise to decide if replies are possible; owedPaise/overdraftLimitPaise are available for an "you owe" line.
 
