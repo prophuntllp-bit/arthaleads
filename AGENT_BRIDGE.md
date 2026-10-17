@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
-- [claude] 2026-10-17 17:00 IST: WhatsApp credits: per-org free replies per month + super-admin credit settings (free replies, overdraft, rates); back-bill script; statement shows back-billed lines. backend/services/creditService.js, routes/creditRoutes.js, services/creditAutoRecharge.js, models/Organization.js, controllers/superAdminController.js, routes/superAdminRoutes.js, scripts/backbill-whatsapp-month.js, frontend CreditsPage.jsx, SuperAdmin.jsx
 - [claude] 2026-10-17 IST: SEO audit small fixes (owner approved): brand spelling Arthaleads on marketing (IntroVideo, data/introFilm.js, pages/ProductTour.jsx, CookieBanner), compare h1 read once (CompetitorComparison.jsx), blog featured image size (PublicBlogPost.jsx, api/blog-post.js), small-text contrast (Landing.jsx, Pricing.jsx, PublicBlogPost.jsx), cache headers for logos/icons (vercel.json headers only), wordpress-plugin/readme.txt MetForm.
 
 
