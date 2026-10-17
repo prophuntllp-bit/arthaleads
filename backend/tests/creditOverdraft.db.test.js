@@ -165,6 +165,30 @@ test("a marketing message Meta bills is charged at our marketing rate", async ()
   assert.equal((await credits.getBalance(org)).balancePaise, -112);
 });
 
+test("a company given 500 free replies pays from the 501st", async () => {
+  const _id = oid();
+  await Organization.collection.insertOne({ _id, name: "Reseller Co", slug: `r-${_id}`,
+    credits: { balancePaise: 0, reservedPaise: 0, freeServicePerMonth: 500, freeService: { yyyymm: month(), used: 499 } } });
+  assert.equal(await credits.reserve(_id, { category: "service" }), 0, "the 500th reply is free");
+  assert.equal(await credits.reserve(_id, { category: "service" }), 15, "the 501st costs the reply rate");
+  assert.equal((await credits.quote(_id, "service", 1)).freeCount, 0);
+});
+
+test("on the 1st the free replies come back, but the debt stays until a top-up", async () => {
+  const _id = oid();
+  // Ended last month owing ₹53.02 with every free reply used.
+  await Organization.collection.insertOne({ _id, name: "Carry Co", slug: `c-${_id}`,
+    credits: { balancePaise: -5302, reservedPaise: 0, freeService: { yyyymm: "202609", used: 1000 } } });
+  const held = await credits.reserve(_id, { category: "service" });
+  assert.equal(held, 0, "the new month's first reply is free");
+  const b = await credits.getBalance(_id);
+  assert.equal(b.balancePaise, -5302, "free replies do not pay off what is owed");
+  assert.equal(b.owedPaise, 5302);
+  const org = await Organization.findById(_id).lean();
+  assert.equal(org.credits.freeService.yyyymm, month());
+  assert.equal(org.credits.freeService.used, 1);
+});
+
 (async () => {
   mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri());

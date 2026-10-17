@@ -50,14 +50,14 @@ router.get("/balance", async (req, res) => {
       billedDirectlyByMeta: !!org?.whatsapp?.billedDirectlyByMeta,
       freeService: {
         used: freeUsed,
-        limit: credits.FREE_SERVICE_PER_MONTH,
-        remaining: Math.max(0, credits.FREE_SERVICE_PER_MONTH - freeUsed),
+        limit: credits.freeAllowanceFor(org),
+        remaining: Math.max(0, credits.freeAllowanceFor(org) - freeUsed),
       },
       autoRecharge: org?.credits?.autoRecharge || { enabled: false },
       // Roughly how many more replies they can send. The composer uses this to
       // warn before it hard-stops, which is friendlier than a 402 mid-sentence.
       serviceMessagesLeft: rates.service > 0
-        ? Math.floor(bal.spendablePaise / rates.service) + Math.max(0, credits.FREE_SERVICE_PER_MONTH - freeUsed)
+        ? Math.floor(bal.spendablePaise / rates.service) + Math.max(0, credits.freeAllowanceFor(org) - freeUsed)
         : null,
       paymentsConfigured: rzp.isConfigured(),
       minTopUpPaise: topUp.MIN_TOPUP_PAISE,
@@ -168,7 +168,7 @@ router.get("/utilization", authorize("admin", "manager", "super_admin"), async (
     const firstKey = new Date(firstMonth + IST_MS).toISOString().slice(0, 7);
     const serviceFree = perMonth.reduce((sum, r) => {
       const already = r._id === firstKey ? priorInFirstMonth : 0;
-      return sum + Math.min(r.n, Math.max(0, credits.FREE_SERVICE_PER_MONTH - already));
+      return sum + Math.min(r.n, Math.max(0, credits.freeAllowanceFor(org) - already));
     }, 0);
     const spentBy = Object.fromEntries(ledgerAgg.map((r) => [key(r._id), r.spentPaise]));
 

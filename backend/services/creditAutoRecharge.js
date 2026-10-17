@@ -103,7 +103,7 @@ function freeRepliesLeft(c) {
   const yyyymm = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
   const fs = c.freeService || {};
   const used = fs.yyyymm === yyyymm ? (fs.used || 0) : 0;
-  return Math.max(0, credits.FREE_SERVICE_PER_MONTH - used);
+  return Math.max(0, credits.freeAllowanceFor({ credits: c }) - used);
 }
 
 module.exports = { runLowCreditSweep, RENOTIFY_AFTER_MS };

@@ -261,6 +261,9 @@ const orgSchema = new mongoose.Schema(
       // How far below zero this org may go before sends stop. Unset = ₹500
       // (creditService.DEFAULT_OVERDRAFT_PAISE); 0 = strictly prepaid.
       overdraftLimitPaise: { type: Number, min: 0 },
+      // Free replies per month for this org. Unset = 1,000
+      // (creditService.DEFAULT_FREE_SERVICE_PER_MONTH).
+      freeServicePerMonth: { type: Number, min: 0 },
       // Held against sends that are in flight. Meta only tells us the real
       // price in the status webhook, which arrives after the send — so we hold
       // worst case up front and settle when the number comes back.

@@ -60,9 +60,18 @@ const VALID_CATEGORIES = ["marketing", "utility", "authentication", "service"];
 // means the schema default alone is not a rate card — this constant is.
 const DEFAULT_SELL_RATES_PAISE = { marketing: 112, utility: 15, authentication: 15, service: 15 };
 
-// Meta's free allowance: 1,000 service messages per phone number per calendar
-// month, from 1 Oct 2026. No rollover.
-const FREE_SERVICE_PER_MONTH = 1000;
+// Free replies each calendar month (UTC, Meta's billing month). No rollover:
+// unused ones expire on the 1st, and they never pay off a negative balance,
+// they only make replies free while they last. 1,000 unless the org has its own
+// credits.freeServicePerMonth (e.g. 500 for companies on Arthaleads' number
+// plan, like AiSensy does), set from the super-admin company page.
+const FREE_SERVICE_PER_MONTH = 1000; // the default; kept under this name for older callers
+const DEFAULT_FREE_SERVICE_PER_MONTH = FREE_SERVICE_PER_MONTH;
+
+function freeAllowanceFor(org) {
+  const v = org?.credits?.freeServicePerMonth;
+  return Number.isFinite(v) && v >= 0 ? v : DEFAULT_FREE_SERVICE_PER_MONTH;
+}
 
 // How far below zero a tenant may go before sends stop: ₹500 unless the org has
 // its own credits.overdraftLimitPaise (0 = strictly prepaid).
@@ -134,7 +143,7 @@ async function quote(orgId, category, count = 1) {
   if (category === "service") {
     const fs = org.credits?.freeService || {};
     const used = fs.yyyymm === currentYyyyMm() ? (fs.used || 0) : 0;
-    free = Math.max(0, Math.min(count, FREE_SERVICE_PER_MONTH - used));
+    free = Math.max(0, Math.min(count, freeAllowanceFor(org) - used));
   }
 
   const billable = count - free;
@@ -164,7 +173,9 @@ async function reserve(orgId, { category, count = 1 } = {}) {
     throw new Error(`Unknown credit category: ${category}`);
   }
 
-  const rate = rateFor(await Organization.findById(orgId).select("credits").lean() || {}, category);
+  const orgDoc = await Organization.findById(orgId).select("credits").lean() || {};
+  const rate = rateFor(orgDoc, category);
+  const allowance = freeAllowanceFor(orgDoc);
 
   // Claim free replies atomically. Each attempt is compare-and-swap on the counter,
   // so two sends at 999 of 1,000 cannot both be given the last free reply.
@@ -174,7 +185,7 @@ async function reserve(orgId, { category, count = 1 } = {}) {
     for (let attempt = 0; attempt < 6 && freeCount === 0; attempt++) {
       const cur = (await Organization.findById(orgId).select("credits.freeService").lean())?.credits?.freeService || {};
       const used = cur.yyyymm === yyyymm ? (cur.used || 0) : 0;
-      const n = Math.max(0, Math.min(count, FREE_SERVICE_PER_MONTH - used));
+      const n = Math.max(0, Math.min(count, allowance - used));
       if (n === 0) break;
       const r = cur.yyyymm === yyyymm
         ? await Organization.updateOne({ _id: orgId, "credits.freeService.yyyymm": yyyymm, "credits.freeService.used": cur.used || 0 }, { $inc: { "credits.freeService.used": n } })
@@ -395,7 +406,9 @@ module.exports = {
   FREE_SERVICE_PER_MONTH,
   DEFAULT_SELL_RATES_PAISE,
   DEFAULT_OVERDRAFT_PAISE,
+  DEFAULT_FREE_SERVICE_PER_MONTH,
   overdraftFor,
+  freeAllowanceFor,
   rateFor,
   ratesFor,
   getBalance,
