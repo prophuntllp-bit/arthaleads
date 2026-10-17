@@ -65,7 +65,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 
-- [claude] 2026-10-17 IST: Artha Phase 4 (mobile) staging -> main (owner: push all together): cherry-picking only my commits (mobile/ Artha + backend/copilot/tools.js, prompt.js and their tests). Then APK 1.0.14 on the owner's go-ahead.
+- [claude] 2026-10-17 IST: Artha Phase 4 (mobile) is on main (b421a06..849d624). Next: APK 1.0.14 (build 40) on the owner's go-ahead; mobile/ and appRelease.js only.
 
 
 
@@ -98,6 +98,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-17 IST (main b421a06..849d624, cherry-picked -x from staging): Artha Phase 4 to main, owner's call 'push all together'. Mobile: sheet 08a97eb, floating avatar af72a0c, change cards c9a9a34, voice e822aa3 + d1f0695 + 4bbd684, morning brief ae39c6f, draft reply + suggestion card + old helpbot removed 2448e17, staging Google hidden e71998a, WhatsApp-style composer 67fe496. Backend (live on deploy): team-member choice buttons 3f6e4df, bulk rows/step label 3c56b14, weekday calendar aef8066, brief link fix 0e534fd (fixes 'who should I call first' for companies with unassigned leads). mobile/ and backend/copilot identical to staging; flutter analyze clean, test 52/52; copilot tools/actions/brief/risks/drafts/suggest + sessionRenewal pass; GitHub Backend tests passed. Earlier mobile work already on main: 9c5ade8 (sign-in renewal), 836efd0 (staging app), 1ab9cd9/dbebae2 (web-app wrappers removed).
 - [claude] 2026-10-17 IST: GitHub repo prophuntllp-bit/arthaleads is now PRIVATE (owner's call; history scanned first, no real secrets ever committed). Vercel (staging da55c521) and Railway both still read it. backend-tests.yml runs only when backend/ changes again (Actions minutes are limited on private repos; Railway skips non-backend commits anyway, so this leaves no gap). Deploy gate proven on staging: a failing test -> Railway SKIPPED "CI check suite failed". Never run `railway up` by hand.
 - [claude] 2026-10-17 IST (staging b20b261a + ec495680 -> main, owner approved): ONE DEPLOY PATH + TEST GATE. Railway's own GitHub deploy is now the only way the backend ships; .github/workflows/deploy-backend.yml (railway up, which raced it and double-deployed) is deleted. New .github/workflows/backend-tests.yml runs `npm test` (Node 22, in-memory Mongo, no secrets) on every push to staging and main and on PRs. Railway "Wait for CI" is ON for both Arthaleads (main) and arthaleads-staging (staging): a push whose GitHub Actions fail is not deployed. Consequences for every agent: (1) a failing backend test now blocks the release, so run `npm test` before pushing; (2) Railway already SKIPS commits that don't touch backend/ (service root); (3) Wait for CI waits for ALL workflows on the commit, including mobile-flutter-ci when mobile/ changes.
 - [claude] 2026-10-17 IST (staging 0c65c83a -> main, owner approved): WhatsApp bot text never carries an em/en dash (owner rule). utils/botText.js noDashes(): number ranges -> "to", other dashes -> commas, bullet dashes -> hyphens. Applied to every bot send: AI reply + Try It preview (whatsappRoutes), greeting, sendBotNotice, away message, ctwaFlowService.sendFlowStep (flow steps and nudges). Agent-typed Inbox messages untouched. tests/botText.test.js. A new bot send path must pass its text through noDashes.
