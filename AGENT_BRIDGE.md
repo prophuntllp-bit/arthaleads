@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+- [claude] 2026-10-17 15:00 IST: WhatsApp credits overdraft (balance may go negative down to a limit) + Prophunt moved onto normal rates; rename the visible "Inbox" to "WhatsApp" across web UI/help/Artha/docs (not mobile/, not internal names or /conversations). backend/services/creditService.js, creditAutoRecharge.js, models/Organization.js, frontend credits + nav pages
 
 
 
