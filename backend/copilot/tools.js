@@ -117,6 +117,9 @@ function writeTools(user, org) {
     } }));
 }
 
+const LINK_KINDS = new Set(["lead", "projectLead", "task"]);
+const linkable = (rows) => (rows || []).filter((r) => r && r.id && LINK_KINDS.has(r.kind));
+
 const ROLE_LABEL = { super_admin: "Owner", admin: "Admin", manager: "Manager", agent: "Agent" };
 
 const CHOOSE_TOOL = tool("ask_user_to_choose",
@@ -157,7 +160,11 @@ function stepLabel(name, args = {}) {
 async function runTool(name, args, ctx) {
   const { user } = ctx;
   const records = [];
-  const remember = (rows) => { for (const r of rows) records.push({ id: r.id, kind: r.kind, name: r.name }); return rows; };
+  // Only real records become links (a saved chat accepts lead, projectLead
+  // and task). The brief's "unassigned new leads" line is kind "summary" and
+  // chats are "chat"; linking those made the chat fail to save, so the whole
+  // answer came back as "Something went wrong".
+  const remember = (rows) => { for (const r of linkable(rows)) records.push({ id: r.id, kind: r.kind, name: r.name }); return rows; };
 
   switch (name) {
     case "search_leads": {
@@ -323,4 +330,4 @@ async function breakdown(user, { group_by: by = "status", created_from, created_
   return { group_by: by, total: leads.length + projLeads.length, groups, range: { from: created_from || null, to: created_to || null } };
 }
 
-module.exports = { toolsFor, runTool, stepLabel, joiToSchema, READ_TOOLS };
+module.exports = { linkable, toolsFor, runTool, stepLabel, joiToSchema, READ_TOOLS };
