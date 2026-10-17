@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-17 IST: SEO internal links to the comparison pages (owner approved): components/CompetitorComparison.jsx (links to the sibling compare pages), pages/Features.jsx (closing CTA line); Sanity blog link to /compare.
+
 
 
 
