@@ -64,7 +64,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 
-- [claude] 2026-10-16 IST: Artha Phase 4 (mobile). Done: sign-in renewal (main 9c5ade8), staging app (main 836efd0); on staging only, waiting for the owner's check: Artha sheet (08a97eb, af72a0c), change cards (c9a9a34, 3c56b14), team-member choice buttons (backend, 3f6e4df). voice (e822aa3 + fix d1f0695, waiting for the owner to speak-test). Next: morning brief on the Dashboard.
+- [claude] 2026-10-16 IST: Artha Phase 4 (mobile). Done: sign-in renewal (main 9c5ade8), staging app (main 836efd0); on staging only, waiting for the owner's check: Artha sheet (08a97eb, af72a0c), change cards (c9a9a34, 3c56b14), team-member choice buttons (backend, 3f6e4df). voice (e822aa3 + fix d1f0695, waiting for the owner to speak-test). Morning brief (ae39c6f). Next: WhatsApp draft reply + suggestion card.
 
 
 
@@ -97,6 +97,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-17 IST (staging 0e534fd + ae39c6f, not on main yet): (1) BACKEND BUG, also on live: Artha's morning_brief tool linked the managers' 'unassigned new leads' summary row (kind summary); CopilotThread.records.kind only allows lead/projectLead/task, so saving the turn threw and 'Who should I call first today?' answered 'Something went wrong' for any company with unassigned new leads. backend/copilot/tools.js remember() now filters through linkable(). copilotRisks.db.test.js +3 checks. Verified on api-staging: Plan my day answers. Recommend moving 0e534fd to main soon (owner's call). (2) mobile morning brief, Phase 4 step 5: screens/dashboard/morning_brief.dart under the Dashboard greeting; saved per user for offline; risks first 3 / items first 4 + Show all; rows open lead/project/chat; Call + WhatsApp; Plan my day -> showArthaSheet(ask:); team table; refresh throttled to 2 min. flutter test 49/49.
 
 - [claude] 2026-10-17 IST (staging, see latest 'hold-to-talk hears more' commit, not on main yet): mobile voice accuracy tweaks on the phone engine (owner: no paid transcription). Buzz/'Speak now' only once the recogniser reports listening; turns restart while the finger is held (pauses no longer cut it), 90 s cap; phone's own locale id; tidySpokenCrm (BHK numbers, site visit, follow up, lakh, crore). flutter test 46/46.
 - [claude] 2026-10-16 IST: Vercel moved to a new account. The website/app now deploy from Vercel team **Arthaleads** (arhtalead@gmail.com), project `arthaleads` (root `frontend`, Vite), connected to prophuntllp-bit/arthaleads. All five domains (www, app, apex 308 -> www, staging, app-staging) verified there via `_vercel` TXT records in Hostinger. Env: VITE_API_URL (api.arthaleads.com/api; staging branch: api-staging.arthaleads.com/api), VITE_GOOGLE_CLIENT_ID. Deployment Protection off. Old project prophuntconsulting-8498/prophunt-crm still connected to GitHub until the owner disconnects it; ignore its builds. No code change.
