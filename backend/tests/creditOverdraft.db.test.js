@@ -125,6 +125,46 @@ test("a campaign that would pass the limit is refused up front; one that fits is
   assert.equal(fits.ok, true);
 });
 
+test("a reply past the free 1,000 is charged even though Meta reports it free", async () => {
+  const org = await company();
+  const held = await credits.reserve(org, { category: "service" });
+  assert.equal(held, 15);
+  const r = await credits.settle(org, { reservedPaise: held, category: "service", waMsgId: "wamid.reply1",
+    metaPricing: { billable: false, pricing_model: "PMP", category: "service", type: "free_customer_service" } });
+  assert.equal(r.debitedPaise, 15);
+  const b = await credits.getBalance(org);
+  assert.equal(b.balancePaise, -15);
+  assert.equal(b.reservedPaise, 0);
+});
+
+test("a reply inside the free 1,000 costs nothing", async () => {
+  const org = await company({ freeUsed: 10 });
+  const held = await credits.reserve(org, { category: "service" });
+  const r = await credits.settle(org, { reservedPaise: held, category: "service", waMsgId: "wamid.reply2", freeTierApplied: true,
+    metaPricing: { billable: false, category: "service" } });
+  assert.equal(r.debitedPaise, 0);
+  assert.equal((await credits.getBalance(org)).balancePaise, 0);
+});
+
+test("a template Meta does not bill (e.g. utility inside the window) still costs nothing", async () => {
+  const org = await company();
+  const held = await credits.reserve(org, { category: "utility" });
+  const r = await credits.settle(org, { reservedPaise: held, category: "utility", waMsgId: "wamid.util1",
+    metaPricing: { billable: false, category: "utility" } });
+  assert.equal(r.skipped, "not-billable");
+  const b = await credits.getBalance(org);
+  assert.equal(b.balancePaise, 0);
+  assert.equal(b.reservedPaise, 0);
+});
+
+test("a marketing message Meta bills is charged at our marketing rate", async () => {
+  const org = await company();
+  const held = await credits.reserve(org, { category: "marketing" });
+  await credits.settle(org, { reservedPaise: held, category: "marketing", waMsgId: "wamid.mkt1",
+    metaPricing: { billable: true, category: "marketing" } });
+  assert.equal((await credits.getBalance(org)).balancePaise, -112);
+});
+
 (async () => {
   mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri());
