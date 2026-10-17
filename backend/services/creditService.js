@@ -247,9 +247,14 @@ async function settle(orgId, {
   metaPricing = null,
   freeTierApplied = false,
 } = {}) {
-  // Meta told us it is not billable (free-tier service message, or a category
-  // that carries no charge) — give the hold straight back.
-  if (metaPricing && metaPricing.billable === false) {
+  // Meta told us it is not billable — give the hold straight back. Except a
+  // reply (service message) past the month's free allowance: Meta charges
+  // nothing for replies inside the 24-hour window, but Arthaleads charges its
+  // own reply rate after the 1,000 free ones (owner decision, 17 Oct 2026; it
+  // is what the Credits page promises). Before this, every reply's hold was
+  // handed back and replies were never charged.
+  const chargedReply = category === "service" && !freeTierApplied;
+  if (metaPricing && metaPricing.billable === false && !chargedReply) {
     await release(orgId, reservedPaise);
     return { debitedPaise: 0, skipped: "not-billable" };
   }
@@ -260,9 +265,11 @@ async function settle(orgId, {
   // Charge our sell rate for whatever category Meta actually billed, which is
   // not always the one we guessed at reserve time — a template can be
   // re-categorised between send and delivery.
-  const billedCategory = VALID_CATEGORIES.includes(metaPricing?.category)
-    ? metaPricing.category
-    : category;
+  const billedCategory = chargedReply && metaPricing?.billable === false
+    ? "service"
+    : VALID_CATEGORIES.includes(metaPricing?.category)
+      ? metaPricing.category
+      : category;
   const ratePaise = freeTierApplied ? 0 : rateFor(org, billedCategory);
 
   const balanceBefore = org.credits?.balancePaise || 0;
