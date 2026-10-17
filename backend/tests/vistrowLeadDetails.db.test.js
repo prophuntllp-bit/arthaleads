@@ -208,16 +208,19 @@ test("brochure flag on a later re-send of a call still creates the task once", a
   assert.equal(await Task.countDocuments({ lead: lead._id }), 1);
 });
 
-test("unassigned lead: a task for each active admin; new lead from a call too", async () => {
+test("unassigned lead: no task for every admin (owner only); the lead says to assign it", async () => {
   const lead = await Lead.create({ name: "Nobody", phone: "9876500009", source: "Manual", orgId: ORG });
   await post(call(7009, "+919876500009", { crm_outcome: { brochure_requested: true } }));
-  const tasks = await Task.find({ lead: lead._id }).lean();
-  assert.deepEqual(tasks.map((t) => String(t.assignedTo)).sort(), [String(ADMIN1), String(ADMIN2)].sort());
+  assert.equal(await Task.countDocuments({ lead: lead._id }), 0);
+  const after = await Lead.findById(lead._id).lean();
+  assert.ok(after.activities.some((a) => /no owner yet - assign it/.test(a.description)));
 
-  const r = await post(call(7010, "+919876500010", { name: "Brand New", crm_outcome: { brochure_requested: true } }));
-  assert.equal(r.status, 201);
-  await post(call(7010, "+919876500010", { name: "Brand New", crm_outcome: { brochure_requested: true } }));
-  assert.equal(await Task.countDocuments({ lead: r.body.leadId }), 2);
+  // Once someone owns it, a re-send of the same call gives the owner the task.
+  await Lead.updateOne({ _id: lead._id }, { $set: { assignedTo: AGENT } });
+  await post(call(7009, "+919876500009", { crm_outcome: { brochure_requested: true } }));
+  const tasks = await Task.find({ lead: lead._id }).lean();
+  assert.deepEqual(tasks.map((t) => String(t.assignedTo)), [String(AGENT)]);
+  assert.match(tasks[0].description, /our team will share it on WhatsApp shortly/);
 });
 
 test("no brochure flag, no task", async () => {
