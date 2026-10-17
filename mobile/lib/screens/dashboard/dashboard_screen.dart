@@ -23,6 +23,7 @@ import '../attendance/attendance_capture_sheet.dart';
 import '../leads/lead_filters.dart';
 import '../leads/lead_form.dart';
 import 'dashboard_widgets.dart';
+import 'morning_brief.dart';
 import '../projects/project_detail_screen.dart';
 import '../../widgets/adaptive_grid.dart';
 
@@ -124,6 +125,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _refreshTimer?.cancel();
+    _briefRefresh.dispose();
     super.dispose();
   }
 
@@ -136,8 +138,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
+  /// Ticks on every load, so the morning brief refreshes with the rest.
+  final _briefRefresh = ValueNotifier<int>(0);
+
   Future<void> _load({bool background = false}) async {
     if (_refreshing) return;
+    if (_analytics != null) _briefRefresh.value++;
     setState(() {
       _refreshing = true;
       if (!background && _analytics == null) _loading = true;
@@ -1733,6 +1739,14 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           FadeSlideIn(child: _dashboardHeader(context, auth, a)),
           const SizedBox(height: 10),
+          // Artha's morning brief: only for companies that have it (the
+          // server answers brief: null otherwise and the card hides itself).
+          MorningBrief(
+            userId: '${auth.user?['_id'] ?? ''}',
+            refresh: _briefRefresh,
+            onNavigate: (label) => widget.onNavigate?.call(label),
+            onCall: _call,
+          ),
           // Setup steps (connect Facebook, add a teammate) are admin jobs an
           // agent cannot do from the app, so agents do not get the checklist.
           if (role != 'agent') OnboardingChecklist(
