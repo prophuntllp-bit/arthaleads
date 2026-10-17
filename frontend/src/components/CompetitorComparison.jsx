@@ -109,9 +109,9 @@ export default function CompetitorComparison({ c }) {
               </ol>
             </nav>
             <h1 className="text-4xl sm:text-5xl font-black leading-[1.08] mb-6" style={{ color: text, textWrap: "balance" }}>
-              <span className="sr-only">{c.name} pricing and alternative: Arthaleads vs {c.name}</span>
-              <span aria-hidden="true">
-                {[c.name, "pricing", "and", "alternative"].map((w, i) => (
+              {/* One copy of the words: an sr-only twin made crawlers read the heading twice. */}
+              <span>
+                {[c.name, "pricing", "and", "alternative:"].map((w, i) => (
                   <span key={w + i} className="word-rise" style={{ animationDelay: `${80 + i * 90}ms` }}>{w}&nbsp;</span>
                 ))}
                 <span className="block">

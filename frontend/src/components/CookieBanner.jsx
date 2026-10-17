@@ -37,7 +37,7 @@ export default function CookieBanner() {
           <Cookie className="h-[18px] w-[18px]" />
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-app">Cookies on ArthaLeads</p>
+          <p className="text-sm font-semibold text-app">Cookies on Arthaleads</p>
           <p className="mt-1 text-xs leading-relaxed text-app-soft">
             We use essential cookies to keep you signed in, and analytics cookies to improve the product.
             Read our{" "}

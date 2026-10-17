@@ -27,8 +27,8 @@ export default function ProductTour() {
   const jump = (t) => setSeek({ t, n: Date.now() });
 
   useSEO({
-    title: "ArthaLeads Product Tour: Real Estate CRM in 2 Minutes (Video)",
-    description: "Watch how ArthaLeads replies to property buyers on WhatsApp at 1 AM, books site visits, fills in every lead, scores it with AI and tells your team who to call first.",
+    title: "Arthaleads Product Tour: Real Estate CRM in 2 Minutes (Video)",
+    description: "Watch how Arthaleads replies to property buyers on WhatsApp at 1 AM, books site visits, fills in every lead, scores it and tells your team who to call first.",
     canonical: "https://www.arthaleads.com/product-tour",
   });
 
@@ -50,7 +50,7 @@ export default function ProductTour() {
       <section className="pt-28 pb-14" style={{ background: isDark ? "#0d0d1a" : "linear-gradient(180deg, #fff7f0 0%, #fff 100%)" }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-[1.1] max-w-4xl" style={{ color: text, textWrap: "balance" }}>
-            ArthaLeads in 2 minutes: the real estate CRM that answers buyers at 1 AM
+            Arthaleads in 2 minutes: the real estate CRM that answers buyers at 1 AM
           </h1>
           <p className="text-base sm:text-lg leading-relaxed mt-4 mb-6 max-w-2xl" style={{ color: soft }}>
             See the WhatsApp AI agent qualify a buyer and book the site visit, every answer land in the

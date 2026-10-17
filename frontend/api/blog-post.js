@@ -124,6 +124,9 @@ const siteNav = () => `<header><nav aria-label="Main">${SITE_NAV.map(link).join(
 const siteFooter = () => `<footer>${SITE_FOOTER.map(([h, items]) =>
   `<section><p><strong>${h}</strong></p><ul>${items.map((i) => `<li>${link(i)}</li>`).join("")}</ul></section>`).join("\n")}</footer>`;
 
+// Sanity image URLs end in -<width>x<height>.<ext>; the size lets the browser reserve the space.
+const sizeAttrs = (url) => { const m = /-(\d+)x(\d+)\.\w+(?:\?|$)/.exec(url || ""); return m ? ` width="${m[1]}" height="${m[2]}"` : ""; };
+
 function articleHtml(post) {
   const author = post.byline || post.author?.name || "Arthaleads Team";
   const date = post.publishedAt
@@ -136,7 +139,7 @@ function articleHtml(post) {
 <h1>${esc(post.title)}</h1>
 ${post.excerpt ? `<p>${esc(post.excerpt)}</p>` : ""}
 <p>${esc(author)}${date ? ` · <time datetime="${esc(post.publishedAt)}">${esc(date)}</time>` : ""}${post.readingTime ? ` · ${post.readingTime} min read` : ""}</p>
-${image ? `<img src="${esc(image)}" alt="${esc(post.featuredImageAlt || post.title)}">` : ""}
+${image ? `<img src="${esc(image)}" alt="${esc(post.featuredImageAlt || post.title)}"${sizeAttrs(image)}>` : ""}
 ${(post.blocks || []).map(blockHtml).join("\n")}
 <p><a href="/blog">More guides on the Arthaleads blog</a> · <a href="/features">Arthaleads features</a> · <a href="/pricing">Pricing</a></p>
 </article></main>

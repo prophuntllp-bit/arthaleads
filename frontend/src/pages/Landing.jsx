@@ -178,7 +178,7 @@ function Hero({ isDark }) {
                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: srcClr, display: "inline-block", flexShrink: 0 }} />
                 <span style={{ fontSize: 12, fontWeight: 600, color: chipText }}>{name}</span>
                 <span style={{ fontSize: 11, color: softClr }}>·</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: srcClr }}>{src}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: chipText }}>{src}</span>
                 <span style={{ fontSize: 11, color: softClr }}>·</span>
                 <span style={{ fontSize: 11, color: isDark ? "rgba(255,255,255,0.55)" : "#6b7280" }}>{action}</span>
                 <span style={{ fontSize: 10, color: softClr, marginLeft: 2 }}>{city}</span>
@@ -396,8 +396,8 @@ function HowItWorks({ isDark }) {
   const cardBg   = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
   const cardBdr  = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
   const listBg   = isDark ? "rgba(255,255,255,0.02)" : "#f3f4f6";
-  const mutedTxt = isDark ? "rgba(255,255,255,0.30)" : "#6b7280";
-  const navDisab = isDark ? "rgba(255,255,255,0.15)" : "#d1d5db";
+  const mutedTxt = isDark ? "rgba(255,255,255,0.30)" : "#4b5563";
+  const navDisab = isDark ? "rgba(255,255,255,0.15)" : "#6b7280";
 
   return (
     <section id="how-it-works" className="py-10 lg:py-14 overflow-hidden" style={{ background: bg }}>
