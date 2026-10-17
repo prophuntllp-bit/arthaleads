@@ -44,6 +44,9 @@ test("shared fill rules: empty fields filled, real values kept, project guess re
   assert.deepEqual(Object.keys(suggestionsFrom(set, said, {})).sort(), ["budget", "preferredLocation", "propertyType", "purpose"]);
   // A type the CRM guessed from the project may be corrected by the buyer.
   assert.equal(planFieldFill({ ...empty, propertyType: "Villa" }, { propertyType: "Plot" }, { projectType: "Villa" }).propertyType, "Plot");
+  // The same place written differently is not a new suggestion (live call 1400).
+  assert.deepEqual(suggestionsFrom({ ...set, preferredLocation: "Baner / Balewadi" }, { preferredLocation: "Baner-Balewadi side" }, {}), {});
+  assert.ok(suggestionsFrom({ ...set, preferredLocation: "Wakad" }, { preferredLocation: "Hinjewadi" }, {}).preferredLocation);
   // Null budget (contract wording) counts as empty too.
   assert.ok(planFieldFill({ ...empty, budget: { min: null, max: null } }, said).budget);
 });

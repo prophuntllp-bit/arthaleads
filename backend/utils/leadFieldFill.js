@@ -23,9 +23,14 @@
 
 const SUGGESTABLE = ["propertyType", "purpose", "bhk", "preferredLocation", "budget"];
 
+// Words that only point at a place ("Baner side", "near Baner"), ignored when
+// comparing, so "Baner-Balewadi side" and "Baner / Balewadi" are one place.
+const FILLER = new Set(["side", "near", "area", "around", "ke", "paas", "pass", "ka", "ki", "and", "or", "the"]);
+const placeWords = (v) => String(v || "").toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w && !FILLER.has(w)).sort().join(" ");
+
 const sameValue = (a, b) => (a && typeof a === "object")
   ? (a.min || 0) === (b?.min || 0) && (a.max || 0) === (b?.max || 0)
-  : String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+  : String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase() || (placeWords(a) !== "" && placeWords(a) === placeWords(b));
 
 const isBlank = (k, v) => k === "budget" ? !(v?.min || v?.max) : (!v || v === "N/A");
 
