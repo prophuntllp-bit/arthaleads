@@ -17,6 +17,7 @@ const { emitLeadCreated, routedProject } = require("../utils/emitLeadCreated");
 const Organization    = require("../models/Organization");
 const { mapGoogleLeadFields, fromWebhookColumns } = require("../utils/googleLeadFields");
 const { mapCustomFieldsToLead } = require("../utils/formFieldMapper");
+const { samePhone } = require("../utils/phone");
 const OPTS = require("../constants/leadOptions");
 const { planOutcome, phoneFilter, cleanEmail, cleanName, FOLLOW_UP_LABELS, followUpKindOf, attemptsOf, reportedBooking, callDescription } = require("../utils/vistrowCallResult");
 const { applyCallDetails, notifyBrochureRequest } = require("../utils/vistrowLeadDetails");
@@ -444,6 +445,16 @@ router.post("/", express.json({ verify: verifyFbSignature }), noOperators, async
           continue;
         }
 
+        // Meta re-sends the same lead when we answer slowly or with an error.
+        // A lead id we already saved for this company is not saved again
+        // (the unique index on orgId + metaLeadId backs this up for two
+        // deliveries arriving at the same moment).
+        const leadgenId = String(leadData.leadgen_id || "");
+        if (leadgenId && await Lead.findOne({ orgId: automation.orgId, metaLeadId: leadgenId }).select("_id").lean()) {
+          logger.info(`Facebook webhook: lead ${leadgenId} already saved - repeat delivery skipped`);
+          continue;
+        }
+
         const accessToken = automation.accessToken || process.env.FB_PAGE_ACCESS_TOKEN;
 
         if (!accessToken) {
@@ -610,7 +621,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), noOperators, async
         // Routing rules always assign regardless of autoAssign (they are explicit overrides).
         // Round-robin fallback only runs when autoAssign is enabled.
         let assignee = null;
-        if (ruleMatch) {
+        if (ruleMatch?.assignTo) {
           assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
           logger.info(`Facebook webhook: rule "${ruleMatch.label}" matched - assigning "${name}" to ${assignee.name}`);
         } else {
@@ -625,7 +636,9 @@ router.post("/", express.json({ verify: verifyFbSignature }), noOperators, async
           }
         }
 
-        const createdLead = await Lead.create({
+        let createdLead;
+        try {
+        createdLead = await Lead.create({
           name,
           phone: fieldMap.phone_number || fieldMap.phone || (isTestLead ? "N/A (test)" : "N/A"),
           email: fieldMap.email || "",
@@ -678,6 +691,13 @@ router.post("/", express.json({ verify: verifyFbSignature }), noOperators, async
             },
           ],
         });
+        } catch (err) {
+          if (err?.code === 11000 && err.keyPattern?.metaLeadId) {
+            logger.info(`Facebook webhook: lead ${leadgenId} saved by a parallel delivery - skipped`);
+            continue;
+          }
+          throw err;
+        }
 
         if (ruleMatch && !isTestLead) await fileLeadInRoutedProject(ruleMatch, createdLead);
         // New-lead hand-off to Vistrow (no-op unless the owner enabled it). Not awaited.
@@ -816,7 +836,7 @@ router.post("/website", express.json(), noOperators, websiteLeadLimiter, async (
     // within the last 2 minutes, it's a plugin double-fire — skip silently.
     if (phone) {
       const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
-      const recent = await Lead.findOne({ orgId, phone, createdAt: { $gte: twoMinsAgo } }).lean();
+      const recent = await Lead.findOne({ orgId, phone: samePhone(phone) || phone, createdAt: { $gte: twoMinsAgo } }).lean();
       if (recent) {
         logger.info(`[website webhook] duplicate skipped: ${name} | ${phone} | original: ${recent.createdAt}`);
         return res.status(200).json({ success: true, message: "Duplicate lead ignored" });
@@ -832,7 +852,7 @@ router.post("/website", express.json(), noOperators, websiteLeadLimiter, async (
 
     const org = await Organization.findById(orgId).select("autoAssign").lean();
     let assignee = null;
-    if (ruleMatch) {
+    if (ruleMatch?.assignTo) {
       assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
       logger.info(`[website webhook] rule "${ruleMatch.label}" matched - assigning "${name}" to ${assignee.name}`);
     } else if (org?.autoAssign !== false) {
@@ -1487,7 +1507,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
     // ══ No call_id: original behaviour, unchanged (Custom / WhatsApp / any ══
     // ══ older Vistrow payload that never sent call_id) ════════════════════
     const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
-    const recent = await Lead.findOne({ orgId, phone: cleanPhone, createdAt: { $gte: twoMinsAgo } }).lean();
+    const recent = await Lead.findOne({ orgId, phone: samePhone(cleanPhone) || cleanPhone, createdAt: { $gte: twoMinsAgo } }).lean();
     if (recent) {
       logger.info(`[custom webhook] duplicate skipped: ${name} | ${cleanPhone} | original: ${recent.createdAt}`);
       return res.status(200).json({ success: true, message: "Duplicate lead ignored" });
@@ -1642,6 +1662,14 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
       ? "Test Lead (Google)"
       : (fullName || "Google Lead");
 
+    // Google re-sends a lead we answered with an error, so a lead id we already
+    // saved is acknowledged and not saved again. Test leads reuse ids, skip them.
+    const externalId = !isTestLead && lead_id ? `google:${String(lead_id)}` : "";
+    if (externalId && await Lead.findOne({ orgId, externalId }).select("_id").lean()) {
+      logger.info(`[google webhook] lead ${lead_id} already saved - repeat delivery skipped`);
+      return res.status(200).json({ success: true, message: "Lead already received" });
+    }
+
     if (!isTestLead && (!phone || phone.length < 7)) {
       // A real submission with no usable phone isn't actionable as a lead —
       // still return 200 so Google doesn't retry/disable the integration.
@@ -1653,7 +1681,7 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
     const cleanPhone = phone || "N/A (test)";
     if (phone) {
       const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
-      const recent = await Lead.findOne({ orgId, phone: cleanPhone, createdAt: { $gte: twoMinsAgo } }).lean();
+      const recent = await Lead.findOne({ orgId, phone: samePhone(cleanPhone) || cleanPhone, createdAt: { $gte: twoMinsAgo } }).lean();
       if (recent) {
         logger.info(`[google webhook] duplicate skipped: ${name} | ${cleanPhone}`);
         return res.status(200).json({ success: true, message: "Duplicate lead ignored" });
@@ -1666,7 +1694,7 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
       : null;
 
     let assignee = null;
-    if (ruleMatch) {
+    if (ruleMatch?.assignTo) {
       assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
     } else if (!isTestLead && org?.autoAssign !== false) {
       try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
@@ -1687,12 +1715,15 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
           `Lead ID: ${lead_id || "unknown"}`,
         ].filter(Boolean).join("\n");
 
-    const lead = await Lead.create({
+    let lead;
+    try {
+    lead = await Lead.create({
       name,
       phone: cleanPhone,
       email,
       source: "Google",
       status: "New",
+      ...(externalId ? { externalId } : {}),
       requirements: isTestLead ? "" : requirements,
       formResponses: isTestLead ? [] : formResponses,
       ...(isTestLead ? {} : mappedLeadFields),
@@ -1721,6 +1752,12 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
         },
       ],
     });
+    } catch (err) {
+      if (err?.code === 11000 && err.keyPattern?.externalId) {
+        return res.status(200).json({ success: true, message: "Lead already received" });
+      }
+      throw err;
+    }
 
     if (ruleMatch && !isTestLead) await fileLeadInRoutedProject(ruleMatch, lead);
     // New-lead hand-off to Vistrow (no-op unless the owner enabled it). Not awaited.
@@ -1756,9 +1793,11 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
     res.status(201).json({ success: true, message: "Lead received", leadId: lead._id });
   } catch (err) {
     logger.error(`[google webhook] error: ${err.message}`);
-    // Still 200 — a malformed request from Google itself shouldn't cause
-    // Google to retry/disable the whole integration over one bad payload.
-    res.status(200).json({ success: false, message: "Failed to process lead" });
+    // A failure on our side (database, network) answers 500 so Google sends
+    // the lead again; a 200 here used to lose it for good. Repeats are safe:
+    // a lead id already saved is skipped above. Bad payloads never get here,
+    // they are answered 400/401/200 before any work is done.
+    res.status(500).json({ success: false, message: "Failed to process lead" });
   }
 });
 
