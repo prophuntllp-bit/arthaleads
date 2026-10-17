@@ -34,7 +34,7 @@ function ReferralBox() {
   const cardBg = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
   const border = isDark ? "rgba(255,255,255,0.1)" : "#e5e7eb";
   const text   = isDark ? "#fff" : "#111827";
-  const soft   = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
+  const soft   = isDark ? "rgba(255,255,255,0.55)" : "#4b5563";
 
   const copy = () => {
     navigator.clipboard?.writeText(link);
@@ -65,7 +65,7 @@ function ReferralBox() {
         </p>
         <div className="flex items-center justify-center gap-3 flex-wrap">
           <a href={CRM_LOGIN_URL} {...CRM_LINK_PROPS} className="px-5 py-2.5 rounded-xl text-sm font-semibold" style={{ border: `1px solid ${border}`, color: text }}>Log In</a>
-          <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#ff6b00] hover:bg-[#e05f00] transition-colors">Create Account</a>
+          <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] transition-colors">Create Account</a>
         </div>
       </div>
     );
@@ -113,7 +113,7 @@ function EarningsCalculator() {
   const cardBg = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
   const border = isDark ? "rgba(255,255,255,0.1)" : "#e5e7eb";
   const text   = isDark ? "#fff" : "#111827";
-  const soft   = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
+  const soft   = isDark ? "rgba(255,255,255,0.55)" : "#4b5563";
 
   const months = count; // 1 free month per converted referral
   const capped = Math.min(months, 6); // matches the 6-month annual cap
@@ -125,7 +125,7 @@ function EarningsCalculator() {
 
       <div className="flex items-center justify-between mb-2">
         <span style={{ fontSize: 13, color: soft }}>Referrals who subscribe</span>
-        <span style={{ fontSize: 20, fontWeight: 800, color: "#ff6b00" }}>{count}</span>
+        <span style={{ fontSize: 20, fontWeight: 800, color: "var(--brand-text)" }}>{count}</span>
       </div>
       <input
         type="range" min="1" max="12" value={count}
@@ -135,7 +135,7 @@ function EarningsCalculator() {
 
       <div className="mt-6 p-5 rounded-xl text-center" style={{ background: "rgba(255,107,0,0.08)", border: "1px solid rgba(255,107,0,0.2)" }}>
         <div style={{ fontSize: 13, color: soft, marginBottom: 4 }}>You could earn</div>
-        <div style={{ fontSize: 32, fontWeight: 900, color: "#ff6b00" }}>{capped} free month{capped !== 1 ? "s" : ""}</div>
+        <div style={{ fontSize: 32, fontWeight: 900, color: "var(--brand-text)" }}>{capped} free month{capped !== 1 ? "s" : ""}</div>
         {months > 6 && (
           <div style={{ fontSize: 12, color: soft, marginTop: 6 }}>
             (Capped at 6 free months per year — but keep referring, it resets annually!)
@@ -243,7 +243,7 @@ export default function ReferEarn() {
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl font-bold mb-3" style={{ color: textColor }}>Start earning today</h2>
           <p className="text-base mb-6" style={{ color: softText }}>Log in to grab your link, or create an account to join the program.</p>
-          <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} className="inline-flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25">
+          <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} className="inline-flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25">
             Get Started Free
             <ArrowRight className="w-4 h-4" />
           </a>

@@ -233,7 +233,7 @@ export default function Privacy() {
         </ul>
         <p>
           You may request deletion of your data at any time by contacting us at{" "}
-          <a href="mailto:contact@arthaleads.com" style={{ color: "var(--app-primary)" }} className="hover:underline">contact@arthaleads.com</a>.
+          <a href="mailto:contact@arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">contact@arthaleads.com</a>.
         </p>
       </Section>
 
@@ -251,7 +251,7 @@ export default function Privacy() {
         </ul>
         <p>
           To exercise any of these rights, contact us at{" "}
-          <a href="mailto:contact@arthaleads.com" style={{ color: "var(--app-primary)" }} className="hover:underline">contact@arthaleads.com</a>.
+          <a href="mailto:contact@arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">contact@arthaleads.com</a>.
           We will respond within 30 days.
         </p>
       </Section>
@@ -266,7 +266,7 @@ export default function Privacy() {
       <Section title="14. Cookies">
         <p>
           We use cookies and similar technologies as described in our{" "}
-          <a href="/cookie-policy" style={{ color: "var(--app-primary)" }} className="hover:underline">Cookie Policy</a>.
+          <a href="/cookie-policy" style={{ color: "var(--brand-text)" }} className="hover:underline">Cookie Policy</a>.
           You can manage your cookie preferences at any time on that page.
         </p>
       </Section>
@@ -281,7 +281,7 @@ export default function Privacy() {
           <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Grievance Officer — Arthaleads (Prophunt LLP)</p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Email:{" "}
-            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--app-primary)" }} className="hover:underline">
+            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">
               contact@arthaleads.com
             </a>
           </p>
@@ -307,13 +307,13 @@ export default function Privacy() {
           <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Arthaleads (Prophunt LLP)</p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Email:{" "}
-            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--app-primary)" }} className="hover:underline">
+            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">
               contact@arthaleads.com
             </a>
           </p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Platform:{" "}
-            <a href="https://arthaleads.com" style={{ color: "var(--app-primary)" }} className="hover:underline">
+            <a href="https://arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">
               https://arthaleads.com
             </a>
           </p>

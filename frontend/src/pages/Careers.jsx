@@ -688,7 +688,7 @@ export default function Careers() {
   const sectionBg = isDark ? "rgba(255,255,255,0.02)" : "#ffffff";
   const sectionBdr= isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
   const heading   = isDark ? "#ffffff" : "#111827";
-  const body      = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
+  const body      = isDark ? "rgba(255,255,255,0.55)" : "#4b5563";
 
   useSEO({
     title:       "Careers at Arthaleads | Join India's Real Estate CRM Team",
@@ -785,7 +785,7 @@ export default function Careers() {
               onClick={scrollToPositions}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
-                background: "#ff6b00", color: "#fff", border: "none",
+                background: "var(--brand-btn)", color: "#fff", border: "none",
                 borderRadius: 12, padding: "13px 26px", fontSize: 15, fontWeight: 700,
                 cursor: "pointer", boxShadow: "0 8px 32px rgba(255,107,0,0.4)",
                 transition: "transform 0.18s, box-shadow 0.18s",
@@ -979,7 +979,7 @@ export default function Careers() {
             }}>Why join us</div>
             <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: heading, marginBottom: 12 }}>
               Built for people who want to{" "}
-              <span style={{ color: "#ff6b00" }}>make an impact</span>
+              <span style={{ color: "var(--brand-text)" }}>make an impact</span>
             </h2>
             <p style={{ fontSize: 15, color: body, maxWidth: 480, margin: "0 auto" }}>
               Small team. Big real-estate market. Every person here shapes how the product works.
@@ -1060,7 +1060,7 @@ export default function Careers() {
                   href="mailto:hr@arthaleads.com?subject=General Application - Arthaleads"
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 8,
-                    background: "#ff6b00", color: "#fff",
+                    background: "var(--brand-btn)", color: "#fff",
                     borderRadius: 12, padding: "12px 22px", fontSize: 14, fontWeight: 700,
                     textDecoration: "none",
                     boxShadow: "0 6px 24px rgba(255,107,0,0.35)",
@@ -1088,7 +1088,7 @@ export default function Careers() {
                 { val: "Remote", label: "Friendly" },
               ].map(({ val, label }) => (
                 <div key={label} style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 22, fontWeight: 900, color: "#ff6b00", lineHeight: 1 }}>{val}</div>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: "var(--brand-text)", lineHeight: 1 }}>{val}</div>
                   <div style={{ fontSize: 11, color: body, marginTop: 3, fontWeight: 500 }}>{label}</div>
                 </div>
               ))}

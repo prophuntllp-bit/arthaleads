@@ -156,7 +156,7 @@ function ProductUpdatesInner() {
   const cardBg     = isDark ? "rgba(255,255,255,0.02)" : "#ffffff";
   const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
   const tagBg      = isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6";
-  const tagText    = isDark ? "rgba(255,255,255,0.45)" : "#9ca3af";
+  const tagText    = isDark ? "rgba(255,255,255,0.45)" : "#4b5563";
   const tagBorder  = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
   const timelineLine = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
 
@@ -224,7 +224,7 @@ function ProductUpdatesInner() {
           </p>
           <a
             href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-            className="inline-flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:-translate-y-0.5"
+            className="inline-flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:-translate-y-0.5"
           >
             Get Started Free
             <ArrowRight className="w-5 h-5" />

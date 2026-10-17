@@ -154,7 +154,7 @@ function HelpGuideInner() {
           <div className="mt-8 text-center">
             <a
               href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-              className="inline-flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25"
+              className="inline-flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25"
             >
               Create Your Account
               <ArrowRight className="w-4 h-4" />
@@ -190,7 +190,7 @@ function HelpGuideInner() {
           <a
             href="mailto:contact@arthaleads.com"
             className="inline-flex items-center gap-2 font-semibold px-6 py-3 rounded-xl transition-colors"
-            style={{ borderColor: "rgba(255,107,0,0.40)", background: "rgba(255,107,0,0.10)", color: "var(--brand-text)", border: "1px solid rgba(255,107,0,0.40)" }}
+            style={{ borderColor: "rgba(255,107,0,0.40)", background: "rgba(255,107,0,0.06)", color: "var(--brand-text)", border: "1px solid rgba(255,107,0,0.40)" }}
           >
             <Mail className="w-4 h-4" />
             contact@arthaleads.com

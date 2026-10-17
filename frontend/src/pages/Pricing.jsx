@@ -200,7 +200,7 @@ export default function Pricing() {
             // used to be one test, which meant a plan could not have a signup
             // link without also claiming the recommended-plan styling.
             const ctaStyle = isPopular
-              ? { background: "#ff6b00", color: "#fff", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }
+              ? { background: "var(--brand-btn)", color: "#fff", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }
               : { border: `1px solid ${altBtnBdr}`, color: altBtnClr, background: "transparent" };
             const ctaHover = isPopular ? {} : {
               onMouseEnter: (e) => { e.currentTarget.style.borderColor = plan.color; e.currentTarget.style.color = plan.color; },
@@ -389,7 +389,7 @@ export default function Pricing() {
             <a
               href={waLink(WA_MESSAGES.sales)} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:-translate-y-0.5"
-              style={{ background: "#ff6b00", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }}
+              style={{ background: "var(--brand-btn)", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }}
             >
               Talk to us on WhatsApp <ArrowRight className="w-4 h-4" />
             </a>

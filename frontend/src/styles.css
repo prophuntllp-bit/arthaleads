@@ -738,3 +738,10 @@
    Buttons, icons, big numbers and gradient headings keep #ff6b00. */
 :root { --brand-text: #c2410c; }
 html[data-public-theme="dark"] { --brand-text: #ff6b00; }
+
+/* Marketing buttons with white text. White on #ff6b00 is 2.9:1 and on the
+   WhatsApp green #128c7e 4.1:1, both below the 4.5:1 WCAG AA needs for button
+   text, so filled buttons use the nearest shades that pass, in both themes:
+   orange #cc4b00 (4.6:1) and green #0f7f72 (4.9:1). Icons, accents, numbers
+   and gradient headings keep #ff6b00. */
+:root { --brand-btn: #cc4b00; --brand-btn-hover: #b34200; --wa-btn: #0f7f72; --wa-btn-hover: #0b6b60; }

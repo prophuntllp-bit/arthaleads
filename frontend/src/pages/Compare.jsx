@@ -285,7 +285,7 @@ export default function Compare() {
           <p className="text-base mb-6" style={{ color: softText }}>
             Start free — no credit card needed. Set up your pipeline in minutes.
           </p>
-          <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} className="inline-flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25">
+          <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} className="inline-flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25">
             Get Started Free
             <ArrowRight className="w-4 h-4" />
           </a>

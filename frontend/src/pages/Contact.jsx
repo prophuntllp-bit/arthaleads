@@ -61,7 +61,7 @@ export default function Contact() {
 
   const bg        = isDark ? "#080810" : "#f9fafb";
   const heading   = isDark ? "#ffffff" : "#111827";
-  const body      = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
+  const body      = isDark ? "rgba(255,255,255,0.55)" : "#4b5563";
   const infoLabel = isDark ? "rgba(255,255,255,0.35)" : "#6b7280";
   const infoVal   = isDark ? "#ffffff" : "#111827";
   const cardBg    = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
@@ -193,7 +193,7 @@ export default function Contact() {
                   </div>
                   {error && <p className="text-sm text-red-400 text-center">{error}</p>}
                   <button type="submit" disabled={loading}
-                    className="w-full bg-[#ff6b00] hover:bg-[#e05f00] disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2">
+                    className="w-full bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2">
                     {loading ? "Sending…" : "Send Message"}
                     {!loading && <ArrowRight className="w-4 h-4" />}
                   </button>

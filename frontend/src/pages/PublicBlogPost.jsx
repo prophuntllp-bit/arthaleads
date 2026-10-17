@@ -370,7 +370,7 @@ function BlogPostInner() {
           <BookOpen className="w-16 h-16 text-[#ff6b00]/40 mb-6" />
           <h1 className="text-2xl font-bold mb-2" style={{ color: t.heading }}>Article not found</h1>
           <p className="mb-6" style={{ color: t.body }}>This article doesn't exist or has been removed.</p>
-          <Link to="/blog" className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#ff6b00] hover:bg-[#e85d04] text-white font-semibold transition">
+          <Link to="/blog" className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-semibold transition">
             <ArrowLeft className="w-4 h-4" /> Back to the blog
           </Link>
         </div>
@@ -410,7 +410,7 @@ function BlogPostInner() {
 
           <div className="mt-8 flex flex-wrap items-center justify-between gap-5 max-w-4xl">
             <div className="flex items-center gap-3.5">
-              <span className="w-12 h-12 rounded-full bg-[#ff6b00] text-white font-bold flex items-center justify-center" aria-hidden="true">{initials}</span>
+              <span className="w-12 h-12 rounded-full bg-[color:var(--brand-btn)] text-white font-bold flex items-center justify-center" aria-hidden="true">{initials}</span>
               <div>
                 <div className="font-semibold" style={{ color: t.heading }}>{authorOf(post)}</div>
                 <div className="text-sm" style={{ color: t.muted }}>{fmtDate(post.publishedAt)} · {post.readingTime || 1} min read</div>
@@ -457,7 +457,7 @@ function BlogPostInner() {
               <ArrowLeft className="w-4 h-4" /> Back to all articles
             </Link>
             <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#ff6b00] hover:bg-[#e85d04] text-white text-sm font-bold transition shadow-lg shadow-orange-500/25">
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white text-sm font-bold transition shadow-lg shadow-orange-500/25">
               Try Arthaleads free <ArrowRight className="w-4 h-4" />
             </a>
           </div>

@@ -127,7 +127,7 @@ function Hero({ isDark }) {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
             <Magnetic>
               <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-                className="shine-btn flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 text-base">
+                className="shine-btn flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 text-base">
                 Start Free Trial <ArrowRight className="w-5 h-5" />
               </a>
             </Magnetic>
@@ -877,7 +877,7 @@ function ContactForm({ isDark }) {
       <p className="text-sm font-bold mb-6" style={{ color: "var(--brand-text)" }}>{form.email}</p>
       <p className="text-xs px-6" style={{ color: body }}>Our team typically responds within 2 hours during business hours.</p>
       <button onClick={() => { setSent(false); setForm({ name: "", email: "", phone: "", company: "", message: "" }); }}
-        className="mt-8 px-6 py-2.5 rounded-xl border text-sm font-semibold transition-all text-[color:var(--brand-text)] hover:bg-[#ff6b00] hover:text-white hover:border-[#ff6b00]"
+        className="mt-8 px-6 py-2.5 rounded-xl border text-sm font-semibold transition-all text-[color:var(--brand-text)] hover:bg-[color:var(--brand-btn)] hover:text-white hover:border-[#ff6b00]"
         style={{ borderColor: "#ff6b00" }}>
         Send another message
       </button>
@@ -1250,7 +1250,7 @@ function FAQ({ isDark }) {
           </p>
           <a href={waLink(WA_MESSAGES.sales)} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm text-white transition-transform duration-200 hover:-translate-y-0.5"
-            style={{ background: "#128C7E", boxShadow: "0 6px 20px rgba(18,140,126,0.3)" }}>
+            style={{ background: "var(--wa-btn)", boxShadow: "0 6px 20px rgba(18,140,126,0.3)" }}>
             <WaLogo size={16} /> Ask on WhatsApp
           </a>
         </Reveal>
@@ -1321,7 +1321,7 @@ function FinalCTA({ isDark }) {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Magnetic>
             <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-              className="shine-btn flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50">
+              className="shine-btn flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50">
               Get Started Free
               <ArrowRight className="w-5 h-5" />
             </a>

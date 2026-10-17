@@ -170,7 +170,7 @@ function BlogPageInner() {
             <BookOpen className="w-12 h-12 mx-auto mb-4 text-[#ff6b00]/40" />
             <h2 className="text-lg font-bold mb-2" style={{ color: t.heading }}>{hasFilters ? "No articles match" : "New articles are on the way"}</h2>
             <p className="text-sm" style={{ color: t.body }}>{hasFilters ? `Nothing found${catName ? ` in ${catName}` : ""}. Try a different search or topic.` : "Check back soon."}</p>
-            {hasFilters && <button onClick={clearFilters} className="mt-5 px-5 py-2.5 rounded-xl bg-[#ff6b00] text-white text-sm font-semibold">Show all articles</button>}
+            {hasFilters && <button onClick={clearFilters} className="mt-5 px-5 py-2.5 rounded-xl bg-[color:var(--brand-btn)] text-white text-sm font-semibold">Show all articles</button>}
           </div>
         ) : (
           <>
@@ -196,7 +196,7 @@ function BlogPageInner() {
                 </button>
                 {[...Array(pages)].map((_, i) => (
                   <button key={i} onClick={() => setPage(i + 1)} aria-current={page === i + 1 ? "page" : undefined}
-                    className={`w-10 h-10 rounded-xl text-sm font-semibold transition ${page === i + 1 ? "bg-[#ff6b00] text-white" : "border hover:border-[#ff6b00]"}`}
+                    className={`w-10 h-10 rounded-xl text-sm font-semibold transition ${page === i + 1 ? "bg-[color:var(--brand-btn)] text-white" : "border hover:border-[#ff6b00]"}`}
                     style={page !== i + 1 ? { borderColor: t.cardBorder, color: t.body } : {}}>{i + 1}</button>
                 ))}
                 <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} aria-label="Next page"
@@ -220,7 +220,7 @@ function BlogPageInner() {
           </div>
           <div className="relative flex flex-col sm:flex-row gap-3 shrink-0">
             <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-white text-[#e85d04] font-bold text-[15px] hover:-translate-y-0.5 transition-transform">
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-white text-[#c2410c] font-bold text-[15px] hover:-translate-y-0.5 transition-transform">
               Start Free Trial <ArrowRight className="w-4 h-4" />
             </a>
             <Link to="/features" className="inline-flex items-center justify-center px-6 py-3.5 rounded-2xl border border-white/50 text-white font-semibold text-[15px] hover:bg-white/10 transition-colors">
@@ -238,7 +238,7 @@ function BlogPageInner() {
 function Chip({ children, onClear, isDark }) {
   return (
     <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full text-xs font-semibold"
-      style={{ background: isDark ? "rgba(255,107,0,0.16)" : "#fff0e3", color: "#e85d04" }}>
+      style={{ background: isDark ? "rgba(255,107,0,0.16)" : "#fff0e3", color: "var(--brand-text)" }}>
       {children}
       <button onClick={onClear} aria-label="Remove filter" className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-[#ff6b00]/20"><X className="w-3 h-3" /></button>
     </span>

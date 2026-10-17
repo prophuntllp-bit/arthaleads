@@ -160,7 +160,7 @@ export default function IntroVideo({ isDark, id = "tour", chapters = false, seek
               return (
                 <button key={k} type="button" onClick={() => switchLang(k)} aria-pressed={on}
                   className="px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ff6b00]"
-                  style={{ background: on ? "#ff6b00" : "transparent", color: on ? "#fff" : body }}>
+                  style={{ background: on ? "var(--brand-btn)" : "transparent", color: on ? "#fff" : body }}>
                   {item.label}
                 </button>
               );

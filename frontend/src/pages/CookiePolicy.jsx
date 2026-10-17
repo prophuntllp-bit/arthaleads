@@ -89,7 +89,7 @@ function CookiePreferences() {
         onClick={save}
         style={{
           marginTop: 16, width: "100%", padding: "11px", borderRadius: 10, border: "none",
-          background: "#ff6b00", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer",
+          background: "var(--brand-btn)", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "background 0.2s",
         }}
         onMouseEnter={(e) => (e.currentTarget.style.background = "#e05f00")}
@@ -244,7 +244,7 @@ export default function CookiePolicy() {
         </ul>
         <p>
           For details on how we handle personal data more broadly, see our{" "}
-          <a href="/privacy" style={{ color: "var(--app-primary)" }} className="hover:underline">Privacy Policy</a>.
+          <a href="/privacy" style={{ color: "var(--brand-text)" }} className="hover:underline">Privacy Policy</a>.
         </p>
       </Section>
 
@@ -254,7 +254,7 @@ export default function CookiePolicy() {
           <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Arthaleads (Prophunt LLP)</p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Email:{" "}
-            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--app-primary)" }} className="hover:underline">
+            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">
               contact@arthaleads.com
             </a>
           </p>

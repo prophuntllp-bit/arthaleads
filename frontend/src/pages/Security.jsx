@@ -144,7 +144,7 @@ export default function Security() {
                   onClick={() => setActive(p.key)}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer"
                   style={{
-                    background: isActive ? "#ff6b00" : cardBg,
+                    background: isActive ? "var(--brand-btn)" : cardBg,
                     color: isActive ? "#fff" : softText,
                     border: `1px solid ${isActive ? "#ff6b00" : cardBorder}`,
                   }}
@@ -206,7 +206,7 @@ export default function Security() {
           </p>
           <a
             href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-            className="inline-flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25"
+            className="inline-flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25"
           >
             Get Started Free
             <ArrowRight className="w-4 h-4" />

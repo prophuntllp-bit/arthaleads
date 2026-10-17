@@ -192,7 +192,7 @@ function CaseStudiesInner() {
           </p>
           <a
             href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-            className="inline-flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:-translate-y-0.5"
+            className="inline-flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:-translate-y-0.5"
           >
             Get Started Free
             <ArrowRight className="w-5 h-5" />

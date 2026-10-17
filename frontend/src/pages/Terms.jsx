@@ -136,7 +136,7 @@ export default function Terms() {
       <Section title="9. Data & Privacy">
         <p>
           By using Arthaleads, you acknowledge that we collect and process certain data as described in our{" "}
-          <a href="/privacy" style={{ color: "var(--app-primary)" }} className="hover:underline">Privacy Policy</a>.
+          <a href="/privacy" style={{ color: "var(--brand-text)" }} className="hover:underline">Privacy Policy</a>.
           {" "}This includes account data, lead data, and integration data from connected platforms (Meta, Google,
           WhatsApp, telephony providers). Your continued use of the Service constitutes acceptance of our data
           practices as outlined in the Privacy Policy.
@@ -162,9 +162,9 @@ export default function Terms() {
           Paid plans are billed in advance for the chosen billing period. You can cancel at any time, with
           no lock-in; your plan stays active until the end of the current billing cycle. We offer a 7-day
           money-back guarantee on your first payment. Full details on refunds and cancellations are in our{" "}
-          <a href="/refund" style={{ color: "var(--app-primary)" }} className="hover:underline">Refund &amp; Cancellation Policy</a>.
+          <a href="/refund" style={{ color: "var(--brand-text)" }} className="hover:underline">Refund &amp; Cancellation Policy</a>.
           {" "}Our use of cookies is described in our{" "}
-          <a href="/cookie-policy" style={{ color: "var(--app-primary)" }} className="hover:underline">Cookie Policy</a>.
+          <a href="/cookie-policy" style={{ color: "var(--brand-text)" }} className="hover:underline">Cookie Policy</a>.
         </p>
       </Section>
 
@@ -184,7 +184,7 @@ export default function Terms() {
           platform, other users, or third parties. You may also terminate your account at any time by
           contacting us. Upon termination, your access to the platform will be revoked and your data will
           be handled in accordance with our{" "}
-          <a href="/privacy" style={{ color: "var(--app-primary)" }} className="hover:underline">Privacy Policy</a>.
+          <a href="/privacy" style={{ color: "var(--brand-text)" }} className="hover:underline">Privacy Policy</a>.
         </p>
       </Section>
 
@@ -217,13 +217,13 @@ export default function Terms() {
           <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Arthaleads (Prophunt LLP)</p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Email:{" "}
-            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--app-primary)" }} className="hover:underline">
+            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">
               contact@arthaleads.com
             </a>
           </p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Platform:{" "}
-            <a href="https://arthaleads.com" style={{ color: "var(--app-primary)" }} className="hover:underline">
+            <a href="https://arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">
               https://arthaleads.com
             </a>
           </p>
