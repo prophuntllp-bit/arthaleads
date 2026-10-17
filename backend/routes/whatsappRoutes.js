@@ -512,6 +512,10 @@ async function firstCustomerText(conv) {
 // Hands one waiting WhatsApp enquiry to Vistrow, exactly once: the claim below
 // lets one caller (the chat read, the timer, the sweep, another instance) do it,
 // and the delivery's event id makes a second hand-off a no-op even so.
+// A chat the WhatsApp assistant is handling is handed over WITHOUT a call
+// (auto_call false, "whatsapp_bot_handling"), so a working conversation is not
+// interrupted (owner decision 17 Oct 2026); requestWhatsAppCall below places
+// the one call later.
 async function emitDueWhatsAppLead(leadId, { now = new Date() } = {}) {
   const lead = await Lead.findOneAndUpdate(
     { _id: leadId, "vistrowEmit.dueAt": { $exists: true }, $or: [{ "vistrowEmit.lockedUntil": null }, { "vistrowEmit.lockedUntil": { $lt: now } }] },
@@ -522,26 +526,51 @@ async function emitDueWhatsAppLead(leadId, { now = new Date() } = {}) {
   const pending = lead.vistrowEmit || {};
   try {
     let result = { queued: false, reason: "lead_gone" };
+    let conv = null;
+    let project;
     if (!lead.isDeleted && !lead.isArchived) {
-      const [org, conv] = await Promise.all([
+      let org;
+      [org, conv] = await Promise.all([
         Organization.findById(lead.orgId).lean(),
         WaConversation.findOne({ orgId: lead.orgId, leadId: lead._id }).sort({ createdAt: -1 }).lean(),
       ]);
-      let project = pending.projectId ? { id: pending.projectId, name: pending.projectName || "" } : undefined;
+      project = pending.projectId ? { id: pending.projectId, name: pending.projectName || "" } : undefined;
       if (project && !project.name) project.name = (await Project.findById(project.id).select("name").lean())?.name || "";
       // No ad behind the chat: the project its first message names (filed there too), so routing can use it.
       if (!project && org && conv && !conv.campaignRef?.adId) {
         const p = await labelAdlessLead(org, conv).catch(() => null);
         if (p) project = p;
       }
+      const defer = !pending.callWanted && org && conv && await botIsHandling(org, conv);
       result = await emitLeadCreated(lead, {
         origin: pending.origin || "whatsapp-inbound", routeSource: "whatsapp", project,
         whatsappFirstMessage: conv ? await firstCustomerText(conv) : "",
         ...(pending.adId ? { attribution: { ad_id: pending.adId } } : {}),
         ...(pending.repeatAt ? { repeat: true, submittedAt: pending.repeatAt } : {}),
+        ...(defer ? { deferCall: BOT_HANDLING_REASON } : {}),
       });
     }
-    await Lead.updateOne({ _id: lead._id }, { $unset: { "vistrowEmit.dueAt": "", "vistrowEmit.lockedUntil": "" }, $set: { "vistrowEmit.emittedAt": now } });
+    const deferred = result?.queued === true && result.reason === BOT_HANDLING_REASON;
+    const set = { "vistrowEmit.emittedAt": now };
+    const unset = { "vistrowEmit.dueAt": "", "vistrowEmit.lockedUntil": "", "vistrowEmit.callWanted": "" };
+    if (deferred) {
+      // A new enquiry gets its own one call.
+      Object.assign(unset, { "vistrowEmit.callRequestedAt": "", "vistrowEmit.callTrigger": "" });
+      set["vistrowEmit.awaitingCallSince"] = now;
+      set["vistrowEmit.quietDueAt"] = await quietDueFrom(conv, now);
+      if (project?.id && !pending.projectId) Object.assign(set, { "vistrowEmit.projectId": project.id, "vistrowEmit.projectName": project.name || "" });
+    }
+    const after = await Lead.findOneAndUpdate({ _id: lead._id }, { $unset: unset, $set: set }, { new: false }).select("vistrowEmit").lean();
+    if (deferred) {
+      await Lead.updateOne({ _id: lead._id }, { $push: { activities: {
+        type: "vistrow_voice", performedByName: "Vistrow Voice",
+        description: "Sent to Vistrow Voice without a call: the WhatsApp assistant is handling the chat. Vistrow calls once if the customer asks for a call, the chat is handed to the team, or they stop replying for 15 minutes.",
+        meta: { deliveryId: result.deliveryId ? String(result.deliveryId) : "", reason: BOT_HANDLING_REASON },
+      } } });
+      // A call asked for while this hand-off was being sent.
+      const wanted = after?.vistrowEmit?.callWanted;
+      if (wanted && !pending.callWanted) await requestWhatsAppCall(lead._id, wanted, { now });
+    }
     return { emitted: true, result };
   } catch (err) {
     // The lock lapses and the sweep tries again.
@@ -559,6 +588,125 @@ async function sweepDueWhatsAppEmits({ now = new Date(), limit = 20 } = {}) {
   return emitted;
 }
 
+// ── The one Vistrow call for a chat the WhatsApp assistant is handling ───────
+// Owner decision 17 Oct 2026, after a live lead was called while the
+// assistant's button flow was mid-question. While the assistant is handling a
+// chat, Vistrow gets the contact but no call. One call follows, whichever comes
+// first:
+//   rule 1  the customer asks for a call or a person (looksLikeCallAsk), or the
+//           assistant / button flow hands the chat to the team (handOffToHuman);
+//   rule 2  the customer has not replied for 15 minutes while the assistant is
+//           still on the chat (vistrowEmit.quietDueAt, swept below);
+// A chat with no assistant on it (bot off, no active agent, outside business
+// hours, already handed to a person) is called as before (rule 3).
+const BOT_HANDLING_REASON = "whatsapp_bot_handling";
+const QUIET_CALL_MS = 15 * 60 * 1000;
+const CALL_ORIGIN = { asked: "whatsapp-handoff", handoff: "whatsapp-handoff", quiet: "whatsapp-quiet" };
+const CALL_WHY = {
+  asked: "the customer asked on WhatsApp to talk to someone",
+  handoff: "the WhatsApp assistant handed the chat to the team",
+  quiet: "the customer stopped replying to the WhatsApp assistant for 15 minutes",
+};
+
+// Is the WhatsApp assistant answering this chat right now? Bot switched on for
+// the org and the chat (not paused for a call, muted or turned off by a
+// person), the chat not handed to a person (handOffToHuman sets status
+// "open"), the plan includes the assistant, inside business hours, and an
+// active assistant would answer it.
+async function botIsHandling(org, conv) {
+  if (!org?.whatsapp?.enabled || org.whatsapp.botEnabled === false) return false;
+  if (levelOf(org.plan) < levelOf("growth")) return false;
+  if (!conv?.botEnabled || conv.status !== "bot") return false;
+  if (!isWithinBusinessHours(org)) return false;
+  return !!(await resolveAgentForConversation(org, conv));
+}
+
+async function quietDueFrom(conv, now) {
+  const lastIn = conv ? await WaMessage.findOne({ conversationId: conv._id, direction: "inbound" }).sort({ timestamp: -1 }).select("timestamp").lean() : null;
+  return new Date((lastIn ? new Date(lastIn.timestamp).getTime() : now.getTime()) + QUIET_CALL_MS);
+}
+
+// Explicit asks for a call or a person, in English, Hinglish and Marathi.
+const CALL_ASK_RE = /\b(call\s*(me|karo|kariye|kijiye|kar\s*do|kar\s*lo|karna|kara)|phone\s*(karo|kariye|kijiye|kar\s*do|me)|ring\s*me|baat\s*(karni|karna|karwa|karao|kara\s*do|karvao)|talk\s*to\s*(an?\s*|your\s*|the\s*)?(advisor|adviser|agent|human|person|someone|team|executive)|speak\s*(to|with)\s*(an?\s*|your\s*|the\s*)?(advisor|adviser|agent|human|person|someone|team|executive)|advis[oe]r)\b/i;
+const CALL_REFUSAL_RE = /\b(don'?t|do\s*not|dont|no|mat|nahi|nahin|nako|naka)\s+(call|phone)\b|\b(call|phone)\s*(mat|nahi|nahin|nako|naka)\b|\bnot\s+now\b/i;
+function looksLikeCallAsk(text) {
+  const t = String(text || "");
+  return t.length <= 300 && CALL_ASK_RE.test(t) && !CALL_REFUSAL_RE.test(t);
+}
+
+// Rule 1 / rule 2: requests the lead's one call, through the same path as
+// "Call now" (a call request routed exactly like an automatic call: the
+// source must be on and a route must name an agent, or nothing is called).
+// The bot pause and the heads-up follow when Vistrow queues it
+// (services/vistrowOutbound/index.js onCallQueued). Never throws.
+async function requestWhatsAppCall(leadId, trigger, { now = new Date() } = {}) {
+  if (!leadId || !CALL_ORIGIN[trigger]) return { requested: false, reason: "invalid" };
+  try {
+    // The first hand-off has not gone yet: it will go as an ordinary call, at
+    // its usual time (first chat read or 60 s), so it still carries the details.
+    const early = await Lead.updateOne({ _id: leadId, "vistrowEmit.dueAt": { $exists: true } }, { $set: { "vistrowEmit.callWanted": trigger } });
+    if (early.matchedCount) return { requested: true, viaFirstHandOff: true };
+    const lead = await Lead.findOneAndUpdate(
+      { _id: leadId, "vistrowEmit.awaitingCallSince": { $exists: true }, "vistrowEmit.callRequestedAt": null, isDeleted: { $ne: true }, isArchived: { $ne: true }, tags: { $ne: "Not a buyer" } },
+      { $set: { "vistrowEmit.callRequestedAt": now, "vistrowEmit.callTrigger": trigger }, $unset: { "vistrowEmit.quietDueAt": "" } },
+      { new: true }
+    ).lean();
+    if (!lead) return { requested: false, reason: "not_waiting" };
+    const pending = lead.vistrowEmit || {};
+    const project = pending.projectId ? { id: String(pending.projectId), name: pending.projectName || "" } : undefined;
+    const adId = pending.adId || lead.campaignRef?.adId || "";
+    const conv = await WaConversation.findOne({ orgId: lead.orgId, leadId: lead._id }).sort({ createdAt: -1 }).lean();
+    const result = await emitLeadCreated(lead, {
+      origin: CALL_ORIGIN[trigger], routeSource: "whatsapp", project,
+      callRequest: true, submittedAt: now, requestedBy: "WhatsApp assistant", callTrigger: trigger,
+      whatsappFirstMessage: conv ? await firstCustomerText(conv) : "",
+      ...(adId ? { attribution: { ad_id: adId } } : {}),
+    }) || { queued: false, reason: "error" };
+    const { notRoutedText } = require("../services/vistrowOutbound/callReasons");
+    await Lead.updateOne({ _id: lead._id }, { $push: { activities: {
+      type: "vistrow_voice", performedByName: "Vistrow Voice",
+      description: result.queued
+        ? `Vistrow Voice asked to call this lead: ${CALL_WHY[trigger]}`
+        : `No Vistrow Voice call although ${CALL_WHY[trigger]}: ${notRoutedText(result.reason)}`,
+      meta: { trigger, queued: !!result.queued, reason: result.reason || "", deliveryId: result.deliveryId ? String(result.deliveryId) : "", eventId: result.eventId || "" },
+    } } });
+    return { requested: !!result.queued, result };
+  } catch (err) {
+    console.error("[vistrow-outbound] WhatsApp call request failed:", err.message);
+    return { requested: false, reason: "error" };
+  }
+}
+
+// Rule 2: 15 minutes with no reply from the customer while the assistant is
+// still on the chat. quietDueAt is stored on the lead and moved on by every
+// customer message (handleInbound), so a restart loses nothing.
+async function sweepQuietWhatsAppCalls({ now = new Date(), limit = 20 } = {}) {
+  const due = await Lead.find({ "vistrowEmit.quietDueAt": { $lte: now } }).select("_id orgId vistrowEmit.quietDueAt").limit(limit).lean();
+  let requested = 0;
+  for (const l of due) {
+    try {
+      const [org, conv] = await Promise.all([
+        Organization.findById(l.orgId).lean(),
+        WaConversation.findOne({ orgId: l.orgId, leadId: l._id }).sort({ createdAt: -1 }).lean(),
+      ]);
+      const dueAt = conv ? await quietDueFrom(conv, now) : now;
+      if (dueAt > now) {
+        // They wrote again in the meantime.
+        await Lead.updateOne({ _id: l._id, "vistrowEmit.quietDueAt": l.vistrowEmit.quietDueAt }, { $set: { "vistrowEmit.quietDueAt": dueAt } });
+        continue;
+      }
+      if (org && conv && await botIsHandling(org, conv)) {
+        if ((await requestWhatsAppCall(l._id, "quiet", { now })).requested) requested++;
+        continue;
+      }
+      // Handed over, paused or switched off: not this rule's call. A new
+      // customer message arms it again.
+      await Lead.updateOne({ _id: l._id, "vistrowEmit.quietDueAt": l.vistrowEmit.quietDueAt }, { $unset: { "vistrowEmit.quietDueAt": "" } });
+    } catch (err) { console.error("[vistrow-outbound] quiet-chat check failed:", err.message); }
+  }
+  return requested;
+}
+
 let vistrowSweepTimer = null;
 function startVistrowWhatsAppSweep({ intervalMs = 15 * 1000 } = {}) {
   if (vistrowSweepTimer || process.env.NODE_ENV === "test") return false;
@@ -568,6 +716,7 @@ function startVistrowWhatsAppSweep({ intervalMs = 15 * 1000 } = {}) {
     running = true;
     try {
       await sweepDueWhatsAppEmits();
+      await sweepQuietWhatsAppCalls();
       await require("../utils/vistrowBotPause").resumeOverduePauses();
     } catch (err) { console.error("[vistrow-outbound] WhatsApp sweep failed:", err.message); }
     finally { running = false; }
@@ -945,6 +1094,20 @@ async function handleInbound(org, parsed) {
     nudgeCount: 0,
     $inc: { unreadCount: 1 },
   });
+
+  if (conv.leadId) {
+    // Rule 2's clock: 15 minutes from the customer's latest message.
+    await Lead.updateOne(
+      { _id: conv.leadId, "vistrowEmit.awaitingCallSince": { $exists: true }, "vistrowEmit.callRequestedAt": null },
+      { $set: { "vistrowEmit.quietDueAt": new Date(inboundTimestamp.getTime() + QUIET_CALL_MS) } }
+    );
+    // Rule 1: the customer asks for a call or a person, in their own words or
+    // on a template's quick-reply button. A button-flow tap is the flow's own
+    // business: its "Talk to Advisor" hands off (handOffToHuman).
+    if (["text", "button"].includes(msgType) && looksLikeCallAsk(msgText)) {
+      await requestWhatsAppCall(conv.leadId, "asked");
+    }
+  }
 
   // Lead details (BHK, budget, location...) are read from every chat, not
   // only the ones the AI bot answers.
@@ -2113,6 +2276,8 @@ async function inferAnsweredFromTranscript(org, agent, conversation, questions) 
 // only a human on the team makes explicitly, from the Inbox toggle.
 async function handOffToHuman(org, conversation, { notify = false, reason = "" } = {}) {
   await WaConversation.findByIdAndUpdate(conversation._id, { status: "open" });
+  // Rule 1: the chat's one Vistrow call, if one is waiting on the assistant.
+  if (conversation.leadId) await requestWhatsAppCall(conversation.leadId, "handoff");
   autoAssignConversation(org, conversation).catch(() => {});
   if (!notify) return;
   const payload = {
@@ -4249,5 +4414,5 @@ router._resolveAgentForConversation = resolveAgentForConversation;
 
 // For tests only (tests/whatsappLeadCapture.db.test.js).
 router._leadCapture = { enrichWhatsAppLead, typedByCustomer, suggestionsFrom };
-router._vistrowEmit = { emitDueWhatsAppLead, sweepDueWhatsAppEmits, startVistrowWhatsAppSweep, VISTROW_EMIT_DELAY_MS };
+router._vistrowEmit = { emitDueWhatsAppLead, sweepDueWhatsAppEmits, startVistrowWhatsAppSweep, VISTROW_EMIT_DELAY_MS, requestWhatsAppCall, sweepQuietWhatsAppCalls, looksLikeCallAsk, QUIET_CALL_MS };
 module.exports = router;

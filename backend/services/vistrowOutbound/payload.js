@@ -128,6 +128,7 @@ function buildCustomFields(l, ctx = {}) {
   if (ctx.callRequest === true) {
     cf.call_request = true;
     put(cf, "requested_by", ctx.requestedBy, 100);
+    put(cf, "call_trigger", ctx.callTrigger, 50);
     if (ctx.submittedAt) cf.requested_at = new Date(ctx.submittedAt).toISOString();
   }
 

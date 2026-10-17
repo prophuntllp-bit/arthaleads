@@ -584,6 +584,35 @@ test("call now: callRequest without the manual-call origin is an ordinary event 
   assert.deepEqual([r.queued, r.reason], [false, "pre_enable"]);
 });
 
+// ═══ WhatsApp: the assistant is handling the chat (17 Oct 2026) ═══════════
+test("whatsapp deferCall: a routed call is held back (Contact only, reason given); an unrouted one keeps its own reason", async () => {
+  const e = env({ cfg: { routing: routingOn(["whatsapp"]) } });
+  const r = await e.svc.enqueueLeadCreated(waLead(e), { ...WA, deferCall: "whatsapp_bot_handling" });
+  assert.deepEqual([r.queued, r.autoCall, r.reason], [true, false, "whatsapp_bot_handling"]);
+  await e.process();
+  assert.deepEqual([e.sent[0].body.auto_call, e.sent[0].body.auto_call_reason, e.sent[0].body.agent_id], [false, "whatsapp_bot_handling", undefined]);
+  const off = env({ cfg: { routing: routingOn([]) } });
+  const r2 = await off.svc.enqueueLeadCreated(waLead(off), { ...WA, deferCall: "whatsapp_bot_handling" });
+  assert.deepEqual([r2.autoCall, r2.reason], [false, "source_disabled"]);
+});
+test("whatsapp call request (whatsapp-handoff / whatsapp-quiet): routed like an automatic call, refused when disabled, kept to one call per number", async () => {
+  const e = env({ cfg: { routing: routingOn(["whatsapp"]) } });
+  const wl = waLead(e, { createdAt: new Date("2026-10-09T09:30:00Z") }); // older than the 15-min lead age
+  const ask = (o) => ({ origin: o, routeSource: "whatsapp", callRequest: true, submittedAt: new Date(e.clock.t), callTrigger: "quiet" });
+  const r = await e.svc.enqueueLeadCreated(wl, ask("whatsapp-quiet"));
+  assert.deepEqual([r.queued, r.autoCall], [true, true], JSON.stringify(r));
+  assert.match(r.eventId, /^evt_call_/);
+  await e.process();
+  assert.deepEqual([e.sent[0].body.agent_id, e.sent[0].body.custom_fields.call_trigger], ["agent_ad", "quiet"]);
+  e.advance(60000);
+  const r2 = await e.svc.enqueueLeadCreated(wl, ask("whatsapp-handoff"));
+  assert.deepEqual([r2.queued, r2.reason], [false, "recent_duplicate_phone"], "an automatic request keeps the same-number window");
+  const off = env({ cfg: { routing: routingOn([]) } });
+  const r3 = await off.svc.enqueueLeadCreated(waLead(off), { ...ask("whatsapp-handoff"), submittedAt: new Date(off.clock.t) });
+  assert.deepEqual([r3.queued, r3.reason], [false, "source_disabled"]);
+  assert.equal(off.store.deliveries.length, 0, "refused outright, no Contact-only fallback");
+});
+
 // ═══ never blocks lead creation ═══════════════════════════════════════════
 test("enqueue never throws, even if the store is down, and reports only an error class", async () => {
   const e = env({ cfg: { routing: routingOn(["website"]) } });
