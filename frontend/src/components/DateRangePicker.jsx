@@ -1,5 +1,5 @@
 // components/DateRangePicker.jsx
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -236,18 +236,46 @@ export default function DateRangePicker({ value, onChange, label, compact = fals
     : presetDates(value);
 
   const WIDTH = 760;
+  // Keeps the popover attached to its button: below it when it fits, above it
+  // when it does not, never off screen. Re-run on every scroll and resize while
+  // open, because the popover is position: fixed in a portal and would
+  // otherwise stay put while the page moves under it (it did, 17 Oct 2026, on
+  // the Credits page, which scrolls; Leads and the Dashboard keep the picker at
+  // the top so it never showed there).
+  const place = useCallback(() => {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    // The button scrolled out of sight: close rather than float detached.
+    if (rect.bottom < 0 || rect.top > window.innerHeight) { setOpen(false); return; }
+    const mobile = window.innerWidth < 640;
+    const h = popoverRef.current?.offsetHeight || (mobile ? 320 : 520);
+    const below = rect.bottom + 8;
+    const above = rect.top - 8 - h;
+    const top = below + h <= window.innerHeight - 8 ? below
+      : above >= 8 ? above
+      : Math.max(8, window.innerHeight - h - 8);
+    // Line up with the button's left edge when that fits, else its right edge.
+    const preferred = rect.left + WIDTH <= window.innerWidth - 12 ? rect.left : rect.right - WIDTH;
+    const left = mobile ? 8 : Math.max(12, Math.min(preferred, window.innerWidth - WIDTH - 12));
+    setPopoverPos((p) => (p.top === top && p.left === left ? p : { top, left }));
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    place();
+    window.addEventListener("scroll", place, true); // capture: any scrolling container
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open, place, mobileShowCalendar]);
+
   const openPicker = () => {
     if (btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
       const mobile = window.innerWidth < 640;
       setIsMobile(mobile);
-      if (mobile) {
-        setPopoverPos({ top: Math.max(Math.min(rect.bottom + 8, window.innerHeight - 320), 8), left: 8 });
-        setMobileShowCalendar(isCustomObj);
-      } else {
-        const left = Math.max(12, Math.min(rect.left, window.innerWidth - WIDTH - 12));
-        setPopoverPos({ top: rect.bottom + 8, left });
-      }
+      if (mobile) setMobileShowCalendar(isCustomObj);
     }
     const next = isCustomObj ? "custom" : value;
     setPending(next);
