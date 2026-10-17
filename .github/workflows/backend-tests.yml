@@ -1,0 +1,53 @@
+name: Backend tests
+
+# The gate in front of every server release (17 Oct 2026). Railway deploys the
+# backend from its own GitHub connection, with "Wait for CI" switched on for
+# both services (production on main, staging on staging): a push whose tests
+# fail here is never deployed. This replaced deploy-backend.yml, whose
+# `railway up` raced Railway's own deploy so every release went out twice and
+# nothing was tested first.
+#
+# Tests use an in-memory MongoDB and fake every outside service, so they need
+# no secrets and never touch real data.
+
+on:
+  push:
+    branches: [main, staging]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-tests.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+  workflow_dispatch:
+
+concurrency:
+  group: backend-tests-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # Railway's default (railpack) runtime
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Cache the test database binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('backend/package-lock.json') }}
+
+      - run: npm ci
+
+      - name: Run the backend test suite
+        run: npm test
