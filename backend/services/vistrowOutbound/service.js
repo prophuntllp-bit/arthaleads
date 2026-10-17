@@ -53,8 +53,17 @@ const ORIGIN_ROUTE_SOURCES = {
   // "Call now via Vistrow" pressed by a person on the lead page: routed as the
   // source the lead really came from (routes/vistrowLeadRoutes.js decides it).
   "manual-call": ["website", "facebook", "whatsapp", "google"],
+  // The one automatic call for a WhatsApp chat the assistant was handling
+  // (owner decision 17 Oct 2026, routes/whatsappRoutes.js requestWhatsAppCall):
+  // the customer asked for a call or was handed to the team, or went quiet.
+  "whatsapp-handoff": ["whatsapp"],
+  "whatsapp-quiet": ["whatsapp"],
 };
 const CALLABLE_ORIGINS = new Set(Object.keys(ORIGIN_ROUTE_SOURCES));
+// Origins that ask for a call about a lead Vistrow already has, now. Only
+// "manual-call" is a person pressing a button; the others are automatic and
+// still keep the same-number dedupe window.
+const CALL_REQUEST_ORIGINS = new Set(["manual-call", "whatsapp-handoff", "whatsapp-quiet"]);
 
 const plain = (lead) => (lead && typeof lead.toObject === "function" ? lead.toObject() : (lead || {}));
 // Error text from drivers can quote document values; keep only the class + code.
@@ -108,7 +117,8 @@ function createService({
     const repeat = ctx.repeat === true && !!ctx.submittedAt;
     // A person asked for this call now: the lead's age and the watermark do not
     // apply (it is a request, not a replay), and it is only sent as a call.
-    const callRequest = ctx.callRequest === true && ctx.origin === "manual-call";
+    const callRequest = ctx.callRequest === true && CALL_REQUEST_ORIGINS.has(ctx.origin);
+    const automaticCallRequest = callRequest && ctx.origin !== "manual-call";
 
     // The "no replay" watermark: a lead created before the owner switched this
     // on is never sent, however late its creation path finishes. A repeat
@@ -143,6 +153,12 @@ function createService({
     // A call request with no agent to route to is refused outright, never
     // downgraded to a Contact (the person wanted a call, not an import).
     if (callRequest && !routing.autoCall) return { queued: false, reason: routing.reason || "no_route" };
+    // An automatic call request is still one person not phoned twice.
+    if (automaticCallRequest && cfg.dedupeWindowHours > 0) {
+      const since = new Date(t.getTime() - cfg.dedupeWindowHours * 3600 * 1000);
+      const prior = await store.findRecentDeliveryForPhone({ orgId: l.orgId, phoneKey: phone, since, excludeEventId: eventId, autoCallOnly: true });
+      if (prior) return { queued: false, reason: "recent_duplicate_phone" };
+    }
 
     // One person submitting twice must not be phoned twice: the repeat is still
     // sent, but as a Contact only. A person pressing "call now" is exempt.
@@ -150,6 +166,11 @@ function createService({
       const since = new Date(t.getTime() - cfg.dedupeWindowHours * 3600 * 1000);
       const prior = await store.findRecentDeliveryForPhone({ orgId: l.orgId, phoneKey: phone, since, excludeEventId: eventId, autoCallOnly: true });
       if (prior) routing = { autoCall: false, reason: "recent_duplicate_phone", sourceKey: routing.sourceKey };
+    }
+    // The caller holds the call back for now (a WhatsApp chat the assistant is
+    // handling): the Contact goes, without a call. Only ever a downgrade.
+    if (!callRequest && routing.autoCall && ctx.deferCall) {
+      routing = { autoCall: false, reason: String(ctx.deferCall), sourceKey: routing.sourceKey };
     }
 
     const built = buildLeadCreatedPayload(l, { ...ctx, eventId }, { orgId: l.orgId, defaultCountryCode: cfg.defaultCountryCode, now: t, routing });
@@ -401,4 +422,4 @@ function createService({
   return { enqueueLeadCreated, enqueueLeadsCreated, processDue, processById, runTest, configProblems, drain, IMPORT_EMIT_CAP };
 }
 
-module.exports = { createService, IMPORT_EMIT_CAP, CALLABLE_ORIGINS };
+module.exports = { createService, IMPORT_EMIT_CAP, CALLABLE_ORIGINS, CALL_REQUEST_ORIGINS };

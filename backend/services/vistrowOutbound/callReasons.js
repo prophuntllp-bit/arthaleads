@@ -20,6 +20,7 @@ const NOT_ROUTED = {
   not_auto_source: "Only Website, Facebook, WhatsApp and Google leads can be called",
   recent_duplicate_phone: "This number was called recently",
   changed_before_send: "The calling rules changed before sending",
+  whatsapp_bot_handling: "The WhatsApp assistant is handling the chat. Vistrow calls if the customer asks for a call, the chat is handed to the team, or they stop replying for 15 minutes",
 };
 
 const CODE_RE = /^[A-Za-z0-9_.:-]{1,80}$/;

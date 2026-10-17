@@ -274,6 +274,16 @@ const leadSchema = new mongoose.Schema(
         adId:        { type: String },
         lockedUntil: { type: Date },
         emittedAt:   { type: Date },
+        // Owner decision 17 Oct 2026: a chat the WhatsApp assistant is handling
+        // is handed over without a call (awaitingCallSince). ONE call follows,
+        // claimed on callRequestedAt: when the customer asks for one or the
+        // chat is handed to the team, or at quietDueAt (15 min after their last
+        // message). callWanted: a call was asked for before the first hand-off.
+        awaitingCallSince: { type: Date },
+        quietDueAt:        { type: Date },
+        callWanted:        { type: String },
+        callRequestedAt:   { type: Date },
+        callTrigger:       { type: String },
       },
       default: undefined,
       _id: false,
@@ -376,6 +386,7 @@ leadSchema.index({ orgId: 1, metaLeadId: 1 }, { unique: true, name: "orgId_metaL
 leadSchema.index({ orgId: 1, externalId: 1 }, { unique: true, name: "orgId_externalId_unique", partialFilterExpression: { externalId: { $type: "string", $gt: "" } } });
 // Only leads with a WhatsApp hand-off to Vistrow still waiting carry dueAt.
 leadSchema.index({ "vistrowEmit.dueAt": 1 }, { sparse: true });
+leadSchema.index({ "vistrowEmit.quietDueAt": 1 }, { sparse: true });
 // domain filter
 leadSchema.index({ orgId: 1, sourceDomain: 1 });
 
