@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
-- [claude] 2026-10-17 12:45 IST: lead integrity (audit item 6): Facebook lead dedupe, Google Ads webhook 5xx, one phone key, routing skips inactive users. backend/routes/webhookRoutes.js, backend/utils/routingRules.js, phone helpers, tests
 
 
 
