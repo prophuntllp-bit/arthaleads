@@ -60,6 +60,7 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 - [claude] 2026-10-17 14:10 IST: one deploy path + test gate: new .github/workflows/backend-tests.yml (npm test on push to staging/main), delete .github/workflows/deploy-backend.yml (duplicate railway up). Railway "Wait for CI" toggle by owner.
+- [claude] 2026-10-17 IST: home hero tour clip waits for page load + idle before downloading (owner approved, audit N2). File: frontend/src/components/ProductTour.jsx.
 
 
 
