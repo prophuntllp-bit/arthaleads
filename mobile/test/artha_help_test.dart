@@ -40,7 +40,7 @@ Future<void> _settle(WidgetTester tester) async {
   }
 }
 
-Future<_Server> _open(WidgetTester tester, {void Function(String)? onNavigate, String? navigated}) async {
+Future<_Server> _open(WidgetTester tester, {void Function(String)? onNavigate}) async {
   SharedPreferences.setMockInitialValues({});
   await ApiClient.instance.setToken('t');
   final server = _Server();
