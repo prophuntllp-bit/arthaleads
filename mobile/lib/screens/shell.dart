@@ -48,8 +48,9 @@ class _ArthaFab extends StatefulWidget {
   /// Drawer label of the screen underneath, handed to the assistant so it can
   /// look up live data for it. See core/copilot_pages.dart.
   final String? navLabel;
+  final void Function(String label)? onNavigate;
 
-  const _ArthaFab({this.navLabel});
+  const _ArthaFab({this.navLabel, this.onNavigate});
 
   @override
   State<_ArthaFab> createState() => _ArthaFabState();
@@ -134,7 +135,7 @@ class _ArthaFabState extends State<_ArthaFab>
               // the theme's default FAB shape is a rounded square, and
               // FloatingActionButton doesn't clip to `shape` unless told to.
               clipBehavior: Clip.antiAlias,
-              onPressed: () => showArthaSheet(context, navLabel: widget.navLabel),
+              onPressed: () => showArthaSheet(context, navLabel: widget.navLabel, onNavigate: widget.onNavigate),
               child: ClipOval(
                 child: Image.asset(
                   'assets/images/ai_avatar.png',
@@ -157,8 +158,9 @@ class _ArthaFabState extends State<_ArthaFab>
 /// so it stays where they left it next time the app opens.
 class _DraggableArthaFab extends StatefulWidget {
   final String? navLabel;
+  final void Function(String label)? onNavigate;
 
-  const _DraggableArthaFab({this.navLabel});
+  const _DraggableArthaFab({this.navLabel, this.onNavigate});
 
   @override
   State<_DraggableArthaFab> createState() => _DraggableArthaFabState();
@@ -232,7 +234,7 @@ class _DraggableArthaFabState extends State<_DraggableArthaFab> {
                   // clean pan-end, which silently dropped the save.
                   _persist(next);
                 },
-                child: _ArthaFab(navLabel: widget.navLabel),
+                child: _ArthaFab(navLabel: widget.navLabel, onNavigate: widget.onNavigate),
               ),
             ),
           ],
@@ -712,7 +714,10 @@ class _ShellState extends State<Shell> {
               // `current.label` is how the assistant learns which screen it
               // was opened over -- the web copilot reads location.pathname on
               // every request, and this is the equivalent handle here.
-              Positioned.fill(child: _DraggableArthaFab(navLabel: current.label)),
+              // Not on WhatsApp, as on the web: it would sit over the
+              // message box and the chat's own Artha (drafts, suggestions).
+              if (current.label != 'WhatsApp')
+                Positioned.fill(child: _DraggableArthaFab(navLabel: current.label, onNavigate: _navigateToLabel)),
             ],
           ),
         ),
