@@ -271,7 +271,7 @@
       ]
     },
     {
-      "source": "/(logo|logo-lockup|logo-lockup-dark|og-image|favicon-32x32|apple-touch-icon).png",
+      "source": "/(logo|logo-lockup|logo-lockup-dark|og-image|og-image-ai|favicon-32x32|apple-touch-icon).png",
       "headers": [
         {
           "key": "Cache-Control",
