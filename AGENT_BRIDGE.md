@@ -65,9 +65,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 
-- [claude] 2026-10-19 IST: IN PROGRESS mobile Artha change log (screens/artha/artha_sheet.dart, history view) + Vistrow auto-call settings on mobile (new screen, reads/writes the existing /integrations/vistrow-outbound settings routes; no backend change planned).
-
-- [claude] 2026-10-19 IST: mobile is waiting for one release of everything (owner). Unreleased on main: 1.0.14 batch + Artha Phase 4 + staging icon + Inbox->WhatsApp rename. Next candidates from the gap check: AI call status/button on the lead, credits display, Artha change log, Vistrow settings.
+- [claude] 2026-10-19 IST: mobile is waiting for one release of everything (owner). Unreleased on main: 1.0.14 batch + Artha Phase 4 + staging icon + Inbox->WhatsApp rename. Also unreleased: AI call status, credits display + utilization, Artha change log, Vistrow auto-call settings. Gap list from the check is done.
 
 
 
@@ -100,6 +98,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-19 IST: mobile Artha change log in the chat history view (GET /copilot/actions; staging 94748a2d) + Vistrow auto-call settings screen for admins, Automation -> Vistrow auto-call (screens/automation/vistrow_autocall_screen.dart, same /integrations/vistrow-outbound routes: master switch, sources, default agent + rules, summary, last 24h; connection key + test/safety settings stay web-only; staging 79e48dbf). Cherry-picked to main, not released. flutter test 64/64. No backend change.
 
 
 - [claude] 2026-10-19 IST: mobile Credits utilization tested on phone (staging app): chart tap day row, both date pickers OK. Fix: Credits list bottom padding 96 so the Statement date button scrolls clear of the floating Artha avatar (staging c9c39e3e, main 2044bccb). Not released.
