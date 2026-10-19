@@ -88,6 +88,7 @@ class _ArthaSheetState extends State<ArthaSheet> {
   bool _showHistory = false;
   bool _loadingHistory = false;
   List<Map<String, dynamic>> _threads = [];
+  List<Map<String, dynamic>> _changes = []; // what Artha applied (GET /copilot/actions)
 
   ScrollController? _scroll;
 
@@ -282,6 +283,12 @@ class _ArthaSheetState extends State<ArthaSheet> {
       _threads = _maps(res.data['threads']);
     } catch (_) {
       _threads = [];
+    }
+    try {
+      final res = await ApiClient.instance.dio.get('/copilot/actions', queryParameters: {'limit': 30});
+      _changes = _maps(res.data['actions']);
+    } catch (_) {
+      _changes = [];
     }
     if (mounted) setState(() => _loadingHistory = false);
   }
@@ -797,32 +804,82 @@ class _ArthaSheetState extends State<ArthaSheet> {
 
   Widget _history(AppTheme t, ScrollController scroll) {
     if (_loadingHistory) return const Center(child: CircularProgressIndicator(strokeWidth: 2.4));
-    if (_threads.isEmpty) {
-      return ListView(controller: scroll, padding: const EdgeInsets.all(24), children: [
-        Text('No saved chats yet.', textAlign: TextAlign.center, style: TextStyle(color: t.textSoft)),
-      ]);
-    }
-    return ListView.separated(
-      controller: scroll,
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      itemCount: _threads.length,
-      separatorBuilder: (_, _) => Divider(height: 1, indent: 16, endIndent: 16, color: t.border),
-      itemBuilder: (_, i) {
-        final th = _threads[i];
-        final id = '${th['id']}';
-        return ListTile(
-          minVerticalPadding: 10,
-          title: Text('${th['title'] ?? 'Chat'}',
-              maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: t.text)),
-          subtitle: Text(_when(th['lastMessageAt']), style: TextStyle(fontSize: 12, color: t.textSoft)),
-          trailing: IconButton(
-            tooltip: 'Delete this chat',
-            onPressed: () => _deleteThread(id),
-            icon: Icon(Icons.delete_outline_rounded, size: 20, color: t.textSoft),
-          ),
-          onTap: () => _loadThread(id),
+    final agent = context.read<AuthState>().role == 'agent';
+    Widget heading(String text) => Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+          child: Text(text.toUpperCase(),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1, color: t.textSoft)),
         );
-      },
+    Widget divider() => Divider(height: 1, indent: 16, endIndent: 16, color: t.border);
+    return ListView(
+      controller: scroll,
+      padding: const EdgeInsets.only(bottom: 16),
+      children: [
+        heading('Past chats'),
+        if (_threads.isEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Text('No saved chats yet. Chats are kept for 90 days.', style: TextStyle(fontSize: 13, color: t.textSoft)),
+          ),
+        for (final (i, th) in _threads.indexed) ...[
+          if (i > 0) divider(),
+          ListTile(
+            minVerticalPadding: 10,
+            title: Text('${th['title'] ?? 'Chat'}',
+                maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: t.text)),
+            subtitle: Text(_when(th['lastMessageAt']), style: TextStyle(fontSize: 12, color: t.textSoft)),
+            trailing: IconButton(
+              tooltip: 'Delete this chat',
+              onPressed: () => _deleteThread('${th['id']}'),
+              icon: Icon(Icons.delete_outline_rounded, size: 20, color: t.textSoft),
+            ),
+            onTap: () => _loadThread('${th['id']}'),
+          ),
+        ],
+        // The change log, as on the web: what was applied through Artha, by
+        // whom. Agents see their own; managers and admins the team's.
+        if (_changes.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          heading(agent ? 'Changes Artha made for you' : 'Changes Artha made for your team'),
+          for (final (i, c) in _changes.indexed) ...[
+            if (i > 0) divider(),
+            _changeRow(t, c),
+          ],
+        ],
+      ],
+    );
+  }
+
+  Widget _changeRow(AppTheme t, Map<String, dynamic> c) {
+    final undone = c['undone'] == true;
+    final text = '${c['message'] ?? ''}'.isNotEmpty ? '${c['message']}' : '${c['what'] ?? ''}';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 1),
+          child: Icon(undone ? Icons.undo_rounded : Icons.check_circle_outline_rounded,
+              size: 18, color: undone ? t.textSoft : AppColors.primary),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(text,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  height: 1.35,
+                  color: undone ? t.textSoft : t.text,
+                  decoration: undone ? TextDecoration.lineThrough : null,
+                  decorationColor: t.textSoft,
+                )),
+            const SizedBox(height: 2),
+            Text(
+              [if ('${c['by'] ?? ''}'.isNotEmpty) '${c['by']}', _when(c['at']), if (undone) 'undone'].join(' · '),
+              style: TextStyle(fontSize: 12, color: t.textSoft),
+            ),
+          ]),
+        ),
+      ]),
     );
   }
 
