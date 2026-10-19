@@ -17,6 +17,7 @@ import 'automation_form.dart';
 import 'connection_card.dart';
 import 'routing_section.dart';
 import 'telephony_integration_screen.dart';
+import 'vistrow_autocall_screen.dart';
 import '../inbox/wa_settings_page.dart';
 import '../../widgets/adaptive_grid.dart';
 
@@ -1846,6 +1847,25 @@ class _AutomationScreenState extends State<AutomationScreen> {
                 locked: !_enterpriseOk,
                 onTap: () => _openTokenManager('voice'),
               ),
+              // Which new leads Vistrow's AI agents phone (admins; the
+              // server allows only them).
+              if (const ['admin', 'super_admin'].contains(context.read<AuthState>().role))
+                _sourceCard(
+                  icon: const Icon(
+                    Icons.phone_forwarded_rounded,
+                    color: Color(0xFF8B5CF6),
+                    size: 26,
+                  ),
+                  title: 'Vistrow auto-call',
+                  description:
+                      'Let Vistrow AI agents call new leads within moments of arriving',
+                  locked: !_enterpriseOk,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const VistrowAutoCallScreen(),
+                    ),
+                  ),
+                ),
               _sourceCard(
                 icon: const Icon(
                   Icons.phone_in_talk_outlined,
