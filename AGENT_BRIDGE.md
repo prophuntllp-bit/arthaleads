@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+- [claude] 2026-10-19 IST: SEO (owner approved): /pricing plan comparison table, /compare buyer's guide (quick answer, cost table, FAQ + FAQPage JSON-LD, title), "AI lead scoring" -> "lead scoring" (rule-based). Files: pages/Pricing.jsx, Compare.jsx, SellDoAlternative.jsx, Features.jsx, components/CompetitorComparison.jsx, backend/controllers/blogController.js (lastmod).
 
 
 
