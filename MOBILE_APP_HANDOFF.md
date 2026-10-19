@@ -117,7 +117,11 @@ new key that nobody's phone will accept an update from.
 1. Bump `version:` in `mobile/pubspec.yaml` — remember the `+2000` offset
    (e.g. `1.0.3+2029` → `1.0.4+2030`).
 2. Build locally with the real keystore (see §6 for the full command).
-3. Attach the resulting signed APK to a new GitHub Release.
+3. Attach the resulting signed APK to a new GitHub Release in the **public**
+   releases-only repo `prophuntllp-bit/arthaleads-app` (`gh release create
+   mobile-v1.0.X-N <apk> --repo prophuntllp-bit/arthaleads-app`). Never in the
+   code repo: it is private since 17 Oct 2026, so its release links 404 for
+   everyone (build 39 broke that way). Check the link with a signed-out `curl -L`.
 4. Update `backend/constants/appRelease.js`:
    - Always update the `download` block (plain build number, e.g. `30`; new
      installs should always get the newest build).
