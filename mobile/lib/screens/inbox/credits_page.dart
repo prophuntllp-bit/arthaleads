@@ -15,9 +15,33 @@ import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
 
 String _rupees(num? paise) {
-  final v = (paise ?? 0) / 100;
+  final v = ((paise ?? 0) / 100).abs();
   return '₹${NumberFormat('#,##0.00', 'en_IN').format(v)}';
 }
+
+/// For balances, which go below zero while a company uses its overdraft:
+/// "−₹45.30", as on the web (never "₹-45.30").
+String signedRupees(num? paise) => '${(paise ?? 0) < 0 ? '−' : ''}${_rupees(paise)}';
+
+/// Whether a WhatsApp reply can be sent with this /credits/balance answer,
+/// as on the web: free monthly replies count, and spendablePaise includes
+/// the overdraft (older servers only sent availablePaise). Unknown balance or
+/// billing straight to the company's own account never blocks.
+bool canSendReply(Map<String, dynamic>? c) {
+  if (c == null || c['billedDirectlyByMeta'] == true) return true;
+  final freeLeft = ((c['freeService'] as Map?)?['remaining'] as num?) ?? 0;
+  final rate = ((c['ratesPaise'] as Map?)?['service'] as num?) ?? 0;
+  final spendable = (c['spendablePaise'] as num?) ?? (c['availablePaise'] as num?) ?? 0;
+  return freeLeft > 0 || spendable >= rate;
+}
+
+/// Opens the credits top-up sheet from anywhere (the chat's out-of-credits
+/// bar uses it too).
+Future<void> showCreditTopUp(BuildContext context, {VoidCallback? onSuccess}) => showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _TopUpSheet(onSuccess: onSuccess ?? () {}),
+    );
 
 /// Credits tab — balance, ledger statement, auto-recharge, top-up.
 /// Mirrors frontend/src/pages/conversations/CreditsPage.jsx against
@@ -249,9 +273,17 @@ class _CreditsPageState extends State<CreditsPage> {
             const Center(child: Padding(padding: EdgeInsets.all(24), child: AppSpinner()))
           else if (c != null) ...[
             _StatCard(
-              title: 'Available balance',
-              value: _rupees(c['availablePaise']),
+              title: ((c['availablePaise'] as num?) ?? 0) < 0 ? 'Balance (overdraft)' : 'Available balance',
+              value: signedRupees(c['availablePaise'] as num?),
+              valueColor: ((c['availablePaise'] as num?) ?? 0) < 0 ? AppColors.danger : null,
               positive: ((c['availablePaise'] as num?) ?? 0) > 0,
+              // Overdraft: what is owed and what is left before sends pause.
+              detail: ((c['availablePaise'] as num?) ?? 0) < 0
+                  ? (((c['spendablePaise'] as num?) ?? 0) > 0
+                      ? 'You owe ${_rupees(c['owedPaise'])}. ${_rupees(c['spendablePaise'])} left before messages pause '
+                          '(limit ${_rupees(c['overdraftLimitPaise'])}). Add credits to clear it.'
+                      : 'Overdraft limit of ${_rupees(c['overdraftLimitPaise'])} reached: messages are paused until you add credits.')
+                  : null,
               note: ((c['reservedPaise'] as num?) ?? 0) > 0
                   ? '${_rupees(c['reservedPaise'])} held for messages in flight'
                   : 'Nothing held right now',
@@ -354,7 +386,9 @@ class _StatCard extends StatelessWidget {
   final String value;
   final String note;
   final bool? positive;
-  const _StatCard({required this.title, required this.value, required this.note, this.positive});
+  final Color? valueColor;
+  final String? detail;
+  const _StatCard({required this.title, required this.value, required this.note, this.positive, this.valueColor, this.detail});
 
   @override
   Widget build(BuildContext context) {
@@ -379,7 +413,11 @@ class _StatCard extends StatelessWidget {
                 children: [
                   Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                   const SizedBox(height: 4),
-                  Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: valueColor)),
+                  if (detail != null) ...[
+                    const SizedBox(height: 4),
+                    Text(detail!, style: const TextStyle(fontSize: 12, height: 1.4, color: Colors.grey)),
+                  ],
                   const SizedBox(height: 2),
                   Text(note, style: const TextStyle(fontSize: 11, color: Colors.grey)),
                 ],
@@ -546,14 +584,14 @@ class _LedgerRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${isCredit ? '+' : ''}${_rupees(amount)}',
+                '${isCredit ? '+' : amount < 0 ? '−' : ''}${_rupees(amount)}',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: isCredit ? AppColors.success : null,
                 ),
               ),
-              Text(_rupees(row['balanceAfterPaise']), style: const TextStyle(fontSize: 10, color: Colors.grey)),
+              Text(signedRupees(row['balanceAfterPaise'] as num?), style: const TextStyle(fontSize: 10, color: Colors.grey)),
             ],
           ),
         ],

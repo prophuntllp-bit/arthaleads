@@ -1,3 +1,4 @@
+import 'credits_page.dart';
 import '../../core/artha_features.dart';
 import '../artha/suggest_card.dart';
 import 'dart:async';
@@ -88,6 +89,35 @@ class _ConversationScreenState extends State<ConversationScreen> {
         _credits = (c.data as Map).cast<String, dynamic>();
       });
     } catch (_) {}
+  }
+
+  /// As on the web: free monthly replies count as spendable, and
+  /// spendablePaise includes the overdraft (older servers: availablePaise).
+  bool get _canSend => canSendReply(_credits);
+
+  /// Out of credits: the chat stays readable (inbound is free), replies wait.
+  Widget _outOfCreditsBar(WaTheme wa) {
+    final admin = context.read<AuthState>().isAdmin;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      child: Row(children: [
+        const Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFB45309)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            admin ? 'Out of credits: you can read, but not reply.' : 'Out of credits: you can read, but not reply. Ask your admin to add credits.',
+            style: TextStyle(fontSize: 13, color: wa.isDark ? Colors.white : Colors.black87),
+          ),
+        ),
+        if (admin)
+          FilledButton.icon(
+            onPressed: () => showCreditTopUp(context, onSuccess: _loadChannel),
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('Add credits'),
+            style: FilledButton.styleFrom(minimumSize: const Size(0, 40), shape: const StadiumBorder()),
+          ),
+      ]),
+    );
   }
 
   Duration get _windowLeft => _lastInboundAt == null
@@ -1304,6 +1334,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     )
                   : templateOnly
                   ? _templateOnlyBar(wa, firstName)
+                  : !_canSend
+                  ? _outOfCreditsBar(wa)
                   : Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
