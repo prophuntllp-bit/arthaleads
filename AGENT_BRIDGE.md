@@ -65,6 +65,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 
+- [claude] 2026-10-19 IST: IN PROGRESS mobile Artha change log (screens/artha/artha_sheet.dart, history view) + Vistrow auto-call settings on mobile (new screen, reads/writes the existing /integrations/vistrow-outbound settings routes; no backend change planned).
+
 - [claude] 2026-10-19 IST: mobile is waiting for one release of everything (owner). Unreleased on main: 1.0.14 batch + Artha Phase 4 + staging icon + Inbox->WhatsApp rename. Next candidates from the gap check: AI call status/button on the lead, credits display, Artha change log, Vistrow settings.
 
 
