@@ -17,12 +17,12 @@ import { useSEO } from "../utils/useSEO";
 
 // The screen that best shows each workflow. "control" has none: it is about trust, not a screen.
 const SCREEN = {
-  capture:    { id: "lead",        path: "leads" },
-  prioritise: { id: "dashboard",   path: "dashboard" },
-  talk:       { id: "inbox",       path: "conversations" },
-  projects:   { id: "project",     path: "projects" },
-  close:      { id: "booking",     path: "bookings" },
-  team:       { id: "performance", path: "performance" },
+  capture:    { id: "lead",        path: "leads",         alt: "Arthaleads lead record with source, budget, configuration and follow-up" },
+  prioritise: { id: "dashboard",   path: "dashboard",     alt: "Arthaleads dashboard with new leads, follow-ups due and hot leads" },
+  talk:       { id: "inbox",       path: "conversations", alt: "Arthaleads shared WhatsApp inbox with the AI agent replying to a buyer" },
+  projects:   { id: "project",     path: "projects",      alt: "Arthaleads project page with its leads, brochure and team" },
+  close:      { id: "booking",     path: "bookings",      alt: "Arthaleads booking with brokerage, GST and invoice" },
+  team:       { id: "performance", path: "performance",   alt: "Arthaleads team performance board with calls, site visits and closings" },
 };
 
 const prefersReducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -86,7 +86,7 @@ function Screen({ spec, isDark }) {
         <span className="w-[46px]" aria-hidden="true" />
       </div>
       <div className="relative" style={{ aspectRatio: "16 / 9" }}>
-        <img src={`/tour/${spec.id}.webp`} alt="" aria-hidden="true" loading="lazy" decoding="async"
+        <img src={`/tour/${spec.id}.webp`} alt={spec.alt} loading="lazy" decoding="async" width="1600" height="900"
           className="absolute inset-0 w-full h-full object-cover object-top" />
         {near && (
           <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover object-top" poster={`/tour/${spec.id}.webp`}
