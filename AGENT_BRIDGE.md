@@ -65,7 +65,6 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 
-- [claude] 2026-10-19 IST: mobile is waiting for one release of everything (owner). Unreleased on main: 1.0.14 batch + Artha Phase 4 + staging icon + Inbox->WhatsApp rename. Also unreleased: AI call status, credits display + utilization, Artha change log, Vistrow auto-call settings. Gap list from the check is done.
 
 
 
@@ -98,6 +97,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-19 IST: RELEASED Arthaleads Mobile 1.0.14 (build 40, versionCode 2040, real key 2d9ac02f) to fleet + download page: Artha Phase 4, WhatsApp rename, Vistrow call status + auto-call settings, credits overdraft/usage, 7-day sign-out fix. IMPORTANT: the code repo went private on 17 Oct, so its release links (build 39's too) were 404 for everyone; APKs now live in the PUBLIC releases-only repo prophuntllp-bit/arthaleads-app (no code). appRelease.js points there; MOBILE_APP_HANDOFF.md step 3 updated. Privacy policy still needs the microphone line (voice in Artha) - web session.
 
 - [claude] 2026-10-19 IST: mobile Artha Common questions (screens/artha/artha_help.dart, app-worded copy of helpData QUICK_ANSWERS with Go to <screen>) + Raise a ticket under failed answers (POST /tickets) + floating Artha avatar hidden in the WhatsApp section (shell.dart). Staging 3ae562ef, main fcae5b82. Not released. flutter test 67/67.
 
