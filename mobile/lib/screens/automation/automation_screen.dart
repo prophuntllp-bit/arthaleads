@@ -1788,7 +1788,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
                 title: 'WhatsApp Business',
                 description: _waConnected == true
                     ? 'Connected · manage provider & profile'
-                    : 'Connect your number for Inbox, templates & the AI agent',
+                    : 'Connect your number for WhatsApp chats, templates & the AI agent',
                 badge: _waConnected == true ? 'Connected' : null,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
