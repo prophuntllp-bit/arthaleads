@@ -1,3 +1,4 @@
+import 'vistrow_call.dart';
 import '../artha/suggest_card.dart';
 import '../artha/artha_sheet.dart';
 import '../artha/change_card.dart';
@@ -58,14 +59,22 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
   String _tab = 'info';
   final _noteCtrl = TextEditingController();
 
+  /// Vistrow AI calls on this lead (status panel, AI call button).
+  late final VistrowCall _vistrow = VistrowCall(
+    leadId: lead['_type'] == 'project' ? null : lead['_id'] as String?,
+    role: context.read<AuthState>().role,
+  );
+
   @override
   void initState() {
     super.initState();
     ArthaEvents.changed.addListener(_reloadAfterArtha);
+    _vistrow.load();
   }
 
   @override
   void dispose() {
+    _vistrow.dispose();
     ArthaEvents.changed.removeListener(_reloadAfterArtha);
     _noteCtrl.dispose();
     super.dispose();
@@ -638,6 +647,7 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
   Future<void> _callLead() async {
     final phone = lead['phone'] as String?;
     if (phone == null || phone.isEmpty || _calling) return;
+    if (!await okToCallDespiteAi(context, _vistrow) || !mounted) return;
     final choice = await pickCallMethod(
       context,
       name: lead['name'] as String?,
@@ -913,6 +923,9 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                   ),
                 ],
               ),
+              // The AI calls, kept apart from the "you call" buttons above.
+              VistrowCallButton(vc: _vistrow, reloadLead: _reloadAfterArtha),
+              VistrowCallPanel(vc: _vistrow, lead: lead),
               const SizedBox(height: 12),
               // Same tab set/order as LeadDetail.jsx: Info, Notes, Activity,
               // Calls, Transcript. Calls opens CallHistoryScreen instead of
