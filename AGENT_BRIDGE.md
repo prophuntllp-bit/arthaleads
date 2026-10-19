@@ -99,6 +99,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+
+- [claude] 2026-10-19 IST: mobile Credits utilization tested on phone (staging app): chart tap day row, both date pickers OK. Fix: Credits list bottom padding 96 so the Statement date button scrolls clear of the floating Artha avatar (staging c9c39e3e, main 2044bccb). Not released.
 - [claude] 2026-10-19 IST: mobile Credits utilization (screens/inbox/credits_usage.dart: date range, totals, stacked daily bars, per-type rows, who sent, campaigns) + statement period picker (list + CSV) on the Credits page; staging + main, not released. flutter test 61/61.
 
 - [claude] 2026-10-19 IST: mobile credits display (staging + main, not released): signed balance '−₹45.30' + overdraft lines on the Credits page, signed ledger/campaign balance, chat 'Out of credits: you can read, but not reply' when canSendReply() (free replies || spendablePaise incl. overdraft >= service rate) is false. Not done: the web's date range + usage chart on Credits (/credits/utilization). flutter test 58/58.
