@@ -1,3 +1,5 @@
+import '../../widgets/date_range_picker.dart';
+import 'credits_usage.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -63,6 +65,10 @@ class _CreditsPageState extends State<CreditsPage> {
   bool _loadingLedger = true;
   bool _exporting = false;
 
+  /// The statement's own period (all time by default); the list and the CSV
+  /// follow it, as on the web.
+  dynamic _stmtRange = '';
+
   Map<String, dynamic>? _ar; // local copy of autoRecharge, editable
   bool _savingAr = false;
 
@@ -94,7 +100,7 @@ class _CreditsPageState extends State<CreditsPage> {
     try {
       final res = await _api.dio.get(
         '/credits/ledger',
-        queryParameters: {'page': page, 'limit': 25},
+        queryParameters: {'page': page, 'limit': 25, ...creditRangeParams(_stmtRange)},
       );
       if (!mounted) return;
       setState(() {
@@ -176,6 +182,8 @@ class _CreditsPageState extends State<CreditsPage> {
     }
   }
 
+  static String _rangeSlug(dynamic v) => v is Map ? '${v['from']}_to_${v['to']}' : ('$v'.isEmpty ? 'all-time' : '$v');
+
   Future<void> _exportCsv() async {
     setState(() => _exporting = true);
     try {
@@ -183,7 +191,7 @@ class _CreditsPageState extends State<CreditsPage> {
       for (var p = 1; p <= 50; p++) {
         final res = await _api.dio.get(
           '/credits/ledger',
-          queryParameters: {'page': p, 'limit': 200},
+          queryParameters: {'page': p, 'limit': 200, ...creditRangeParams(_stmtRange)},
         );
         final rows = (res.data['rows'] as List? ?? []).cast<Map<String, dynamic>>();
         final total = res.data['total'] as int? ?? 0;
@@ -208,7 +216,7 @@ class _CreditsPageState extends State<CreditsPage> {
       await Share.shareXFiles([
         XFile.fromData(
           bytes,
-          name: 'whatsapp-credits-statement-$today.csv',
+          name: 'whatsapp-credits-statement-${_rangeSlug(_stmtRange)}-$today.csv',
           mimeType: 'text/csv',
         ),
       ]);
@@ -325,12 +333,30 @@ class _CreditsPageState extends State<CreditsPage> {
               ),
           ],
 
+          // Where the messages and the money went (admins and managers).
+          if (context.read<AuthState>().isAdmin) ...[
+            const SizedBox(height: 10),
+            const CreditsUsageSection(),
+          ],
+
           const SizedBox(height: 18),
           Row(
             children: [
-              const Expanded(
-                child: Text('Statement', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Statement', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  Text(dateRangeLabel(_stmtRange),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                ]),
               ),
+              DateRangePicker(
+                value: _stmtRange,
+                onChanged: (v) {
+                  setState(() => _stmtRange = v);
+                  _loadLedger(1);
+                },
+              ),
+              const SizedBox(width: 4),
               if (_total > 0)
                 TextButton.icon(
                   onPressed: _exporting ? null : _exportCsv,
