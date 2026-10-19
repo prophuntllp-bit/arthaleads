@@ -23,7 +23,9 @@
 //      on people's phones
 //   2. push — Flutter Mobile CI builds a signed release APK (the keystore
 //      secrets ARE configured; see .github/workflows/mobile-flutter-ci.yml)
-//   3. attach that APK to a GitHub Release and point `download.url` at it
+//   3. attach that APK to a GitHub Release in the PUBLIC repo
+//      prophuntllp-bit/arthaleads-app (the code repo is private, so its
+//      release links 404) and point `download.url` at it
 //   4. only when the fleet should follow: raise `build`/`version`/`url` too
 //
 // Keeping this in the repo rather than in Railway env vars means the release is
@@ -95,9 +97,22 @@ module.exports = {
     // number and form polish. Not marked mandatory (minBuild unchanged).
     // Verified on a real phone as an in-place install, versionCode 2039 over
     // 2038, same signing key, login kept.
-    build: 39,
+    //
+    // 19 Oct 2026: 40 brings Artha to the app (streamed answers, change cards
+    // with Undo, hold-to-talk, morning brief, WhatsApp reply drafts and the
+    // suggestion card), the WhatsApp rename and chat box, Vistrow AI call
+    // status and auto-call settings, credits overdraft and usage, and the
+    // X-Renewed-Token fix so phones stay signed in past 7 days. Not marked
+    // mandatory (minBuild unchanged). Same signing key, versionCode 2040 over
+    // 2039, verified as an in-place install on a real phone.
+    //
+    // The APK now lives in the PUBLIC releases-only repo
+    // prophuntllp-bit/arthaleads-app: the code repo went private on 17 Oct
+    // 2026, after which its release links (39's included) returned 404 to
+    // everyone. Publish future APKs there, never in the private repo.
+    build: 40,
     // Human-readable, shown in the update prompt.
-    version: "1.0.13",
+    version: "1.0.14",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
     //
@@ -116,9 +131,9 @@ module.exports = {
     // we cannot see who is on a 32-bit device; the download block's own
     // comment already documents why an ABI split is the wrong call for an
     // audience we don't control. Bigger file, installs everywhere.
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.13-39/arthaleads-1.0.13-39.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads-app/releases/download/mobile-v1.0.14-40/arthaleads-1.0.14-40.apk",
     // Optional short "what's new" line, shown in that prompt.
-    notes: "The Inbox now scrolls back through every chat and long chats load earlier messages. Every Pipeline stage shows its own leads and true count. Also: chat date dividers, editable lead note, duplicate number warning, correct Bookings and Invoices totals, clock in without a camera, and a new support number.",
+    notes: "Artha comes to the app: ask about your leads, apply the changes it prepares, hold to talk, and a morning brief. Also: a new WhatsApp chat box with reply drafts, AI call status on leads, a credits usage chart, and you stay signed in past 7 days.",
 
     // ── The public download page (new installs) ──────────────────────────────
     // Ahead of the block above by design. Anyone arriving at /download-app has
@@ -132,26 +147,27 @@ module.exports = {
     // 8 Oct 2026: same again for 37, in step with the fleet block above.
     // 8 Oct 2026: same again for 38.
     // 12 Oct 2026: same again for 39.
+    // 19 Oct 2026: same again for 40 (from the public arthaleads-app repo).
     download: {
-      version: "1.0.13",
+      version: "1.0.14",
       // The plain build number, not Android's versionCode — the APK is stamped
       // 2035 and the app reports it back as 35 (% 1000). mobile/pubspec.yaml
       // explains why the two differ; the short version is that every install
       // in the field is on versionCode 2024 and cannot be given a lower one.
-      build: 39,
+      build: 40,
       // Universal APK, not the arm64 split: this link is public, we cannot see
       // whose phone is on the other end, and a 32-bit device meeting an arm64
       // APK fails with a bare "App not installed" that the user cannot fix.
       // Bigger file, but it installs everywhere the page claims it will.
-      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.13-39/arthaleads-1.0.13-39.apk",
+      url: "https://github.com/prophuntllp-bit/arthaleads-app/releases/download/mobile-v1.0.14-40/arthaleads-1.0.14-40.apk",
       // Bytes, so the page can format it. 0 hides the figure rather than
       // showing a wrong one.
-      sizeBytes: 82729307,
+      sizeBytes: 84157047,
       // Minimum Android version, for the requirements line on that page. This
       // is the human-readable form of minSdk in mobile/android/app/build.gradle.kts
       // — keep the two in step.
       minAndroid: "7.0",
-      notes: "The Inbox now scrolls back through every chat and long chats load earlier messages. Every Pipeline stage shows its own leads and true count. Also: chat date dividers, editable lead note, duplicate number warning, correct Bookings and Invoices totals, clock in without a camera, and a new support number.",
+      notes: "Artha comes to the app: ask about your leads, apply the changes it prepares, hold to talk, and a morning brief. Also: a new WhatsApp chat box with reply drafts, AI call status on leads, a credits usage chart, and you stay signed in past 7 days.",
     },
   },
 };
