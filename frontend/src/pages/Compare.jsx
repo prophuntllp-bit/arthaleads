@@ -6,6 +6,7 @@ import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
+import { PLAN_PRICING } from "../utils/plan";
 
 const COMPETITORS = ["Arthaleads", "Leadrat", "Sell.Do", "Kylas"];
 
@@ -90,6 +91,46 @@ const CHOOSING = [
     link: { to: "/pricing", label: "See Arthaleads plans and pricing" } },
 ];
 
+// Buyer's guide. Competitor figures are the ones already sourced and dated on
+// SellDoAlternative.jsx, LeadratAlternative.jsx and KylasAlternative.jsx
+// (checked 14 Oct 2026): keep the three in step, and never add a figure that
+// is not on one of those pages first.
+const KYLAS_FLAT = 12999;
+const KYLAS_BREAK_EVEN = Math.floor(KYLAS_FLAT / PLAN_PRICING.growth.monthly);   // Growth is cheaper up to this many users
+const inr = (n) => `₹${n.toLocaleString("en-IN")}`;
+
+const WHO_FITS = [
+  { name: "Arthaleads", fit: `Teams of 5 to 30 who sell on WhatsApp and want published per-user prices (${inr(PLAN_PRICING.starter.monthly)} or ${inr(PLAN_PRICING.growth.monthly)} plus GST), a 14-day free trial and a WhatsApp AI agent in the plan.` },
+  { name: "Sell.Do", fit: "Large developers who want an established real estate suite and are happy to book a demo and work from a custom quote.", to: "/compare/sell-do-alternative" },
+  { name: "Leadrat", fit: "Teams of 30 to 100 users who prefer one all-features plan billed annually, from ₹2,299 per user at 10 users down to ₹1,499 at 100.", to: "/compare/leadrat-alternative" },
+  { name: "Kylas", fit: `Teams of ${KYLAS_BREAK_EVEN + 1} or more who would rather pay one flat fee (Elevate, ${inr(KYLAS_FLAT)} a month in India) for unlimited users, or start on a free plan.`, to: "/compare/kylas-alternative" },
+];
+
+const COST_ROWS = [
+  ["Arthaleads", "Per user per month, five-user minimum", `${inr(PLAN_PRICING.starter.monthly)} (Starter) or ${inr(PLAN_PRICING.growth.monthly)} (Growth) per user, plus GST. Enterprise on quote.`, "14-day free trial, no credit card"],
+  ["Sell.Do", "Per active user per month, five-user minimum", "Not published: a custom quote", "Book a demo first"],
+  ["Leadrat", "Per user, one plan, billed annually, from 10 users", "₹2,299 per user per month at 10 users, ₹1,499 at 100", "Book a demo; no trial mentioned"],
+  ["Kylas", "Flat monthly fee, unlimited users", `Elevate ${inr(KYLAS_FLAT)} a month in India; Embark free`, "Free plan; 7-day Elevate trial"],
+];
+
+const GUIDE_FAQS = [
+  ["Which is the best real estate CRM in India?",
+   `It depends on your team. For 5 to 30 people who work on WhatsApp and want published prices and a free trial, Arthaleads fits. Large developers who want a full suite on a custom quote often look at Sell.Do. Leadrat suits 30 to 100 users on one annual plan, and Kylas suits bigger teams that prefer a flat fee for unlimited users.`],
+  ["How much does a real estate CRM cost in India?",
+   `Published prices on the websites we checked on ${CHECKED} range from ${inr(PLAN_PRICING.starter.monthly)} per user per month (Arthaleads Starter) to ₹2,299 per user per month (Leadrat at 10 users, billed annually). Kylas charges a flat ${inr(KYLAS_FLAT)} a month for unlimited users, and Sell.Do quotes per team. Check whether GST is included and whether billing is monthly or yearly.`],
+  ["What should a real estate CRM include?",
+   "Automatic capture from Facebook and Instagram lead ads, WhatsApp and your website, with the source on every lead; instant assignment and alerts; follow-up reminders; project-wise pipelines if you sell more than one project; and reports on response time, site visits and bookings by source and person."],
+  ["Can I try a real estate CRM before paying?",
+   "Arthaleads has a 14-day free trial of the Growth plan with no credit card. Kylas has a free plan and a 7-day trial of Elevate. Sell.Do and Leadrat start with a demo, according to their websites."],
+];
+
+// In the markup (not added by an effect) so the prerendered HTML carries it for crawlers that run no JS.
+const GUIDE_JSONLD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": GUIDE_FAQS.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
+}).replace(/</g, "\\u003c");
+
 function Cell({ val }) {
   if (val === "y") return <span><Check aria-hidden="true" className="w-4 h-4 mx-auto" style={{ color: "#22c55e" }} /><span className="sr-only">Yes</span></span>;
   if (val === "p") return <span className="text-xs font-medium" style={{ color: "#b45309" }}>Partial</span>;
@@ -102,8 +143,8 @@ export default function Compare() {
   const [query, setQuery] = useState("");
 
   useSEO({
-    title:       "Arthaleads vs Leadrat, Sell.Do & Kylas: CRM Comparison",
-    description: "Compare Arthaleads with Leadrat, Sell.Do, and Kylas. See how India’s real estate CRMs stack up on lead management, automation, analytics, and value.",
+    title:       "Best Real Estate CRM in India: Buyer's Guide & Comparison",
+    description: "Compare Arthaleads, Sell.Do, Leadrat and Kylas on features, pricing and free trials, with a buyer's guide to choosing a real estate CRM in India.",
     canonical:   "https://www.arthaleads.com/compare",
   });
 
@@ -125,19 +166,43 @@ export default function Compare() {
 
   return (
     <div className="min-h-screen" style={{ background: bg, color: textColor, fontFamily: "Inter, sans-serif" }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: GUIDE_JSONLD }} />
       <PublicNav />
 
       {/* Hero */}
       <section className="relative pt-32 pb-10 overflow-hidden">
         <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl font-black mb-5" style={{ color: textColor }}>
-            How Arthaleads{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">compares</span>
+          <h1 className="text-4xl sm:text-5xl font-black mb-5" style={{ color: textColor, textWrap: "balance" }}>
+            Choosing the best real estate CRM{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">in India</span>
           </h1>
           <p className="text-lg max-w-xl mx-auto" style={{ color: softText }}>
-            An honest, feature-by-feature look at Arthaleads against other popular real estate CRMs in India.
-            Search any feature to jump straight to it.
+            An honest buyer's guide: who each CRM suits, what it costs, and a feature-by-feature comparison of
+            Arthaleads, Sell.Do, Leadrat and Kylas, sourced from their own websites.
           </p>
+        </div>
+      </section>
+
+      {/* Quick answer: who each one suits */}
+      <section className="pb-12">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl sm:text-3xl font-black mb-2 text-center" style={{ color: textColor }}>The short answer: it depends on your team</h2>
+          <p className="text-base max-w-2xl mx-auto text-center mb-8" style={{ color: softText }}>
+            No CRM is best for everyone. This is who each one fits, based on how it is priced and sold.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {WHO_FITS.map((w) => (
+              <div key={w.name} className="rounded-2xl border p-5" style={{ background: cardBg, borderColor: cardBorder }}>
+                <h3 className="font-bold text-base mb-1.5" style={{ color: textColor }}>{w.name}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: softText }}>{w.fit}</p>
+                {w.to && (
+                  <Link to={w.to} className="inline-flex items-center gap-1.5 mt-2.5 text-sm font-semibold underline underline-offset-2" style={{ color: isDark ? "#fb923c" : "#c2410c" }}>
+                    Arthaleads vs {w.name} <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -272,6 +337,53 @@ export default function Compare() {
                     {c.link.label} <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* What it costs */}
+      <section className="pb-16">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl sm:text-3xl font-black mb-2 text-center" style={{ color: textColor }}>What does a real estate CRM cost in India?</h2>
+          <p className="text-base max-w-2xl mx-auto text-center mb-6" style={{ color: softText }}>
+            List prices as published on each company's website on {CHECKED}. Some prices exclude GST, and billing may be monthly or yearly.
+          </p>
+          <div className="overflow-x-auto rounded-2xl" style={{ border: `1px solid ${cardBorder}` }}>
+            <table className="w-full min-w-[640px] text-sm border-collapse">
+              <caption className="sr-only">Real estate CRM prices in India compared</caption>
+              <thead>
+                <tr style={{ background: headBg }}>
+                  {["CRM", "How it is priced", "Published price", "Try before you buy"].map((h) => (
+                    <th key={h} scope="col" className="text-left font-semibold px-4 py-3" style={{ color: softText }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {COST_ROWS.map(([name, model, price, trial], i) => (
+                  <tr key={name} style={{ borderTop: `1px solid ${cardBorder}`, background: i === 0 ? (isDark ? "rgba(255,107,0,0.05)" : "#fff7f0") : cardBg }}>
+                    <th scope="row" className="text-left font-bold px-4 py-3" style={{ color: textColor }}>{name}</th>
+                    <td className="px-4 py-3" style={{ color: textColor }}>{model}</td>
+                    <td className="px-4 py-3" style={{ color: textColor }}>{price}</td>
+                    <td className="px-4 py-3" style={{ color: textColor }}>{trial}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Buyer FAQs (same text as GUIDE_JSONLD) */}
+      <section className="pb-16">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl sm:text-3xl font-black mb-6 text-center" style={{ color: textColor }}>Questions buyers ask</h2>
+          <div className="space-y-4">
+            {GUIDE_FAQS.map(([q, a]) => (
+              <div key={q} className="rounded-2xl border p-5" style={{ background: cardBg, borderColor: cardBorder }}>
+                <h3 className="font-bold text-base mb-2" style={{ color: textColor }}>{q}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: softText }}>{a}</p>
               </div>
             ))}
           </div>

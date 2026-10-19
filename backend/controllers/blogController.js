@@ -110,10 +110,10 @@ const blogController = {
       // page file); bump it when you edit a page, Google ignores it if it lies.
       const staticPages = [
         { url: "/",                 priority: "1.0", changefreq: "weekly", lastmod: "2026-10-16" },
-        { url: "/features",         priority: "0.9", changefreq: "monthly", lastmod: "2026-10-16" },
-        { url: "/pricing",          priority: "0.9", changefreq: "monthly", lastmod: "2026-10-16" },
-        { url: "/compare",          priority: "0.8", changefreq: "monthly", lastmod: "2026-10-16" },
-        { url: "/compare/sell-do-alternative", priority: "0.7", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/features",         priority: "0.9", changefreq: "monthly", lastmod: "2026-10-19" },
+        { url: "/pricing",          priority: "0.9", changefreq: "monthly", lastmod: "2026-10-19" },
+        { url: "/compare",          priority: "0.8", changefreq: "monthly", lastmod: "2026-10-19" },
+        { url: "/compare/sell-do-alternative", priority: "0.7", changefreq: "monthly", lastmod: "2026-10-19" },
         { url: "/compare/leadrat-alternative", priority: "0.7", changefreq: "monthly", lastmod: "2026-10-16" },
         { url: "/compare/kylas-alternative",   priority: "0.7", changefreq: "monthly", lastmod: "2026-10-16" },
         { url: "/blog",             priority: "0.8", changefreq: "weekly"  },

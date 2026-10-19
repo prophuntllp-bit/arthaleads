@@ -19,7 +19,7 @@ import { Reveal, Spotlight, Magnetic, CountUp } from "./motion/Motion";
 const OUR_PRICING = [
   "Prices on the website, GST added on top. Enterprise is on quote.",
   "Minimum 5 users. Annual billing gives about two months free.",
-  "Growth includes the WhatsApp AI agent, AI lead scoring and AI-written replies.",
+  "Growth includes the WhatsApp AI agent, lead scoring and AI-written replies.",
   "WhatsApp message charges from Meta come from a prepaid credit balance, with a statement of every charge.",
   "14-day free trial on your own leads, no credit card.",
 ];

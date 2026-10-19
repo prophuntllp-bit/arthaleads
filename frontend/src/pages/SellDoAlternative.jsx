@@ -51,7 +51,7 @@ const SELLDO = {
     ["Pricing", `Published: ₹${PLAN_PRICING.starter.monthly} (Starter) or ₹${PLAN_PRICING.growth.monthly} (Growth) per user per month, GST extra. Enterprise on quote.`, "Not published. A custom per-user quote based on team size and modules.", SRC_PRICING],
     ["Minimum team size", "5 users", "5 users", SRC_PRICING],
     ["How you try it", "14-day free trial, no credit card", "Book a demo, then a written quote", SRC_PRICING],
-    ["AI", "WhatsApp AI agent, AI lead scoring and AI-written replies included on Growth", "Jarvis AI: voice agents, call analysis and content agents, priced as usage-based add-ons", SRC_PRICING],
+    ["AI", "WhatsApp AI agent, lead scoring and AI-written replies included on Growth", "Jarvis AI: voice agents, call analysis and content agents, priced as usage-based add-ons", SRC_PRICING],
     ["WhatsApp", "Shared team inbox, AI agent, templates and campaigns, click-to-WhatsApp ad leads", "WhatsApp Connector, with communication costs quoted separately", SRC_HOME],
     ["Launch-day booking engine", "Not built for launch-day inventory release", "IRIS launch platform for bookings and inventory at launch", SRC_HOME],
     ["Post-sales", "Bookings and brokerage invoices", "Post-sales and collections in the real-estate suite", SRC_PRICING],
