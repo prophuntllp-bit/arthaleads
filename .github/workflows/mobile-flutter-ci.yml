@@ -45,7 +45,11 @@ jobs:
         working-directory: mobile
         run: flutter build apk --debug
 
+      # Only on a hand-started run: the private repo's artifact storage quota
+      # ran out (19 Oct 2026), which failed every push run here and with it
+      # Railway's "Wait for CI". Nobody downloads the debug APK from pushes.
       - name: Upload debug APK
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: arthaleads-mobile-debug-apk
