@@ -259,7 +259,7 @@ class _CreditsPageState extends State<CreditsPage> {
         await Future.wait([_loadBalance(), _loadLedger(1)]);
       },
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96), // room to scroll past the floating Artha avatar
         children: [
           Row(
             children: [
