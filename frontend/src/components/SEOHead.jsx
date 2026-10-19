@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet-async";
 
 const BASE_URL = "https://www.arthaleads.com";
-const DEFAULT_IMAGE = `${BASE_URL}/og-image.png`;
+const DEFAULT_IMAGE = `${BASE_URL}/og-image-ai.png`; // new name so WhatsApp/LinkedIn do not keep the cached old card
 
 export default function SEOHead({
   title,

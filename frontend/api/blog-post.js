@@ -175,7 +175,7 @@ export default async function handler(req, res) {
     const title = clip(post.metaTitle || post.title, 70);
     const desc = clip(post.metaDescription || post.excerpt, 160);
     const url = post.canonicalUrl || `${SITE}/blog/${post.slug}`;
-    const image = abs(post.ogImage || post.featuredImage) || `${SITE}/og-image.png`;
+    const image = abs(post.ogImage || post.featuredImage) || `${SITE}/og-image-ai.png`;
     const full = `${title} - Arthaleads`;
     const ogTitle = clip(post.ogTitle || full, 95);
     const ogDesc = clip(post.ogDescription || desc, 200);
