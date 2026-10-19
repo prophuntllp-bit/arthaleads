@@ -185,7 +185,7 @@ export default function Features() {
 
   useSEO({
     title: "Real Estate CRM Features for Indian Sales Teams | Arthaleads",
-    description: "Every feature of the Arthaleads real estate CRM: lead capture from ads, WhatsApp and your website, AI lead scoring, campaigns, call intelligence and bookings.",
+    description: "Every feature of the Arthaleads real estate CRM: lead capture from ads, WhatsApp and your website, lead scoring, campaigns, call intelligence and bookings.",
     canonical: "https://www.arthaleads.com/features",
   });
 

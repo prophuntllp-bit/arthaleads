@@ -28,6 +28,35 @@ const FAQ_JSONLD = JSON.stringify({
   "mainEntity": FAQS.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
 }).replace(/</g, "\\u003c");
 
+// Plan comparison table: a real <table>, so search engines and AI answers can
+// read the plans side by side. Every row restates data/plans.js and
+// PLAN_PRICING: change a plan there, change it here. true = included,
+// false = not on this plan, a string = the value shown.
+const inr = (n) => `₹${n.toLocaleString("en-IN")}`;
+const COMPARE_ROWS = [
+  ["Price per user per month", `${inr(PLAN_PRICING.starter.monthly)} + GST`, `${inr(PLAN_PRICING.growth.monthly)} + GST`, "Custom quote"],
+  ["Price per user per year (2 months free)", `${inr(PLAN_PRICING.starter.annual)} + GST`, `${inr(PLAN_PRICING.growth.annual)} + GST`, "Custom quote"],
+  ["Team size", "5 to 10 users", "5 to 30 users", "25+ users"],
+  ["Projects", "2", "Unlimited", "Unlimited"],
+  ["File storage", "2 GB", "15 GB", "100 GB"],
+  ["Call recordings kept", "30 days", "90 days", "1 year"],
+  ["Facebook and Instagram lead ads import", true, true, true],
+  ["WhatsApp chats, website forms, CSV import", true, true, true],
+  ["Kanban pipeline and follow-up reminders", true, true, true],
+  ["Role-based access (admin, manager, agent)", true, true, true],
+  ["WhatsApp AI agent, 24/7 replies", false, true, true],
+  ["WhatsApp templates and campaigns", false, true, true],
+  ["Duplicate detection and round-robin assignment", false, true, true],
+  ["Bulk lead export", false, true, true],
+  ["Attendance and team performance dashboard", false, true, true],
+  ["Conversion and booking analytics", false, true, true],
+  ["Google Ads leads", false, false, true],
+  ["Webhooks and API access", false, false, true],
+  ["Vistrow Voice AI calling", false, false, true],
+  ["Custom branding and reporting", false, false, true],
+  ["Support", "Email", "Priority", "Dedicated account manager"],
+];
+
 // Plan colours are too light for small text on white; these darker shades pass WCAG AA (4.5:1).
 const PLAN_TEXT = { "#3b82f6": "#2563eb", "#ff6b00": "#c2410c", "#a855f7": "#7e22ce" };
 
@@ -343,6 +372,43 @@ export default function Pricing() {
           <Link to="/compare" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[color:var(--brand-text)] hover:underline">
             See how we compare to other CRMs <ArrowRight className="w-4 h-4" />
           </Link>
+        </div>
+      </section>
+
+      {/* Plans side by side */}
+      <section className="pb-16">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl sm:text-3xl font-black text-center mb-2" style={{ color: heading }}>Compare Arthaleads plans</h2>
+          <p className="text-sm text-center mb-6" style={{ color: body }}>
+            Prices are per user per month, with a five-user minimum and 18% GST on top. New accounts start with a 14-day free trial of Growth.
+          </p>
+          <div className="overflow-x-auto rounded-2xl" style={{ border: `1px solid ${cardBdr}` }}>
+            <table className="w-full min-w-[560px] text-sm border-collapse">
+              <caption className="sr-only">Arthaleads Starter, Growth and Enterprise plans compared</caption>
+              <thead>
+                <tr style={{ background: altBg }}>
+                  <th scope="col" className="text-left font-semibold px-4 py-3" style={{ color: body }}>Feature</th>
+                  {PLANS.map((p) => (
+                    <th key={p.id} scope="col" className="text-center font-bold px-3 py-3" style={{ color: isDark ? p.color : PLAN_TEXT[p.color] }}>{p.name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARE_ROWS.map(([label, ...vals], ri) => (
+                  <tr key={label} style={{ borderTop: `1px solid ${divBdr}`, background: ri % 2 ? (isDark ? "rgba(255,255,255,0.015)" : "#fcfcfc") : cardBg }}>
+                    <th scope="row" className="text-left font-normal px-4 py-3" style={{ color: featClr }}>{label}</th>
+                    {vals.map((v, i) => (
+                      <td key={i} className="text-center px-3 py-3" style={{ color: featClr }}>
+                        {v === true ? <><Check aria-hidden="true" className="w-4 h-4 mx-auto text-green-600" /><span className="sr-only">Included</span></>
+                          : v === false ? <><span aria-hidden="true" style={{ color: body }}>–</span><span className="sr-only">Not included</span></>
+                          : v}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
