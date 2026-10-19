@@ -99,6 +99,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+- [claude] 2026-10-19 IST: mobile Artha Common questions (screens/artha/artha_help.dart, app-worded copy of helpData QUICK_ANSWERS with Go to <screen>) + Raise a ticket under failed answers (POST /tickets) + floating Artha avatar hidden in the WhatsApp section (shell.dart). Staging 3ae562ef, main fcae5b82. Not released. flutter test 67/67.
+
 - [claude] 2026-10-19 IST: mobile Artha change log in the chat history view (GET /copilot/actions; staging 94748a2d) + Vistrow auto-call settings screen for admins, Automation -> Vistrow auto-call (screens/automation/vistrow_autocall_screen.dart, same /integrations/vistrow-outbound routes: master switch, sources, default agent + rules, summary, last 24h; connection key + test/safety settings stay web-only; staging 79e48dbf). Cherry-picked to main, not released. flutter test 64/64. No backend change.
 
 
