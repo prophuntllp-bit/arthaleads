@@ -90,9 +90,9 @@ const Map<String, CopilotPage> copilotPages = {
       "How do I mark a task as complete?",
     ],
   ),
-  "Inbox": CopilotPage(
+  "WhatsApp": CopilotPage(
     "/conversations",
-    "WhatsApp Inbox",
+    "WhatsApp",
     [
       "How many WhatsApp conversations are open?",
       "What's my wallet balance?",

@@ -50,7 +50,7 @@ class _ConversationsShellState extends State<ConversationsShell>
   // isAdmin: admin/super_admin (AI Agents, Settings). isStaff: anyone but an
   // agent; the Credits statement is admin/manager only on the server (a58301e).
   List<_Tab> _tabs(bool isAdmin, bool isStaff) => [
-    _Tab('Inbox', Icons.chat_rounded, const InboxScreen(), badge: _unread > 0 ? (_unread > 99 ? '99+' : '$_unread') : null),
+    _Tab('WhatsApp', Icons.chat_rounded, const InboxScreen(), badge: _unread > 0 ? (_unread > 99 ? '99+' : '$_unread') : null),
     const _Tab('Templates', Icons.description_rounded, TemplatesPage(), minPlan: 'growth', feature: 'WhatsApp templates'),
     const _Tab('Campaigns', Icons.campaign_rounded, CampaignsPage(), minPlan: 'growth', feature: 'WhatsApp campaigns'),
     if (isStaff)

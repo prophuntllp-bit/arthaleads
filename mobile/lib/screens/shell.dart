@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -322,9 +323,11 @@ class _ShellState extends State<Shell> {
   // because builds older than this one only know that spelling.
   static const _routeAliases = <String, String>{
     'automation': 'Integrations',
-    // The web calls the Inbox "Conversations" and Plan & Billing "Plans"; push
+    // The web's WhatsApp section lives at /conversations and Plan & Billing at "Plans"; push
     // links use the web paths, which matched no tab here, so taps did nothing.
-    'conversations': 'Inbox',
+    'conversations': 'WhatsApp',
+    // Older notifications and links may still name the section "inbox".
+    'inbox': 'WhatsApp',
     'plans': 'Plan & Billing',
   };
 
@@ -385,7 +388,7 @@ class _ShellState extends State<Shell> {
     final conversationId = target['conversationId'] ?? '';
     final leadId = target['leadId'] ?? '';
     if (conversationId.isNotEmpty) {
-      _navigateToLabel('Inbox');
+      _navigateToLabel('WhatsApp');
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => ConversationScreen(conversationId: conversationId, contactName: ''),
@@ -445,7 +448,8 @@ class _ShellState extends State<Shell> {
       () => const DashboardScreen(),
     ),
     _NavItem('Leads', Icons.people_alt_rounded, () => const LeadsScreen()),
-    _NavItem('Inbox', Icons.chat_rounded, () => const ConversationsShell()),
+    // Called "WhatsApp" since 17 Oct 2026, as on the web (was "Inbox").
+    _NavItem('WhatsApp', FontAwesomeIcons.whatsapp.data, () => const ConversationsShell()),
     _NavItem(
       'Follow-ups',
       Icons.event_repeat_rounded,
@@ -548,9 +552,9 @@ class _ShellState extends State<Shell> {
       child: AppBackdrop(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          // Inbox carries its own single header strip (drawer button, tabs,
+          // WhatsApp carries its own single header strip (drawer button, tabs,
           // theme toggle) — a second AppBar above it just doubled the chrome.
-          appBar: current.label == 'Inbox' ? null : AppBar(
+          appBar: current.label == 'WhatsApp' ? null : AppBar(
             title: Text(current.label),
             actions: [
               const HeaderSearchButton(),

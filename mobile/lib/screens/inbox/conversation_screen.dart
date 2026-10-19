@@ -721,7 +721,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         builder: (ctx) => AlertDialog(
           title: const Text('Release this chat?'),
           content: const Text(
-            'It goes back to the team as unassigned and will leave your Inbox. An admin or manager can assign it again.',
+            'It goes back to the team as unassigned and will leave your WhatsApp chats. An admin or manager can assign it again.',
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
