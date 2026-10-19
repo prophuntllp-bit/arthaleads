@@ -99,6 +99,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+- [claude] 2026-10-19 IST: mobile Credits utilization (screens/inbox/credits_usage.dart: date range, totals, stacked daily bars, per-type rows, who sent, campaigns) + statement period picker (list + CSV) on the Credits page; staging + main, not released. flutter test 61/61.
+
 - [claude] 2026-10-19 IST: mobile credits display (staging + main, not released): signed balance '−₹45.30' + overdraft lines on the Credits page, signed ledger/campaign balance, chat 'Out of credits: you can read, but not reply' when canSendReply() (free replies || spendablePaise incl. overdraft >= service rate) is false. Not done: the web's date range + usage chart on Credits (/credits/utilization). flutter test 58/58.
 
 - [claude] 2026-10-19 IST: mobile Vistrow AI call status + AI call button on the lead sheet (screens/leads/vistrow_call.dart; staging + main, not released): panel (last call, tries, next AI call, declined reason, whyNot), 'AI call · agent' for admin/manager when canCall, 'Call anyway?' before a person calls while the AI is busy. flutter test 56/56. NOTE for the web/server session: GET /integrations/vistrow-outbound/leads/:id/status (vistrowLeadRoutes.js loadLead) checks only orgId, not visibility, so an agent can read the Vistrow status of another agent's lead by id; consider visibility.canSeeLead.
