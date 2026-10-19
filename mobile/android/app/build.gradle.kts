@@ -73,6 +73,9 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         manifestPlaceholders["appLabel"] = if (isStagingBuild) "Arthaleads Staging" else "Arthaleads"
+        // The staging app's icon carries a red STAGING band (src/stagingIcon),
+        // so it can't be mistaken for the live app on the home screen.
+        manifestPlaceholders["appIcon"] = if (isStagingBuild) "@mipmap/ic_launcher_staging" else "@mipmap/ic_launcher"
         if (isStagingBuild) applicationIdSuffix = ".staging"
     }
 
@@ -151,6 +154,9 @@ if (isStagingBuild) {
     // google-services.json has no client for the .staging package, and the
     // plugin fails the build without one.
     tasks.configureEach { if (name.contains("GoogleServices")) enabled = false }
+    // Staging-only icon resources (names don't clash with main's), never in
+    // a live build.
+    android.sourceSets.getByName("main").res.srcDir("src/stagingIcon/res")
 }
 
 kotlin {
