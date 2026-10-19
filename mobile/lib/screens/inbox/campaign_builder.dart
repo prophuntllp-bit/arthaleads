@@ -620,7 +620,7 @@ class _CampaignBuilderScreenState extends State<CampaignBuilderScreen> {
                         children: [
                           Text('${_rupees(prev['ratePaise'] as num?)} each · ${prev['creditCategory']}',
                               style: TextStyle(fontSize: 11, color: t.textSoft)),
-                          Text('balance ${_rupees(prev['availablePaise'] as num?)}', style: TextStyle(fontSize: 11, color: t.textSoft)),
+                          Text('balance ${((prev['availablePaise'] as num?) ?? 0) < 0 ? '−' : ''}${_rupees(((prev['availablePaise'] as num?) ?? 0).abs())}', style: TextStyle(fontSize: 11, color: t.textSoft)),
                         ],
                       ),
                     ],
