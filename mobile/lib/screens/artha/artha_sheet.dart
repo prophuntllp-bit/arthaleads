@@ -10,6 +10,7 @@ import '../../core/copilot_pages.dart';
 import '../../core/push_service.dart';
 import '../../core/theme.dart';
 import '../../widgets/report_message_button.dart';
+import 'artha_help.dart';
 import 'change_card.dart';
 import 'voice_input.dart';
 
@@ -27,14 +28,15 @@ class ArthaFocus {
 /// screen 1). Mirrors the web panel, frontend/src/components/HelpBot.jsx:
 /// streamed answers from POST /copilot/chat with the lookups shown as steps,
 /// names linked to their records, saved chats, starter buttons, ratings.
-Future<void> showArthaSheet(BuildContext context, {String? navLabel, ArthaFocus? focus, String? ask}) {
+Future<void> showArthaSheet(BuildContext context,
+    {String? navLabel, ArthaFocus? focus, String? ask, void Function(String label)? onNavigate}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.40),
-    builder: (_) => ArthaSheet(navLabel: navLabel, focus: focus, ask: ask),
+    builder: (_) => ArthaSheet(navLabel: navLabel, focus: focus, ask: ask, onNavigate: onNavigate),
   );
 }
 
@@ -56,6 +58,12 @@ class _Msg {
   List<ChangeProposal> proposals = [];
   bool writesDisabled = false;
   bool streaming;
+
+  /// Artha could not answer (not a refusal): offer "Raise a ticket".
+  bool failed = false;
+
+  /// A common-question answer: the screen its "Go there" opens.
+  String? goto;
   String? turnId;
   String? rating;
   _Msg(this.role, this.text, {this.prompt = '', this.streaming = false});
@@ -67,7 +75,10 @@ class ArthaSheet extends StatefulWidget {
 
   /// A question to ask as soon as the sheet opens ("Plan my day").
   final String? ask;
-  const ArthaSheet({super.key, this.navLabel, this.focus, this.ask});
+
+  /// Opens a drawer screen by its label (the shell's); "Go there" needs it.
+  final void Function(String label)? onNavigate;
+  const ArthaSheet({super.key, this.navLabel, this.focus, this.ask, this.onNavigate});
 
   @override
   State<ArthaSheet> createState() => _ArthaSheetState();
@@ -159,11 +170,13 @@ class _ArthaSheetState extends State<ArthaSheet> {
         bot.text = bot.text.isEmpty ? 'Stopped.' : '${bot.text}\n\n(Stopped.)';
       } else {
         bot.text = "Couldn't reach Artha. Check your internet and try again.";
+        bot.failed = true;
       }
     } on ArthaRefused catch (e) {
       bot.text = e.message;
     } catch (_) {
       bot.text = bot.text.isEmpty ? "Sorry, I couldn't reach Artha. Please try again." : bot.text;
+      bot.failed = true;
     } finally {
       bot.streaming = false;
       // A step still "running" when the stream ended did not finish.
@@ -225,6 +238,7 @@ class _ArthaSheetState extends State<ArthaSheet> {
         case 'error':
           bot.streaming = false;
           bot.text = '${ev['message'] ?? 'Something went wrong. Please try again.'}';
+          bot.failed = true;
       }
     });
     _toBottom();
@@ -542,8 +556,101 @@ class _ArthaSheetState extends State<ArthaSheet> {
               for (final s in _starters) _chip(t, s, () => _ask(s)),
           ],
         ),
+        if (_focus == null) ...[
+          const SizedBox(height: 18),
+          _commonQuestions(t),
+        ],
       ],
     );
+  }
+
+  bool _showCommon = false;
+
+  /// "Common questions": instant answers, no AI call, as on the web.
+  Widget _commonQuestions(AppTheme t) => Container(
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: t.border)),
+        clipBehavior: Clip.antiAlias,
+        child: Column(children: [
+          InkWell(
+            onTap: () => setState(() => _showCommon = !_showCommon),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(children: [
+                  Icon(Icons.help_outline_rounded, size: 18, color: t.textSoft),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text('Common questions', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: t.textSoft))),
+                  Icon(_showCommon ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: t.textSoft),
+                ]),
+              ),
+            ),
+          ),
+          if (_showCommon)
+            for (final item in arthaQuickAnswers) ...[
+              Divider(height: 1, color: t.border),
+              InkWell(
+                onTap: () => _quick(item),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 46),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    child: Row(children: [
+                      Expanded(child: Text(item.q, style: TextStyle(fontSize: 13.5, color: t.text))),
+                      Icon(Icons.arrow_forward_rounded, size: 16, color: t.textSoft),
+                    ]),
+                  ),
+                ),
+              ),
+            ],
+        ]),
+      );
+
+  void _quick(ArthaQuickAnswer item) {
+    setState(() {
+      _msgs.add(_Msg('user', item.q));
+      _msgs.add(_Msg('bot', item.a)..goto = item.goto);
+    });
+    _toBottom();
+  }
+
+  Widget _helpActions(AppTheme t, _Msg m) {
+    Widget button(IconData icon, String label, Color color, VoidCallback onTap) => Padding(
+          padding: const EdgeInsets.only(top: 8, right: 8),
+          child: OutlinedButton.icon(
+            onPressed: onTap,
+            icon: Icon(icon, size: 16),
+            label: Text(label),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: color,
+              side: BorderSide(color: color.withValues(alpha: 0.35)),
+              minimumSize: const Size(0, 40),
+              shape: const StadiumBorder(),
+            ),
+          ),
+        );
+    return Wrap(children: [
+      if (m.goto != null && widget.onNavigate != null)
+        button(Icons.arrow_forward_rounded, 'Go to ${m.goto}', AppColors.primary, () {
+          final label = m.goto!;
+          Navigator.of(context).pop();
+          widget.onNavigate!(label);
+        }),
+      if (m.failed) button(Icons.confirmation_number_outlined, 'Raise a ticket', AppColors.danger, () => _raiseTicket(m)),
+    ]);
+  }
+
+  Future<void> _raiseTicket(_Msg m) async {
+    final email = context.read<AuthState>().user?['email'] as String?;
+    final number = await showArthaTicketSheet(context, subject: m.prompt);
+    if (number == null || !mounted) return;
+    setState(() {
+      m.failed = false;
+      final who = email ?? 'your email';
+      final no = number.isEmpty ? '' : '$number ';
+      _msgs.add(_Msg('bot', "Ticket ${no}raised. We'll get back to you at $who within 24 hours. You can follow it in Help & Support, under Contact & Tickets."));
+    });
+    _toBottom();
   }
 
   /// "Log a call" needs the person's own words ("interested in 2 BHK, visit
@@ -638,7 +745,9 @@ class _ArthaSheetState extends State<ArthaSheet> {
               for (final c in m.choices) _choices(t, c),
               for (final p in m.proposals) ChangeCard(key: ObjectKey(p), p: p),
               if (m.proposals.length >= 2 && !m.writesDisabled) _applyAll(t, m),
-              if (!m.streaming && m.text.isNotEmpty) _feedbackRow(t, m),
+              if (m.failed || (m.goto != null && widget.onNavigate != null)) _helpActions(t, m),
+              // Not on the instant answers or the ticket note: no AI wrote those.
+              if (!m.streaming && m.text.isNotEmpty && (m.turnId != null || m.prompt.isNotEmpty)) _feedbackRow(t, m),
             ],
           ),
         ),
