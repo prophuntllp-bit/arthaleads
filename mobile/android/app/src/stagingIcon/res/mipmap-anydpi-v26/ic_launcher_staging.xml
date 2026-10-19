@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Staging app only (build.gradle.kts adds this folder for API_BASE_URL=api-staging):
+     the live icon's layers plus a red STAGING band, so the two apps differ on
+     the home screen. Regenerate with the script named in the commit. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+  <background android:drawable="@drawable/ic_launcher_background"/>
+  <foreground>
+    <layer-list>
+      <item>
+        <inset android:drawable="@drawable/ic_launcher_foreground" android:inset="16%" />
+      </item>
+      <item android:drawable="@drawable/ic_launcher_staging_band" />
+    </layer-list>
+  </foreground>
+</adaptive-icon>
