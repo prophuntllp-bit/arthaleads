@@ -65,7 +65,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 
-- [claude] 2026-10-19 IST: mobile 'Inbox' -> 'WhatsApp' rename (what people see only, as on web 17 Oct): screens/shell.dart (drawer label, push alias, label checks), inbox/conversations_shell.dart first tab, core/copilot_pages.dart, 3 UI strings. No APK until the owner releases everything together.
+- [claude] 2026-10-19 IST: mobile is waiting for one release of everything (owner). Unreleased on main: 1.0.14 batch + Artha Phase 4 + staging icon + Inbox->WhatsApp rename. Next candidates from the gap check: AI call status/button on the lead, credits display, Artha change log, Vistrow settings.
 
 
 
@@ -98,6 +98,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-19 IST: mobile Inbox -> WhatsApp rename (staging + main): shell.dart drawer label + WhatsApp logo, push aliases conversations/inbox -> WhatsApp, label checks; conversations_shell first tab; copilot_pages key/label; 3 strings use the web's 'WhatsApp chats' wording. Not released (owner: release all at once).
 
 - [claude] 2026-10-19 IST (staging ffc2f88, main f54f103): staging app icon gets a red STAGING band (mobile/android/app/src/stagingIcon/res, added only for staging builds; manifest icon ${appIcon}). Live build checked: com.arthaleads.crm, icon @mipmap/ic_launcher, 0 staging images. Also ran a web-vs-mobile gap check (read-only): app still says 'Inbox' (web renamed to WhatsApp 17 Oct); no Vistrow AI-calling UI in the app (settings, routing, lead AI call button/status); credits negative balance/spendablePaise + date range/usage chart partial; Artha change log (/copilot/actions) missing.
 - [claude] 2026-10-19 IST: main gets the /pricing plan comparison table and the /compare buyer's guide (staging 0cb9f379 -> main 9a71c0d), owner approved after staging check. Details in the staging log entry.
