@@ -98,6 +98,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-19 IST: main gets descriptive alt text on the /features workflow screenshots (staging f04c65e1, owner approved), fixing the one Bing Site Scan warning (19 Oct: 32 pages, 0 errors). Bing Webmaster profile filled as the company.
 
 - [claude] 2026-10-19 IST: mobile Inbox -> WhatsApp rename (staging + main): shell.dart drawer label + WhatsApp logo, push aliases conversations/inbox -> WhatsApp, label checks; conversations_shell first tab; copilot_pages key/label; 3 strings use the web's 'WhatsApp chats' wording. Not released (owner: release all at once).
 
