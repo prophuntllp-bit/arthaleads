@@ -98,6 +98,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+- [claude] 2026-10-19 IST: Flutter Mobile CI was red on every push since ~09:00: the private repo's Actions artifact storage quota is used up, so 'Upload debug APK' failed (and Railway's Wait for CI with it). The upload now runs only on workflow_dispatch (81f083fb); CI green again. Live API serves build 40 and its download link returns 200 signed out.
+
 - [claude] 2026-10-19 IST: RELEASED Arthaleads Mobile 1.0.14 (build 40, versionCode 2040, real key 2d9ac02f) to fleet + download page: Artha Phase 4, WhatsApp rename, Vistrow call status + auto-call settings, credits overdraft/usage, 7-day sign-out fix. IMPORTANT: the code repo went private on 17 Oct, so its release links (build 39's too) were 404 for everyone; APKs now live in the PUBLIC releases-only repo prophuntllp-bit/arthaleads-app (no code). appRelease.js points there; MOBILE_APP_HANDOFF.md step 3 updated. Privacy policy still needs the microphone line (voice in Artha) - web session.
 
 - [claude] 2026-10-19 IST: mobile Artha Common questions (screens/artha/artha_help.dart, app-worded copy of helpData QUICK_ANSWERS with Go to <screen>) + Raise a ticket under failed answers (POST /tickets) + floating Artha avatar hidden in the WhatsApp section (shell.dart). Staging 3ae562ef, main fcae5b82. Not released. flutter test 67/67.
