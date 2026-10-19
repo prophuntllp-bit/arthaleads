@@ -65,7 +65,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 
-- [claude] 2026-10-17 IST: Artha Phase 4 (mobile) is on main (b421a06..849d624). Next: APK 1.0.14 (build 40) on the owner's go-ahead; mobile/ and appRelease.js only.
+- [claude] 2026-10-19 IST: mobile 'Inbox' -> 'WhatsApp' rename (what people see only, as on web 17 Oct): screens/shell.dart (drawer label, push alias, label checks), inbox/conversations_shell.dart first tab, core/copilot_pages.dart, 3 UI strings. No APK until the owner releases everything together.
 
 
 
