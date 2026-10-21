@@ -598,7 +598,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
               )}
             </div>
             <div className="flex flex-wrap items-start gap-2">
-              <SourceBadge source={lead.source} />
+              <SourceBadge source={lead.source} lead={lead} />
               <PriorityBadge priority={lead.priority} />
               <StatusBadge status={lead.status} lead={lead} />
               {onEdit && (

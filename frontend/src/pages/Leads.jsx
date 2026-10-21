@@ -1329,7 +1329,7 @@ export default function Leads() {
                     <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} onContact={() => handleContact(lead)} /></td>
                     <td>
                       <div className="flex flex-col gap-0.5">
-                        <SourceBadge source={lead.source} />
+                        <SourceBadge source={lead.source} lead={lead} />
                         {lead.leadSourceLabel && (
                           <span className="text-[10px] text-app-soft truncate max-w-[130px]" title={lead.leadSourceLabel}>
                             {lead.leadSourceLabel}
