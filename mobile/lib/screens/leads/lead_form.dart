@@ -15,9 +15,12 @@ import '../../widgets/labeled_field.dart';
 /// field set (name/phone/email/source/status), so the form hides the rest for those.
 class LeadFormScreen extends StatefulWidget {
   final Map<String, dynamic>? lead;
+
+  /// A new lead's first values (from the quick-add sheet's More details).
+  final Map<String, dynamic>? initial;
   final List<Map<String, dynamic>> agents;
 
-  const LeadFormScreen({super.key, this.lead, required this.agents});
+  const LeadFormScreen({super.key, this.lead, this.initial, required this.agents});
 
   @override
   State<LeadFormScreen> createState() => _LeadFormScreenState();
@@ -26,10 +29,10 @@ class LeadFormScreen extends StatefulWidget {
 class _LeadFormScreenState extends State<LeadFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late final _name = TextEditingController(
-    text: widget.lead?['name'] as String? ?? '',
+    text: (widget.lead ?? widget.initial)?['name'] as String? ?? '',
   );
   late final _phone = TextEditingController(
-    text: widget.lead?['phone'] as String? ?? '',
+    text: (widget.lead ?? widget.initial)?['phone'] as String? ?? '',
   );
   late final _email = TextEditingController(
     text: widget.lead?['email'] as String? ?? '',
@@ -59,7 +62,7 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
     widget.lead?['followUpDate'] as String? ?? '',
   );
 
-  late String _source = widget.lead?['source'] as String? ?? 'Manual';
+  late String _source = (widget.lead ?? widget.initial)?['source'] as String? ?? 'Manual';
   late String _status = widget.lead?['status'] as String? ?? 'New';
   late String _priority = widget.lead?['priority'] as String? ?? 'Medium';
   late String _propertyType = widget.lead?['propertyType'] as String? ?? '';
@@ -85,6 +88,8 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
   void initState() {
     super.initState();
     if (!_isProjectLead) _phone.addListener(_onPhoneChanged);
+    // Carried over from the quick-add sheet: check it straight away.
+    if (!_isProjectLead && _phone.text.trim().isNotEmpty) _onPhoneChanged();
   }
 
   void _onPhoneChanged() {
