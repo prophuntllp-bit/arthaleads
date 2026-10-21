@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-21 IST: IN PROGRESS mobile New Lead: button moves from the home header to the Leads header (pinned bar on scroll, + FAB removed, Import/Export/QR into a menu), quick-add sheet (name, phone, source; More details = full form), duplicate number check while typing. Files: mobile/lib/screens/leads/*, screens/dashboard/dashboard_screen.dart. Mobile only.
+
 
 
 
