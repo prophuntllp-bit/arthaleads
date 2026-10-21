@@ -65,7 +65,11 @@ class DateRangePicker extends StatelessWidget {
   final dynamic value;
   final ValueChanged<dynamic> onChanged;
 
-  const DateRangePicker({super.key, required this.value, required this.onChanged});
+  /// Shown beside the calendar icon ("Last 30 days"); without it the trigger
+  /// is the icon alone.
+  final String? label;
+
+  const DateRangePicker({super.key, required this.value, required this.onChanged, this.label});
 
   Future<void> _open(BuildContext context) async {
     final result = await showModalBottomSheet<dynamic>(
@@ -79,6 +83,29 @@ class DateRangePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTheme.of(context);
+    if (label != null) {
+      return InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => _open(context),
+        child: Container(
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: t.surfaceLow,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: t.border),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.calendar_month_rounded, size: 17, color: t.textSoft),
+            const SizedBox(width: 6),
+            Text(label!, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: t.text)),
+            const SizedBox(width: 2),
+            Icon(Icons.expand_more_rounded, size: 18, color: t.textSoft),
+          ]),
+        ),
+      );
+    }
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () => _open(context),

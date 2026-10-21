@@ -24,15 +24,24 @@ import '../leads/lead_filters.dart';
 import '../leads/lead_form.dart';
 import 'dashboard_widgets.dart';
 import 'morning_brief.dart';
+import '../../core/artha_features.dart';
+import '../artha/artha_sheet.dart';
 import '../projects/project_detail_screen.dart';
 import '../../widgets/adaptive_grid.dart';
+
+/// Overdue follow-ups, for the badge on the bottom bar's Follow-ups tab.
+/// Set each time the Dashboard loads.
+final overdueFollowUps = ValueNotifier<int>(0);
 
 /// Dashboard — GET /leads/analytics + /leads/hot + /leads/followups-due.
 /// Mobile-first condensation of the web dashboard's zoned layout.
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key, this.onNavigate});
+  const DashboardScreen({super.key, this.onNavigate, this.reports = false});
 
   final ValueChanged<String>? onNavigate;
+
+  /// The Reports tab: the charts and Team section, no home cards.
+  final bool reports;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -90,13 +99,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _clocking = false;
   dynamic _dateRange = 'last30days';
   int? _goalOverride;
-  List<String> _insights = [];
-  bool _insightsOpen = false;
-  bool _insightsLoading = false;
   // Like the web, these panels load closed on every visit; the chevron
   // opens one for this visit only.
   bool _dueExpanded = false;
-  bool _hotExpanded = false;
   bool _staleExpanded = false;
   bool _projectsExpanded = false;
   Timer? _refreshTimer;
@@ -190,6 +195,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _requireSelfie =
           results[7]?.data['requireSelfie'] as bool? ?? _requireSelfie;
       _waConnected = results[8]?.data['connected'] == true;
+      overdueFollowUps.value = _due.where(_isOverdue).length;
       _goalOverride = null;
       _loading = false;
       _refreshing = false;
@@ -444,19 +450,18 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  Future<void> _generateInsights() async {
+  // ── Artha insights (the banner's View) ───────────────────────────────────
+
+  /// Two short lines from this range's numbers (POST /help/ask, as before).
+  Future<List<String>>? _insightsFuture;
+
+  Future<List<String>> _fetchInsights() async {
     final a = _analytics;
-    if (a == null || _insightsLoading) return;
-    setState(() {
-      _insightsOpen = true;
-      _insightsLoading = true;
-    });
+    if (a == null) return const [];
     try {
       final sources = ((a['bySource'] as Map?) ?? {}).entries.toList()
         ..sort((x, y) => (y.value as num).compareTo(x.value as num));
-      final topSource = sources.isEmpty
-          ? 'N/A'
-          : '${sources.first.key} (${sources.first.value})';
+      final topSource = sources.isEmpty ? 'N/A' : '${sources.first.key} (${sources.first.value})';
       final summary = [
         'Total leads: ${a['allTimeTotal'] ?? 0}',
         'New this period: ${a['totalLeads'] ?? 0}',
@@ -466,14 +471,11 @@ class _DashboardScreenState extends State<DashboardScreen>
         'Top source: $topSource',
         'Pipeline value: ${a['pipelineValue'] ?? 0}',
       ].join('. ');
-      final res = await _api.dio.post(
-        '/help/ask',
-        data: {
-          'question':
-              'Using only these CRM numbers: $summary. Give exactly 2 short insights: one positive and one action. Each on its own line, maximum 15 words.',
-          'page': '',
-        },
-      );
+      final res = await _api.dio.post('/help/ask', data: {
+        'question':
+            'Using only these CRM numbers: $summary. Give exactly 2 short insights: one positive and one action. Each on its own line, maximum 15 words.',
+        'page': '',
+      });
       final answer = res.data['answer'] as String? ?? '';
       final lines = answer
           .split('\n')
@@ -481,26 +483,118 @@ class _DashboardScreenState extends State<DashboardScreen>
           .where((line) => line.isNotEmpty)
           .take(2)
           .toList();
-      if (mounted) setState(() => _insights = lines);
+      return lines.isEmpty ? const ['Insights are unavailable right now.'] : lines;
     } catch (_) {
-      if (mounted) {
-        setState(() => _insights = ['Insights are unavailable right now.']);
-      }
-    } finally {
-      if (mounted) setState(() => _insightsLoading = false);
+      return const ['Insights are unavailable right now.'];
     }
   }
 
-  Widget _dashboardHeader(
-    BuildContext context,
-    AuthState auth,
-    Map<String, dynamic>? analytics,
-  ) {
+  void _openInsights() {
+    _insightsFuture ??= _fetchInsights();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          final t = AppTheme.of(ctx);
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  const Icon(Icons.auto_awesome_rounded, size: 18, color: _arthaPurple),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text('Artha insights', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: t.text))),
+                ]),
+                const SizedBox(height: 2),
+                Text('From your numbers for $_scope', style: TextStyle(fontSize: 12.5, color: t.textSoft)),
+                const SizedBox(height: 14),
+                FutureBuilder<List<String>>(
+                  future: _insightsFuture,
+                  builder: (_, snap) {
+                    if (snap.connectionState != ConnectionState.done) {
+                      return const Padding(padding: EdgeInsets.symmetric(vertical: 18), child: Center(child: AppSpinner(size: 22)));
+                    }
+                    return Column(children: [
+                      for (final line in snap.data ?? const <String>[])
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            const Padding(
+                              padding: EdgeInsets.only(top: 3),
+                              child: Icon(Icons.arrow_forward_rounded, size: 14, color: _arthaPurple),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(line, style: TextStyle(fontSize: 14, height: 1.4, color: t.text))),
+                          ]),
+                        ),
+                    ]);
+                  },
+                ),
+                const SizedBox(height: 6),
+                Row(children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => setSheet(() => _insightsFuture = _fetchInsights()),
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: const Text('Refresh'),
+                      style: OutlinedButton.styleFrom(minimumSize: const Size(0, 46)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        showArthaSheet(context, navLabel: 'Dashboard', onNavigate: widget.onNavigate);
+                      },
+                      icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                      label: const Text('Ask Artha'),
+                      style: FilledButton.styleFrom(backgroundColor: _arthaPurple, minimumSize: const Size(0, 46)),
+                    ),
+                  ),
+                ]),
+              ]),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ── Home (redesigned 21 Oct 2026) ────────────────────────────────────────
+  // Action first: what to do today, then the numbers. Charts and the Team
+  // section moved to the Reports tab (DashboardScreen(reports: true)).
+
+  static const _arthaPurple = Color(0xFF7C3AED);
+
+  /// Today in IST, as a plain date.
+  static DateTime _istDay(DateTime d) {
+    final x = d.toUtc().add(const Duration(hours: 5, minutes: 30));
+    return DateTime(x.year, x.month, x.day);
+  }
+
+  bool _isOverdue(Map<String, dynamic> lead) {
+    final date = DateTime.tryParse('${lead['followUpDate'] ?? ''}');
+    return date != null && _istDay(date).isBefore(_istDay(DateTime.now()));
+  }
+
+  bool _isDueToday(Map<String, dynamic> lead) {
+    final date = DateTime.tryParse('${lead['followUpDate'] ?? ''}');
+    return date != null && _istDay(date) == _istDay(DateTime.now());
+  }
+
+  List<Map<String, dynamic>> _upcoming(Map<String, dynamic>? a) =>
+      ((a?['upcomingItems'] as List?) ?? const []).whereType<Map>().map((m) => m.cast<String, dynamic>()).toList();
+
+  bool get _agent => context.read<AuthState>().role == 'agent';
+
+  Widget _homeHeader(BuildContext context, AuthState auth, Map<String, dynamic>? analytics) {
+    final t = AppTheme.of(context);
     final bySource = (analytics?['bySource'] as Map?) ?? {};
-    // A pill for every source that is connected or has leads in this period, in
-    // a fixed order. Anything that is not one of the named sources (Manual,
-    // Referral, Walk-in, the property portals...) is counted together as Other,
-    // so the pills add up to the Total Leads card. Same rule as the web.
+    // A pill for every source that is connected or has leads in this period,
+    // in a fixed order. Anything that is not a named source (Manual, Referral,
+    // the portals...) counts as Other, so the pills add up to Total Leads.
     final connected = <String>{
       for (final a in _automations)
         if (a['status'] == 'connected' && a['isActive'] != false) '${a['platform']}',
@@ -511,719 +605,869 @@ class _DashboardScreenState extends State<DashboardScreen>
     final otherCount = bySource.entries
         .where((e) => !named.contains('${e.key}'))
         .fold<int>(0, (sum, e) => sum + ((e.value as num?)?.toInt() ?? 0));
-    final specs = <({String platform, String label, int count, Color color, IconData icon})>[
-      (platform: 'Facebook', label: 'Facebook', count: n('Facebook'), color: const Color(0xFF1877F2), icon: FontAwesomeIcons.facebookF.data),
-      (platform: 'Google', label: 'Google', count: n('Google'), color: const Color(0xFFEA4335), icon: FontAwesomeIcons.google.data),
-      (platform: 'WhatsApp', label: 'WhatsApp', count: n('WhatsApp'), color: AppColors.whatsapp, icon: FontAwesomeIcons.whatsapp.data),
-      (platform: 'Website Form', label: 'Website', count: n('Website'), color: AppColors.purple, icon: FontAwesomeIcons.globe.data),
-      (platform: 'Vistrow Voice', label: 'Vistrow Voice', count: n('Vistrow Voice'), color: const Color(0xFF8B5CF6), icon: Icons.mic_rounded),
-      (platform: 'Custom', label: 'Other', count: otherCount, color: AppColors.warning, icon: FontAwesomeIcons.bolt.data),
+    final specs = <({String platform, String source, String label, int count, Color color, IconData icon})>[
+      (platform: 'Facebook', source: 'Facebook', label: 'Facebook', count: n('Facebook'), color: const Color(0xFF1877F2), icon: FontAwesomeIcons.facebookF.data),
+      (platform: 'Google', source: 'Google', label: 'Google', count: n('Google'), color: const Color(0xFFEA4335), icon: FontAwesomeIcons.google.data),
+      (platform: 'WhatsApp', source: 'WhatsApp', label: 'WhatsApp', count: n('WhatsApp'), color: AppColors.whatsapp, icon: FontAwesomeIcons.whatsapp.data),
+      (platform: 'Website Form', source: 'Website', label: 'Website', count: n('Website'), color: AppColors.purple, icon: FontAwesomeIcons.globe.data),
+      (platform: 'Vistrow Voice', source: 'Vistrow Voice', label: 'Calls', count: n('Vistrow Voice'), color: const Color(0xFF2563EB), icon: Icons.phone_in_talk_rounded),
+      (platform: 'Custom', source: '', label: 'Other', count: otherCount, color: AppColors.warning, icon: FontAwesomeIcons.bolt.data),
     ];
     final sources = [
       for (final sp in specs)
         if (connected.contains(sp.platform) || sp.count > 0) sp,
     ];
+    final first = (auth.user?['name'] as String? ?? '').split(' ').first;
 
     return SoftSurface(
-      radius: 28,
-      color: AppTheme.of(context).surface,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (sources.isNotEmpty) ...[
-            // Wraps onto a second line rather than scrolling sideways, so no
-            // source is ever cut off at the edge on a narrow screen.
-            Wrap(
-              spacing: 7,
-              runSpacing: 7,
-              children: [
-                for (final source in sources)
-                  _SourcePill(
-                    count: source.count,
-                    color: source.color,
-                    icon: source.icon,
-                    tooltip: source.label,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 14),
-          ],
-          Text('OVERVIEW', style: AppText.kicker(context)),
-          const SizedBox(height: 6),
-          Text(
-            '${_greeting()}, ${(auth.user?['name'] as String? ?? '').split(' ').first}',
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.7,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              DateRangePicker(
-                value: _dateRange,
-                onChanged: (value) {
-                  setState(() => _dateRange = value);
-                  _load();
-                },
-              ),
-              const SizedBox(width: 9),
-              GradientButton(
-                onPressed: _openAddLead,
-                icon: Icons.add_rounded,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                child: const Text('New Lead'),
-              ),
-              const Spacer(),
+      radius: 24,
+      color: t.surface,
+      padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('${_greeting()},', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: t.textSoft)),
               Text(
-                _dateRangeLabel,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: AppTheme.of(context).textSoft,
-                ),
+                first.isEmpty ? 'Welcome' : first,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: t.text, height: 1.2),
               ),
-            ],
+              const SizedBox(height: 2),
+              Text("Here's your overview for today", style: TextStyle(fontSize: 12, color: t.textSoft)),
+            ]),
           ),
-          if (auth.isAdmin) ...[
-          const SizedBox(height: 14),
-          InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: _insights.isEmpty
-                ? _generateInsights
-                : () => setState(() => _insightsOpen = !_insightsOpen),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.045),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.auto_awesome_rounded,
-                        size: 15,
-                        color: AppColors.primary,
-                      ),
-                      const SizedBox(width: 7),
-                      const Text(
-                        'ARTHA AI',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.4,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: const Text(
-                          'LIVE',
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 9),
-                      Expanded(
-                        child: Text(
-                          _insightsLoading
-                              ? 'Analysing pipeline…'
-                              : _insights.isEmpty
-                              ? 'Tap for live insights'
-                              : '${_insights.length} insights ready',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.of(context).textSoft,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (_insightsOpen &&
-                          _insights.isNotEmpty &&
-                          !_insightsLoading)
-                        InkWell(
-                          borderRadius: BorderRadius.circular(8),
-                          onTap: _generateInsights,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 5,
-                              vertical: 3,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.bolt_rounded,
-                                  size: 11,
-                                  color: AppTheme.of(context).textSoft,
-                                ),
-                                const SizedBox(width: 2),
-                                Text(
-                                  'Refresh',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: AppTheme.of(context).textSoft,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      if (_insightsLoading)
-                        const AppSpinner(size: 14)
-                      else
-                        Icon(
-                          _insightsOpen
-                              ? Icons.keyboard_arrow_up_rounded
-                              : Icons.keyboard_arrow_down_rounded,
-                          size: 18,
-                          color: AppTheme.of(context).textSoft,
-                        ),
-                    ],
-                  ),
-                  if (_insightsOpen && _insights.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Divider(height: 1, color: AppTheme.of(context).border),
-                    const SizedBox(height: 8),
-                    for (final insight in _insights)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 5),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Padding(
-                              padding: EdgeInsets.only(top: 3),
-                              child: Icon(
-                                Icons.arrow_upward_rounded,
-                                size: 10,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                insight,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  height: 1.35,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ],
-              ),
+          const SizedBox(width: 10),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            DateRangePicker(
+              value: _dateRange,
+              label: _dateRangeLabel,
+              onChanged: (value) {
+                setState(() {
+                  _dateRange = value;
+                  _insightsFuture = null;
+                });
+                _load();
+              },
+            ),
+            const SizedBox(height: 8),
+            GradientButton(
+              onPressed: _openAddLead,
+              icon: Icons.add_rounded,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+              child: const Text('New Lead'),
+            ),
+          ]),
+        ]),
+        if (sources.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          // One line that scrolls sideways, never a second row.
+          SizedBox(
+            height: 50,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: sources.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (_, i) {
+                final sp = sources[i];
+                return _SourceChip(
+                  count: sp.count,
+                  label: sp.label,
+                  color: sp.color,
+                  icon: sp.icon,
+                  onTap: () => _openLeadsFiltered(source: sp.source),
+                );
+              },
             ),
           ),
-          ],
         ],
+      ]),
+    );
+  }
+
+  /// One line: Artha's insights for this range ("View" opens them).
+  Widget _arthaBanner(BuildContext context) {
+    final t = AppTheme.of(context);
+    final tint = t.isDark ? const Color(0xFFC4B5FD) : _arthaPurple;
+    return Material(
+      color: _arthaPurple.withValues(alpha: t.isDark ? 0.14 : 0.07),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: _arthaPurple.withValues(alpha: 0.22)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: _openInsights,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
+          child: Row(children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)]),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Text('ARTHA AI', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: tint)),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(color: _arthaPurple.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(6)),
+                    child: Text('LIVE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: tint)),
+                  ),
+                ]),
+                const SizedBox(height: 2),
+                Text('AI insights for smarter follow-ups',
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: t.text)),
+              ]),
+            ),
+            const SizedBox(width: 6),
+            Text('View', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: tint)),
+            Icon(Icons.chevron_right_rounded, size: 20, color: tint),
+          ]),
+        ),
       ),
     );
   }
 
-  Widget _actionRequiredSection(BuildContext context) {
-    final now = DateTime.now();
-    final overdueLeads = _due.where((lead) {
-      final raw = lead['followUpDate'] as String?;
-      final date = raw == null ? null : DateTime.tryParse(raw)?.toLocal();
-      return date != null &&
-          date.isBefore(DateTime(now.year, now.month, now.day));
-    }).toList();
-    final todayLeads = _due.where((lead) {
-      final raw = lead['followUpDate'] as String?;
-      final date = raw == null ? null : DateTime.tryParse(raw)?.toLocal();
-      return date != null &&
-          date.year == now.year &&
-          date.month == now.month &&
-          date.day == now.day;
-    }).toList();
-    final overdue = overdueLeads.length;
-    final dueToday = todayLeads.length;
+  /// Today's priorities: the morning brief's counts as three tiles. The
+  /// header opens the full brief (who to call first, needs attention) where
+  /// the company has it, else Follow-ups.
+  Widget _prioritiesCard(BuildContext context, Map<String, dynamic>? a) {
+    final t = AppTheme.of(context);
+    final today = _istDay(DateTime.now());
+    final visits = _upcoming(a).where((i) {
+      final d = DateTime.tryParse('${i['siteVisitDate'] ?? ''}');
+      return d != null && _istDay(d) == today;
+    }).length;
+    final overdue = _due.where(_isOverdue).length;
 
-    return Column(
-      children: [
-        const _SectionHeader(
-          label: 'Action Required',
-          color: AppColors.primary,
+    Widget tile(IconData icon, Color color, int n, String label, String sub, VoidCallback onTap) {
+      final on = n > 0;
+      return Expanded(
+        child: Material(
+          color: on ? color.withValues(alpha: t.isDark ? 0.14 : 0.07) : t.surfaceLow,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 10, 8, 10),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Icon(icon, size: 19, color: on ? color : t.textSoft),
+                  const SizedBox(width: 6),
+                  Text('$n', style: TextStyle(fontSize: 22, height: 1.1, fontWeight: FontWeight.w800, color: on ? color : t.text)),
+                ]),
+                const SizedBox(height: 6),
+                Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: t.text)),
+                Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: t.textSoft)),
+              ]),
+            ),
+          ),
         ),
-        const SizedBox(height: 12),
-        SoftSurface(
-          radius: 20,
-          color: AppColors.danger.withValues(alpha: 0.045),
-          border: Border.all(color: AppColors.danger.withValues(alpha: 0.24)),
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              InkWell(
-                onTap: () => setState(() => _dueExpanded = !_dueExpanded),
-                borderRadius: BorderRadius.circular(20),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: AppColors.danger.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(13),
-                        ),
-                        child: const Icon(
-                          Icons.warning_amber_rounded,
-                          size: 20,
-                          color: AppColors.danger,
-                        ),
-                      ),
-                      const SizedBox(width: 11),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '$overdue overdue · $dueToday due today',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            Text(
-                              // Same as the web: an agent only sees their own leads.
-                              context.read<AuthState>().role == 'agent' ? 'Your action list' : 'Across your team',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.of(context).textSoft,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        _dueExpanded
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.keyboard_arrow_down_rounded,
-                        size: 18,
-                      ),
-                    ],
-                  ),
-                ),
+      );
+    }
+
+    return SoftSurface(
+      radius: 20,
+      padding: const EdgeInsets.fromLTRB(14, 8, 12, 14),
+      child: Column(children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: _openPriorities,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.10), shape: BoxShape.circle),
+                child: const Icon(Icons.track_changes_rounded, size: 20, color: AppColors.primary),
               ),
-              if (_dueExpanded) ...[
-                Divider(height: 1, color: AppTheme.of(context).border),
-                if (overdueLeads.isEmpty && todayLeads.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text('No follow-ups require action.'),
-                  ),
-                for (final lead in [...overdueLeads, ...todayLeads].take(8))
-                  ListTile(
-                    dense: true,
-                    onTap: () => _openLead(lead['_id'] as String?),
-                    // Days overdue ("45d"), same as the web, so the name
-                    // keeps its own line next to the row's shortcuts.
-                    leading: _smallBadge(
-                      overdueLeads.contains(lead)
-                          ? '${(lead['daysOverdue'] as num?)?.toInt() ?? '!'}d'
-                          : 'TODAY',
-                      overdueLeads.contains(lead)
-                          ? AppColors.danger
-                          : AppColors.warning,
-                    ),
-                    minLeadingWidth: 0,
-                    horizontalTitleGap: 10,
-                    title: Text(
-                      lead['name']?.toString() ?? 'Lead',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    subtitle: Text(
-                      '${orIfBlank(lead['assignedToName'], 'Unassigned')} · ${_followUpTime(lead['followUpDate'])}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextButton(
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            minimumSize: const Size(0, 32),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          onPressed: () => _setFollowUp(lead, _tomorrow11Ist()),
-                          child: const Text('Tomorrow', style: TextStyle(fontSize: 11.5)),
-                        ),
-                        IconButton(
-                          tooltip: 'Clear this follow-up',
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () => _setFollowUp(lead, null),
-                          icon: const Icon(Icons.close_rounded, size: 18),
-                        ),
-                        IconButton(
-                          tooltip: 'Call',
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () => _call(
-                            phone: lead['phone']?.toString(),
-                            name: lead['name']?.toString(),
-                            leadId: lead['_id']?.toString(),
-                          ),
-                          icon: Icon(FontAwesomeIcons.phone.data, size: 16),
-                        ),
-                      ],
-                    ),
-                  ),
-                if (context.read<AuthState>().isAdmin &&
-                    _due.any((l) => ((l['daysOverdue'] as num?)?.toInt() ?? 0) > 30))
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 4, 8, 4),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${_due.where((l) => ((l['daysOverdue'] as num?)?.toInt() ?? 0) > 30).length} of these are more than 30 days overdue.',
-                            style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: _clearStaleFollowUps,
-                          child: const Text('Clear old', style: TextStyle(color: AppColors.danger, fontSize: 12)),
-                        ),
-                      ],
-                    ),
-                  ),
-                if (overdueLeads.length + todayLeads.length > 8)
-                  TextButton(
-                    onPressed: () => widget.onNavigate?.call('Follow-ups'),
-                    child: Text(
-                      'View all ${plural(overdueLeads.length + todayLeads.length, 'follow-up')}',
-                    ),
-                  ),
-              ],
-            ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text("Today's priorities", style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: t.text)),
+                  Text(_agent ? 'From your leads and follow-ups' : "From your team's leads and follow-ups",
+                      maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: t.textSoft)),
+                ]),
+              ),
+              Icon(Icons.chevron_right_rounded, color: t.textSoft),
+            ]),
           ),
         ),
-        if (_hot.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          SoftSurface(
-            radius: 20,
-            border: Border.all(
-              color: AppColors.primary.withValues(alpha: 0.65),
-              width: 1.2,
-            ),
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: [
-                InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () => setState(() => _hotExpanded = !_hotExpanded),
-                  child: Padding(
-                  padding: const EdgeInsets.all(13),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(13),
-                        ),
-                        child: const Icon(
-                          Icons.local_fire_department_rounded,
-                          size: 21,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Row(
-                              children: [
-                                Text(
-                                  'Hot Today',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                InfoTip(
-                                  'Ranked by recent WhatsApp replies, how new the lead is, follow-ups due, budget and pipeline stage. Leads tagged Not a buyer are left out.',
-                                ),
-                              ],
-                            ),
-                            Text(
-                              plural(_hot.length, 'ranked lead'),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.of(context).textSoft,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(
-                        Icons.auto_awesome_rounded,
-                        size: 17,
-                        color: AppColors.primary,
-                      ),
-                      const SizedBox(width: 6),
-                      Icon(
-                        _hotExpanded
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.keyboard_arrow_down_rounded,
-                        size: 18,
-                      ),
-                    ],
-                  ),
-                ),
-                ),
-                if (_hotExpanded)
-                for (final hot in _hot) ...[
-                  Divider(height: 1, color: AppTheme.of(context).border),
-                  InkWell(
-                    onTap: () => _openLead(str(hot['_id'])),
-                    child: Padding(
-                    padding: const EdgeInsets.all(13),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: AppColors.danger.withValues(alpha: 0.09),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Text(
-                            '${hot['_score'] ?? hot['score'] ?? 'HOT'}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w900,
-                              color: AppColors.danger,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 11),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                str(hot['name']) ?? '—',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              Text(
-                                [
-                                      str(hot['status']),
-                                      str(hot['priority']),
-                                      str(hot['location']),
-                                    ]
-                                    .whereType<String>()
-                                    .where((v) => v.isNotEmpty)
-                                    .join(' · '),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: AppTheme.of(context).textSoft,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Call',
-                          onPressed: () => _call(
-                            phone: str(hot['phone']),
-                            name: str(hot['name']),
-                            leadId: str(hot['_id']),
-                          ),
-                          icon: Icon(
-                            FontAwesomeIcons.phone.data,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'WhatsApp',
-                          onPressed: () => showWhatsAppSendSheet(
-                            context,
-                            phone: str(hot['phone']),
-                            name: str(hot['name']),
-                            leadId: str(hot['_id']),
-                          ),
-                          icon: Icon(
-                            FontAwesomeIcons.whatsapp.data,
-                            color: AppColors.whatsapp,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ],
+        const SizedBox(height: 8),
+        Row(children: [
+          tile(Icons.local_fire_department_rounded, AppColors.primary, _hot.length, 'Hot leads', 'Need attention', _openHotSheet),
+          const SizedBox(width: 8),
+          tile(Icons.alarm_rounded, AppColors.danger, overdue, 'Overdue', 'Follow-ups', () => widget.onNavigate?.call('Follow-ups')),
+          const SizedBox(width: 8),
+          tile(Icons.event_available_rounded, _arthaPurple, visits, 'Site visits', 'Today', () => widget.onNavigate?.call('Follow-ups')),
+        ]),
+      ]),
     );
   }
 
-  Widget _attendanceCard(BuildContext context) {
-    final clockIn = DateTime.tryParse(
-      '${_attendance?['clockIn'] ?? ''}',
-    )?.toLocal();
-    final clockOut = DateTime.tryParse(
-      '${_attendance?['clockOut'] ?? ''}',
-    )?.toLocal();
+  /// The full morning brief in a sheet, for companies that have it.
+  Future<void> _openPriorities() async {
+    final brief = (await ArthaFeatures.get())['brief'] == true;
+    if (!mounted) return;
+    if (!brief) {
+      widget.onNavigate?.call('Follow-ups');
+      return;
+    }
+    final auth = context.read<AuthState>();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.85,
+        minChildSize: 0.4,
+        maxChildSize: 0.95,
+        builder: (ctx, scroll) => ListView(
+          controller: scroll,
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+          children: [
+            MorningBrief(
+              userId: '${auth.user?['_id'] ?? ''}',
+              refresh: _briefRefresh,
+              expanded: true,
+              onOpen: () => Navigator.of(ctx).pop(),
+              onNavigate: (label) => widget.onNavigate?.call(label),
+              onCall: _call,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _attendanceRow(BuildContext context) {
+    final t = AppTheme.of(context);
+    final clockIn = DateTime.tryParse('${_attendance?['clockIn'] ?? ''}')?.toLocal();
+    final clockOut = DateTime.tryParse('${_attendance?['clockOut'] ?? ''}')?.toLocal();
     final working = clockIn != null && clockOut == null;
     final done = clockIn != null && clockOut != null;
+    final (status, color) = working
+        ? ('Clocked in ${DateFormat('h:mm a').format(clockIn)}', AppColors.success)
+        : done
+        ? ('Done · ${DateFormat('h:mm a').format(clockIn)} to ${DateFormat('h:mm a').format(clockOut)}', t.textSoft)
+        : ('Not clocked in', AppColors.danger);
     return SoftSurface(
-      radius: 18,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          Icon(
-            working ? Icons.timer_outlined : Icons.fingerprint_rounded,
-            color: working ? AppColors.success : AppColors.primary,
-            size: 28,
+      radius: 20,
+      padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+      child: Row(children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.10), shape: BoxShape.circle),
+          child: Icon(working ? Icons.timer_outlined : Icons.fingerprint_rounded, size: 21, color: working ? AppColors.success : AppColors.primary),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Attendance', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: t.text)),
+            const SizedBox(height: 2),
+            Row(children: [
+              Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(status, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+              ),
+            ]),
+          ]),
+        ),
+        if (!done)
+          FilledButton(
+            onPressed: _clocking ? null : _clockAttendance,
+            style: FilledButton.styleFrom(
+              backgroundColor: working ? AppColors.danger : AppColors.primary,
+              minimumSize: const Size(0, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+            ),
+            child: _clocking
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : Text(working ? 'Clock Out' : 'Clock In'),
+          )
+        else
+          IconButton(
+            tooltip: 'Open Attendance',
+            onPressed: () => widget.onNavigate?.call('Attendance'),
+            icon: const Icon(Icons.chevron_right_rounded),
+          ),
+      ]),
+    );
+  }
+
+  /// The six numbers in one card, three to a row.
+  Widget _performanceCard(BuildContext context, Map<String, dynamic> a) {
+    final t = AppTheme.of(context);
+    final byStatus = (a['byStatus'] as Map?) ?? {};
+    final total = (a['totalLeads'] as num?)?.toInt() ?? 0;
+    final prev = (a['previousPeriodLeads'] as num?)?.toInt();
+    final delta = prev == null ? null : _calcDelta(total, prev);
+    final fresh = (byStatus['New'] as num?)?.toInt() ?? 0;
+    final sp = (a['speedToLead'] as Map?) ?? {};
+    final tot = (sp['total'] as num?)?.toInt() ?? 0;
+    final in1h = (sp['within1h'] as num?)?.toInt() ?? 0;
+    final pct = tot == 0 ? null : (in1h / tot * 100).round();
+    final visits = ((a['sourcePerformance'] as List?) ?? []).fold<int>(0, (n, r) => n + (((r as Map)['visits'] as num?)?.toInt() ?? 0));
+    final won = (byStatus['Closed Won'] as num?)?.toInt() ?? 0;
+    final dueToday = (a['todayFollowUps'] as num?)?.toInt() ?? 0;
+    // Colour only where it means something: a zero stays plain.
+    Color tone(int v, Color c) => v > 0 ? c : t.text;
+
+    final tiles = [
+      _KpiTile(
+        label: 'Total leads',
+        value: '$total',
+        sub: delta != null ? '${delta >= 0 ? '↑' : '↓'} ${delta.abs()}% vs previous' : 'In this period',
+        subColor: delta == null ? null : (delta >= 0 ? AppColors.success : AppColors.danger),
+        color: tone(total, AppColors.primary),
+        tip: 'Leads that came in during the selected dates, including any later moved into a project.',
+        onTap: () => _openLeadsFiltered(),
+      ),
+      _KpiTile(
+        label: 'New leads',
+        value: '$fresh',
+        sub: 'Not contacted yet',
+        color: tone(fresh, const Color(0xFF2563EB)),
+        tip: 'Leads from these dates still in New: nobody has marked them contacted yet.',
+        onTap: () => _openLeadsFiltered(status: 'New'),
+      ),
+      _KpiTile(
+        label: 'Response',
+        value: pct == null ? '-' : '$pct%',
+        // The headline is "within 1 hour", so the line under it is too.
+        sub: tot == 0 ? 'No leads yet' : '$in1h of $tot in 1 hr',
+        sub2: tot == 0 ? null : '${sp['notContacted'] ?? 0} not yet',
+        color: pct == null ? t.textSoft : pct >= 60 ? AppColors.success : pct >= 30 ? AppColors.warning : AppColors.danger,
+        tip: "Leads a person reached within an hour of arriving: a call, marking them Contacted, or an agent's own WhatsApp message. The WhatsApp bot's replies don't count.",
+      ),
+      _KpiTile(
+        label: 'Site visits',
+        value: '$visits',
+        sub: visits > 0 ? 'Reached site or later' : 'None yet',
+        color: tone(visits, _arthaPurple),
+        tip: 'Leads from these dates at the Site Visit stage or later, or with a site visit date set.',
+        onTap: () => _openLeadsFiltered(status: 'Site Visit'),
+      ),
+      _KpiTile(
+        label: 'Closed won',
+        value: '$won',
+        sub: won > 0 && total > 0 ? '${(won / total * 1000).round() / 10}% of leads' : 'None yet',
+        color: tone(won, AppColors.success),
+        tip: 'Leads from these dates marked Closed Won.',
+        onTap: () => _openLeadsFiltered(status: 'Closed Won'),
+      ),
+      _KpiTile(
+        label: 'Follow-ups',
+        value: '$dueToday',
+        sub: 'Due today',
+        color: tone(dueToday, AppColors.warning),
+        tip: 'Follow-ups due today. This one ignores the date range above.',
+        onTap: () => widget.onNavigate?.call('Follow-ups'),
+      ),
+    ];
+
+    return SoftSurface(
+      radius: 20,
+      padding: const EdgeInsets.fromLTRB(14, 8, 12, 14),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => widget.onNavigate?.call('Reports'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(children: [
+              const Icon(Icons.bar_chart_rounded, size: 22, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Lead performance', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: t.text))),
+              Text(_dateRangeLabel, style: TextStyle(fontSize: 12, color: t.textSoft)),
+              Icon(Icons.chevron_right_rounded, size: 20, color: t.textSoft),
+            ]),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _kpiRow(tiles.sublist(0, 3)),
+        const SizedBox(height: 8),
+        _kpiRow(tiles.sublist(3)),
+      ]),
+    );
+  }
+
+  Widget _kpiRow(List<Widget> tiles) => IntrinsicHeight(
+        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Expanded(child: tiles[0]),
+          const SizedBox(width: 8),
+          Expanded(child: tiles[1]),
+          const SizedBox(width: 8),
+          Expanded(child: tiles[2]),
+        ]),
+      );
+
+  /// Overdue and due-today follow-ups in one line; Review opens the list.
+  Widget _actionBar(BuildContext context) {
+    final t = AppTheme.of(context);
+    final overdueLeads = _due.where(_isOverdue).toList();
+    final todayLeads = _due.where(_isDueToday).toList();
+    final scope = _agent ? 'Your follow-ups' : 'Across your team';
+    if (overdueLeads.isEmpty && todayLeads.isEmpty) {
+      return SoftSurface(
+        radius: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(children: [
+          const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text("You're all caught up for today", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: t.text)),
+              Text('No follow-ups overdue or due today · $scope', style: TextStyle(fontSize: 11.5, color: t.textSoft)),
+            ]),
+          ),
+        ]),
+      );
+    }
+    final urgent = overdueLeads.isNotEmpty;
+    final accent = urgent ? AppColors.danger : AppColors.warning;
+    return SoftSurface(
+      radius: 20,
+      color: accent.withValues(alpha: 0.05),
+      border: Border.all(color: accent.withValues(alpha: 0.26)),
+      padding: EdgeInsets.zero,
+      child: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+          child: Row(children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+              child: Icon(Icons.warning_amber_rounded, size: 21, color: accent),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Action required', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: accent)),
+                Text('${overdueLeads.length} overdue · ${todayLeads.length} due today',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: t.text)),
+                Text(scope, style: TextStyle(fontSize: 11.5, color: t.textSoft)),
+              ]),
+            ),
+            OutlinedButton(
+              onPressed: () => setState(() => _dueExpanded = !_dueExpanded),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: accent,
+                side: BorderSide(color: accent.withValues(alpha: 0.4)),
+                minimumSize: const Size(0, 40),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                shape: const StadiumBorder(),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(_dueExpanded ? 'Hide' : 'Review'),
+                Icon(_dueExpanded ? Icons.expand_less_rounded : Icons.chevron_right_rounded, size: 18),
+              ]),
+            ),
+          ]),
+        ),
+        if (_dueExpanded) ...[
+          Divider(height: 1, color: t.border),
+          for (final lead in [...overdueLeads, ...todayLeads].take(8))
+            ListTile(
+              dense: true,
+              onTap: () => _openLead(lead['_id'] as String?),
+              leading: _smallBadge(
+                overdueLeads.contains(lead) ? '${(lead['daysOverdue'] as num?)?.toInt() ?? '!'}d' : 'TODAY',
+                overdueLeads.contains(lead) ? AppColors.danger : AppColors.warning,
+              ),
+              minLeadingWidth: 0,
+              horizontalTitleGap: 10,
+              title: Text(lead['name']?.toString() ?? 'Lead',
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: Text(
+                '${orIfBlank(lead['assignedToName'], 'Unassigned')} · ${_followUpTime(lead['followUpDate'])}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                TextButton(
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: const Size(0, 32),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () => _setFollowUp(lead, _tomorrow11Ist()),
+                  child: const Text('Tomorrow', style: TextStyle(fontSize: 11.5)),
+                ),
+                IconButton(
+                  tooltip: 'Clear this follow-up',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _setFollowUp(lead, null),
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                ),
+                IconButton(
+                  tooltip: 'Call',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _call(phone: lead['phone']?.toString(), name: lead['name']?.toString(), leadId: lead['_id']?.toString()),
+                  icon: Icon(FontAwesomeIcons.phone.data, size: 16),
+                ),
+              ]),
+            ),
+          if (context.read<AuthState>().isAdmin && _due.any((l) => ((l['daysOverdue'] as num?)?.toInt() ?? 0) > 30))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 4, 8, 4),
+              child: Row(children: [
+                Expanded(
+                  child: Text(
+                    '${_due.where((l) => ((l['daysOverdue'] as num?)?.toInt() ?? 0) > 30).length} of these are more than 30 days overdue.',
+                    style: TextStyle(fontSize: 11, color: t.textSoft),
+                  ),
+                ),
+                TextButton(
+                  onPressed: _clearStaleFollowUps,
+                  child: const Text('Clear old', style: TextStyle(color: AppColors.danger, fontSize: 12)),
+                ),
+              ]),
+            ),
+          if (overdueLeads.length + todayLeads.length > 8)
+            TextButton(
+              onPressed: () => widget.onNavigate?.call('Follow-ups'),
+              child: Text('View all ${plural(overdueLeads.length + todayLeads.length, 'follow-up')}'),
+            ),
+        ],
+      ]),
+    );
+  }
+
+  /// Hot Today and Upcoming 48 hours side by side: the top lead of each with
+  /// its actions; the header opens the whole list.
+  Widget _hotAndUpcoming(BuildContext context, Map<String, dynamic>? a) {
+    final upcoming = _upcoming(a);
+    return IntrinsicHeight(
+      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Expanded(
+          child: _miniList(
+            context,
+            icon: Icons.local_fire_department_rounded,
+            color: AppColors.primary,
+            title: 'Hot Today',
+            sub: plural(_hot.length, 'ranked lead'),
+            count: _hot.length,
+            empty: 'No hot leads right now',
+            onOpen: _openHotSheet,
+            first: _hot.firstOrNull,
+            firstLine: (l) => [str(l['status']), str(l['location'])].whereType<String>().where((v) => v.isNotEmpty).join(' · '),
+            actions: (l) => [
+              _miniAction(context, FontAwesomeIcons.phone.data, 'Call', AppColors.success,
+                  () => _call(phone: str(l['phone']), name: str(l['name']), leadId: str(l['_id']))),
+              _miniAction(context, FontAwesomeIcons.whatsapp.data, 'WhatsApp', AppColors.whatsapp,
+                  () => showWhatsAppSendSheet(context, phone: str(l['phone']), name: str(l['name']), leadId: str(l['_id']))),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _miniList(
+            context,
+            icon: Icons.calendar_month_rounded,
+            color: const Color(0xFF6366F1),
+            title: 'Upcoming',
+            sub: 'Next 48 hours',
+            count: upcoming.length,
+            empty: 'Nothing in the next 48 hours',
+            onOpen: () => _openUpcomingSheet(upcoming),
+            first: upcoming.firstOrNull,
+            date: (l) => _shortDate(l['followUpDate'] ?? l['siteVisitDate']),
+            firstLine: (l) => '${l['followUpDate'] != null ? 'Follow-up' : 'Site visit'} · ${orIfBlank(l['assignedToName'], 'Unassigned')}',
+            warn: (l) => '${l['assignedToName'] ?? ''}'.trim().isEmpty,
+            actions: (l) => [
+              if (context.read<AuthState>().isAdmin && '${l['assignedToName'] ?? ''}'.trim().isEmpty)
+                _miniAction(context, Icons.person_add_alt_1_outlined, 'Assign', AppColors.primary, () => _assign(l))
+              else
+                _miniAction(context, Icons.open_in_new_rounded, 'View lead', AppColors.primary, () => _openLead(str(l['_id']))),
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _miniList(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String sub,
+    required int count,
+    required String empty,
+    required VoidCallback onOpen,
+    required Map<String, dynamic>? first,
+    required String Function(Map<String, dynamic>) firstLine,
+    required List<Widget> Function(Map<String, dynamic>) actions,
+    String Function(Map<String, dynamic>)? date,
+    bool Function(Map<String, dynamic>)? warn,
+  }) {
+    final t = AppTheme.of(context);
+    return SoftSurface(
+      radius: 20,
+      padding: const EdgeInsets.fromLTRB(12, 6, 10, 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: count > 0 ? onOpen : null,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(children: [
+              Icon(icon, size: 20, color: color),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: t.text)),
+                  Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, color: t.textSoft)),
+                ]),
+              ),
+              if (count > 0) _smallBadge('$count', color),
+            ]),
+          ),
+        ),
+        Divider(height: 12, color: t.border),
+        if (first == null)
+          Expanded(
+            child: Center(
+              child: Text(empty, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: t.textSoft)),
+            ),
+          )
+        else ...[
+          InkWell(
+            onTap: () => _openLead(str(first['_id'])),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              CircleAvatar(
+                radius: 15,
+                backgroundColor: t.surfaceLow,
+                child: Text(
+                  (str(first['name']) ?? '?').isEmpty ? '?' : str(first['name'])![0].toUpperCase(),
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: t.textSoft),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(
+                      child: Text(str(first['name']) ?? 'Lead',
+                          maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: t.text)),
+                    ),
+                    if (date != null)
+                      Text(date(first), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF6366F1))),
+                  ]),
+                  Text(
+                    firstLine(first),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: warn?.call(first) == true ? AppColors.warning : t.textSoft,
+                      fontWeight: warn?.call(first) == true ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ]),
+              ),
+            ]),
+          ),
+          const Spacer(),
+          const SizedBox(height: 10),
+          Row(children: [
+            for (final (i, w) in actions(first).indexed) ...[
+              if (i > 0) const SizedBox(width: 6),
+              Expanded(child: w),
+            ],
+          ]),
+        ],
+      ]),
+    );
+  }
+
+  Widget _miniAction(BuildContext context, IconData icon, String label, Color color, VoidCallback onTap) {
+    final t = AppTheme.of(context);
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: t.text,
+        side: BorderSide(color: t.border),
+        minimumSize: const Size(0, 40),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 5),
+          Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _hotRow(BuildContext context, Map<String, dynamic> hot) {
+    final t = AppTheme.of(context);
+    return InkWell(
+      onTap: () => _openLead(str(hot['_id'])),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(children: [
+          Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: AppColors.danger.withValues(alpha: 0.09), borderRadius: BorderRadius.circular(14)),
+            child: Text('${hot['_score'] ?? hot['score'] ?? 'HOT'}',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppColors.danger)),
           ),
           const SizedBox(width: 11),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  working
-                      ? 'Clocked in ${DateFormat('hh:mm a').format(clockIn)}'
-                      : done
-                      ? 'Attendance completed'
-                      : 'Not clocked in',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Text(
-                  working
-                      ? 'Tap to clock out'
-                      : done
-                      ? '${DateFormat('hh:mm a').format(clockIn)} – ${DateFormat('hh:mm a').format(clockOut)}'
-                      : 'Selfie and location may be required',
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    color: AppTheme.of(context).textSoft,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (!done)
-            FilledButton(
-              onPressed: _clocking ? null : _clockAttendance,
-              style: FilledButton.styleFrom(
-                backgroundColor: working ? AppColors.danger : AppColors.primary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 13,
-                  vertical: 9,
-                ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(str(hot['name']) ?? 'Lead', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: t.text)),
+              Text(
+                [str(hot['status']), str(hot['priority']), str(hot['location'])].whereType<String>().where((v) => v.isNotEmpty).join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11.5, color: t.textSoft),
               ),
-              child: _clocking
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(working ? 'Clock Out' : 'Clock In'),
-            )
-          else
-            IconButton(
-              onPressed: () => widget.onNavigate?.call('Attendance'),
-              icon: const Icon(Icons.arrow_forward_rounded),
-            ),
-        ],
+            ]),
+          ),
+          IconButton(
+            tooltip: 'Call',
+            onPressed: () => _call(phone: str(hot['phone']), name: str(hot['name']), leadId: str(hot['_id'])),
+            icon: Icon(FontAwesomeIcons.phone.data, color: AppColors.success, size: 19),
+          ),
+          IconButton(
+            tooltip: 'WhatsApp',
+            onPressed: () => showWhatsAppSendSheet(context, phone: str(hot['phone']), name: str(hot['name']), leadId: str(hot['_id'])),
+            icon: Icon(FontAwesomeIcons.whatsapp.data, color: AppColors.whatsapp),
+          ),
+        ]),
       ),
     );
   }
 
-  Widget _upcomingSection(BuildContext context, Map<String, dynamic> data) {
-    final items = (data['upcomingItems'] as List? ?? [])
-        .cast<Map<String, dynamic>>();
-    if (items.isEmpty) return const SizedBox.shrink();
-    return SoftSurface(
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          ListTile(
-            dense: true,
-            leading: const Icon(
-              Icons.calendar_month_rounded,
-              color: Color(0xFF6366F1),
-            ),
-            title: const Text(
-              'Upcoming 48 hours',
-              style: TextStyle(fontWeight: FontWeight.w800),
-            ),
-            trailing: _smallBadge('${items.length}', const Color(0xFF6366F1)),
-          ),
-          Divider(height: 1, color: AppTheme.of(context).border),
-          for (final item in items.take(6))
-            ListTile(
-              dense: true,
-              onTap: () => _openLead(item['_id'] as String?),
-              title: Text(
-                item['name']?.toString() ?? 'Lead',
-                style: const TextStyle(fontWeight: FontWeight.w700),
+  Future<void> _listSheet(String title, String sub, List<Widget> Function(BuildContext ctx) rows) => showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (ctx) {
+          final t = AppTheme.of(ctx);
+          return ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.75),
+            child: ListView(shrinkWrap: true, padding: const EdgeInsets.only(top: 16, bottom: 16), children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: t.text)),
+                  Text(sub, style: TextStyle(fontSize: 12.5, color: t.textSoft)),
+                ]),
               ),
+              ...rows(ctx),
+            ]),
+          );
+        },
+      );
+
+  void _openHotSheet() {
+    if (_hot.isEmpty) return;
+    _listSheet(
+      'Hot Today',
+      'Ranked by recent WhatsApp replies, how new the lead is, follow-ups due, budget and stage',
+      (ctx) => [for (final h in _hot) _hotRow(ctx, h)],
+    );
+  }
+
+  void _openUpcomingSheet(List<Map<String, dynamic>> items) {
+    if (items.isEmpty) return;
+    final admin = context.read<AuthState>().isAdmin;
+    _listSheet('Upcoming 48 hours', 'Follow-ups and site visits', (ctx) => [
+          for (final item in items)
+            ListTile(
+              onTap: () {
+                Navigator.pop(ctx);
+                _openLead(item['_id'] as String?);
+              },
+              title: Text(item['name']?.toString() ?? 'Lead', style: const TextStyle(fontWeight: FontWeight.w700)),
               subtitle: Text(
                 '${item['followUpDate'] != null ? 'Follow-up' : 'Site visit'} · ${orIfBlank(item['assignedToName'], 'Unassigned')}',
               ),
-              trailing: Text(
-                _shortDate(item['followUpDate'] ?? item['siteVisitDate']),
-                style: const TextStyle(
-                  color: Color(0xFF6366F1),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(_shortDate(item['followUpDate'] ?? item['siteVisitDate']),
+                    style: const TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.w700)),
+                if (admin && '${item['assignedToName'] ?? ''}'.trim().isEmpty)
+                  IconButton(
+                    tooltip: 'Assign',
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _assign(item);
+                    },
+                    icon: const Icon(Icons.person_add_alt_1_outlined, color: AppColors.primary),
+                  ),
+              ]),
             ),
-        ],
+        ]);
+  }
+
+  /// Assign an unassigned lead from the dashboard (admins and managers).
+  Future<void> _assign(Map<String, dynamic> lead) async {
+    final id = str(lead['_id']);
+    if (id == null) return;
+    List<Map<String, dynamic>> agents = [];
+    try {
+      final res = await _api.dio.get('/auth/agents');
+      agents = ((res.data['agents'] as List?) ?? []).whereType<Map>().map((m) => m.cast<String, dynamic>()).toList();
+    } catch (_) {}
+    if (!mounted) return;
+    if (agents.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No team members to assign to yet.')));
+      return;
+    }
+    final agentId = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.62),
+        child: SafeArea(
+          child: ListView(shrinkWrap: true, padding: const EdgeInsets.symmetric(vertical: 12), children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+              child: Text('Assign ${str(lead['name']) ?? 'this lead'} to',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.of(ctx).text)),
+            ),
+            for (final a in agents)
+              ListTile(title: Text('${a['name'] ?? ''}'), subtitle: Text('${a['role'] ?? ''}'), onTap: () => Navigator.pop(ctx, '${a['_id']}')),
+          ]),
+        ),
       ),
     );
+    if (agentId == null || !mounted) return;
+    try {
+      final r = await _api.dio.post('/leads/bulk-assign', data: {
+        'ids': [id],
+        'agentId': agentId,
+      });
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${r.data['message'] ?? 'Assigned'}')));
+      _load(background: true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.errorMessage(e, 'Could not assign the lead'))));
+      }
+    }
   }
 
   Widget _staleSection(BuildContext context) {
@@ -1735,290 +1979,170 @@ class _DashboardScreenState extends State<DashboardScreen>
       color: AppColors.primary,
       onRefresh: _load,
       child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          FadeSlideIn(child: _dashboardHeader(context, auth, a)),
-          const SizedBox(height: 10),
-          // Artha's morning brief: only for companies that have it (the
-          // server answers brief: null otherwise and the card hides itself).
-          MorningBrief(
-            userId: '${auth.user?['_id'] ?? ''}',
-            refresh: _briefRefresh,
-            onNavigate: (label) => widget.onNavigate?.call(label),
-            onCall: _call,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        children: widget.reports ? _reportsBody(context, a, isAdmin) : _homeBody(context, auth, a, role),
+      ),
+    );
+  }
+
+  List<Widget> _errorBanner() => [
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.danger.withValues(alpha: .08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.danger.withValues(alpha: .25)),
           ),
-          // Setup steps (connect Facebook, add a teammate) are admin jobs an
-          // agent cannot do from the app, so agents do not get the checklist.
-          if (role != 'agent') OnboardingChecklist(
+          child: Row(children: [
+            const Icon(Icons.cloud_off_rounded, color: AppColors.danger),
+            const SizedBox(width: 9),
+            const Expanded(child: Text('Dashboard data could not refresh. Showing the latest available information.')),
+            TextButton(onPressed: _load, child: const Text('Retry')),
+          ]),
+        ),
+      ];
+
+  /// Home: what to act on today, then the numbers.
+  List<Widget> _homeBody(BuildContext context, AuthState auth, Map<String, dynamic>? a, String? role) => [
+        FadeSlideIn(child: _homeHeader(context, auth, a)),
+        const SizedBox(height: 12),
+        _arthaBanner(context),
+        const SizedBox(height: 12),
+        _prioritiesCard(context, a),
+        if (role == 'agent' && a != null && ((a['allTimeTotal'] as num?)?.toInt() ?? 0) == 0) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.warning.withValues(alpha: 0.2)),
+            ),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.warning_amber_rounded, size: 18, color: AppColors.warning),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('No leads assigned to you yet',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.warning)),
+                  const SizedBox(height: 2),
+                  Text('Ask your manager to assign leads so they appear here.',
+                      style: TextStyle(fontSize: 11.5, color: AppTheme.of(context).textSoft)),
+                ]),
+              ),
+            ]),
+          ),
+        ],
+        const SizedBox(height: 12),
+        _attendanceRow(context),
+        if (_analyticsError) ..._errorBanner(),
+        if (a != null) ...[
+          const SizedBox(height: 12),
+          FadeSlideIn(delay: const Duration(milliseconds: 40), child: _performanceCard(context, a)),
+        ],
+        const SizedBox(height: 12),
+        _actionBar(context),
+        const SizedBox(height: 12),
+        _hotAndUpcoming(context, a),
+        // Setup steps (connect Facebook, add a teammate): last, so a new
+        // company's checklist does not push today's work down. Admin jobs an
+        // agent cannot do from the app, so agents do not get it.
+        if (role != 'agent') ...[
+          const SizedBox(height: 12),
+          OnboardingChecklist(
             totalLeads: (a?['allTimeTotal'] as num?)?.toInt() ?? 0,
             onNavigate: (label) => widget.onNavigate?.call(label),
           ),
-          if (role == 'agent' &&
-              a != null &&
-              ((a['allTimeTotal'] as num?)?.toInt() ?? 0) == 0) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.warning.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: AppColors.warning.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.warning_amber_rounded,
-                    size: 18,
-                    color: AppColors.warning,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'No leads assigned to you yet',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.warning,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Ask your manager to assign leads so they appear here.',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: AppTheme.of(context).textSoft,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          _attendanceCard(context),
-          if (_analyticsError) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.danger.withValues(alpha: .08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: AppColors.danger.withValues(alpha: .25),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.cloud_off_rounded, color: AppColors.danger),
-                  const SizedBox(width: 9),
-                  const Expanded(
-                    child: Text(
-                      'Dashboard data could not refresh. Showing the latest available information.',
-                    ),
-                  ),
-                  TextButton(onPressed: _load, child: const Text('Retry')),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 18),
-
-          // ── Stat cards ──
-          if (a != null) ...[
-            FadeSlideIn(
-              delay: const Duration(milliseconds: 40),
-              // Two columns on a phone, three on a small tablet, all six in
-              // a row on a large one, so cards never stretch into big empty
-              // boxes on wide screens.
-              child: LayoutBuilder(builder: (context, box) {
-                final cols = box.maxWidth >= 1000 ? 6 : box.maxWidth >= 560 ? 3 : 2;
-                return AdaptiveGrid(
- columns: cols,
- spacing: 10,
- children: [
-                  // Same six cards as the web, all for the selected range
-                  // except Follow-ups (due today is due today).
-                  Builder(
-                    builder: (context) {
-                      final total = (a['totalLeads'] as num?)?.toInt() ?? 0;
-                      final prev = (a['previousPeriodLeads'] as num?)?.toInt();
-                      final delta = prev == null ? null : _calcDelta(total, prev);
-                      return _MetricCard(
-                        label: 'Total Leads',
-                        value: '$total',
-                        sub: delta != null
-                            ? '${delta >= 0 ? '↑' : '↓'} ${delta.abs()}% vs previous'
-                            : 'created $_scope',
-                        subColor: delta == null
-                            ? null
-                            : delta >= 0
-                            ? AppColors.success
-                            : AppColors.danger,
-                        color: AppColors.primary,
-                        tip: 'Leads that came in during the selected dates, including any later moved into a project.',
-                        onTap: () => _openLeadsFiltered(),
-                      );
-                    },
-                  ),
-                  _MetricCard(
-                    label: 'New',
-                    value: '${((a['byStatus'] as Map?) ?? {})['New'] ?? 0}',
-                    sub: 'Not contacted yet',
-                    color: const Color(0xFF6366F1),
-                    tip: 'Leads from these dates still in New: nobody has marked them contacted yet.',
-                    onTap: () => _openLeadsFiltered(status: 'New'),
-                  ),
-                  Builder(
-                    builder: (context) {
-                      // A person reached the lead within an hour: a call,
-                      // marked Contacted, or an agent's WhatsApp message.
-                      // The WhatsApp bot's replies don't count.
-                      final sp = (a['speedToLead'] as Map?) ?? {};
-                      final tot = (sp['total'] as num?)?.toInt() ?? 0;
-                      final pct = tot == 0 ? null : (((sp['within1h'] as num?) ?? 0) / tot * 100).round();
-                      return _MetricCard(
-                        label: 'Reached in 1 hr',
-                        tip: "Share of these leads a person reached within an hour of arriving: a call, marking them Contacted, or an agent's own WhatsApp message. The WhatsApp bot's replies don't count.",
-                        value: pct == null ? '-' : '$pct%',
-                        sub: tot == 0
-                            ? 'No leads in this period'
-                            : '${sp['within5m'] ?? 0} in 5 min · ${sp['notContacted'] ?? 0} not yet',
-                        color: pct == null
-                            ? AppTheme.of(context).textSoft
-                            : pct >= 60
-                            ? AppColors.success
-                            : pct >= 30
-                            ? AppColors.warning
-                            : AppColors.danger,
-                      );
-                    },
-                  ),
-                  Builder(
-                    builder: (context) {
-                      final visits = ((a['sourcePerformance'] as List?) ?? [])
-                          .fold<int>(0, (n, r) => n + (((r as Map)['visits'] as num?)?.toInt() ?? 0));
-                      return _MetricCard(
-                        label: 'Site Visits',
-                        value: '$visits',
-                        sub: visits > 0 ? 'Reached site visit or later' : 'None yet this period',
-                        color: const Color(0xFF8B5CF6),
-                        tip: 'Leads from these dates at the Site Visit stage or later, or with a site visit date set.',
-                        onTap: () => _openLeadsFiltered(status: 'Site Visit'),
-                      );
-                    },
-                  ),
-                  Builder(
-                    builder: (context) {
-                      final won = (((a['byStatus'] as Map?) ?? {})['Closed Won'] as num?)?.toInt() ?? 0;
-                      final total = (a['totalLeads'] as num?)?.toInt() ?? 0;
-                      return _MetricCard(
-                        label: 'Closed Won',
-                        value: '$won',
-                        sub: won > 0 && total > 0
-                            ? '${(won / total * 1000).round() / 10}% of leads'
-                            : 'None marked Closed Won',
-                        color: AppColors.success,
-                        tip: 'Leads from these dates marked Closed Won.',
-                        onTap: () => _openLeadsFiltered(status: 'Closed Won'),
-                      );
-                    },
-                  ),
-                  _MetricCard(
-                    label: 'Follow-ups',
-                    value: '${a['todayFollowUps'] ?? 0}',
-                    sub: 'Due today, all leads',
-                    color: AppColors.warning,
-                    tip: 'Follow-ups due today across all your leads. This one ignores the date range above.',
-                    onTap: () => widget.onNavigate?.call('Follow-ups'),
-                  ),
-                ],
-              );
-              }),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Showing leads created $_scope.${a['allTimeTotal'] != null ? ' ${NumberFormat.decimalPattern('en_IN').format(a['allTimeTotal'])} leads in total.' : ''}',
-              style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
-            ),
-            const SizedBox(height: 20),
-
-            _actionRequiredSection(context),
-            if ((a['upcomingItems'] as List?)?.isNotEmpty ?? false) ...[
-              const SizedBox(height: 12),
-              _upcomingSection(context, a),
-            ],
-            const SizedBox(height: 20),
-
-            if (isAdmin) ...[
-              const _SectionHeader(
-                label: 'Admin Intelligence',
-                color: Color(0xFF6366F1),
-              ),
-              const SizedBox(height: 12),
-              if (_stale.isNotEmpty) ...[
-                _staleSection(context),
-                const SizedBox(height: 12),
-              ],
-              // Projects from closed deals; with none yet it could only show
-              // dashes and zeros, so it waits for the first one.
-              if (((a['allTimeClosedWon'] as num?)?.toInt() ?? 0) > 0) ...[
-                _forecastSection(context, a),
-                const SizedBox(height: 12),
-              ],
-              DashLeadsTrend(data: a, scope: _scope),
-              const SizedBox(height: 12),
-              _liveOperationsSection(context),
-              const SizedBox(height: 20),
-            ],
-
-            // ── Performance: all for the selected range ──
-            const _SectionHeader(label: 'Performance'),
-            const SizedBox(height: 12),
-            DashStatusBreakdown(
-              byStatus: (a['byStatus'] as Map?) ?? {},
-              scope: _scope,
-              onSelect: (status) => _openLeadsFiltered(status: status),
-            ),
-            const SizedBox(height: 12),
-            DashSourceDonut(
-              bySource: (a['bySource'] as Map?) ?? {},
-              scope: _scope,
-              onSelect: (source) => _openLeadsFiltered(source: source),
-            ),
-            const SizedBox(height: 12),
-            DashSourcePerformance(
-              rows: ((a['sourcePerformance'] as List?) ?? []).cast<Map<String, dynamic>>(),
-              scope: _scope,
-              onSelect: (source) => _openLeadsFiltered(source: source),
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          // ── Team: goal (admins), leaderboard and live feed (every role) ──
-          if (a != null) ...[
-            const _SectionHeader(label: 'Team'),
-            const SizedBox(height: 12),
-            if (isAdmin) ...[
-              _goalCard(context, a),
-              const SizedBox(height: 12),
-            ],
-            if ((a['byAgent'] as List?)?.isNotEmpty ?? false) ...[
-              _topAgentsCard(context, a),
-              const SizedBox(height: 12),
-            ],
-            if ((a['recentActivity'] as List?)?.isNotEmpty ?? false) _teamActivityCard(context, a),
-          ],
-          const SizedBox(height: 80),
         ],
-      ),
-    );
+        const SizedBox(height: 90),
+      ];
+
+  /// Reports: the charts and the Team section that used to sit below the
+  /// home screen, for the same date range picker.
+  List<Widget> _reportsBody(BuildContext context, Map<String, dynamic>? a, bool isAdmin) {
+    final t = AppTheme.of(context);
+    return [
+      Row(children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(
+              a?['allTimeTotal'] != null
+                  ? 'Leads created $_scope · ${NumberFormat.decimalPattern('en_IN').format(a!['allTimeTotal'])} in total'
+                  : 'Leads created $_scope',
+              style: TextStyle(fontSize: 12.5, color: t.textSoft),
+            ),
+          ]),
+        ),
+        const SizedBox(width: 8),
+        DateRangePicker(
+          value: _dateRange,
+          label: _dateRangeLabel,
+          onChanged: (value) {
+            setState(() => _dateRange = value);
+            _load();
+          },
+        ),
+      ]),
+      if (_analyticsError) ..._errorBanner(),
+      const SizedBox(height: 16),
+      if (a != null) ...[
+        if (isAdmin) ...[
+          const _SectionHeader(label: 'Admin Intelligence', color: Color(0xFF6366F1)),
+          const SizedBox(height: 12),
+          if (_stale.isNotEmpty) ...[
+            _staleSection(context),
+            const SizedBox(height: 12),
+          ],
+          // Projects from closed deals; with none yet it could only show
+          // dashes and zeros, so it waits for the first one.
+          if (((a['allTimeClosedWon'] as num?)?.toInt() ?? 0) > 0) ...[
+            _forecastSection(context, a),
+            const SizedBox(height: 12),
+          ],
+          DashLeadsTrend(data: a, scope: _scope),
+          const SizedBox(height: 12),
+          _liveOperationsSection(context),
+          const SizedBox(height: 20),
+        ],
+
+        // ── Performance: all for the selected range ──
+        const _SectionHeader(label: 'Performance'),
+        const SizedBox(height: 12),
+        DashStatusBreakdown(
+          byStatus: (a['byStatus'] as Map?) ?? {},
+          scope: _scope,
+          onSelect: (status) => _openLeadsFiltered(status: status),
+        ),
+        const SizedBox(height: 12),
+        DashSourceDonut(
+          bySource: (a['bySource'] as Map?) ?? {},
+          scope: _scope,
+          onSelect: (source) => _openLeadsFiltered(source: source),
+        ),
+        const SizedBox(height: 12),
+        DashSourcePerformance(
+          rows: ((a['sourcePerformance'] as List?) ?? []).cast<Map<String, dynamic>>(),
+          scope: _scope,
+          onSelect: (source) => _openLeadsFiltered(source: source),
+        ),
+        const SizedBox(height: 16),
+
+        // ── Team: goal (admins), leaderboard and live feed (every role) ──
+        const _SectionHeader(label: 'Team'),
+        const SizedBox(height: 12),
+        if (isAdmin) ...[
+          _goalCard(context, a),
+          const SizedBox(height: 12),
+        ],
+        if ((a['byAgent'] as List?)?.isNotEmpty ?? false) ...[
+          _topAgentsCard(context, a),
+          const SizedBox(height: 12),
+        ],
+        if ((a['recentActivity'] as List?)?.isNotEmpty ?? false) _teamActivityCard(context, a),
+      ],
+      const SizedBox(height: 90),
+    ];
   }
 
   Widget _goalCard(BuildContext context, Map<String, dynamic> a) {
@@ -2232,65 +2356,68 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 }
 
-class _SourcePill extends StatelessWidget {
+/// A source counter in the home header: icon, count and name, tappable to
+/// open Leads filtered by that source.
+class _SourceChip extends StatelessWidget {
   final int count;
+  final String label;
   final Color color;
   final IconData icon;
-  final String tooltip;
+  final VoidCallback onTap;
 
-  const _SourcePill({
-    required this.count,
-    required this.color,
-    required this.icon,
-    required this.tooltip,
-  });
+  const _SourceChip({required this.count, required this.label, required this.color, required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: color.withValues(alpha: 0.24)),
+    final t = AppTheme.of(context);
+    return Semantics(
+      button: true,
+      label: '$label leads: $count',
+      excludeSemantics: true,
+      child: Material(
+        color: color.withValues(alpha: t.isDark ? 0.14 : 0.07),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: color.withValues(alpha: 0.22)),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 5),
-            Text(
-              '$count',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: color,
-              ),
-            ),
-          ],
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(icon, size: 17, color: color),
+              const SizedBox(width: 8),
+              Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('$count', style: TextStyle(fontSize: 15, height: 1.1, fontWeight: FontWeight.w800, color: t.text)),
+                Text(label, style: TextStyle(fontSize: 10.5, color: t.textSoft)),
+              ]),
+            ]),
+          ),
         ),
       ),
     );
   }
 }
 
-class _MetricCard extends StatelessWidget {
+/// One number in Lead performance: label (with an info tip), the number, and
+/// up to two short lines of context. Same shape for all six.
+class _KpiTile extends StatelessWidget {
   final String label;
   final String value;
   final String sub;
+  final String? sub2;
   final Color color;
   final Color? subColor;
   final VoidCallback? onTap;
   final String? tip;
 
-  const _MetricCard({
+  const _KpiTile({
     required this.label,
     required this.value,
     required this.sub,
     required this.color,
+    this.sub2,
     this.subColor,
     this.onTap,
     this.tip,
@@ -2298,70 +2425,49 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = SoftSurface(
-      radius: 18,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Flexible(
-                child: Text(
-                  label.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 8.5,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                    color: AppTheme.of(context).textSoft,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (tip != null)
-                SizedBox(width: 20, height: 14, child: OverflowBox(maxWidth: 20, maxHeight: 24, child: InfoTip(tip!, size: 12))),
-            ],
+    final t = AppTheme.of(context);
+    final body = Padding(
+      padding: const EdgeInsets.fromLTRB(10, 9, 6, 10),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Flexible(
+            child: Text(label,
+                maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: t.textSoft)),
           ),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.center,
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 21,
-                height: 1,
-                fontWeight: FontWeight.w800,
-                color: color,
-              ),
-            ),
+          if (tip != null) SizedBox(width: 20, height: 16, child: OverflowBox(maxWidth: 24, maxHeight: 24, child: InfoTip(tip!, size: 12))),
+        ]),
+        const SizedBox(height: 4),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(value, style: TextStyle(fontSize: 24, height: 1.1, fontWeight: FontWeight.w800, color: color)),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          sub,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 11,
+            height: 1.3,
+            fontWeight: subColor != null ? FontWeight.w700 : FontWeight.w400,
+            color: subColor ?? t.textSoft,
           ),
-          const SizedBox(height: 4),
-          Text(
-            sub,
-            style: TextStyle(
-              fontSize: 9.5,
-              fontWeight: subColor != null ? FontWeight.w700 : FontWeight.w400,
-              color: subColor ?? AppTheme.of(context).textSoft,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
+        ),
+        if (sub2 != null)
+          Text(sub2!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, height: 1.3, color: t.textSoft)),
+      ]),
     );
-    if (onTap == null) return content;
-    return Semantics(
-      button: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: content,
-      ),
+    return Material(
+      color: t.surfaceLow,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: t.border)),
+      child: onTap == null
+          ? body
+          : InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: onTap,
+              child: Semantics(button: true, child: body),
+            ),
     );
   }
 }
