@@ -1783,6 +1783,32 @@ const ASK_PHOTOS    = /\b(photos?|pics?|pictures?|images?|snaps?)\b|फोटो
 const ASK_VIDEOS    = /\b(videos?|vdo|walkthrough|walk-through)\b|वीडियो|विडियो|व्हिडिओ|व्हिडीओ|विडिओ/i;
 const ASK_BROCHURE  = /\b(brochures?|catalou?gues?)\b|ब्रोशर|ब्रोशुअर|ब्रोचर|ब्रोशर्/i;
 const ASK_FLOORPLAN = /floor\s?-?plans?|\blayouts?\b|फ्लोर\s?प्लान|फ्लोअर\s?प्लान|फ्लोर\s?प्लॅन|नक्शा|नकाशा/i;
+// "Send it again", "didn't get it", "phir se bhejo": the customer really wants
+// the same files a second time. Anything else, already-sent files stay sent.
+const ASK_AGAIN = /\b(again|resend|re-send|once more|one more time|didn'?t (get|receive)|did not (get|receive)|not (received|getting|showing|opening|loading)|can'?t (see|open|play)|cannot (see|open|play)|dobara|phir se|fir se|firse|wapas)\b|दोबारा|फिर से|फिरसे/i;
+
+// Media the bot (not a person) sent in this chat in the last 24 hours: the
+// file addresses, and which kinds those were. A customer who taps "Photos &
+// Videos" and then answers "Yes" to another question must not get the same
+// four files twice (it happened, 20 Oct 2026).
+const MEDIA_REPEAT_WINDOW_MS = 24 * 60 * 60 * 1000;
+async function recentBotMedia(conversationId, now = Date.now()) {
+  const rows = await WaMessage.find({
+    conversationId, direction: "outbound", sender: "bot",
+    mediaType: { $in: ["image", "video", "document"] },
+    timestamp: { $gte: new Date(now - MEDIA_REPEAT_WINDOW_MS) },
+  }).select("mediaType mediaUrl body").lean();
+  const urls = new Set(rows.map((r) => r.mediaUrl).filter(Boolean));
+  const kinds = new Set();
+  for (const r of rows) {
+    if (r.mediaType === "image") kinds.add("photos");
+    else if (r.mediaType === "video") kinds.add("videos");
+    else if (/floor plan/i.test(r.body || "")) kinds.add("floorplan");
+    else kinds.add("brochure");
+  }
+  return { urls, kinds };
+}
+
 function detectMediaAsk(text) {
   const t = String(text || "");
   return { photos: ASK_PHOTOS.test(t), videos: ASK_VIDEOS.test(t), brochure: ASK_BROCHURE.test(t), floorplan: ASK_FLOORPLAN.test(t) };
@@ -2377,12 +2403,16 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     // Work out now what can really go out, so the reply says the right thing
     // and the files are sent whether or not the model remembers its tag.
     const ask = detectMediaAsk(inboundText);
+    const askAgain = ASK_AGAIN.test(String(inboundText || ""));
+    const alreadySent = askAgain ? { urls: new Set(), kinds: new Set() } : await recentBotMedia(conversation._id);
     let mediaProject = null, plan = null;
     if ((ask.photos || ask.videos || ask.brochure || ask.floorplan) && org.whatsapp?.provider === "meta") {
       const ctx = [inboundText, conversation.campaignRef?.headline, lead?.leadSourceLabel, ...recentMsgs.slice(-6).map((m) => m.body)].filter(Boolean).join(" ");
       mediaProject = sourceProject || await resolveDiscussedProject(org, agent, ctx);
       if (mediaProject) plan = mediaPlan(agent, mediaProject, ask);
     }
+    // Already sent within the day: not planned again, and not "missing" either.
+    if (plan) plan.send = plan.send.filter((k) => !alreadySent.kinds.has(k));
     const MEDIA_NAMES = { photos: "photos", videos: "the video", brochure: "the brochure", floorplan: "the floor plan" };
     const listNames = (keys) => keys.map((k) => MEDIA_NAMES[k]).join(" and ");
     const greetingMode = agent?.greetingEnabled === false ? "off"
@@ -2401,6 +2431,7 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
       { role: "user", content: inboundText },
       ...(plan?.send.length ? [{ role: "system", content: `The customer just asked for ${listNames(plan.send)} of ${mediaProject.name}. It is being sent to them right now, along with your reply. Say in one short line that you are sending it. Do not say the team will send it, and do not add any [SHARE_...] tag.` }] : []),
       ...(plan?.missing.length ? [{ role: "system", content: `The customer asked for ${listNames(plan.missing)} of ${mediaProject.name}, but that is not available to send yet. Say warmly that the team will share it shortly, and add [NEEDS_TEAM] at the end.` }] : []),
+      ...(alreadySent.kinds.size ? [{ role: "system", content: `Already sent in this chat today: ${listNames([...alreadySent.kinds])}. They are above in the chat. Do not offer, promise or say you are sending them again, and do not add a [SHARE_...] tag for them. If the customer refers to them, point to what was already shared and move the conversation on.` }] : []),
       // Last, so it outweighs the language of earlier assistant turns.
       { role: "system", content: `Language for this reply: ${languageInstruction(
         detectCustomerLanguage([...recentMsgs.filter((m) => m.direction === "inbound").map((m) => m.body), inboundText])
@@ -2427,10 +2458,12 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     const needsTeam      = reply.includes("[NEEDS_TEAM]");
     reply = reply.replace("[NEEDS_TEAM]", "").trim();
     if (needsTeam) notifyHotSignal(org, conversation, `Needs an answer: "${String(inboundText).slice(0, 60)}"`).catch(() => {});
-    const wantsPhotos    = reply.includes("[SHARE_PHOTOS]")    || !!plan?.send.includes("photos");
-    const wantsBrochure  = reply.includes("[SHARE_BROCHURE]")  || !!plan?.send.includes("brochure");
-    const wantsVideos    = reply.includes("[SHARE_VIDEO]")     || !!plan?.send.includes("videos");
-    const wantsFloorPlan = reply.includes("[SHARE_FLOORPLAN]") || !!plan?.send.includes("floorplan");
+    // A tag for something already sent today is ignored (the model was told).
+    const fresh = (kind) => !alreadySent.kinds.has(kind);
+    const wantsPhotos    = (reply.includes("[SHARE_PHOTOS]")    && fresh("photos"))    || !!plan?.send.includes("photos");
+    const wantsBrochure  = (reply.includes("[SHARE_BROCHURE]")  && fresh("brochure"))  || !!plan?.send.includes("brochure");
+    const wantsVideos    = (reply.includes("[SHARE_VIDEO]")     && fresh("videos"))    || !!plan?.send.includes("videos");
+    const wantsFloorPlan = (reply.includes("[SHARE_FLOORPLAN]") && fresh("floorplan")) || !!plan?.send.includes("floorplan");
     reply = reply.replace(/\[SHARE_(PHOTOS|BROCHURE|VIDEO|FLOORPLAN)\]/g, "").trim();
     reply = noDashes(reply); // owner rule: no em dashes from the bot
 
@@ -2480,7 +2513,7 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     // the text reply that has already gone out, or trigger a human handoff
     // over something this minor.
     if (wantsPhotos || wantsBrochure || wantsVideos || wantsFloorPlan) {
-      sendQualifiedMedia(org, agent, conversation, botName, reply, { wantsPhotos, wantsBrochure, wantsVideos, wantsFloorPlan, project: plan ? mediaProject : null })
+      sendQualifiedMedia(org, agent, conversation, botName, reply, { wantsPhotos, wantsBrochure, wantsVideos, wantsFloorPlan, project: plan ? mediaProject : null, allowRepeat: askAgain })
         .then(async ({ missing }) => {
           // The reply already said something was on its way. If the project
           // has no such file, say so instead of leaving the customer waiting.
@@ -2532,8 +2565,12 @@ async function resolveDiscussedProject(org, agent, replyText) {
 // one — so this re-checks the agent's own toggle and that the asset genuinely
 // exists before sending anything. Not available on a BSP connection; media
 // messages are Meta-direct only (see sendProviderMedia).
-async function sendQualifiedMedia(org, agent, conversation, botName, replyText, { wantsPhotos, wantsVideos, wantsBrochure, wantsFloorPlan, force = false, project: givenProject = null, senderOverride = null, senderNameOverride = null }) {
+async function sendQualifiedMedia(org, agent, conversation, botName, replyText, { wantsPhotos, wantsVideos, wantsBrochure, wantsFloorPlan, force = false, project: givenProject = null, senderOverride = null, senderNameOverride = null, allowRepeat = false }) {
   const nothing = { sent: [], missing: [] };
+  // The bot never sends a file it already sent in this chat in the last 24
+  // hours (unless the customer asked again). A person sending files from the
+  // chat (senderOverride) always gets exactly what they picked.
+  const skipUrls = senderOverride || allowRepeat ? new Set() : (await recentBotMedia(conversation._id)).urls;
   if (org.whatsapp?.provider !== "meta") return nothing;
   const project = givenProject || await resolveDiscussedProject(org, agent, replyText);
   if (!project) return nothing;
@@ -2547,7 +2584,8 @@ async function sendQualifiedMedia(org, agent, conversation, botName, replyText, 
     if (!ok) return;
     const before = sends.length;
     add();
-    (sends.length > before ? sent : missing).push(kind);
+    if (sends.length > before) { sent.push(kind); return; }
+    missing.push(kind);
   };
   want("photos", wantsPhotos && allowed(agent?.shareProjectPhotos), () => {
     // Every uploaded photo, up to 10. WhatsApp has no album for raw images,
@@ -2567,6 +2605,22 @@ async function sendQualifiedMedia(org, agent, conversation, botName, replyText, 
   want("floorplan", wantsFloorPlan && allowed(agent?.shareFloorPlan), () => {
     if (project.floorPlanUrl) sends.push({ type: "document", url: project.floorPlanUrl, caption: `${project.name} floor plan`, filename: `${project.name} Floor Plan.pdf` });
   });
+  // Drop files already sent today. A kind whose every file was dropped is
+  // neither sent nor missing: it is already in the chat.
+  const dropped = new Set();
+  for (let i = sends.length - 1; i >= 0; i--) {
+    if (skipUrls.has(sends[i].url)) { dropped.add(sends[i].type); sends.splice(i, 1); }
+  }
+  if (dropped.size) {
+    const kindOf = { image: "photos", video: "videos" };
+    for (const t of dropped) {
+      const k = kindOf[t];
+      if (k && !sends.some((m) => m.type === t)) { const at = sent.indexOf(k); if (at >= 0) sent.splice(at, 1); }
+    }
+    if (!sends.some((m) => m.type === "document")) {
+      for (const k of ["brochure", "floorplan"]) { const at = sent.indexOf(k); if (at >= 0) sent.splice(at, 1); }
+    }
+  }
   if (!sends.length) return { sent, missing };
 
   let lastPreview = "📷 Photo";
@@ -4428,6 +4482,8 @@ router._noteWhyDetailsEmpty = noteWhyDetailsEmpty;   // also used by one-off bac
 router._matchByMessageText = matchByMessageText;
 router._triggerBotReply = triggerBotReply;
 router._buildProjectGroundedPrompt = buildProjectGroundedPrompt;
+router._sendQualifiedMedia = sendQualifiedMedia;
+router._ASK_AGAIN = ASK_AGAIN;
 router._sendBotNotice = sendBotNotice;            // the Vistrow call heads-up (utils/vistrowWhatsAppHeadsUp.js)
 router._resolveAgentForConversation = resolveAgentForConversation;
 
