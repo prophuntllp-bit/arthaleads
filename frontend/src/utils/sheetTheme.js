@@ -211,17 +211,33 @@ function addSheet(wb, title, rows, textColumns, tab) {
 }
 
 // ── Summary sheet ────────────────────────────────────────────────────────────
-function addSummary(wb, allRows, logo) {
+// Two columns of small tables (each table goes under whichever column is
+// shorter so far), then the wide tables: team performance and the hot leads
+// nobody has called. Everything is counted from the rows in this download
+// only, and the server only ever gives an agent their own leads; an agent's
+// file also leaves out the team sections altogether.
+const FUNNEL = ["New", "Contacted", "Site Visit", "Negotiation", "Closed Won"];
+const LEFT = 2, RIGHT = 7; // column B and column G; F is the gap between them
+const GREY = "6B7280";
+
+function istKey(offsetDays = 0) {
+  return new Date(Date.now() + 5.5 * 3600000 + offsetDays * 86400000).toISOString().slice(0, 10);
+}
+
+function addSummary(wb, allRows, { logo, filtersText = "", forAgent = false }) {
   const ws = wb.addWorksheet("Summary", {
     properties: { tabColor: { argb: argb(BRAND) } },
     views: [{ showGridLines: false }],
     pageSetup: { orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
-  ws.columns = [{ width: 3 }, { width: 30 }, { width: 11 }, { width: 10 }, { width: 44 }];
+  ws.columns = [3, 26, 10, 10, 24, 3, 26, 10, 10, 24].map((width) => ({ width }));
   const total = allRows.length;
   const now = new Date(Date.now() + 5.5 * 3600000);
   const stamp = `${now.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" })}, ${now.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "UTC" }).toUpperCase()} IST`;
+  const font = (extra = {}) => ({ size: 10, color: { argb: argb(INK) }, ...extra });
+  const greyFont = (extra = {}) => ({ size: 10, color: { argb: argb(GREY) }, ...extra });
 
+  // ── Logo, what this is, which filters ──
   // The logo (mark + wordmark, public/excel-logo.png, 1116 x 220). Without it,
   // the name in the logo's colours: "Artha" orange, "Leads" black.
   ws.getRow(2).height = 40;
@@ -234,121 +250,315 @@ function addSummary(wb, allRows, logo) {
       { text: "Leads", font: { bold: true, size: 22, color: { argb: "FF111111" } } },
     ] };
   }
-  ws.getCell("B3").value = `Leads report: ${total.toLocaleString("en-IN")} lead${total === 1 ? "" : "s"}, downloaded ${stamp}`;
-  ws.getCell("B3").font = { size: 11, color: { argb: "FF6B7280" } };
+  ws.getCell("B3").value = `Leads report: ${total.toLocaleString("en-IN")} lead${total === 1 ? "" : "s"}${forAgent ? " assigned to you" : ""}, downloaded ${stamp}`;
+  ws.getCell("B3").font = { size: 11, color: { argb: argb(GREY) } };
+  ws.getCell("B4").value = { richText: [
+    { text: "Filters: ", font: { bold: true, size: 10, color: { argb: argb(BRAND_DEEP) } } },
+    { text: filtersText || "All leads, no filters", font: greyFont() },
+  ] };
 
-  // Four headline numbers.
-  const count = (pred) => allRows.filter(pred).length;
-  const kpis = [
-    ["Total leads", total],
-    ["Not contacted yet", count((r) => r.Status === "New")],
-    ["Site visits done", count((r) => r.VisitDone === "Yes" || r.Status === "Site Visit")],
-    ["Closed won", count((r) => r.Status === "Closed Won")],
+  // ── Numbers used below ──
+  const today = istKey(), in7 = istKey(7);
+  const isOpen = (r) => r.Status !== "Closed Won" && r.Status !== "Closed Lost";
+  const contacted = (r) => (r.Status && r.Status !== "New") || !isEmpty(r.FirstContacted);
+  const visited = (r) => r.VisitDone === "Yes" || ["Site Visit", "Negotiation", "Closed Won"].includes(r.Status);
+  // How far along the pipeline a lead got. A lost lead counts as contacted
+  // when someone did reach it.
+  const stage = (r) => {
+    let s = r.Status === "Closed Lost" ? 0 : Math.max(0, FUNNEL.indexOf(r.Status));
+    if (contacted(r)) s = Math.max(s, 1);
+    if (r.VisitDone === "Yes") s = Math.max(s, 2);
+    return s;
+  };
+  const fuDay = (r) => String(r.FollowUpDate || "").slice(0, 10);
+
+  // ── Four headline cards ──
+  const cards = [
+    ["Total leads", total, BRAND],
+    ["Not contacted yet", allRows.filter((r) => !contacted(r)).length, "B91C1C"],
+    ["Site visits", allRows.filter(visited).length, INK],
+    ["Closed won", allRows.filter((r) => r.Status === "Closed Won").length, "15803D"],
   ];
-  let r = 5;
-  ws.getRow(r).height = 18; ws.getRow(r + 1).height = 30;
-  kpis.forEach(([name, value], i) => {
-    // Two per line: B/C and D/E.
-    const col = i % 2 === 0 ? 2 : 4;
-    const row = r + Math.floor(i / 2) * 3;
-    ws.getRow(row).height = 18; ws.getRow(row + 1).height = 30;
-    ws.mergeCells(row, col, row, col + 1); ws.mergeCells(row + 1, col, row + 1, col + 1);
-    const top = ws.getCell(row, col), big = ws.getCell(row + 1, col);
+  const edge = { style: "thin", color: { argb: argb("F5C9A6") } };
+  ws.getRow(6).height = 18; ws.getRow(7).height = 32;
+  cards.forEach(([name, value, colour], i) => {
+    const col = [2, 4, 7, 9][i];
+    ws.mergeCells(6, col, 6, col + 1); ws.mergeCells(7, col, 7, col + 1);
+    const top = ws.getCell(6, col), big = ws.getCell(7, col);
     top.value = name; big.value = value;
-    top.font = { bold: true, size: 10, color: { argb: "FF6B7280" } };
-    big.font = { bold: true, size: 20, color: { argb: argb(i === 0 ? BRAND : INK) } };
-    // Each card is a box: light orange edges, a thick brand line along the bottom.
-    const edge = { style: "thin", color: { argb: argb("F5C9A6") } };
+    top.font = greyFont({ bold: true });
+    big.font = { bold: true, size: 22, color: { argb: argb(colour) } };
     for (const c of [top, big]) { c.fill = solid("FFF4EB"); c.alignment = { vertical: "middle", horizontal: "left", indent: 1 }; }
+    // Each card is a box: light orange edges, a thick brand line along the bottom.
     top.border = { top: edge, left: edge, right: edge };
     big.border = { left: edge, right: edge, bottom: { style: "medium", color: { argb: argb(BRAND) } } };
   });
-  r += 7;
 
-  const section = (title, key, styleOf, { limit = 12, blank = "Not set" } = {}) => {
-    const tally = new Map();
-    for (const row of allRows) {
-      const v = isEmpty(row[key]) ? blank : String(row[key]);
-      tally.set(v, (tally.get(v) || 0) + 1);
-    }
-    if (!tally.size || (tally.size === 1 && tally.has(blank) && key !== "AssignedTo")) return;
-    let list = [...tally].sort((a, b) => b[1] - a[1]);
-    if (list.length > limit) {
-      const rest = list.slice(limit - 1).reduce((s, [, n]) => s + n, 0);
-      list = [...list.slice(0, limit - 1), [`Others (${list.length - limit + 1})`, rest]];
-    }
-    const max = Math.max(...list.map(([, n]) => n));
-
-    const h = ws.getRow(r);
-    h.height = 24;
-    [[2, title], [3, "Leads"], [4, "Share"], [5, ""]].forEach(([c, v]) => {
-      const cell = h.getCell(c);
-      cell.value = v;
-      cell.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
-      cell.fill = solid(BRAND);
-      cell.alignment = { vertical: "middle", horizontal: c === 2 ? "left" : "center", indent: c === 2 ? 1 : 0 };
-      cell.border = { ...box(HEAD_RULE), bottom: { style: "medium", color: { argb: argb(BRAND_DEEP) } } };
-    });
-    r++;
-    for (const [name, n] of list) {
-      const row = ws.getRow(r);
-      row.height = 20;
-      const [lab, num, pct, bar] = [2, 3, 4, 5].map((c) => row.getCell(c));
-      lab.value = name; num.value = n; pct.value = total ? n / total : 0;
-      for (const c of [lab, num, pct, bar]) c.border = box(RULE);
-      lab.font = { bold: true, size: 10, color: { argb: argb(INK) } };
-      lab.alignment = { vertical: "middle", indent: 1 };
-      num.alignment = pct.alignment = { vertical: "middle", horizontal: "center" };
-      num.font = { bold: true, size: 10, color: { argb: argb(INK) } };
-      pct.numFmt = "0%"; pct.font = { size: 10, color: { argb: "FF6B7280" } };
-      const colour = styleOf(name, lab);
-      bar.value = "█".repeat(Math.max(1, Math.round((n / max) * 30)));
-      bar.font = { size: 10, color: { argb: argb(colour) } };
-      bar.alignment = { vertical: "middle" };
-      r++;
-    }
-    // A total line closes each table.
-    const foot = ws.getRow(r);
-    foot.height = 22;
-    [[2, "Total"], [3, total], [4, 1], [5, ""]].forEach(([c, v]) => {
-      const cell = foot.getCell(c);
-      cell.value = v;
-      cell.fill = solid("FFF4EB");
-      cell.font = { bold: true, size: 10, color: { argb: argb(INK) } };
-      cell.alignment = { vertical: "middle", horizontal: c === 2 ? "left" : "center", indent: c === 2 ? 1 : 0 };
-      cell.border = { ...box(RULE), top: { style: "medium", color: { argb: argb(BRAND) } }, bottom: { style: "medium", color: { argb: argb(BRAND) } } };
-      if (c === 4) cell.numFmt = "0%";
-    });
-    r += 3;
+  // ── Cell styles shared by every table ──
+  const headCell = (cell, value, left) => {
+    cell.value = value;
+    cell.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+    cell.fill = solid(BRAND);
+    cell.alignment = { vertical: "middle", horizontal: left ? "left" : "center", indent: left ? 1 : 0 };
+    cell.border = { ...box(HEAD_RULE), bottom: { style: "medium", color: { argb: argb(BRAND_DEEP) } } };
+  };
+  const footCell = (cell, value) => {
+    cell.value = value;
+    cell.fill = solid("FFF4EB");
+    cell.font = font({ bold: true });
+    cell.border = { ...box(RULE), top: { style: "medium", color: { argb: argb(BRAND) } }, bottom: { style: "medium", color: { argb: argb(BRAND) } } };
+  };
+  const bodyCell = (cell, value, f = font()) => {
+    cell.value = value;
+    cell.font = f;
+    cell.border = box(RULE);
+    cell.alignment = { vertical: "middle", horizontal: "center" };
   };
 
-  section("By source", "Source", (name, cell) => {
-    if (SOURCE_FILL[name] || name === "Vistrow Voice") { sourcePill(cell, name); cell.alignment = { vertical: "middle", indent: 1 }; }
-    return SOURCE_FILL[name] || (name === "Vistrow Voice" ? VOICE_GRADIENT[1] : SOURCE_FILL.Other);
-  });
-  section("By status", "Status", (name, cell) => {
-    if (STATUS_STYLE[name]) { softPill(cell, STATUS_STYLE[name]); cell.alignment = { vertical: "middle", indent: 1 }; }
-    return STATUS_STYLE[name]?.[1] || BRAND;
-  });
-  section("By priority", "Priority", (name, cell) => {
-    if (PRIORITY_STYLE[name]) { softPill(cell, PRIORITY_STYLE[name]); cell.alignment = { vertical: "middle", indent: 1 }; }
-    return PRIORITY_STYLE[name]?.[1] || BRAND;
-  });
-  section("By project", "Project", () => BRAND, { blank: "No project" });
-  section("By team member", "AssignedTo", () => BRAND, { blank: "Unassigned" });
+  // A small table: name | leads | share | bar.
+  // items: [{ name, n, style(cell) -> bar colour, note }]
+  const smallTable = (c0, r0, { title, head = ["Leads", "Share"], items, of = total, foot = "Total", footN = of }) => {
+    let r = r0;
+    ws.getRow(r).height = 24;
+    headCell(ws.getCell(r, c0), title, true);
+    headCell(ws.getCell(r, c0 + 1), head[0]);
+    headCell(ws.getCell(r, c0 + 2), head[1]);
+    headCell(ws.getCell(r, c0 + 3), "");
+    r++;
+    const max = Math.max(1, ...items.map((x) => x.n));
+    for (const it of items) {
+      ws.getRow(r).height = 20;
+      const lab = ws.getCell(r, c0);
+      bodyCell(lab, it.name, font({ bold: true }));
+      lab.alignment = { vertical: "middle", indent: 1 };
+      const colour = it.style ? it.style(lab) : BRAND;
+      bodyCell(ws.getCell(r, c0 + 1), it.n, font({ bold: true }));
+      const pct = ws.getCell(r, c0 + 2);
+      bodyCell(pct, of ? it.n / of : 0, greyFont());
+      pct.numFmt = "0%";
+      const bar = ws.getCell(r, c0 + 3);
+      bodyCell(bar, null);
+      bar.alignment = { vertical: "middle" };
+      const blocks = it.n ? "█".repeat(Math.max(1, Math.round((it.n / max) * 18))) : "";
+      bar.value = { richText: [
+        { text: blocks || " ", font: { size: 10, color: { argb: argb(colour) } } },
+        ...(it.note ? [{ text: `  ${it.note}`, font: greyFont({ size: 9 }) }] : []),
+      ] };
+      r++;
+    }
+    if (foot) {
+      ws.getRow(r).height = 22;
+      footCell(ws.getCell(r, c0), foot);
+      ws.getCell(r, c0).alignment = { vertical: "middle", indent: 1 };
+      footCell(ws.getCell(r, c0 + 1), footN);
+      footCell(ws.getCell(r, c0 + 2), of ? footN / of : 0);
+      ws.getCell(r, c0 + 2).numFmt = "0%";
+      footCell(ws.getCell(r, c0 + 3), "");
+      for (const c of [1, 2]) ws.getCell(r, c0 + c).alignment = { vertical: "middle", horizontal: "center" };
+      r++;
+    }
+    return r + 2; // two empty rows before the next table
+  };
+
+  const tally = (key, blank) => {
+    const m = new Map();
+    for (const row of allRows) {
+      const v = isEmpty(row[key]) ? blank : String(row[key]);
+      m.set(v, (m.get(v) || 0) + 1);
+    }
+    return [...m].sort((a, b) => b[1] - a[1]);
+  };
+  const capped = (list, limit = 12) => list.length <= limit ? list
+    : [...list.slice(0, limit - 1), [`Others (${list.length - limit + 1})`, list.slice(limit - 1).reduce((s, [, n]) => s + n, 0)]];
+  const pillIn = (styles) => (name) => (cell) => {
+    if (styles[name]) { softPill(cell, styles[name]); cell.alignment = { vertical: "middle", indent: 1 }; cell.border = box(RULE); }
+    return styles[name]?.[1] || BRAND;
+  };
+
+  // ── The small tables ──
+  const sections = [];
+
+  // Pipeline: how many leads got at least this far, and how many dropped
+  // since the step before.
+  const reached = FUNNEL.map((_, i) => allRows.filter((r) => stage(r) >= i).length);
+  const lost = allRows.filter((r) => r.Status === "Closed Lost").length;
+  sections.push((c0, r0) => smallTable(c0, r0, {
+    title: "Pipeline", head: ["Reached", "Of all"], foot: lost ? "Closed lost" : null, footN: lost,
+    items: FUNNEL.map((name, i) => ({
+      name, n: reached[i], style: pillIn(STATUS_STYLE)(name),
+      note: i && reached[i - 1] > reached[i] ? `${reached[i - 1] - reached[i]} dropped` : "",
+    })),
+  }));
+
+  sections.push((c0, r0) => smallTable(c0, r0, {
+    title: "By status", items: tally("Status", "Not set").map(([name, n]) => ({ name, n, style: pillIn(STATUS_STYLE)(name) })),
+  }));
+
+  sections.push((c0, r0) => smallTable(c0, r0, {
+    title: "By source",
+    items: capped(tally("Source", "Not set")).map(([name, n]) => ({ name, n, style: (cell) => {
+      if (SOURCE_FILL[name] || name === "Vistrow Voice") { sourcePill(cell, name); cell.alignment = { vertical: "middle", indent: 1 }; cell.border = box(RULE); }
+      return SOURCE_FILL[name] || (name === "Vistrow Voice" ? VOICE_GRADIENT[1] : SOURCE_FILL.Other);
+    } })),
+  }));
+
+  // Follow-ups on leads still open (not won or lost).
+  const open = allRows.filter(isOpen);
+  const fu = [
+    ["Overdue", open.filter((r) => fuDay(r) && fuDay(r) < today).length, ["FEE2E2", "B91C1C"]],
+    ["Due today", open.filter((r) => fuDay(r) === today).length, ["FEF3C7", "B45309"]],
+    ["Next 7 days", open.filter((r) => fuDay(r) > today && fuDay(r) <= in7).length, ["DBEAFE", "1D4ED8"]],
+    ["Later", open.filter((r) => fuDay(r) > in7).length, ["F3F4F6", "374151"]],
+    ["No follow-up set", open.filter((r) => !fuDay(r)).length, ["F3F4F6", GREY]],
+  ];
+  sections.push((c0, r0) => smallTable(c0, r0, {
+    title: "Follow-ups", of: open.length, foot: "Open leads",
+    items: fu.map(([name, n, st]) => ({ name, n, style: (cell) => { softPill(cell, st); cell.alignment = { vertical: "middle", indent: 1 }; cell.border = box(RULE); return st[1]; } })),
+  }));
+
+  sections.push((c0, r0) => smallTable(c0, r0, {
+    title: "By priority", items: tally("Priority", "Not set").map(([name, n]) => ({ name, n, style: pillIn(PRIORITY_STYLE)(name) })),
+  }));
+
+  const projects = tally("Project", "No project");
+  if (!(projects.length === 1 && projects[0][0] === "No project")) {
+    sections.push((c0, r0) => smallTable(c0, r0, { title: "By project", items: capped(projects).map(([name, n]) => ({ name, n })) }));
+  }
+
+  // Leads per day for the last 14 days of the period, newest first, days with
+  // none included so gaps show.
+  const days = allRows.map((r) => String(r.CreatedAt || "").slice(0, 10)).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+  if (days.length) {
+    const last = new Date(`${days[days.length - 1]}T00:00:00Z`);
+    const first = new Date(Math.max(new Date(`${days[0]}T00:00:00Z`), last - 13 * 86400000));
+    const perDay = [];
+    for (let d = new Date(last); d >= first; d = new Date(d - 86400000)) {
+      const key = d.toISOString().slice(0, 10);
+      perDay.push({ name: d.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" }), n: days.filter((x) => x === key).length });
+    }
+    const shown = perDay.reduce((s, x) => s + x.n, 0);
+    sections.push((c0, r0) => smallTable(c0, r0, { title: "Leads per day", items: perDay, foot: `Total, ${perDay.length} day${perDay.length === 1 ? "" : "s"}`, footN: shown }));
+  }
+
+  // Each table under whichever column is shorter.
+  const cursor = { [LEFT]: 10, [RIGHT]: 10 };
+  for (const draw of sections) {
+    const c0 = cursor[LEFT] <= cursor[RIGHT] ? LEFT : RIGHT;
+    cursor[c0] = draw(c0, cursor[c0]);
+  }
+  let r = Math.max(cursor[LEFT], cursor[RIGHT]);
+
+  // ── Wide tables (columns B to J; F+G and I+J are joined where needed) ──
+  // spec: [[fromCol, toCol, value], ...]
+  const wide = (row, spec, styler) => {
+    for (const [a, b, v] of spec) {
+      if (b > a) ws.mergeCells(row, a, row, b);
+      // Right to left: a write to the second half of a joined cell lands on
+      // the first half, so the first half (with the real value) goes last.
+      for (let c = b; c >= a; c--) styler(ws.getCell(row, c), c === a ? v : undefined, c);
+    }
+  };
+  const sectionTitle = (text, sub) => {
+    ws.getCell(r, 2).value = { richText: [
+      { text, font: { bold: true, size: 13, color: { argb: argb(BRAND_DEEP) } } },
+      ...(sub ? [{ text: `   ${sub}`, font: greyFont() }] : []),
+    ] };
+    ws.getRow(r).height = 22;
+    r++;
+  };
+
+  if (!forAgent) {
+    // Team performance: who has how many leads and how fast they reach them.
+    const people = new Map();
+    for (const row of allRows) {
+      const who = isEmpty(row.AssignedTo) ? "Unassigned" : String(row.AssignedTo);
+      if (!people.has(who)) people.set(who, []);
+      people.get(who).push(row);
+    }
+    const stats = (rows) => {
+      const times = rows.map((x) => x.ResponseHours).filter((h) => !isEmpty(h)).map(Number);
+      return {
+        leads: rows.length, contacted: rows.filter(contacted).length, visits: rows.filter(visited).length,
+        won: rows.filter((x) => x.Status === "Closed Won").length,
+        avg: times.length ? times.reduce((s, h) => s + h, 0) / times.length : null,
+        fast: times.length ? times.filter((h) => h <= 1).length / times.length : null,
+      };
+    };
+    const list = [...people].map(([who, rows]) => [who, stats(rows)]).sort((a, b) => b[1].leads - a[1].leads).slice(0, 25);
+    sectionTitle("Team performance", "average response is from lead created to first contact");
+    const cols = [[2, 2, "Team member"], [3, 3, "Leads"], [4, 4, "Contacted"], [5, 5, "Site visits"], [6, 7, "Closed won"], [8, 8, "Avg response"], [9, 9, "Within 1 h"], [10, 10, "Not contacted"]];
+    ws.getRow(r).height = 24;
+    wide(r, cols, (cell, v, c) => headCell(cell, v === undefined ? null : v, c === 2));
+    r++;
+    const line = (name, s, isFoot) => {
+      ws.getRow(r).height = isFoot ? 22 : 20;
+      const vals = [name, s.leads, s.contacted, s.visits, s.won, s.avg, s.fast, s.leads - s.contacted];
+      wide(r, cols.map(([a, b], i) => [a, b, vals[i]]), (cell, v, c) => {
+        if (isFoot) footCell(cell, v === undefined ? null : v); else bodyCell(cell, v === undefined ? null : v, font({ bold: c === 2 }));
+        cell.alignment = c === 2 ? { vertical: "middle", indent: 1 } : { vertical: "middle", horizontal: "center" };
+        if (v === null || v === undefined) return;
+        if (c === 8) { cell.numFmt = '0.0" h"'; cell.font = font({ bold: true, color: { argb: argb(v <= 1 ? "15803D" : v <= 24 ? "B45309" : "B91C1C") } }); }
+        if (c === 9) cell.numFmt = "0%";
+        if (c === 10 && v > 0) cell.font = font({ bold: true, color: { argb: "FFB91C1C" } });
+        if (c === 6 && v > 0) cell.font = font({ bold: true, color: { argb: "FF15803D" } });
+      });
+      r++;
+    };
+    for (const [who, s] of list) line(who, s, false);
+    line("Total", stats(allRows), true);
+    r += 2;
+  }
+
+  // Hot and high-priority leads nobody has contacted yet: who to call first.
+  const waiting = allRows.filter((x) => (x.Priority === "Hot" || x.Priority === "High") && !contacted(x))
+    .sort((a, b) => (a.Priority === "Hot" ? 0 : 1) - (b.Priority === "Hot" ? 0 : 1) || (Number(b.LeadAgeDays) || 0) - (Number(a.LeadAgeDays) || 0));
+  sectionTitle("Hot and high leads not contacted yet", waiting.length > 10 ? `the 10 waiting longest of ${waiting.length}` : "");
+  const hcols = [[2, 2, "Name"], [3, 4, "Phone"], [5, 5, "Priority"], [6, 7, "Source"], [8, 8, "Waiting (days)"], [9, 10, forAgent ? "Project" : "Assigned to"]];
+  ws.getRow(r).height = 24;
+  wide(r, hcols, (cell, v, c) => headCell(cell, v === undefined ? null : v, c === 2));
+  r++;
+  if (!waiting.length) {
+    ws.mergeCells(r, 2, r, 10);
+    for (let c = 2; c <= 10; c++) bodyCell(ws.getCell(r, c), c === 2 ? "None. Every hot and high lead has been contacted." : null, font({ bold: true, color: { argb: "FF15803D" } }));
+    ws.getCell(r, 2).alignment = { vertical: "middle", indent: 1 };
+    ws.getRow(r).height = 22;
+    r++;
+  }
+  for (const x of waiting.slice(0, 10)) {
+    ws.getRow(r).height = 20;
+    const vals = [x.Name, prettyPhone(x.Phone), x.Priority, x.Source, isEmpty(x.LeadAgeDays) ? null : Number(x.LeadAgeDays),
+      forAgent ? (x.Project || "") : (x.AssignedTo || "Unassigned")];
+    wide(r, hcols.map(([a, b], i) => [a, b, vals[i]]), (cell, v, c) => {
+      bodyCell(cell, v === undefined ? null : v, font({ bold: c === 2 }));
+      if (c === 2 || c === 3 || c === 9) cell.alignment = { vertical: "middle", indent: 1 };
+      if (v === undefined || v === null || v === "") return;
+      if (c === 5 && PRIORITY_STYLE[v]) softPill(cell, PRIORITY_STYLE[v]);
+      if (c === 6) sourcePill(cell, v);
+      if (c === 8 && v >= 2) cell.font = font({ bold: true, color: { argb: "FFB91C1C" } });
+    });
+    // The joined Source cell keeps its pill colour across both halves.
+    ws.getCell(r, 7).fill = ws.getCell(r, 6).fill;
+    r++;
+  }
+
+  r += 1;
+  ws.getCell(r, 2).value = "Made with ArthaLeads · arthaleads.com";
+  ws.getCell(r, 2).font = greyFont({ size: 9, italic: true });
   return ws;
 }
 
 // sheets: { "WhatsApp": [rows], "Website": [rows] } (one sheet per entry).
 // Excel sheet names are at most 31 characters and cannot contain : \ / ? * [ ].
 // logo: the PNG as base64, for the top of the Summary sheet.
-export function buildThemedWorkbook(ExcelJS, sheets, { textColumns = TEXT_DEFAULT, summary = false, logo = null } = {}) {
+// filtersText: which filters the download used. forAgent: the person
+// downloading is an agent (their file leaves out the team sections).
+export function buildThemedWorkbook(ExcelJS, sheets, { textColumns = TEXT_DEFAULT, summary = false, logo = null, filtersText = "", forAgent = false } = {}) {
   const wb = new ExcelJS.Workbook();
   wb.creator = "ArthaLeads";
   wb.company = "ArthaLeads";
   wb.created = new Date();
   const used = new Set(summary ? ["summary"] : []);
-  if (summary) addSummary(wb, Object.values(sheets).flat(), logo);
+  if (summary) addSummary(wb, Object.values(sheets).flat(), { logo, filtersText, forAgent });
   for (const [name, rows] of Object.entries(sheets)) {
     let title = String(name).replace(/[:\\/?*[\]]/g, " ").trim().slice(0, 31) || "Leads";
     for (let i = 2; used.has(title.toLowerCase()); i++) title = `${title.slice(0, 28)} ${i}`;

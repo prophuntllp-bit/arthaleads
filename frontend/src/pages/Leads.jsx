@@ -20,7 +20,7 @@ import { useColumnResize, RTh } from "../hooks/useColumnResize";
 import api from "../services/api";
 import fetchLeadToOpen from "../utils/fetchLeadToOpen";
 import toast from "react-hot-toast";
-import { fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
+import { fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS, DATE_RANGE_OPTIONS } from "../utils/constants";
 
 // Same three values/labels as the "Any WhatsApp consent" filter above — kept
 // as its own constant since the bulk-action toolbar needs the identical list
@@ -784,6 +784,28 @@ export default function Leads() {
         ? `${selectedIdsOverride.size}-selected`
         : `${rows.length}-leads`;
 
+      // What this download covers, in words, for the top of the Summary sheet.
+      const filtersText = (() => {
+        if (selectedIdsOverride?.size > 0) return `${selectedIdsOverride.size} selected leads`;
+        const parts = [];
+        const nameOf = (list, id) => list.find((x) => String(x._id) === String(id))?.name;
+        if (filters.from || filters.to) parts.push(`Created ${filters.from ? fmtDate(filters.from) : "…"} to ${filters.to ? fmtDate(filters.to) : "today"}`);
+        else if (filters.dateRange) parts.push(DATE_RANGE_OPTIONS.find((o) => o.value === filters.dateRange)?.label || filters.dateRange);
+        if (filters.source)     parts.push(`Source: ${filters.source}`);
+        if (filters.siteFilter) parts.push(`Website: ${filters.siteFilter}${filters.sitePage ? ` ${filters.sitePage}` : ""}`);
+        if (filters.sourceSel)  parts.push("One ad or form");
+        if (filters.status)     parts.push(`Status: ${filters.status}`);
+        if (filters.priority)   parts.push(`Priority: ${filters.priority}`);
+        if (filters.booking)    parts.push(`Outcome: ${filters.booking}`);
+        if (filters.projectId)  parts.push(`Project: ${nameOf(projects, filters.projectId) || "one project"}`);
+        if (filters.assignedTo) parts.push(`Assigned to: ${nameOf(agents, filters.assignedTo) || "one person"}`);
+        if (filters.myOnly)     parts.push("My leads only");
+        if (filters.followUpToday) parts.push("Follow-ups due today");
+        if (filters.consent)    parts.push(`WhatsApp consent: ${filters.consent}`);
+        if (filters.search)     parts.push(`Search: "${filters.search}"`);
+        return parts.length ? parts.join(" · ") : "All leads, no filters";
+      })();
+
       // Phone is written as text in both formats, so Excel never turns it
       // into 9.19689E+11 or drops a leading zero (see utils/sheetExport.js).
       // Leads from more than one source go into one workbook with a sheet per
@@ -791,8 +813,8 @@ export default function Leads() {
       const bySource = rows.reduce((acc, r) => { (acc[r.Source || "Other"] ||= []).push(r); return acc; }, {});
       const sourceNames = Object.keys(bySource).sort((a, b) => bySource[b].length - bySource[a].length);
       if (type === "excel" && sourceNames.length > 1) {
-        await downloadXlsxSheets(Object.fromEntries(sourceNames.map((n) => [n, bySource[n]])), `leads-${label}-${date}.xlsx`, { summary: true });
-      } else if (type === "excel") await downloadXlsx(rows, `leads-${label}-${date}.xlsx`, { sheetName: "Leads", summary: true });
+        await downloadXlsxSheets(Object.fromEntries(sourceNames.map((n) => [n, bySource[n]])), `leads-${label}-${date}.xlsx`, { summary: true, filtersText, forAgent: user?.role === "agent" });
+      } else if (type === "excel") await downloadXlsx(rows, `leads-${label}-${date}.xlsx`, { sheetName: "Leads", summary: true, filtersText, forAgent: user?.role === "agent" });
       else downloadCsv(rows, `leads-${label}-${date}.csv`);
 
       toast.success(`Exported ${rows.length} lead${rows.length !== 1 ? "s" : ""}`);

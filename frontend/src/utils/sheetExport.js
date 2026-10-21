@@ -60,6 +60,8 @@ export async function downloadXlsxSheets(sheets, filename, opts = {}) {
   const wb = buildThemedWorkbook(ExcelJS, sheets, {
     ...(opts.textColumns ? { textColumns: opts.textColumns } : {}),
     summary: !!opts.summary,
+    filtersText: opts.filtersText || "",
+    forAgent: !!opts.forAgent,
     logo: opts.summary ? await logoBase64() : null,
   });
   const buf = await wb.xlsx.writeBuffer();
