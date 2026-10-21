@@ -383,7 +383,8 @@ app.use("/api/media",      require("./routes/mediaRoutes"));
 // definitions, app version) only count against the general limiter. Before
 // this, ten page loads from one office in 15 minutes hit the submissions
 // limit and every page showed "Too many submissions" (audit FE30).
-const submissionsOnly = (req, res, next) => (req.method === "GET" || req.method === "HEAD" ? next() : contactLimiter(req, res, next));
+// QR form posts (/form/:token) have their own per-QR limiter in publicRoutes.js.
+const submissionsOnly = (req, res, next) => (req.method === "GET" || req.method === "HEAD" || req.path.startsWith("/form/") ? next() : contactLimiter(req, res, next));
 app.use("/api/public",     submissionsOnly, require("./routes/publicRoutes"));
 
 // ── Dynamic Sitemap (served at /sitemap.xml) ──────────────────────────────────

@@ -747,6 +747,21 @@ function RootRoute() {
   return <Landing />;
 }
 
+// The cursor effect, cookie notice and install prompt are for our own site and
+// app. The QR enquiry form (/form/:token) belongs to the customer's company and
+// is filled in on a visitor's phone, so it gets none of them.
+function SiteChrome() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/form/")) return null;
+  return (
+    <>
+      <CustomCursor />
+      <CookieBanner />
+      <InstallBanner />
+    </>
+  );
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -755,9 +770,7 @@ export default function App() {
     <AuthProvider>
     <CopilotProvider>
       <ErrorBoundary>
-      <CustomCursor />
-      <CookieBanner />
-      <InstallBanner />
+      <SiteChrome />
       <Suspense fallback={<PageFallback />}>
       <Routes>
         {/* Landing - guest sees homepage, logged-in user goes to dashboard */}

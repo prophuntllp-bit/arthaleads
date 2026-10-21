@@ -5,8 +5,23 @@ const OPTS = require("../constants/leadOptions");
 const APP_RELEASE = require("../constants/appRelease");
 const { answerMarketingQuestion } = require("../utils/openai");
 
+// QR form submissions are limited per QR code, not per network: at an expo
+// everyone on the hall Wi-Fi (or one salesperson filling it in for walk-ins)
+// shares one IP, and the shared 10-per-IP submissions limit turned the 11th
+// visitor away. 60 per QR per 15 minutes still stops a flood from one leaked
+// code. server.js skips its per-IP submissions limiter for these POSTs.
+const rateLimit = require("express-rate-limit");
+const qrFormLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  keyGenerator: (req) => `qr:${String(req.params.token || "").slice(0, 64)}`,
+  message: { success: false, message: "This QR code is receiving a lot of enquiries right now. Please try again in a few minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 router.get("/form/:token", getForm);
-router.post("/form/:token", submitLead);
+router.post("/form/:token", qrFormLimiter, submitLead);
 
 // ── WhatsApp Embedded Signup config ──────────────────────────────────────────
 // appId/configId are the same values baked into the web bundle as

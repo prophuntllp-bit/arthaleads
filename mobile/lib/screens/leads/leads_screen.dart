@@ -697,7 +697,7 @@ class LeadsScreenState extends State<LeadsScreen> {
         if (auth.isAdmin)
           const PopupMenuItem(
             value: 'import',
-            child: ListTile(leading: Icon(Icons.upload_file_rounded), title: Text('Import CSV'), dense: true),
+            child: ListTile(leading: Icon(Icons.upload_file_rounded), title: Text('Import CSV or Excel'), dense: true),
           ),
         PopupMenuItem(
           value: 'csv',

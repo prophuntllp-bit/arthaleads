@@ -126,6 +126,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         endpoint: '/projects/${p['_id']}/qr-token',
         title: 'QR Code',
         description: p['name'] as String? ?? '',
+        projectName: p['name'] as String?,
       ),
     );
   }

@@ -332,8 +332,20 @@ Future<ImportResult> parseLeadImportFile(String path, List<Map<String, dynamic>>
     }
     rows = _parseCsvText(text);
   } else {
+    // The phone reads .xlsx only: the old binary .xls format is not
+    // supported by the excel package, so say how to fix it instead of a bare
+    // "Import failed".
+    const resave = 'Open it in Excel or Google Sheets, save it as .xlsx or CSV, then import that.';
+    if (path.toLowerCase().endsWith('.xls')) {
+      throw const ImportEmptyException("Old Excel files (.xls) can't be read on the phone. $resave");
+    }
     final bytes = await File(path).readAsBytes();
-    final workbook = xlsx.Excel.decodeBytes(bytes);
+    final xlsx.Excel workbook;
+    try {
+      workbook = xlsx.Excel.decodeBytes(bytes);
+    } catch (_) {
+      throw const ImportEmptyException("This file couldn't be read as a spreadsheet. $resave");
+    }
     if (workbook.tables.isEmpty) throw const ImportEmptyException('File is empty');
     final sheet = workbook.tables.values.first;
     final excelRows = sheet.rows;
