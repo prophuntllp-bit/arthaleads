@@ -127,11 +127,13 @@ export function SourceBadge({ source, lead }) {
     const when = last?.createdAt ? ` · ${new Date(last.createdAt).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}` : "";
     return (
       <span
-        className="badge !p-0 overflow-hidden"
+        className={`badge !p-0 overflow-hidden ${color}`}
         title={`Came in via ${source}, then a Vistrow AI call${when}`}
       >
-        <span className={`px-2.5 py-1 ${color}`}>{source}</span>
-        <span className={`px-2 py-1 ${SOURCE_COLORS["Vistrow Voice"]}`}>AI call</span>
+        {/* flex-1: in a stretched column (the Leads list) the source half
+            fills the pill, so no empty white tail shows after "AI call". */}
+        <span className={`flex-1 px-2.5 py-1 ${color}`}>{source}</span>
+        <span className={`shrink-0 px-2.5 py-1 ${SOURCE_COLORS["Vistrow Voice"]}`}>AI call</span>
       </span>
     );
   }
