@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:csv/csv.dart';
-import 'package:excel/excel.dart' as xlsx;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -31,6 +30,8 @@ import 'lead_filters.dart';
 import 'lead_origin.dart';
 import 'lead_form.dart';
 import 'quick_add_lead.dart';
+import '../../core/xlsx_export.dart';
+import '../../widgets/date_range_picker.dart';
 import 'lead_import.dart';
 import 'wa_broadcast_sheet.dart';
 
@@ -779,6 +780,32 @@ class LeadsScreenState extends State<LeadsScreen> {
     lead['createdAt'] ?? '',
   ];
 
+  /// The Summary sheet's "Filters:" line, like the web's.
+  String _exportFiltersText() {
+    final f = _filters;
+    String? nameOf(List<Map<String, dynamic>> list, String id) =>
+        id.isEmpty ? null : list.where((x) => '${x['_id']}' == id).map((x) => '${x['name']}').firstOrNull;
+    final df = DateFormat('d MMM yyyy');
+    return XlsxExport.filtersText([
+      if (f.from != null || f.to != null)
+        'Created ${f.from != null ? df.format(f.from!) : '…'} to ${f.to != null ? df.format(f.to!) : 'today'}'
+      else if (f.dateRange.isNotEmpty)
+        dateRangeLabel(f.dateRange),
+      if (f.source.isNotEmpty) 'Source: ${f.source}',
+      if (f.siteFilter.isNotEmpty) 'Website: ${f.siteFilter}',
+      if (f.sourceSel.isNotEmpty) 'One ad or form',
+      if (f.status.isNotEmpty) 'Status: ${f.status}',
+      if (f.priority.isNotEmpty) 'Priority: ${f.priority}',
+      if (f.booking.isNotEmpty) 'Outcome: ${f.booking}',
+      if (f.projectId.isNotEmpty) 'Project: ${nameOf(_projects, f.projectId) ?? 'one project'}',
+      if (f.assignedTo.isNotEmpty) 'Assigned to: ${nameOf(_agents, f.assignedTo) ?? 'one person'}',
+      if (f.myOnly) 'My leads only',
+      if (f.followUpToday) 'Follow-ups due today',
+      if (f.consent.isNotEmpty) 'WhatsApp consent: ${f.consent}',
+      if (_searchCtrl.text.trim().isNotEmpty) 'Search: "${_searchCtrl.text.trim()}"',
+    ]);
+  }
+
   /// Mirrors Leads.jsx's exportRows: respects current filters/search when
   /// nothing is selected, narrows to the selection otherwise, and fetches
   /// the full matching set server-side rather than just what's scrolled
@@ -787,6 +814,21 @@ class LeadsScreenState extends State<LeadsScreen> {
     if (_exporting) return;
     setState(() => _exporting = true);
     try {
+      // Excel: the server makes the file in the web's look (Summary sheet,
+      // a sheet per source, orange header, filters, pills), same columns.
+      if (asExcel) {
+        await XlsxExport.shareLeads(
+          _selected.isNotEmpty
+              ? {'ids': _selected.join(','), 'filtersText': '${_selected.length} selected leads'}
+              : {
+                  if (_searchCtrl.text.trim().isNotEmpty) 'search': _searchCtrl.text.trim(),
+                  ..._filters.toParams(),
+                  'filtersText': _exportFiltersText(),
+                },
+          fallbackName: 'leads-${DateFormat('yyyy-MM-dd').format(DateTime.now())}.xlsx',
+        );
+        return;
+      }
       List<Map<String, dynamic>> source;
       if (_selected.isNotEmpty) {
         source = _leads.where((l) => _selected.contains(l['_id'])).toList();
@@ -810,43 +852,15 @@ class LeadsScreenState extends State<LeadsScreen> {
       }
 
       final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      if (asExcel) {
-        final wb = xlsx.Excel.createExcel();
-        final sheet = wb.getDefaultSheet() ?? 'Sheet1';
-        wb.rename(sheet, 'Leads');
-        wb.appendRow(
-          'Leads',
-          _exportHeader.map((h) => xlsx.TextCellValue(h)).toList(),
-        );
-        for (final lead in source) {
-          wb.appendRow(
-            'Leads',
-            _exportRow(
-              lead,
-            ).map((v) => xlsx.TextCellValue(v.toString())).toList(),
-          );
-        }
-        final bytes = wb.save();
-        if (bytes == null) throw Exception('Failed to build workbook');
-        await Share.shareXFiles([
-          XFile.fromData(
-            Uint8List.fromList(bytes),
-            name: 'arthaleads-leads-$date.xlsx',
-            mimeType:
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          ),
-        ]);
-      } else {
-        final rows = <List<dynamic>>[_exportHeader, ...source.map(_exportRow)];
-        final csv = const ListToCsvConverter().convert(rows);
-        await Share.shareXFiles([
-          XFile.fromData(
-            Uint8List.fromList(utf8.encode(csv)),
-            name: 'arthaleads-leads-$date.csv',
-            mimeType: 'text/csv',
-          ),
-        ]);
-      }
+      final rows = <List<dynamic>>[_exportHeader, ...source.map(_exportRow)];
+      final csv = const ListToCsvConverter().convert(rows);
+      await Share.shareXFiles([
+        XFile.fromData(
+          Uint8List.fromList(utf8.encode(csv)),
+          name: 'arthaleads-leads-$date.csv',
+          mimeType: 'text/csv',
+        ),
+      ]);
     } catch (e) {
       _snack(ApiClient.errorMessage(e, 'Export failed'), error: true);
     } finally {

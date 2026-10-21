@@ -13,6 +13,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../core/xlsx_export.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/whatsapp_send_sheet.dart';
 import '../../widgets/chips.dart';
@@ -660,6 +661,64 @@ class _LeadsTabState extends State<_LeadsTab> {
     }
   }
 
+  /// Excel in the web's look: the server builds the same project sheet the
+  /// web makes (POST /leads/export-sheet, kind "project"), including one
+  /// column per field captured at import.
+  Future<void> _exportExcel() async {
+    if (_exporting) return;
+    setState(() => _exporting = true);
+    try {
+      final leads = await _exportSource();
+      if (leads == null) return;
+      const keep = ['name', 'phone', 'whatsapp', 'email', 'source', 'status', 'booking', 'followUp', 'followUp2', 'remark1', 'remark2', 'remark3', 'remark4', 'remarkNote', 'remarkUpdatedBy', 'remarkUpdatedAt'];
+      final tabLabel = widget.isProspective ? 'Prospective' : 'Leads';
+      final projectName = (widget.project['name'] as String? ?? 'project').replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+      final selection = _selected.isNotEmpty ? '_${_selected.length}selected' : '';
+      await XlsxExport.shareRows({
+        'kind': 'project',
+        'prospective': widget.isProspective,
+        'leads': [for (final l in leads) {for (final k in keep) if (l[k] != null) k: l[k]}],
+        'filename': '${tabLabel}_$projectName$selection',
+      }, fallbackName: '${tabLabel}_$projectName$selection.xlsx');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.errorMessage(e, 'Export failed')), backgroundColor: AppColors.danger),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  /// The leads an Excel export covers: the selection, else everything
+  /// matching the tab's search and filters. Null (with a message) when none.
+  Future<List<Map<String, dynamic>>?> _exportSource() async {
+    List<Map<String, dynamic>> sourceLeads;
+    if (_selected.isNotEmpty) {
+      sourceLeads = _leads.where((l) => _selected.contains(l['_id'])).toList();
+    } else {
+      final res = await _api.dio.get(
+        '/projects/$_projectId/leads',
+        queryParameters: {
+          'page': 1,
+          'limit': 9999,
+          'isProspective': widget.isProspective,
+          if (_searchCtrl.text.trim().isNotEmpty) 'search': _searchCtrl.text.trim(),
+          if (_bookingFilter.isNotEmpty) 'bookingIn': _bookingFilter,
+          if (widget.isProspective && _dateFrom != null) 'followUpFrom': _dateFrom!.toIso8601String(),
+          if (widget.isProspective && _dateTo != null) 'followUpTo': _dateTo!.toIso8601String(),
+        },
+      );
+      sourceLeads = (res.data['leads'] as List? ?? []).cast<Map<String, dynamic>>();
+    }
+    if (sourceLeads.isEmpty) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No leads to export')));
+      return null;
+    }
+    return sourceLeads;
+  }
+
   Future<void> _exportCsv() async {
     if (_exporting) return;
     setState(() => _exporting = true);
@@ -949,10 +1008,14 @@ class _LeadsTabState extends State<_LeadsTab> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       )
-                    : IconButton(
+                    : PopupMenuButton<String>(
+                        tooltip: 'Export',
                         icon: const Icon(Icons.download, size: 20),
-                        tooltip: 'Export CSV',
-                        onPressed: _exportCsv,
+                        onSelected: (v) => v == 'excel' ? _exportExcel() : _exportCsv(),
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'excel', child: Text('Export Excel')),
+                          PopupMenuItem(value: 'csv', child: Text('Export CSV')),
+                        ],
                       ),
               ],
             ),

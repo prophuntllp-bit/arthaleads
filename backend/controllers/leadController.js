@@ -329,6 +329,52 @@ const leadController = {
     } catch (err) { next(err); }
   },
 
+  // POST /api/leads/export-sheet { sheets: { "Dump Leads": [rows] }, filename }
+  //   or { kind: "dump" | "project", leads: [...], prospective?, filename }
+  // Rows the phone app already holds (Dump Leads, a project's leads), returned
+  // as an Excel file in the ArthaLeads look, same as the web makes in the
+  // browser. Nothing is read from the database here; it only styles what the
+  // signed-in user sent. Values are written as plain text/numbers (ExcelJS
+  // never turns a string into a formula), and the size is capped.
+  async exportSheet(req, res, next) {
+    try {
+      const { kind, leads, prospective, filename = "arthaleads-export.xlsx" } = req.body || {};
+      let { sheets } = req.body || {};
+      // Dump Leads and a project's leads: the phone sends the leads it already
+      // shows and the rows are built here exactly as the web builds them.
+      if ((kind === "dump" || kind === "project") && Array.isArray(leads)) {
+        if (leads.length > 10000) return res.status(413).json({ success: false, message: "Too many rows for one file (10,000 at most)" });
+        const { dumpRows, projectRows } = require("../utils/exports/leadWorkbook");
+        const plain = leads.filter((l) => l && typeof l === "object" && !Array.isArray(l));
+        sheets = kind === "dump"
+          ? { "Dump Leads": dumpRows(plain) }
+          : { [prospective ? "Prospective" : "Leads"]: projectRows(plain, { prospective: !!prospective }) };
+      }
+      if (!sheets || typeof sheets !== "object" || Array.isArray(sheets)) {
+        return res.status(400).json({ success: false, message: "Nothing to export" });
+      }
+      const clean = {};
+      let total = 0;
+      for (const [name, rows] of Object.entries(sheets).slice(0, 10)) {
+        if (!Array.isArray(rows)) return res.status(400).json({ success: false, message: "Nothing to export" });
+        total += rows.length;
+        if (total > 10000) return res.status(413).json({ success: false, message: "Too many rows for one file (10,000 at most)" });
+        clean[String(name).slice(0, 60) || "Sheet"] = rows.map((r) => (r && typeof r === "object" && !Array.isArray(r)
+          ? Object.fromEntries(Object.entries(r).slice(0, 80).map(([k, v]) => [
+            String(k).slice(0, 80),
+            typeof v === "number" && Number.isFinite(v) ? v : v == null ? "" : String(v).slice(0, 5000),
+          ]))
+          : {}));
+      }
+      if (!total) return res.status(404).json({ success: false, message: "Nothing to export" });
+      const { themedWorkbook, sendWorkbook } = require("../utils/exports/leadWorkbook");
+      const name = `${String(filename).replace(/\.xlsx$/i, "").slice(0, 100) || "arthaleads-export"}.xlsx`;
+      return sendWorkbook(res, themedWorkbook(clean), name);
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async exportLeads(req, res, next) {
     try {
       const { format = "csv", ids, raw } = req.query;
@@ -346,6 +392,7 @@ const leadController = {
       } else {
         const query = { ...req.query, limit: EXPORT_LIMIT + 1, page: 1 };
         delete query.format;
+        delete query.filtersText;
         const { leads } = await leadService.getAllUnified(query, req.user, { fetchCap: EXPORT_LIMIT + 1 });
         if (leads.length > EXPORT_LIMIT) {
           truncated = true;
@@ -369,6 +416,19 @@ const leadController = {
       // stopped at 10 rows unless they had bumped rows-per-page first.
       if (raw === "1") {
         return res.json({ success: true, leads: sourceLeads, total: sourceLeads.length, truncated });
+      }
+
+      // A ready Excel file in the ArthaLeads look (the phone app's export; the
+      // web builds the same file in the browser from raw=1). Same rows, same
+      // sheets per source, same Summary sheet: utils/exports/leadWorkbook.js.
+      if (format === "xlsx") {
+        if (!sourceLeads.length) return res.status(404).json({ success: false, message: "No leads to export" });
+        const { leadsWorkbook, sendWorkbook } = require("../utils/exports/leadWorkbook");
+        const label = ids ? `${sourceLeads.length}-selected` : `${sourceLeads.length}-leads`;
+        const filtersText = String(req.query.filtersText || "").slice(0, 300)
+          || (ids ? `${sourceLeads.length} selected leads` : "All leads, no filters");
+        if (truncated) res.setHeader("X-Truncated", "1");
+        return sendWorkbook(res, leadsWorkbook(sourceLeads, { filtersText, forAgent: req.user.role === "agent" }), `leads-${label}-${istDateKey()}.xlsx`);
       }
 
       const rows = sourceLeads.map((lead) => ({
