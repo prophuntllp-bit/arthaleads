@@ -371,6 +371,8 @@ const VerifyEmail    = lazy(() => import("./pages/VerifyEmail"));
 const DeleteAccount  = lazy(() => import("./pages/DeleteAccount"));
 const DownloadApp    = lazy(() => import("./pages/DownloadApp"));
 const WhatsAppCrm    = lazy(() => import("./pages/WhatsAppCrm"));
+const AiCrm          = lazy(() => import("./pages/AiCrm"));
+const BuilderCrm     = lazy(() => import("./pages/BuilderCrm"));
 const SellDoAlternative = lazy(() => import("./pages/SellDoAlternative"));
 const LeadratAlternative = lazy(() => import("./pages/LeadratAlternative"));
 const KylasAlternative  = lazy(() => import("./pages/KylasAlternative"));
@@ -745,6 +747,21 @@ function RootRoute() {
   return <Landing />;
 }
 
+// The cursor effect, cookie notice and install prompt are for our own site and
+// app. The QR enquiry form (/form/:token) belongs to the customer's company and
+// is filled in on a visitor's phone, so it gets none of them.
+function SiteChrome() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/form/")) return null;
+  return (
+    <>
+      <CustomCursor />
+      <CookieBanner />
+      <InstallBanner />
+    </>
+  );
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -753,9 +770,7 @@ export default function App() {
     <AuthProvider>
     <CopilotProvider>
       <ErrorBoundary>
-      <CustomCursor />
-      <CookieBanner />
-      <InstallBanner />
+      <SiteChrome />
       <Suspense fallback={<PageFallback />}>
       <Routes>
         {/* Landing - guest sees homepage, logged-in user goes to dashboard */}
@@ -778,6 +793,8 @@ export default function App() {
         <Route path="/delete-account"       element={<DeleteAccount />} />
         <Route path="/download-app"         element={<DownloadApp />} />
         <Route path="/whatsapp-crm"         element={<WhatsAppCrm />} />
+        <Route path="/ai-crm"               element={<AiCrm />} />
+        <Route path="/builder-crm"          element={<BuilderCrm />} />
         <Route path="/compare/sell-do-alternative" element={<SellDoAlternative />} />
         <Route path="/compare/leadrat-alternative" element={<LeadratAlternative />} />
         <Route path="/compare/kylas-alternative" element={<KylasAlternative />} />
