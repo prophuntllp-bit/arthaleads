@@ -199,7 +199,7 @@ export default function DumpLeads() {
       const suffix = !overrideSource && selectedIds.size > 0 ? `-selected-${selectedIds.size}` : "";
       const dateStr = new Date().toISOString().slice(0, 10);
 
-      if (type === "excel") downloadXlsx(rows, `arthaleads-dump-leads${suffix}-${dateStr}.xlsx`, { sheetName: "Dump Leads" });
+      if (type === "excel") await downloadXlsx(rows, `arthaleads-dump-leads${suffix}-${dateStr}.xlsx`, { sheetName: "Dump Leads" });
       else downloadCsv(rows, `arthaleads-dump-leads${suffix}-${dateStr}.csv`);
       toast.success(`Exported ${rows.length} leads as ${type === "excel" ? "Excel" : "CSV"}`);
     } catch (e) {

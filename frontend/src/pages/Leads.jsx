@@ -745,8 +745,8 @@ export default function Leads() {
       const bySource = rows.reduce((acc, r) => { (acc[r.Source || "Other"] ||= []).push(r); return acc; }, {});
       const sourceNames = Object.keys(bySource).sort((a, b) => bySource[b].length - bySource[a].length);
       if (type === "excel" && sourceNames.length > 1) {
-        downloadXlsxSheets(Object.fromEntries(sourceNames.map((n) => [n, bySource[n]])), `leads-${label}-${date}.xlsx`);
-      } else if (type === "excel") downloadXlsx(rows, `leads-${label}-${date}.xlsx`, { sheetName: "Leads" });
+        await downloadXlsxSheets(Object.fromEntries(sourceNames.map((n) => [n, bySource[n]])), `leads-${label}-${date}.xlsx`);
+      } else if (type === "excel") await downloadXlsx(rows, `leads-${label}-${date}.xlsx`, { sheetName: "Leads" });
       else downloadCsv(rows, `leads-${label}-${date}.csv`);
 
       toast.success(`Exported ${rows.length} lead${rows.length !== 1 ? "s" : ""}`);
