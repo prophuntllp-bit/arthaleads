@@ -555,7 +555,15 @@ class _ShellState extends State<Shell> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) _handleBack(visible);
+        if (didPop) return;
+        // Back with the menu open closes the menu; it used to switch the
+        // screen behind it instead (and the menu stayed open).
+        final scaffold = _scaffold.currentState;
+        if (scaffold != null && scaffold.isDrawerOpen) {
+          scaffold.closeDrawer();
+          return;
+        }
+        _handleBack(visible);
       },
       child: AppBackdrop(
         child: Scaffold(
@@ -808,8 +816,10 @@ class _BottomTabs extends StatelessWidget {
         onTap: () => onTab(label),
         child: Center(
           child: AnimatedContainer(
+            width: double.infinity,
             duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             decoration: BoxDecoration(
               color: on ? AppColors.primary.withValues(alpha: t.isDark ? 0.18 : 0.10) : Colors.transparent,
               borderRadius: BorderRadius.circular(16),
@@ -817,12 +827,15 @@ class _BottomTabs extends StatelessWidget {
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               glyph,
               const SizedBox(height: 3),
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.fade,
-                softWrap: false,
-                style: TextStyle(fontSize: 11.5, fontWeight: on ? FontWeight.w700 : FontWeight.w500, color: color),
+              // Shrinks rather than cuts "Follow-ups" on a narrow phone.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: TextStyle(fontSize: 11.5, fontWeight: on ? FontWeight.w700 : FontWeight.w500, color: color),
+                ),
               ),
             ]),
           ),
