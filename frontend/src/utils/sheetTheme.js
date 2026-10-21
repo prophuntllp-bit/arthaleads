@@ -12,7 +12,8 @@ const BRAND_DEEP = "A04100"; // --app-primary-deep
 const INK = "1F2937";
 const MUTED = "9CA3AF";
 const ZEBRA = "FFF7F0";      // a whisper of the brand orange on every other row
-const RULE = "F3E3D6";
+const RULE = "E2CDB9";      // cell borders: a warm grey-brown that reads on white and on the orange tint
+const HEAD_RULE = "D45A00";  // lines between the orange header cells
 
 // Same colours as SOURCE_COLORS in constants.js (solid pill, white text).
 export const SOURCE_FILL = {
@@ -72,6 +73,11 @@ const solid = (hex) => ({ type: "pattern", pattern: "solid", fgColor: { argb: ar
 const voiceFill = () => ({ type: "gradient", gradient: "angle", degree: 0,
   stops: VOICE_GRADIENT.map((hex, n) => ({ position: n / (VOICE_GRADIENT.length - 1), color: { argb: argb(hex) } })) });
 const isEmpty = (v) => v === "" || v == null;
+// A full box around a cell, every side the same.
+const box = (hex, style = "thin") => {
+  const side = { style, color: { argb: argb(hex) } };
+  return { top: side, left: side, bottom: side, right: side };
+};
 
 // "2026-10-21" or "2026-10-21 14:30" (IST wall-clock) to a date Excel shows as
 // exactly that, so filters group by year and month and the column sorts.
@@ -144,7 +150,7 @@ function addSheet(wb, title, rows, textColumns, tab) {
     c.fill = solid(isForm(keys[n - 1]) ? BRAND_DEEP : BRAND);
     c.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
     c.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
-    c.border = { bottom: { style: "medium", color: { argb: argb(BRAND_DEEP) } } };
+    c.border = { ...box(HEAD_RULE), bottom: { style: "medium", color: { argb: argb(BRAND_DEEP) } } };
   });
 
   for (let i = 2; i <= rows.length + 1; i++) {
@@ -157,7 +163,7 @@ function addSheet(wb, title, rows, textColumns, tab) {
       const k = keys[c - 1];
       cell.font = { color: { argb: argb(INK) }, size: 10, ...(k === "Name" ? { bold: true } : {}) };
       cell.alignment = { vertical: "middle", indent: 1, ...(CENTER_COLUMNS.has(k) ? { horizontal: "center", indent: 0 } : {}) };
-      cell.border = { bottom: { style: "thin", color: { argb: argb(RULE) } } };
+      cell.border = box(RULE);
       if (zebra) cell.fill = solid(ZEBRA);
       if (cell.value == null) continue;
 
@@ -242,8 +248,11 @@ function addSummary(wb, allRows) {
     top.value = name; big.value = value;
     top.font = { bold: true, size: 10, color: { argb: "FF6B7280" } };
     big.font = { bold: true, size: 20, color: { argb: argb(i === 0 ? BRAND : INK) } };
-    for (const c of [top, big]) { c.fill = solid("FFF4EB"); c.alignment = { vertical: "middle", indent: 1 }; }
-    big.border = { bottom: { style: "medium", color: { argb: argb(BRAND) } } };
+    // Each card is a box: light orange edges, a thick brand line along the bottom.
+    const edge = { style: "thin", color: { argb: argb("F5C9A6") } };
+    for (const c of [top, big]) { c.fill = solid("FFF4EB"); c.alignment = { vertical: "middle", horizontal: "left", indent: 1 }; }
+    top.border = { top: edge, left: edge, right: edge };
+    big.border = { left: edge, right: edge, bottom: { style: "medium", color: { argb: argb(BRAND) } } };
   });
   r += 7;
 
@@ -269,6 +278,7 @@ function addSummary(wb, allRows) {
       cell.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
       cell.fill = solid(BRAND);
       cell.alignment = { vertical: "middle", horizontal: c === 2 ? "left" : "center", indent: c === 2 ? 1 : 0 };
+      cell.border = { ...box(HEAD_RULE), bottom: { style: "medium", color: { argb: argb(BRAND_DEEP) } } };
     });
     r++;
     for (const [name, n] of list) {
@@ -276,7 +286,7 @@ function addSummary(wb, allRows) {
       row.height = 20;
       const [lab, num, pct, bar] = [2, 3, 4, 5].map((c) => row.getCell(c));
       lab.value = name; num.value = n; pct.value = total ? n / total : 0;
-      for (const c of [lab, num, pct, bar]) c.border = { bottom: { style: "thin", color: { argb: argb(RULE) } } };
+      for (const c of [lab, num, pct, bar]) c.border = box(RULE);
       lab.font = { bold: true, size: 10, color: { argb: argb(INK) } };
       lab.alignment = { vertical: "middle", indent: 1 };
       num.alignment = pct.alignment = { vertical: "middle", horizontal: "center" };
@@ -288,7 +298,19 @@ function addSummary(wb, allRows) {
       bar.alignment = { vertical: "middle" };
       r++;
     }
-    r += 2;
+    // A total line closes each table.
+    const foot = ws.getRow(r);
+    foot.height = 22;
+    [[2, "Total"], [3, total], [4, 1], [5, ""]].forEach(([c, v]) => {
+      const cell = foot.getCell(c);
+      cell.value = v;
+      cell.fill = solid("FFF4EB");
+      cell.font = { bold: true, size: 10, color: { argb: argb(INK) } };
+      cell.alignment = { vertical: "middle", horizontal: c === 2 ? "left" : "center", indent: c === 2 ? 1 : 0 };
+      cell.border = { ...box(RULE), top: { style: "medium", color: { argb: argb(BRAND) } }, bottom: { style: "medium", color: { argb: argb(BRAND) } } };
+      if (c === 4) cell.numFmt = "0%";
+    });
+    r += 3;
   };
 
   section("By source", "Source", (name, cell) => {
