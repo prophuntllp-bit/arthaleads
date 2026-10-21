@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
-- [claude] 2026-10-21 IST: IN PROGRESS mobile New Lead: button moves from the home header to the Leads header (pinned bar on scroll, + FAB removed, Import/Export/QR into a menu), quick-add sheet (name, phone, source; More details = full form), duplicate number check while typing. Files: mobile/lib/screens/leads/*, screens/dashboard/dashboard_screen.dart. Mobile only.
 
 
 
@@ -100,6 +99,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-21 IST: mobile New Lead moved to the Leads header (home button and + FAB removed; Import/Export/QR in a menu; title row folds on scroll, compact New in the search row), quick-add sheet (name, phone, source chips, last source remembered; after save Call/WhatsApp/Follow-up; More details prefills the full form) and duplicate check while typing (GET /leads/check-duplicate, Open). Tested on a phone, light + dark. Staging 122978e5; on main, not released. flutter test 70/70. Left a test lead 'Quick Add Test' (9000000077) on staging.
 
 - [claude] 2026-10-21 IST: mobile home redesign (owner mockup): compact header + swipeable source counters, Artha insights banner, Today's priorities (opens the morning brief), one-line attendance, Lead performance 3x2, Action required bar, Hot Today / Upcoming side by side (Call, WhatsApp, Assign); charts + Team moved to a new Reports tab; bottom bar Home/Leads/Follow-ups(overdue badge)/Reports/More(menu). Fixed: Back with the menu open switched screens. Tested on a phone (light + dark). Staging 8b2b5018 + follow-up; on main, not released.
 - [claude] 2026-10-21 IST (staging -> main, owner approved "push all together"): (1) Media cache: /api/media serves from a copy on the server's disk (backend/utils/mediaCache.js), B2 read once per file per server start; ranges from the copy, simultaneous misses share one read, LRU past MEDIA_CACHE_MB (default 1024, 0=off), files over MEDIA_CACHE_MAX_FILE_MB (100) stream from B2 as before. Reason: free daily B2 caps hit 17 Oct (Meta re-downloads media on every bot send). tests/mediaCache.test.js. Backblaze login is arhtalead@gmail.com; caps can't be raised until a card is added. (2) Excel downloads (Leads, Dump Leads, project leads) built with ExcelJS (lazy-loaded): brand header, filters, frozen header/Name, Source cells in the pill colours, more columns (created time, lead age, first contacted, response time, site visit, location, timeline, campaign, calls, tags, form answers), phones "+91 xxxxx xxxxx", hidden empty columns. Leads adds a Summary sheet (logo public/excel-logo.png, filters line, cards, pipeline, status/source/follow-ups/priority/project/per-day pairs, team performance, hot leads not contacted). Agents: server only returns their own leads (visibility.db.test.js now covers /leads/export incl. ids); their file also omits team sections. Importer skips Summary, reads all lead sheets, stores phones as digits. frontend/src/utils/sheetTheme.js + sheetExport.js. (3) WhatsApp bot waits ~5 s of customer quiet (WA_BOT_QUIET_MS) and answers a burst once; tests/mergeQuickMessages.db.test.js. (4) Share image: dark "Close more property deals with AI." og-image-ai.png, now used by index.html/SEOHead/blog-post.
