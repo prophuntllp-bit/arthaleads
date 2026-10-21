@@ -13,6 +13,7 @@ import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../core/xlsx_export.dart';
 import '../../widgets/chips.dart';
 import '../../widgets/motion.dart';
 import '../leads/lead_origin.dart';
@@ -223,6 +224,34 @@ class _DumpScreenState extends State<DumpScreen> {
       XFile.fromData(Uint8List.fromList(utf8.encode(csv)),
           name: 'arthaleads-dump-leads-$dateStr.csv', mimeType: 'text/csv'),
     ]);
+  }
+
+  bool _exportingXlsx = false;
+
+  /// Excel in the web's look: the server builds the same Dump Leads sheet
+  /// the web makes (POST /leads/export-sheet, kind "dump").
+  Future<void> _exportExcel() async {
+    if (_exportingXlsx) return;
+    final source = _selected.isNotEmpty ? _leads.where((l) => _selected.contains(_uid(l))).toList() : _filtered;
+    const keep = ['name', 'phone', 'email', 'source', 'projectName', 'status', 'booking', 'isDeleted', 'assignedToName', 'remark', 'remark1', 'remark2', 'createdAt'];
+    final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final suffix = _selected.isNotEmpty ? '-selected-${_selected.length}' : '';
+    setState(() => _exportingXlsx = true);
+    try {
+      await XlsxExport.shareRows({
+        'kind': 'dump',
+        'leads': [for (final l in source) {for (final k in keep) if (l[k] != null) k: l[k]}],
+        'filename': 'arthaleads-dump-leads$suffix-$dateStr',
+      }, fallbackName: 'arthaleads-dump-leads$suffix-$dateStr.xlsx');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.errorMessage(e, 'Export failed')), backgroundColor: AppColors.danger),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exportingXlsx = false);
+    }
   }
 
   Future<void> _importCsv() async {
@@ -510,11 +539,22 @@ class _DumpScreenState extends State<DumpScreen> {
                 tooltip: 'Import CSV',
                 onPressed: _importing ? null : _importCsv,
               ),
-              IconButton(
-                icon: const Icon(Icons.download, size: 20),
-                tooltip: _selected.isNotEmpty ? 'Export ${_selected.length} selected' : 'Export CSV',
-                onPressed: filtered.isEmpty ? null : _exportCsv,
-              ),
+              if (_exportingXlsx)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                )
+              else
+                PopupMenuButton<String>(
+                  tooltip: _selected.isNotEmpty ? 'Export ${_selected.length} selected' : 'Export',
+                  enabled: filtered.isNotEmpty,
+                  icon: const Icon(Icons.download, size: 20),
+                  onSelected: (v) => v == 'excel' ? _exportExcel() : _exportCsv(),
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'excel', child: Text('Export Excel')),
+                    PopupMenuItem(value: 'csv', child: Text('Export CSV')),
+                  ],
+                ),
             ],
           ),
         ),
