@@ -30,7 +30,8 @@ test("the server's copy of the look is exactly the web's (run scripts/syncSheetT
 
 test("Leads rows: the web's columns in the web's order, IST dates, calls and form answers", () => {
   const [a, b] = leadRows(leads, Date.parse("2026-10-21T00:00:00Z"));
-  assert.deepEqual(Object.keys(a).slice(0, 8), ["Name", "Phone", "Status", "Priority", "Project", "AssignedTo", "Email", "Source"]);
+  assert.deepEqual(Object.keys(a).slice(0, 10), ["Name", "Phone", "Status", "Priority", "Score", "AIReason", "Project", "AssignedTo", "Email", "Source"]);
+  assert.equal(typeof a.Score, "number", "the Hot Today score, as on the web");
   assert.equal(a.CreatedAt, "2026-10-20 10:00");
   assert.equal(a.Calls, 1);
   assert.ok(a.LastCall.startsWith("Answered, "));

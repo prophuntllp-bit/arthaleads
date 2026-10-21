@@ -7,17 +7,31 @@
 //   40–59  → "Lukewarm"
 //   0–39   → "Cold"
 //
-// Factors (max raw = ~125, clamped to 100):
-//   Status           0–25
-//   Priority         0–20
-//   Budget max       0–15
-//   Booking          0–20
-//   Site visit done  0–10
-//   Activities       0–10
-//   Notes            0–5
-//   Follow-up due    0–15
-//   Recent contact   0–10
-//   Source warmth    0–5
+// Factors (raw total clamped to 0–100):
+//   Status 0–25, Priority 0–20, Budget max 0–15, Booking 0–20,
+//   Site visit done 0–10, Activities 0–10, Notes 0–5, Follow-up due 0–15,
+//   Customer active recently 0–20, New lead 0–10, First contacted 0–10,
+//   Source warmth 0–5, Idle for weeks −6 to −20,
+//   AI read of the last 14 days of chat and calls −20 to +20 (aiAdjust below).
+//
+// Every screen scores from the same lead fields, so the Dashboard, the
+// WhatsApp list, Artha and the Excel download always agree.
+
+const AI_WINDOW_MS = 14 * 86400000;
+
+// The AI's adjustment (services/aiLeadScore.js), while the activity it read
+// is under 14 days old. Older than that it lapses: the lead is back to its
+// plain rule score.
+function aiAdjust(lead, now = Date.now()) {
+  const a = lead.aiScore;
+  if (!a || !a.adjust || !a.signalAt) return 0;
+  if (now - new Date(a.signalAt).getTime() > AI_WINDOW_MS) return 0;
+  return Math.max(-20, Math.min(20, a.adjust));
+}
+function aiFresh(lead, now = Date.now()) {
+  const a = lead.aiScore;
+  return !!(a && a.reason && a.signalAt && now - new Date(a.signalAt).getTime() <= AI_WINDOW_MS);
+}
 
 function scoreLead(lead) {
   let s = 0;
@@ -67,8 +81,11 @@ function scoreLead(lead) {
 
   // The customer wrote back recently (WhatsApp). The strongest live signal
   // there is: they are in the conversation right now.
-  if (lead._lastReplyAt) {
-    const hrs = (Date.now() - new Date(lead._lastReplyAt)) / 3600000;
+  // _lastReplyAt (Hot Today's WhatsApp lookup) or the lead's own record of
+  // when the customer last wrote or talked on a call.
+  const replyAt = [lead._lastReplyAt, lead.lastCustomerSignalAt].filter(Boolean).map((d) => new Date(d)).sort((a, b) => b - a)[0];
+  if (replyAt) {
+    const hrs = (Date.now() - replyAt) / 3600000;
     if (hrs <= 24) s += 20;
     else if (hrs <= 72) s += 12;
     else if (hrs <= 168) s += 6;
@@ -84,8 +101,8 @@ function scoreLead(lead) {
 
   // Nothing has happened on it for weeks: cool it down, whatever it scored
   // on paper months ago.
-  const lastTouch = lead._lastReplyAt && new Date(lead._lastReplyAt) > new Date(lead.updatedAt || 0)
-    ? lead._lastReplyAt : lead.updatedAt;
+  const lastTouch = replyAt && replyAt > new Date(lead.updatedAt || 0)
+    ? replyAt : lead.updatedAt;
   if (lastTouch) {
     const idle = (Date.now() - new Date(lastTouch)) / 86400000;
     if (idle > 60) s -= 20;
@@ -104,6 +121,8 @@ function scoreLead(lead) {
   if (lead.source === "WhatsApp") s += 5;
   else if (["Facebook", "Google"].includes(lead.source)) s += 3;
 
+  s += aiAdjust(lead);
+
   return Math.max(0, Math.min(Math.round(s), 100));
 }
 
@@ -116,6 +135,8 @@ function scoreLabel(score) {
 
 // Derive the single most actionable suggestion for a lead
 function nextBestAction(lead, score) {
+  // The AI's suggestion, when it read this lead's recent chat and calls.
+  if (aiFresh(lead) && lead.aiScore.nextStep) return { action: lead.aiScore.nextStep, icon: "sparkles", color: "orange", ai: true };
   if (lead.status === "Negotiation") return { action: "Send Proposal", icon: "file", color: "indigo" };
   if (lead.booking === "Site Visit Booked") return { action: "Confirm Site Visit", icon: "map-pin", color: "violet" };
   if (lead.booking === "Site Visit Done" || lead.siteVisitDone) return { action: "Follow Up & Close", icon: "handshake", color: "emerald" };
@@ -126,4 +147,12 @@ function nextBestAction(lead, score) {
   return { action: "Send WhatsApp", icon: "message", color: "green" };
 }
 
-module.exports = { scoreLead, scoreLabel, nextBestAction };
+// What screens show about the AI's part: null when the AI hasn't read the lead
+// in the last 14 days (the score is then the rule score alone).
+function aiSummary(lead) {
+  if (!aiFresh(lead)) return null;
+  const a = lead.aiScore;
+  return { level: a.level, reason: a.reason, adjust: aiAdjust(lead), signals: a.signals || [], scoredAt: a.scoredAt, wrong: !!a.feedback?.wrong };
+}
+
+module.exports = { scoreLead, scoreLabel, nextBestAction, aiSummary, aiAdjust };

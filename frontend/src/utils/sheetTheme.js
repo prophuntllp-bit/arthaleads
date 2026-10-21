@@ -45,7 +45,7 @@ const LABELS = {
   CreatedAt: "Created On", AddedOn: "Added On", PipelineStatus: "Pipeline Status", BookingStatus: "Booking Status",
   Campaign: "Campaign / Ad", LeadAgeDays: "Lead Age (days)", FirstContacted: "First Contacted",
   ResponseHours: "Response Time", SiteVisitDate: "Site Visit", VisitDone: "Visit Done",
-  PreferredLocation: "Preferred Location", LastCall: "Last Call",
+  PreferredLocation: "Preferred Location", LastCall: "Last Call", AIReason: "AI Read (last 14 days)",
 };
 const WIDTHS = {
   "#": 6, Name: 24, Phone: 18, WhatsApp: 18, Email: 28, Source: 15, LeadSource: 32, Campaign: 28, Website: 24,
@@ -54,11 +54,11 @@ const WIDTHS = {
   Remark3: 36, Remark4: 36, "Remark 1": 36, "Remark 2": 36, "Lead Outcome": 16, BookingStatus: 16,
   AssignedTo: 18, Project: 26, Reason: 13, CreatedAt: 21, FirstContacted: 21, SiteVisitDate: 21,
   LeadAgeDays: 17, ResponseHours: 17, VisitDone: 13, City: 16, PreferredLocation: 22, Timeline: 16,
-  Calls: 9, LastCall: 24, Tags: 22,
+  Calls: 9, LastCall: 24, Tags: 22, Score: 10, AIReason: 44,
 };
 const DATE_COLUMNS = new Set(["FollowUpDate", "FollowUpDate2", "CreatedAt", "AddedOn", "FirstContacted", "SiteVisitDate"]);
 const MONEY_COLUMNS = new Set(["BudgetMin", "BudgetMax"]);
-const CENTER_COLUMNS = new Set(["BHK", "Calls", "LeadAgeDays", "ResponseHours", "VisitDone", "#"]);
+const CENTER_COLUMNS = new Set(["BHK", "Calls", "LeadAgeDays", "ResponseHours", "VisitDone", "#", "Score"]);
 const ALWAYS_SHOWN = new Set(["Name", "Phone", "Status", "Priority", "Project", "AssignedTo", "Source"]);
 const TEXT_DEFAULT = ["Phone", "WhatsApp"];
 const ODD_BUDGET = 100000; // under ₹1 lakh is almost always a typing slip
@@ -189,6 +189,11 @@ function addSheet(wb, title, rows, textColumns, tab) {
       if (k === "Source") sourcePill(cell, cell.value);
       if (STATUS_COLUMNS.has(k) && STATUS_STYLE[cell.value]) softPill(cell, STATUS_STYLE[cell.value]);
       if (k === "Priority" && PRIORITY_STYLE[cell.value]) softPill(cell, PRIORITY_STYLE[cell.value]);
+      // Same colours as the Hot Today score badge.
+      if (k === "Score" && typeof cell.value === "number") {
+        const [bg, fg] = cell.value >= 80 ? ["FEE2E2", "DC2626"] : cell.value >= 60 ? ["FFEDD5", "EA580C"] : cell.value >= 40 ? ["FEF3C7", "B45309"] : ["F3F4F6", "6B7280"];
+        softPill(cell, [bg, fg]);
+      }
       if (k === "VisitDone") softPill(cell, cell.value === "Yes" ? ["DCFCE7", "15803D"] : ["F3F4F6", "6B7280"]);
       if (k === "ResponseHours") {
         // Green within the hour, amber within the day, red after that.

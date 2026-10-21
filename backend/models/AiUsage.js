@@ -31,6 +31,10 @@ const schema = new mongoose.Schema(
     arthaOutputTokens: { type: Number, default: 0 },
     arthaCostMicroUsd: { type: Number, default: 0 },
 
+    // AI lead scoring (services/aiLeadScore.js): one call per scored lead.
+    leadScoreCalls:    { type: Number, default: 0 },
+    leadScoreTokens:   { type: Number, default: 0 },
+
     // Button flows: a small model call reading a typed reply as a button
     // (utils/flowAnswer.js aiMatch), only when the rules couldn't.
     flowMatchCalls:    { type: Number, default: 0 },

@@ -320,6 +320,34 @@ const leadSchema = new mongoose.Schema(
     // ── Response Time Tracking ────────────────────────────────────────────────
     firstContactedAt: { type: Date, default: null }, // set once when status first moves to "Contacted"
 
+    // ── AI lead scoring (21 Oct 2026, services/aiLeadScore.js) ───────────────
+    // When the CUSTOMER last did something: wrote on WhatsApp, or talked on a
+    // call (team call with a transcript, or a Vistrow AI call). Never set by
+    // anything we send. The AI only reads leads with one in the last 14 days.
+    lastCustomerSignalAt: { type: Date, default: undefined },
+    // Set when the lead arrived through a spreadsheet import. The AI skips it
+    // until the customer replies after that (lastCustomerSignalAt > importedAt).
+    importedAt: { type: Date, default: undefined },
+    // The AI's read of the last 14 days of chat and call summaries, on top of
+    // the rule score (utils/leadScorer.js adds `adjust`, at most +-20, while
+    // signalAt is within 14 days). Undefined until a lead is first scored.
+    aiScore: {
+      type: {
+        level:      { type: String, enum: ["hot", "warm", "cold"] },
+        adjust:     { type: Number, default: 0 },
+        confidence: { type: Number, default: 0 },
+        reason:     { type: String, default: "" },
+        signals:    { type: [String], default: undefined },
+        nextStep:   { type: String, default: "" },
+        scoredAt:   { type: Date },
+        signalAt:   { type: Date },   // the lastCustomerSignalAt this score read up to
+        model:      { type: String, default: "" },
+        // An agent tapped "AI got it wrong". Kept for review; changes nothing.
+        feedback:   { type: { wrong: Boolean, by: mongoose.Schema.Types.ObjectId, byName: String, at: Date }, default: undefined },
+      },
+      default: undefined,
+    },
+
     // ── Misc ──────────────────────────────────────────────────────────────────
     tags: [{ type: String, trim: true }],
     isArchived: { type: Boolean, default: false },
@@ -360,8 +388,26 @@ const leadSchema = new mongoose.Schema(
 
 // ── Indexes ───────────────────────────────────────────────────────────────────
 // Single-field (kept for backward compat)
+// A Vistrow AI call reaching the lead (pushed, or a re-send filling in the
+// transcript) is the customer talking: stamp lastCustomerSignalAt in the same
+// write, so every webhook path counts without each one remembering to.
+function stampVoiceSignal() {
+  const u = this.getUpdate() || {};
+  const set = u.$set || {};
+  const addsCall = (u.$push && u.$push.voiceCalls) || Object.keys(set).some((k) => /^voiceCalls(\.\$)?\.transcript$/.test(k));
+  if (!addsCall) return;
+  this.setUpdate({ ...u, $set: { ...set, lastCustomerSignalAt: new Date() } });
+}
+leadSchema.pre("updateOne", stampVoiceSignal);
+leadSchema.pre("findOneAndUpdate", stampVoiceSignal);
+leadSchema.pre("save", async function stampNewVoiceLead() {
+  if (this.isNew && Array.isArray(this.voiceCalls) && this.voiceCalls.length && !this.lastCustomerSignalAt) this.lastCustomerSignalAt = new Date();
+});
+
 leadSchema.index({ followUpDate: 1 });
 leadSchema.index({ createdAt: -1 });
+// The AI scoring sweep: leads with recent customer activity.
+leadSchema.index({ orgId: 1, lastCustomerSignalAt: -1 }, { partialFilterExpression: { lastCustomerSignalAt: { $exists: true } } });
 
 // Compound indexes - these cover the most common multi-field queries:
 // "all active leads for this org sorted by date" (dashboard, leads list)

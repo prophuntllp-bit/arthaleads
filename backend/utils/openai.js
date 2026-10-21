@@ -230,7 +230,7 @@ Annual billing gives roughly two months free vs. monthly. No setup fee on any pl
 CORE FEATURES
 ════════════════════════════════════════════════
 - Unified Lead Inbox: every lead source in one place — Facebook Lead Ads, Google Ads, WhatsApp, walk-ins, property portals, WordPress forms, QR codes.
-- AI Lead Scoring: every lead auto-scored 0-100 on budget, urgency, stage, engagement; "Hot Today" dashboard widget surfaces who to call first.
+- AI Lead Scoring: every lead scored 0-100 from its stage, priority, budget, follow-ups and activity; for leads active in the last 14 days, AI also reads the recent WhatsApp chat and call summaries and moves the score up or down with a one-line reason (e.g. "asked for a Saturday visit, loan approved"). "Hot Today" dashboard widget surfaces who to call first.
 - AI WhatsApp Draft: AI writes a personalised WhatsApp message per lead in one click.
 - AI Call Intelligence: one-tap click-to-call (bridges your phone to the lead via EnableX) or call straight from the browser (WebRTC soft phone, no phone needed). Every recording is auto-transcribed with AI-detected intent/sentiment/summary/next-step, and can auto-advance the lead's pipeline stage.
 - QR Code Lead Capture: every org and project gets its own QR code for hoardings, brochures, expo stalls — scan-to-form-to-CRM.
@@ -699,7 +699,7 @@ ZONE: TODAY AT A GLANCE — Six equal stat cards in a single row (2-col on mobil
 
 ZONE: ACTION REQUIRED — Two-column side-by-side layout on tablet/desktop, stacked on mobile. Both panels load instantly alongside the KPI stats (parallel fetch):
 - LEFT: OVERDUE FOLLOW-UPS panel — lists all leads whose follow-up date has passed. Amber-tinted card, dismissible per session (X button), collapsible (chevron). Scrollable list shows up to 5 rows before scrolling. "View all" link goes to Follow-ups page.
-- RIGHT: HOT TODAY — Arthaleads' main AI feature. Scores every lead 0–100 pts and ranks them by priority so agents know exactly who to call first. Distinguished by an animated orange spinning border glow (the only card with this effect on the dashboard — signals it's the USP). Orange header gradient, pulsing live dot on the flame icon, orange "AI Scored" sparkle badge. No "View all" button — chevron collapses/expands the list. Each row: score badge (red ≥80, orange ≥60), lead name/status, next-best-action badge, one-tap Call and WhatsApp buttons.
+- RIGHT: HOT TODAY — Arthaleads' main AI feature. Scores every lead 0–100 pts and ranks them by priority so agents know exactly who to call first. For leads whose customer wrote or talked on a call in the last 14 days, AI reads that recent chat and the call summaries and adjusts the score by up to 20 points; those rows show the AI's one-line reason and an "AI got it wrong" option. Spreadsheet-imported leads are only read by AI once the customer replies; project leads are not AI-scored. Distinguished by an animated orange spinning border glow (the only card with this effect on the dashboard — signals it's the USP). Orange header gradient, pulsing live dot on the flame icon, orange "AI Scored" sparkle badge. No "View all" button — chevron collapses/expands the list. Each row: score badge (red ≥80, orange ≥60), lead name/status, next-best-action badge, one-tap Call and WhatsApp buttons.
 Below the 2-col grid: UPCOMING 48 HOURS — leads with follow-up or site visit in the next 2 days.
 
 ADMIN INTELLIGENCE ZONE (Admin/Manager only — entire zone hidden from agents):

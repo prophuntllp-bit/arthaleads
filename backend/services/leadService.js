@@ -986,6 +986,9 @@ const leadService = {
         assignedTo: effectiveAssignee?._id || item.assignedTo || null,
         budget: { min: item.budget?.min || 0, max: item.budget?.max || 0, currency: item.budget?.currency || "INR" },
         orgId: user.orgId,
+        // Marks it as a spreadsheet row: the AI lead score skips it until the
+        // customer replies (services/aiLeadScore.js).
+        importedAt: new Date(),
         createdBy: user._id,
         assignedToName,
         activities,

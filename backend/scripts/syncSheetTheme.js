@@ -2,7 +2,7 @@
 // CommonJS: backend/utils/exports/sheetTheme.js, so a file made by the server
 // (the phone's exports) looks exactly like one the web makes. Run after every
 // change to the web file:  node scripts/syncSheetTheme.js
-// tests/sheetTheme.sync.test.js fails while the two differ.
+// tests/exportXlsx.test.js fails while the two differ.
 const fs = require("fs");
 const path = require("path");
 

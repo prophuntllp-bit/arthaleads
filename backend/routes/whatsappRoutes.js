@@ -35,7 +35,7 @@ const { samePhone } = require("../utils/phone");
 const { noDashes } = require("../utils/botText");
 const { emitLeadCreated, routedProject } = require("../utils/emitLeadCreated");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
-const { scoreLead, scoreLabel } = require("../utils/leadScorer");
+const { scoreLead, scoreLabel, aiSummary } = require("../utils/leadScorer");
 const { fillTemplate } = require("../utils/formFieldMapper");
 const { looksLikeSolicitation } = require("../utils/solicitationGuard");
 const { limitEmoji } = require("../utils/limitEmoji");
@@ -908,7 +908,7 @@ async function maybeSendAwayMessage(org, agent, conversation) {
 // One shared field list rather than a separate one per route, so the two
 // views can never quietly drift into scoring a lead on incomplete data.
 const LEAD_SCORE_FIELDS = "name status statusSetBy priority propertyType bhk preferredLocation budget source phone arthaSuggest "
-  + "booking siteVisitDone activities notes followUpDate firstContactedAt";
+  + "booking siteVisitDone activities notes followUpDate firstContactedAt createdAt updatedAt lastCustomerSignalAt aiScore";
 
 // Attaches the same rule-based hotness score the Dashboard's "Hot Today"
 // widget already uses (see leadScorer.js) onto each conversation's populated
@@ -921,6 +921,7 @@ function attachLeadScores(conversations) {
     const score = scoreLead(c.leadId);
     c.leadId._score = score;
     c.leadId._scoreLabel = scoreLabel(score);
+    c.leadId._ai = aiSummary(c.leadId);
   }
 }
 
@@ -1129,6 +1130,9 @@ async function handleInbound(org, parsed) {
       $inc: { unreadCount: 1 },
     }),
     ...(conv.leadId ? [
+      // The customer just wrote: the AI lead score reads this lead again once
+      // they have been quiet for 10 minutes (services/aiLeadScore.js).
+      require("../services/aiLeadScore").markSignal(conv.leadId, inboundTimestamp),
       // Rule 2's clock: 15 minutes from the customer's latest message.
       Lead.updateOne(
         { _id: conv.leadId, "vistrowEmit.awaitingCallSince": { $exists: true }, "vistrowEmit.callRequestedAt": null },

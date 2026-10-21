@@ -728,6 +728,9 @@ export default function Leads() {
           Phone:         str(lead.phone),           // kept as string - no numeric coercion
           Status:        str(lead.status),
           Priority:      str(lead.priority),
+          // The Hot Today score (rules, plus the AI's read of the last 14 days).
+          Score:         lead._score ?? "",
+          AIReason:      lead._ai?.reason ? `${lead._ai.level[0].toUpperCase()}${lead._ai.level.slice(1)}: ${lead._ai.reason}` : "",
           Project:       str(lead.projectName),
           AssignedTo:    str(lead.assignedToName),
           Email:         str(lead.email),

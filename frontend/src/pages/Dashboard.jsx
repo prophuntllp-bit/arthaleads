@@ -1346,6 +1346,7 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
   };
 
   const ActionIcon = ({ icon }) => {
+    if (icon === "sparkles") return <Sparkles className="h-3 w-3" />;
     if (icon === "phone")   return <Phone className="h-3 w-3" />;
     if (icon === "bell")    return <Bell className="h-3 w-3" />;
     if (icon === "map-pin") return <MapPin className="h-3 w-3" />;
@@ -1356,6 +1357,17 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
   };
 
   const topScore = leads[0]?._score ?? null;
+  const anyAi = leads.some((l) => l._ai);
+
+  // "AI got it wrong" (or undo). Kept for review; the score itself is unchanged.
+  const flagAi = async (lead, wrong) => {
+    setLeads((ls) => ls.map((l) => (l._id === lead._id ? { ...l, _ai: { ...l._ai, wrong } } : l)));
+    try { await api.post(`/leads/${lead._id}/ai-score/feedback`, { wrong }); }
+    catch {
+      setLeads((ls) => ls.map((l) => (l._id === lead._id ? { ...l, _ai: { ...l._ai, wrong: !wrong } } : l)));
+      toast.error("Couldn't save that. Try again.");
+    }
+  };
 
   return (
     <div className="hot-ai-wrapper">{/* spinning conic-gradient border */}
@@ -1379,21 +1391,24 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
           <div className="min-w-0 flex-1">
             <h3 className="flex items-center gap-1.5 text-sm font-bold text-app leading-tight">
               Hot Today
-              <InfoTip text="Ranked by recent WhatsApp replies, how new the lead is, follow-ups due, budget and pipeline stage. Leads tagged Not a buyer are left out." />
+              <InfoTip text="Ranked by recent replies, how new the lead is, follow-ups due, budget and pipeline stage. For leads whose customer wrote or talked on a call in the last 14 days, AI also reads that chat and the call summaries and moves the score up or down by up to 20 points, with its reason shown. Leads tagged Not a buyer are left out." />
             </h3>
             <p className="text-[11px] text-app-soft truncate">
-              {topScore !== null ? `Top score: ${topScore} pts · ${leads.length} ranked` : "AI-ranked leads to call first"}
+              {topScore !== null ? `Top score: ${topScore} pts · ${leads.length} ranked` : "Leads to call first"}
             </p>
           </div>
         </div>
 
         {/* Controls — AI SCORED badge + chevron */}
         <div className="shrink-0 flex items-center gap-1">
-          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-            style={{ background: "linear-gradient(90deg, rgba(249,115,22,0.15), rgba(251,146,60,0.15))", border: "1px solid rgba(249,115,22,0.35)", color: "#fb923c" }}>
-            <Sparkles className="h-2.5 w-2.5" />
-            <span className="hidden sm:inline">AI Scored</span>
-          </span>
+          {/* Only when the AI actually read at least one of these leads. */}
+          {anyAi && (
+            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+              style={{ background: "linear-gradient(90deg, rgba(249,115,22,0.15), rgba(251,146,60,0.15))", border: "1px solid rgba(249,115,22,0.35)", color: "#fb923c" }}>
+              <Sparkles className="h-2.5 w-2.5" />
+              <span className="hidden sm:inline">AI Scored</span>
+            </span>
+          )}
           <button type="button"
             onClick={() => setMinimized((v) => !v)}
             title={minimized ? "Expand" : "Minimize"}
@@ -1415,21 +1430,44 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
 
               {/* Score badge */}
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                <div className="shrink-0 flex h-9 w-9 flex-col items-center justify-center rounded-xl text-center"
-                  style={{ background: ss.bg }}>
+                <div className="relative shrink-0 flex h-9 w-9 flex-col items-center justify-center rounded-xl text-center self-start"
+                  style={{ background: ss.bg }}
+                  title={lead._ai ? `Includes ${lead._ai.adjust > 0 ? "+" : ""}${lead._ai.adjust} from AI` : "Rule score"}>
                   <span className="text-[11px] font-black leading-none" style={{ color: ss.color }}>{lead._score}</span>
                   <span className="text-[8px] font-semibold uppercase" style={{ color: ss.color }}>pts</span>
+                  {lead._ai && (
+                    <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full"
+                      style={{ background: "var(--app-card-solid, var(--app-surface-solid))", border: "1px solid rgba(249,115,22,0.4)" }}>
+                      <Sparkles className="h-2 w-2" style={{ color: "#f97316" }} />
+                    </span>
+                  )}
                 </div>
 
-                {/* Name + meta */}
-                <button type="button"
-                  onClick={() => navigate("/leads", { state: { openLeadId: lead._id } })}
-                  className="text-left min-w-0 cursor-pointer">
-                  <p className="text-sm font-semibold text-app truncate hover:text-orange-500 transition">{lead.name}</p>
-                  <p className="text-[11px] text-app-soft truncate">
-                    {[lead.status, lead.priority !== "Medium" ? lead.priority : null, lead.preferredLocation].filter(Boolean).join(" · ")}
-                  </p>
-                </button>
+                <div className="min-w-0 flex-1">
+                  {/* Name + meta */}
+                  <button type="button"
+                    onClick={() => navigate("/leads", { state: { openLeadId: lead._id } })}
+                    className="block max-w-full text-left min-w-0 cursor-pointer">
+                    <p className="text-sm font-semibold text-app truncate hover:text-orange-500 transition">{lead.name}</p>
+                    <p className="text-[11px] text-app-soft truncate">
+                      {[lead.status, lead.priority !== "Medium" ? lead.priority : null, lead.preferredLocation].filter(Boolean).join(" · ")}
+                    </p>
+                  </button>
+                  {/* What the AI read in the last 14 days, and a way to say it's wrong. */}
+                  {lead._ai?.reason && (
+                    <div className="mt-1 flex items-start gap-1.5">
+                      <Sparkles className="mt-0.5 h-3 w-3 shrink-0" style={{ color: "#f97316" }} />
+                      <p className={`min-w-0 text-[11px] leading-snug ${lead._ai.wrong ? "text-app-soft line-through" : "text-app"}`}
+                        style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                        {lead._ai.reason}
+                      </p>
+                      <button type="button" onClick={() => flagAi(lead, !lead._ai.wrong)}
+                        className="shrink-0 whitespace-nowrap text-[10px] font-semibold text-app-soft underline-offset-2 transition hover:text-orange-500 hover:underline">
+                        {lead._ai.wrong ? "Undo" : "AI got it wrong"}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Next best action + quick actions */}

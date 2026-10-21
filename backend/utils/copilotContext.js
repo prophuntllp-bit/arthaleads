@@ -59,7 +59,7 @@ async function fetchPageContext(page, userId, orgId, leadId, user = null) {
 - Assigned to: ${lead.assignedTo?.name || "unassigned"}
 - Lead outcome: ${lead.booking || "none"}
 - Last remark: ${lead.remark1 || lead.remarkNote || "none"}
-- AI Score: ${lead.score ?? "not scored"}
+- Lead score: ${(() => { const sc = require("./leadScorer"); const n = sc.scoreLead(lead); const ai = sc.aiSummary(lead); return `${n}/100 (${sc.scoreLabel(n)})${ai ? `; AI read of recent chat and calls: ${ai.level}, "${ai.reason}"` : "; rule score only, no recent conversation read by AI"}`; })()}
 - Notes: ${(lead.notes || []).length} note(s)`);
       }
     } catch { /* non-critical */ }
