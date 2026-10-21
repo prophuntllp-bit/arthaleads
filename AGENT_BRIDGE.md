@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-21 IST: IN PROGRESS (owner asked, crosses into web + backend): QR lead capture fixes + improvements (frontend/src/pages/PublicLeadForm.jsx, frontend/src/components/QrModal.jsx, backend/controllers/publicController.js, backend/routes/publicRoutes.js, server.js public limiter, mobile/lib/widgets/qr_sheet.dart) and a server-built styled Excel for phone exports (new backend export route reusing the frontend/src/utils/sheetTheme.js theme). Staging first. Please avoid these files until I log done.
+
 
 
 
