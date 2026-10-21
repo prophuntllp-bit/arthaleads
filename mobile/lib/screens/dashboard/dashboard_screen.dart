@@ -12,7 +12,6 @@ import '../../core/constants.dart';
 import '../../core/deep_link.dart';
 import '../../core/theme.dart';
 import '../../widgets/skeleton.dart';
-import '../../widgets/buttons.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/whatsapp_send_sheet.dart';
 import '../../widgets/date_range_picker.dart';
@@ -21,7 +20,6 @@ import '../../widgets/motion.dart';
 import '../../widgets/onboarding_checklist.dart';
 import '../attendance/attendance_capture_sheet.dart';
 import '../leads/lead_filters.dart';
-import '../leads/lead_form.dart';
 import 'dashboard_widgets.dart';
 import 'morning_brief.dart';
 import '../../core/artha_features.dart';
@@ -376,22 +374,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     return (((current ?? 0) - previous) / previous * 100).round();
   }
 
-  Future<void> _openAddLead() async {
-    List<Map<String, dynamic>> agents = [];
-    if (context.read<AuthState>().isAdmin) {
-      try {
-        final res = await _api.dio.get('/auth/agents');
-        agents = (res.data['agents'] as List? ?? [])
-            .cast<Map<String, dynamic>>();
-      } catch (_) {}
-    }
-    if (!mounted) return;
-    final saved = await Navigator.of(context).push<bool>(
-      FadeSlidePageRoute(builder: (_) => LeadFormScreen(agents: agents)),
-    );
-    if (saved == true) _load();
-  }
-
   Future<void> _clockAttendance() async {
     if (_clocking) return;
     final clockedIn =
@@ -650,13 +632,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                 });
                 _load();
               },
-            ),
-            const SizedBox(height: 8),
-            GradientButton(
-              onPressed: _openAddLead,
-              icon: Icons.add_rounded,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-              child: const Text('New Lead'),
             ),
           ]),
         ]),

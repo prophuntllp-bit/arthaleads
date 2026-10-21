@@ -30,6 +30,7 @@ import 'lead_detail_sheet.dart';
 import 'lead_filters.dart';
 import 'lead_origin.dart';
 import 'lead_form.dart';
+import 'quick_add_lead.dart';
 import 'lead_import.dart';
 import 'wa_broadcast_sheet.dart';
 
@@ -49,6 +50,10 @@ class LeadsScreen extends StatefulWidget {
 class LeadsScreenState extends State<LeadsScreen> {
   final _api = ApiClient.instance;
   final _scroll = ScrollController();
+
+  /// Scrolled down the list: the title row folds away and a compact New
+  /// button joins the search row, so New lead is always one tap away.
+  bool _headerCollapsed = false;
   final _searchCtrl = TextEditingController();
 
   final List<Map<String, dynamic>> _leads = [];
@@ -95,6 +100,8 @@ class LeadsScreenState extends State<LeadsScreen> {
     _loadMeta();
     _autoRefresh = Timer.periodic(const Duration(seconds: 15), (_) => _refreshTop());
     _scroll.addListener(() {
+      final collapsed = _scroll.hasClients && _scroll.position.pixels > 60;
+      if (collapsed != _headerCollapsed) setState(() => _headerCollapsed = collapsed);
       if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 400 &&
           !_loading &&
           _page < _pages) {
@@ -632,13 +639,94 @@ class LeadsScreenState extends State<LeadsScreen> {
     }
   }
 
-  Future<void> _openForm({Map<String, dynamic>? lead}) async {
+  Future<void> _openForm({Map<String, dynamic>? lead, Map<String, dynamic>? initial}) async {
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => LeadFormScreen(lead: lead, agents: _agents),
+        builder: (_) => LeadFormScreen(lead: lead, initial: initial, agents: _agents),
       ),
     );
     if (saved == true) _load(reset: true);
+  }
+
+  /// New lead: the quick sheet first (name, phone, source); "More details"
+  /// continues in the full form with what was typed.
+  Future<void> _newLead() async {
+    final r = await showQuickAddLead(context);
+    if (r == null || !mounted) return;
+    if (r.moreDetails != null) {
+      await _openForm(initial: r.moreDetails);
+      return;
+    }
+    if (r.saved) await _load(reset: true);
+    if (r.openLeadId != null && mounted) DeepLink.openLeadId.value = r.openLeadId;
+  }
+
+  Widget _newLeadButton({bool compact = false}) => GradientButton(
+        onPressed: _newLead,
+        icon: Icons.add_rounded,
+        padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 14, vertical: 10),
+        child: Text(compact ? 'New' : 'New lead'),
+      );
+
+  /// Import, export and the capture QR, in one menu beside New lead.
+  Widget _toolsMenu(AuthState auth) {
+    if (_importing || _exporting) {
+      return const SizedBox(
+        width: 44,
+        height: 44,
+        child: Center(child: SizedBox(width: 19, height: 19, child: CircularProgressIndicator(strokeWidth: 2))),
+      );
+    }
+    return PopupMenuButton<String>(
+      tooltip: 'Import, export and QR code',
+      onSelected: (v) {
+        switch (v) {
+          case 'import':
+            _importCsv();
+          case 'csv':
+            _exportLeads(asExcel: false);
+          case 'excel':
+            _exportLeads(asExcel: true);
+          case 'qr':
+            _showQrCode();
+        }
+      },
+      itemBuilder: (ctx) => [
+        // Import and the capture QR are admin/manager only on the server
+        // (POST /leads/import, /org/me/qr-token).
+        if (auth.isAdmin)
+          const PopupMenuItem(
+            value: 'import',
+            child: ListTile(leading: Icon(Icons.upload_file_rounded), title: Text('Import CSV'), dense: true),
+          ),
+        PopupMenuItem(
+          value: 'csv',
+          enabled: _leads.isNotEmpty,
+          child: ListTile(
+            leading: const Icon(Icons.download_rounded),
+            title: Text(_selected.isEmpty ? 'Export CSV' : 'Export ${_selected.length} as CSV'),
+            dense: true,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'excel',
+          enabled: _leads.isNotEmpty,
+          child: ListTile(
+            leading: const Icon(Icons.table_chart_outlined),
+            title: Text(_selected.isEmpty ? 'Export Excel' : 'Export ${_selected.length} as Excel'),
+            dense: true,
+          ),
+        ),
+        if (auth.isAdmin)
+          const PopupMenuItem(
+            value: 'qr',
+            child: ListTile(leading: Icon(Icons.qr_code_2_rounded), title: Text('Lead capture QR code'), dense: true),
+          ),
+      ],
+      child: IgnorePointer(
+        child: IconButton.outlined(onPressed: () {}, icon: const Icon(Icons.more_horiz_rounded, size: 20)),
+      ),
+    );
   }
 
   static const _exportHeader = [
@@ -851,90 +939,43 @@ class LeadsScreenState extends State<LeadsScreen> {
     final auth = context.watch<AuthState>();
 
     return Scaffold(
-      // Bottom-left: the draggable Artha assistant bubble owns the
-      // bottom-right corner (see _DraggableArthaFab in shell.dart).
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-      floatingActionButton: _selectMode
-          ? null
-          : GradientFab(onPressed: () => _openForm()),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Leads Management',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      Text(
-                        plural(_total, 'active lead'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
+          AnimatedSize(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            child: _headerCollapsed
+                ? const SizedBox(width: double.infinity)
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Leads Management',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                              Text(
+                                plural(_total, 'active lead'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _newLeadButton(),
+                        const SizedBox(width: 6),
+                        _toolsMenu(auth),
+                      ],
+                    ),
                   ),
-                ),
-                // Import and the capture QR are admin/manager only on the
-                // server (POST /leads/import, /org/me/qr-token).
-                if (auth.isAdmin) IconButton.outlined(
-                  tooltip: 'Import CSV',
-                  onPressed: _importing ? null : _importCsv,
-                  icon: _importing
-                      ? const SizedBox(
-                          width: 17,
-                          height: 17,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.upload_file_rounded, size: 19),
-                ),
-                if (auth.isAdmin) const SizedBox(width: 4),
-                _exporting
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10),
-                        child: SizedBox(
-                          width: 19,
-                          height: 19,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : PopupMenuButton<bool>(
-                        tooltip: _selected.isEmpty
-                            ? 'Export leads'
-                            : 'Export ${_selected.length} selected',
-                        enabled: _leads.isNotEmpty,
-                        onSelected: (asExcel) => _exportLeads(asExcel: asExcel),
-                        itemBuilder: (ctx) => const [
-                          PopupMenuItem(
-                            value: false,
-                            child: Text('Export CSV'),
-                          ),
-                          PopupMenuItem(
-                            value: true,
-                            child: Text('Export Excel'),
-                          ),
-                        ],
-                        child: IgnorePointer(
-                          child: IconButton.outlined(
-                            onPressed: _leads.isEmpty ? null : () {},
-                            icon: const Icon(Icons.download_rounded, size: 19),
-                          ),
-                        ),
-                      ),
-                if (auth.isAdmin) const SizedBox(width: 4),
-                if (auth.isAdmin) IconButton.outlined(
-                  tooltip: 'Lead capture QR code',
-                  onPressed: _showQrCode,
-                  icon: const Icon(Icons.qr_code_2_rounded, size: 19),
-                ),
-              ],
-            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -981,6 +1022,10 @@ class LeadsScreenState extends State<LeadsScreen> {
                     child: const Icon(Icons.filter_list),
                   ),
                 ),
+                if (_headerCollapsed && !_selectMode) ...[
+                  const SizedBox(width: 6),
+                  _newLeadButton(compact: true),
+                ],
               ],
             ),
           ),
