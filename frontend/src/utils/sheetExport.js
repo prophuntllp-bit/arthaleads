@@ -34,8 +34,8 @@ export function downloadCsv(rows, filename, opts) {
   download(new Blob([toCsv(rows, opts)], { type: "text/csv;charset=utf-8" }), filename);
 }
 
-export function downloadXlsx(rows, filename, { sheetName = "Leads", textColumns } = {}) {
-  return downloadXlsxSheets({ [sheetName]: rows }, filename, { textColumns });
+export function downloadXlsx(rows, filename, { sheetName = "Leads", ...opts } = {}) {
+  return downloadXlsxSheets({ [sheetName]: rows }, filename, opts);
 }
 
 // One workbook with a sheet per name, e.g. { WhatsApp: [...], Website: [...] },
@@ -43,7 +43,11 @@ export function downloadXlsx(rows, filename, { sheetName = "Leads", textColumns 
 // fetched when someone actually downloads.
 export async function downloadXlsxSheets(sheets, filename, opts = {}) {
   const [{ default: ExcelJS }, { buildThemedWorkbook }] = await Promise.all([import("exceljs"), import("./sheetTheme")]);
-  const wb = buildThemedWorkbook(ExcelJS, sheets, opts.textColumns ? { textColumns: opts.textColumns } : {});
+  // opts: textColumns (kept as text, default Phone/WhatsApp), summary (adds the Summary sheet).
+  const wb = buildThemedWorkbook(ExcelJS, sheets, {
+    ...(opts.textColumns ? { textColumns: opts.textColumns } : {}),
+    summary: !!opts.summary,
+  });
   const buf = await wb.xlsx.writeBuffer();
   download(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), filename);
 }

@@ -232,14 +232,19 @@ export default function DumpLeads() {
         rows = parseCsvText(text);
       } else {
         const workbook = xlsxRead(buffer, { type: "array" });
-        const firstSheet = workbook.SheetNames[0];
-        rows = xlsxUtils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
+        // Our own downloads start with a "Summary" sheet and then one sheet per
+        // source: read every lead sheet. Any other file: its first sheet.
+        const names = workbook.SheetNames.includes("Summary")
+          ? workbook.SheetNames.filter((n) => n !== "Summary")
+          : workbook.SheetNames.slice(0, 1);
+        rows = names.flatMap((n) => xlsxUtils.sheet_to_json(workbook.Sheets[n], { defval: "" }));
       }
 
       const leadsToImport = rows
         .map((row) => ({
           name:   String(row.Name   || row.name   || "").trim(),
-          phone:  String(row.Phone  || row.phone  || "").trim(),
+          // "+91 98765 43210" (how our downloads show it) back to 919876543210.
+          phone:  String(row.Phone  || row.phone  || "").trim().replace(/^\+?[\d\s\-()]+$/, (v) => v.replace(/\D/g, "")),
           email:  String(row.Email  || row.email  || "").trim(),
           source: String(row.Source || row.source || "Manual").trim() || "Manual",
           status: String(row.PipelineStatus || row.Status || row.status || "New").trim() || "New",
