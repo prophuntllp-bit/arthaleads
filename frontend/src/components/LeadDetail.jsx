@@ -180,11 +180,18 @@ function ConsentCard({ lead, onUpdated }) {
 }
 
 // Small labelled pill used for voice-call metadata (duration, channel, …)
-function MetaPill({ icon: Icon, children }) {
+// Vistrow Voice purple, matching the "Vistrow Voice" source pill, so every
+// voice element reads as coming from Vistrow Voice at a glance.
+const VISTROW_PURPLE = "#9333ea";
+const VISTROW_GRADIENT = "linear-gradient(90deg, #9333ea, #d946ef, #ec4899)";
+
+function MetaPill({ icon: Icon, children, vistrow = false }) {
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium text-app-soft"
-      style={{ borderColor: "var(--app-border)" }}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${vistrow ? "" : "text-app-soft"}`}
+      style={vistrow
+        ? { borderColor: "rgba(147,51,234,0.35)", color: VISTROW_PURPLE, background: "rgba(147,51,234,0.06)" }
+        : { borderColor: "var(--app-border)" }}
     >
       {Icon && <Icon className="h-3 w-3" />}
       {children}
@@ -628,7 +635,16 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
           {tabList.map((item) => (
             <button
               key={item}
-              className={item === tab ? "btn-primary rounded-xl" : "btn-secondary rounded-xl"}
+              className={
+                item === tab && item === "transcript" ? "btn-secondary rounded-xl !text-white !border-transparent"
+                : item === tab && item === "chat" ? "btn-secondary rounded-xl !text-white !border-transparent"
+                : item === tab ? "btn-primary rounded-xl" : "btn-secondary rounded-xl"
+              }
+              style={
+                item === tab && item === "transcript" ? { background: VISTROW_GRADIENT }
+                : item === tab && item === "chat" ? { background: "#2AB540" }
+                : undefined
+              }
               onClick={() => setTab(item)}
               type="button"
             >
@@ -636,6 +652,10 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                 ? `Notes (${lead.notes?.length || 0})`
                 : item === "calls"
                 ? `Calls${callHistory.length ? ` (${callHistory.length})` : ""}`
+                : item === "transcript"
+                ? <span className="inline-flex items-center gap-1.5"><Mic className="h-3.5 w-3.5" style={item === tab ? undefined : { color: VISTROW_PURPLE }} />Vistrow Voice</span>
+                : item === "chat"
+                ? <span className="inline-flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5" style={item === tab ? undefined : { color: "#2AB540" }} />WhatsApp</span>
                 : item[0].toUpperCase() + item.slice(1)}
             </button>
           ))}
@@ -1046,8 +1066,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                     className="w-full text-left px-4 py-3 flex items-center gap-3"
                   >
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: "rgba(99,102,241,0.10)" }}>
-                      <Mic className="w-3.5 h-3.5" style={{ color: "#6366f1" }} />
+                      style={{ background: VISTROW_GRADIENT }}>
+                      <Mic className="w-3.5 h-3.5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-app">
@@ -1071,11 +1091,11 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                     <div className="px-4 pb-4 space-y-4">
                       {/* Metadata row */}
                       <div className="flex flex-wrap items-center gap-2">
-                        {dur && <MetaPill icon={Clock}>{dur}</MetaPill>}
-                        {vc.channel && <MetaPill>{vc.channel}</MetaPill>}
-                        {langLabel && <MetaPill>{langLabel}</MetaPill>}
-                        {vc.agentName && <MetaPill icon={Mic}>{vc.agentName}</MetaPill>}
-                        {vc.pagePath && <MetaPill icon={MapPin}>{vc.pagePath}</MetaPill>}
+                        {dur && <MetaPill vistrow icon={Clock}>{dur}</MetaPill>}
+                        {vc.channel && <MetaPill vistrow>{vc.channel}</MetaPill>}
+                        {langLabel && <MetaPill vistrow>{langLabel}</MetaPill>}
+                        {vc.agentName && <MetaPill vistrow icon={Mic}>{vc.agentName}</MetaPill>}
+                        {vc.pagePath && <MetaPill vistrow icon={MapPin}>{vc.pagePath}</MetaPill>}
                       </div>
 
                       {/* Recording */}
@@ -1113,11 +1133,11 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                               <div key={i} className={`flex ${isCaller ? "justify-start" : "justify-end"}`}>
                                 <div className="max-w-[82%] rounded-2xl px-3.5 py-2"
                                   style={{
-                                    background: isCaller ? "var(--app-surface-low)" : "rgba(249,115,22,0.10)",
-                                    border: `1px solid ${isCaller ? "var(--app-border)" : "rgba(249,115,22,0.22)"}`,
+                                    background: isCaller ? "var(--app-surface-low)" : "rgba(147,51,234,0.08)",
+                                    border: `1px solid ${isCaller ? "var(--app-border)" : "rgba(147,51,234,0.25)"}`,
                                   }}>
                                   <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5"
-                                    style={{ color: isCaller ? "var(--app-text-soft)" : "var(--app-primary)" }}>
+                                    style={{ color: isCaller ? "var(--app-text-soft)" : VISTROW_PURPLE }}>
                                     {turn.speaker || "—"}
                                   </p>
                                   <p className="text-sm text-app whitespace-pre-wrap break-words">{turn.text}</p>

@@ -77,7 +77,7 @@ export function isAiCallStatus(lead) {
 export function StatusBadge({ status, lead, compact = false }) {
   if (isAiCallStatus(lead)) {
     return (
-      <span className="badge inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-300"
+      <span className="badge inline-flex items-center gap-1 bg-purple-50 text-purple-700 ring-1 ring-purple-300"
         title="Updated by Vistrow Voice call" aria-label={`${status}, updated by Vistrow Voice call`}>
         {!compact && <PhoneCall className="h-3 w-3" aria-hidden="true" />}
         {status}{!compact && <span className="font-normal opacity-80">· AI call</span>}
