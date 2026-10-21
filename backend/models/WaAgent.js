@@ -37,6 +37,11 @@ const waAgentSchema = new mongoose.Schema(
 
     // ── What it knows and how it talks ──────────────────────────────────────
     greeting:        { type: String, default: "" },
+    // Off = no greeting message AND the assistant does not say hello or
+    // introduce itself in its first reply (for Click-to-WhatsApp ads whose own
+    // Meta "automated greeting" already welcomed the customer, 21 Oct 2026).
+    // Agents saved before this field read as on.
+    greetingEnabled: { type: Boolean, default: true },
     businessContext: { type: String, default: "" },
     groundRules:     { type: String, default: "" },
 
@@ -207,7 +212,8 @@ waAgentSchema.methods.readiness = function readiness(activeProjectCount = 0) {
   const checks = [
     { key: "name",     ok: !!this.name?.trim(),        label: "Has a name" },
     { key: "purpose",  ok: !!this.description?.trim(), label: "Describes what it does" },
-    { key: "greeting", ok: !!this.greeting?.trim(),    label: "Opens with a greeting" },
+    // Switched off on purpose (the ad's Meta greeting covers it) counts as done.
+    { key: "greeting", ok: !!this.greeting?.trim() || this.greetingEnabled === false, label: "Opens with a greeting" },
     { key: "context",  ok: !!this.businessContext?.trim() || !!this.systemPrompt?.trim(), label: "Knows about your business" },
     { key: "rules",    ok: !!this.groundRules?.trim() || !!this.systemPrompt?.trim(),     label: "Has ground rules" },
     {
