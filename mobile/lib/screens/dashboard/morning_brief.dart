@@ -28,12 +28,20 @@ class MorningBrief extends StatefulWidget {
   final void Function(String label) onNavigate;
   final Future<void> Function({required String? phone, String? name, String? leadId}) onCall;
 
+  /// In the Today's priorities sheet: always open, no hide button.
+  final bool expanded;
+
+  /// Before a row opens what it points at (the sheet closes itself).
+  final VoidCallback? onOpen;
+
   const MorningBrief({
     super.key,
     required this.userId,
     required this.refresh,
     required this.onNavigate,
     required this.onCall,
+    this.expanded = false,
+    this.onOpen,
   });
 
   @override
@@ -137,6 +145,7 @@ class _MorningBriefState extends State<MorningBrief> {
   // ── Opening what a row points at ─────────────────────────────────────────
 
   void _open(Map<String, dynamic> it) {
+    widget.onOpen?.call();
     final kind = it['kind'];
     final convo = '${it['conversationId'] ?? ''}';
     if (kind == 'summary') {
@@ -234,14 +243,14 @@ class _MorningBriefState extends State<MorningBrief> {
                 ],
               ]),
             ),
-            if (!nothing)
+            if (!nothing && !widget.expanded)
               IconButton(
                 tooltip: _collapsed ? 'Show the list' : 'Hide the list',
                 onPressed: _toggle,
                 icon: Icon(_collapsed ? Icons.expand_more_rounded : Icons.expand_less_rounded, color: t.textSoft),
               ),
           ]),
-          if (!_collapsed) ...[
+          if (!_collapsed || widget.expanded) ...[
             if (risks.isNotEmpty) ...[
               const SizedBox(height: 12),
               _riskPanel(t, risks, riskTotal),

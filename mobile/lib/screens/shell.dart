@@ -279,6 +279,7 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   int _index = 0;
+  final _scaffold = GlobalKey<ScaffoldState>();
   final Map<String, Widget> _screenCache = {};
   final List<String> _navigationHistory = [];
   DateTime? _lastBackPressed;
@@ -449,6 +450,9 @@ class _ShellState extends State<Shell> {
       Icons.dashboard_rounded,
       () => const DashboardScreen(),
     ),
+    // The Dashboard's charts and Team section (21 Oct 2026), so Home is
+    // only what to act on today. A tab in the bottom bar.
+    _NavItem('Reports', Icons.insert_chart_outlined_rounded, () => const DashboardScreen(reports: true)),
     _NavItem('Leads', Icons.people_alt_rounded, () => const LeadsScreen()),
     // Called "WhatsApp" since 17 Oct 2026, as on the web (was "Inbox").
     _NavItem('WhatsApp', FontAwesomeIcons.whatsapp.data, () => const ConversationsShell()),
@@ -542,6 +546,8 @@ class _ShellState extends State<Shell> {
     final current = visible[_index];
     final currentScreen = current.label == 'Dashboard'
         ? DashboardScreen(onNavigate: _navigateToLabel)
+        : current.label == 'Reports'
+        ? DashboardScreen(key: const ValueKey('reports'), reports: true, onNavigate: _navigateToLabel)
         : current.label == 'Bookings'
         ? BookingsScreen(onNavigate: _navigateToLabel)
         : _screenCache.putIfAbsent(current.label, current.builder);
@@ -553,7 +559,18 @@ class _ShellState extends State<Shell> {
       },
       child: AppBackdrop(
         child: Scaffold(
+          key: _scaffold,
           backgroundColor: Colors.transparent,
+          bottomNavigationBar: _BottomTabs(
+            current: current.label,
+            onTab: (label) {
+              if (label == 'More') {
+                _scaffold.currentState?.openDrawer();
+              } else {
+                _navigateToLabel(label);
+              }
+            },
+          ),
           // WhatsApp carries its own single header strip (drawer button, tabs,
           // theme toggle) — a second AppBar above it just doubled the chrome.
           appBar: current.label == 'WhatsApp' ? null : AppBar(
@@ -719,6 +736,95 @@ class _ShellState extends State<Shell> {
               if (current.label != 'WhatsApp')
                 Positioned.fill(child: _DraggableArthaFab(navLabel: current.label, onNavigate: _navigateToLabel)),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The bottom tab bar (21 Oct 2026): the four places people go all day, and
+/// More for the full menu (the drawer). Any screen that is not one of the
+/// four lights up More.
+class _BottomTabs extends StatelessWidget {
+  final String current;
+  final ValueChanged<String> onTab;
+  const _BottomTabs({required this.current, required this.onTab});
+
+  static const _tabs = [
+    ('Dashboard', 'Home', Icons.home_outlined, Icons.home_rounded),
+    ('Leads', 'Leads', Icons.people_alt_outlined, Icons.people_alt_rounded),
+    ('Follow-ups', 'Follow-ups', Icons.event_repeat_outlined, Icons.event_repeat_rounded),
+    ('Reports', 'Reports', Icons.insert_chart_outlined_rounded, Icons.insert_chart_rounded),
+    ('More', 'More', Icons.more_horiz_rounded, Icons.more_horiz_rounded),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTheme.of(context);
+    final onTab = _tabs.any((x) => x.$1 == current) ? current : 'More';
+    return Container(
+      decoration: BoxDecoration(
+        color: t.surfaceSolid,
+        border: Border(top: BorderSide(color: t.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 64,
+          child: Row(children: [
+            for (final (label, title, icon, iconOn) in _tabs)
+              Expanded(
+                child: _tab(context, t, label, title, label == onTab ? iconOn : icon, label == onTab),
+              ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _tab(BuildContext context, AppTheme t, String label, String title, IconData icon, bool on) {
+    final color = on ? AppColors.primary : t.textSoft;
+    final badge = label == 'Follow-ups' ? overdueFollowUps : null;
+    Widget glyph = Icon(icon, size: 24, color: color);
+    if (badge != null) {
+      glyph = ValueListenableBuilder<int>(
+        valueListenable: badge,
+        builder: (_, n, child) => Badge(
+          isLabelVisible: n > 0,
+          label: Text(n > 99 ? '99+' : '$n'),
+          backgroundColor: AppColors.danger,
+          child: child,
+        ),
+        child: glyph,
+      );
+    }
+    return Semantics(
+      button: true,
+      selected: on,
+      label: title,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: () => onTab(label),
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: on ? AppColors.primary.withValues(alpha: t.isDark ? 0.18 : 0.10) : Colors.transparent,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              glyph,
+              const SizedBox(height: 3),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.fade,
+                softWrap: false,
+                style: TextStyle(fontSize: 11.5, fontWeight: on ? FontWeight.w700 : FontWeight.w500, color: color),
+              ),
+            ]),
           ),
         ),
       ),
