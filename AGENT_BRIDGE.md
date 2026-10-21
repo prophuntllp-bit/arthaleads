@@ -60,6 +60,8 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
+- [claude] 2026-10-21 IST: IN PROGRESS mobile home redesign + bottom tab bar (Home/Leads/Follow-ups/Reports/More) + new Reports screen (dashboard charts + Team moved there). Files: mobile/lib/screens/shell.dart, screens/dashboard/*. Mobile only, staging first.
+
 
 
 
