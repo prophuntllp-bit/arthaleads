@@ -526,7 +526,8 @@ function addSummary(wb, allRows, { logo, filtersText = "", forAgent = false }) {
   r++;
   if (!waiting.length) {
     ws.mergeCells(r, 2, r, 10);
-    for (let c = 2; c <= 10; c++) bodyCell(ws.getCell(r, c), c === 2 ? "None. Every hot and high lead has been contacted." : null, font({ bold: true, color: { argb: "FF15803D" } }));
+    // Right to left, so the message in the first cell is written last (see wide()).
+    for (let c = 10; c >= 2; c--) bodyCell(ws.getCell(r, c), c === 2 ? "None. Every hot and high lead has been contacted." : null, font({ bold: true, color: { argb: "FF15803D" } }));
     ws.getCell(r, 2).alignment = { vertical: "middle", indent: 1 };
     ws.getRow(r).height = 22;
     r++;
