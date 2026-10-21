@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+- [claude] 2026-10-21 IST: WhatsApp agents: "Send a greeting" on/off (no double greeting after Meta's ad greeting) + follow-up nudges for normal (non button-flow) AI chats. backend/models/WaAgent.js, routes/whatsappRoutes.js (greeting, prompt firstReplyRule, agent save), services/ctwaFlowService.js (runNudges), frontend agent builder page
 
 
 
