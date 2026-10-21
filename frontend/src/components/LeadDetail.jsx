@@ -417,6 +417,12 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   const voiceCalls = Array.isArray(lead.voiceCalls)
     ? [...lead.voiceCalls].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
     : [];
+  // What the latest Vistrow Voice call captured, shown first on the Info tab
+  // (owner, 21 Oct 2026: it sat at the bottom of the call transcript).
+  const latestCall = voiceCalls[0];
+  const captured = latestCall?.extractedData && typeof latestCall.extractedData === "object" && !Array.isArray(latestCall.extractedData)
+    ? Object.entries(latestCall.extractedData).filter(([, v]) => v !== "" && v != null)
+    : [];
   const hasVoice = voiceCalls.some((c) =>
     c.transcript?.length || c.sentiment || c.channel || c.durationSeconds || c.agentName || c.recordingUrl);
   // Chat tab: read-only WhatsApp history, for leads that came in (or were
@@ -669,6 +675,20 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
 
         {tab === "info" && (
           <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+            {captured.length > 0 && (
+              <div className="md:col-span-2 rounded-[1.35rem] p-4"
+                style={{ background: "rgba(147,51,234,0.06)", border: "1px solid rgba(147,51,234,0.25)" }}>
+                <p className="stitch-kicker mb-3 inline-flex items-center gap-1.5" style={{ color: VISTROW_PURPLE }}>
+                  <Mic className="h-3.5 w-3.5" />
+                  Captured on the Vistrow Voice call{latestCall?.createdAt ? ` · ${fmtDateTime(latestCall.createdAt)}` : ""}
+                </p>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {captured.map(([k, v]) => (
+                    <Info key={k} label={k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())} value={String(v)} />
+                  ))}
+                </div>
+              </div>
+            )}
             {lead.leadSourceLabel && <Info label="Source Detail" value={lead.leadSourceLabel} />}
             <Info label="Property Type" value={lead.propertyType} />
             <Info label="BHK" value={lead.bhk} />
@@ -1054,9 +1074,6 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
               const dur = secs > 0 ? `${Math.floor(secs / 60)}m ${Math.round(secs % 60)}s`.replace(/^0m /, "") : null;
               const langLabel = vc.language ? (LANG_NAMES[vc.language] || String(vc.language).toUpperCase()) : null;
               const turns = vc.transcript || [];
-              const extracted = vc.extractedData && typeof vc.extractedData === "object" && !Array.isArray(vc.extractedData)
-                ? Object.entries(vc.extractedData).filter(([, v]) => v !== "" && v != null)
-                : [];
 
               return (
                 <div key={callKey} className="rounded-[1.25rem] overflow-hidden stitch-surface-muted">
@@ -1103,18 +1120,6 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                         <div>
                           <p className="stitch-kicker mb-2">Recording</p>
                           <RecordingPlayer url={vc.recordingUrl} mimeType={vc.recordingMimeType} />
-                        </div>
-                      )}
-
-                      {/* Captured details (extracted_data) */}
-                      {extracted.length > 0 && (
-                        <div className="rounded-[1.35rem] p-4 stitch-surface-muted">
-                          <p className="stitch-kicker mb-3">Captured Details</p>
-                          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                            {extracted.map(([k, v]) => (
-                              <Info key={k} label={k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())} value={String(v)} />
-                            ))}
-                          </div>
                         </div>
                       )}
 
