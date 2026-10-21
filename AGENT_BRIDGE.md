@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
-- [claude] 2026-10-21 IST: WhatsApp bot never re-sends the same photos/videos/documents in a chat within 24h unless the customer asks again. backend/routes/whatsappRoutes.js (triggerBotReply media plan + prompt, sendQualifiedMedia), tests
 
 
 
