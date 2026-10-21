@@ -211,8 +211,7 @@ function addSheet(wb, title, rows, textColumns, tab) {
 }
 
 // ── Summary sheet ────────────────────────────────────────────────────────────
-// Two columns of small tables (each table goes under whichever column is
-// shorter so far), then the wide tables: team performance and the hot leads
+// Two columns of small tables, side by side in pairs that line up, then the wide tables: team performance and the hot leads
 // nobody has called. Everything is counted from the rows in this download
 // only, and the server only ever gives an agent their own leads; an agent's
 // file also leaves out the team sections altogether.
@@ -316,8 +315,9 @@ function addSummary(wb, allRows, { logo, filtersText = "", forAgent = false }) {
   };
 
   // A small table: name | leads | share | bar.
-  // items: [{ name, n, style(cell) -> bar colour, note }]
-  const smallTable = (c0, r0, { title, head = ["Leads", "Share"], items, of = total, foot = "Total", footN = of }) => {
+  // items: [{ name, n, style(cell) -> bar colour, note }]. bodyRows: pad with
+  // empty lines to this many, so two tables side by side end on the same row.
+  const smallTable = (c0, r0, { title, head = ["Leads", "Share"], items, of = total, foot = "Total", footN = of }, bodyRows = items.length) => {
     let r = r0;
     ws.getRow(r).height = 24;
     headCell(ws.getCell(r, c0), title, true);
@@ -346,6 +346,10 @@ function addSummary(wb, allRows, { logo, filtersText = "", forAgent = false }) {
       ] };
       r++;
     }
+    for (let k = items.length; k < bodyRows; k++, r++) {
+      ws.getRow(r).height = 20;
+      for (let c = 0; c < 4; c++) bodyCell(ws.getCell(r, c0 + c), null);
+    }
     if (foot) {
       ws.getRow(r).height = 22;
       footCell(ws.getCell(r, c0), foot);
@@ -357,7 +361,7 @@ function addSummary(wb, allRows, { logo, filtersText = "", forAgent = false }) {
       for (const c of [1, 2]) ws.getCell(r, c0 + c).alignment = { vertical: "middle", horizontal: "center" };
       r++;
     }
-    return r + 2; // two empty rows before the next table
+    return r;
   };
 
   const tally = (key, blank) => {
@@ -382,25 +386,17 @@ function addSummary(wb, allRows, { logo, filtersText = "", forAgent = false }) {
   // since the step before.
   const reached = FUNNEL.map((_, i) => allRows.filter((r) => stage(r) >= i).length);
   const lost = allRows.filter((r) => r.Status === "Closed Lost").length;
-  sections.push((c0, r0) => smallTable(c0, r0, {
-    title: "Pipeline", head: ["Reached", "Of all"], foot: lost ? "Closed lost" : null, footN: lost,
+  sections.push({
+    title: "Pipeline", head: ["Reached", "Of all"], foot: "Closed lost", footN: lost,
     items: FUNNEL.map((name, i) => ({
       name, n: reached[i], style: pillIn(STATUS_STYLE)(name),
       note: i && reached[i - 1] > reached[i] ? `${reached[i - 1] - reached[i]} dropped` : "",
     })),
-  }));
+  });
 
-  sections.push((c0, r0) => smallTable(c0, r0, {
+  sections.push({
     title: "By status", items: tally("Status", "Not set").map(([name, n]) => ({ name, n, style: pillIn(STATUS_STYLE)(name) })),
-  }));
-
-  sections.push((c0, r0) => smallTable(c0, r0, {
-    title: "By source",
-    items: capped(tally("Source", "Not set")).map(([name, n]) => ({ name, n, style: (cell) => {
-      if (SOURCE_FILL[name] || name === "Vistrow Voice") { sourcePill(cell, name); cell.alignment = { vertical: "middle", indent: 1 }; cell.border = box(RULE); }
-      return SOURCE_FILL[name] || (name === "Vistrow Voice" ? VOICE_GRADIENT[1] : SOURCE_FILL.Other);
-    } })),
-  }));
+  });
 
   // Follow-ups on leads still open (not won or lost).
   const open = allRows.filter(isOpen);
@@ -411,19 +407,27 @@ function addSummary(wb, allRows, { logo, filtersText = "", forAgent = false }) {
     ["Later", open.filter((r) => fuDay(r) > in7).length, ["F3F4F6", "374151"]],
     ["No follow-up set", open.filter((r) => !fuDay(r)).length, ["F3F4F6", GREY]],
   ];
-  sections.push((c0, r0) => smallTable(c0, r0, {
+  sections.push({
     title: "Follow-ups", of: open.length, foot: "Open leads",
     items: fu.map(([name, n, st]) => ({ name, n, style: (cell) => { softPill(cell, st); cell.alignment = { vertical: "middle", indent: 1 }; cell.border = box(RULE); return st[1]; } })),
-  }));
+  });
 
-  sections.push((c0, r0) => smallTable(c0, r0, {
-    title: "By priority", items: tally("Priority", "Not set").map(([name, n]) => ({ name, n, style: pillIn(PRIORITY_STYLE)(name) })),
-  }));
+  sections.push({
+    title: "By source",
+    items: capped(tally("Source", "Not set")).map(([name, n]) => ({ name, n, style: (cell) => {
+      if (SOURCE_FILL[name] || name === "Vistrow Voice") { sourcePill(cell, name); cell.alignment = { vertical: "middle", indent: 1 }; cell.border = box(RULE); }
+      return SOURCE_FILL[name] || (name === "Vistrow Voice" ? VOICE_GRADIENT[1] : SOURCE_FILL.Other);
+    } })),
+  });
 
   const projects = tally("Project", "No project");
   if (!(projects.length === 1 && projects[0][0] === "No project")) {
-    sections.push((c0, r0) => smallTable(c0, r0, { title: "By project", items: capped(projects).map(([name, n]) => ({ name, n })) }));
+    sections.push({ title: "By project", items: capped(projects).map(([name, n]) => ({ name, n })) });
   }
+
+  sections.push({
+    title: "By priority", items: tally("Priority", "Not set").map(([name, n]) => ({ name, n, style: pillIn(PRIORITY_STYLE)(name) })),
+  });
 
   // Leads per day for the last 14 days of the period, newest first, days with
   // none included so gaps show.
@@ -437,16 +441,19 @@ function addSummary(wb, allRows, { logo, filtersText = "", forAgent = false }) {
       perDay.push({ name: d.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" }), n: days.filter((x) => x === key).length });
     }
     const shown = perDay.reduce((s, x) => s + x.n, 0);
-    sections.push((c0, r0) => smallTable(c0, r0, { title: "Leads per day", items: perDay, foot: `Total, ${perDay.length} day${perDay.length === 1 ? "" : "s"}`, footN: shown }));
+    sections.push({ title: "Leads per day", items: perDay, foot: `Total, ${perDay.length} day${perDay.length === 1 ? "" : "s"}`, footN: shown });
   }
 
-  // Each table under whichever column is shorter.
-  const cursor = { [LEFT]: 10, [RIGHT]: 10 };
-  for (const draw of sections) {
-    const c0 = cursor[LEFT] <= cursor[RIGHT] ? LEFT : RIGHT;
-    cursor[c0] = draw(c0, cursor[c0]);
+  // Side by side in pairs (Pipeline | Status, Follow-ups | Source, Project |
+  // Priority, ...): both tables of a pair start on the same row and are
+  // padded to the same height, so headings, rows and totals line up.
+  let r = 10;
+  for (let k = 0; k < sections.length; k += 2) {
+    const pair = sections.slice(k, k + 2);
+    const rows = Math.max(...pair.map((t) => t.items.length));
+    const ends = pair.map((t, n) => smallTable(n ? RIGHT : LEFT, r, t, rows));
+    r = Math.max(...ends) + 2; // two empty rows before the next pair
   }
-  let r = Math.max(cursor[LEFT], cursor[RIGHT]);
 
   // ── Wide tables (columns B to J; F+G and I+J are joined where needed) ──
   // spec: [[fromCol, toCol, value], ...]
