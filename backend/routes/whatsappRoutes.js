@@ -1170,6 +1170,11 @@ async function handleInbound(org, parsed) {
 // copy of the conversation, so flowState reflects the previous turn) fixes
 // both. Single API instance, so an in-process queue is enough.
 const botQueues = new Map(); // conversationId -> { tail: Promise, pending: [{ interactiveId, args }] }
+// Before answering typed text, wait until the customer has been quiet this long
+// after it, so "hi" + "price?" or a line typed just before a button tap get ONE
+// reply (21 Oct 2026: two messages 4 s apart got two separate answers, and the
+// second answer re-sent the photos). WA_BOT_QUIET_MS overrides (tests).
+const BOT_QUIET_MS = Number(process.env.WA_BOT_QUIET_MS ?? 5000);
 // Inbound messages already answered, per conversation (the live webhook and
 // resumeBotIfOwed can both owe a reply to the same message). Keyed by the
 // message itself, never by time: "anything sent since it arrived" mistakes the
@@ -1192,15 +1197,22 @@ function respondAsBot(org, conv, args) {
     q.pending.splice(q.pending.indexOf(entry), 1);
     try {
       if (args.inboundKey && answeredInbound.get(id)?.has(args.inboundKey)) return;
-      // Two typed messages in a row ("Hi" then "send me the price"): answer
-      // once, on the newest, with both in the transcript, instead of two
-      // replies. Only typed text is folded; every button tap is its own turn.
-      // A skipped first message hands its "new conversation" status on, so the
-      // greeting / qualification flow still starts.
+      // Typed text waits for the customer to finish: until BOT_QUIET_MS after
+      // it arrived. Anything that came in meanwhile is queued behind it.
+      if (!args.interactiveId && BOT_QUIET_MS > 0) {
+        const arrived = args.inboundAt ? new Date(args.inboundAt).getTime() : Date.now();
+        const wait = Math.min(BOT_QUIET_MS, arrived + BOT_QUIET_MS - Date.now());
+        if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+      }
+      // Something newer is waiting (more typed text, or a button tap): answer
+      // once, on the newest, with this message in the transcript, instead of
+      // two replies. Every button tap is still its own turn. A skipped first
+      // message hands its "new conversation" status on, so the greeting /
+      // qualification flow still starts.
       if (!args.interactiveId) {
-        const laterText = q.pending.find((p) => !p.interactiveId);
-        if (laterText) {
-          if (args.isNewConversation) laterText.args.isNewConversation = true;
+        const later = q.pending[q.pending.length - 1];
+        if (later) {
+          if (args.isNewConversation) later.args.isNewConversation = true;
           markAnswered(id, args.inboundKey);
           return;
         }
