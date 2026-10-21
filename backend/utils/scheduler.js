@@ -341,6 +341,16 @@ cron.schedule("*/5 * * * *", () => {
     .catch((err) => logger.error(`[wa-nudges] cron failed: ${err.message}`));
 });
 
+// ── Every 5 minutes: AI lead scoring ─────────────────────────────────────────
+// Reads leads whose customer wrote or talked on a call in the last 14 days and
+// has been quiet for 10 minutes since (services/aiLeadScore.js). No-op without
+// an AI key (staging).
+cron.schedule("*/5 * * * *", () => {
+  require("../services/aiLeadScore").runSweep()
+    .then(({ scored }) => { if (scored) logger.info(`[ai-score] scored ${scored} lead(s)`); })
+    .catch((err) => logger.error(`[ai-score] sweep failed: ${err.message}`));
+});
+
 // ── Every 30 minutes: warn orgs whose WhatsApp credits are running low ───────
 // Half-hourly rather than daily because credits drain in minutes during a
 // campaign, and the whole point is to catch it before replies start failing.

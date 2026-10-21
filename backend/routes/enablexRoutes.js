@@ -1339,6 +1339,8 @@ ${transcript.slice(0, 3000)}`,
     "meta.intent":     intent,
     "meta.sentiment":  sentiment,
   } });
+  // The customer talked on this call: the AI lead score reads it next sweep.
+  if (Model.modelName === "Lead" && transcript) await require("../services/aiLeadScore").markSignal(leadId);
 
   // Auto-advance lead status when aiAutoStatus is enabled for this org. The move
   // only applies if the status is still what was just read, so a change someone

@@ -9,7 +9,7 @@ const { createLeadSchema, updateLeadSchema, addNoteSchema, assignLeadSchema, imp
 const Lead = require("../models/Lead");
 const Automation = require("../models/Automation");
 const logger = require("../config/logger");
-const { scoreLead, scoreLabel, nextBestAction } = require("../utils/leadScorer");
+const { scoreLead, scoreLabel, nextBestAction, aiSummary } = require("../utils/leadScorer");
 const { draftWhatsAppMessage } = require("../utils/openai");
 const AiUsage = require("../models/AiUsage");
 
@@ -36,7 +36,7 @@ router.get("/hot", planGate("growth"), async (req, res, next) => {
     if (req.user.role === "agent") filter.assignedTo = req.user._id;
 
     const leads = await Lead.find(filter)
-      .select("name phone status priority source budget booking siteVisitDone followUpDate firstContactedAt activities notes assignedToName assignedTo propertyType bhk preferredLocation purpose createdAt updatedAt")
+      .select("name phone status priority source budget booking siteVisitDone followUpDate firstContactedAt activities notes assignedToName assignedTo propertyType bhk preferredLocation purpose createdAt updatedAt lastCustomerSignalAt aiScore")
       .populate("assignedTo", "name")
       .lean();
 
@@ -65,14 +65,32 @@ router.get("/hot", planGate("growth"), async (req, res, next) => {
     const scored = leads
       .map((l) => {
         const score = scoreLead(l);
-        return { ...l, _score: score, _scoreLabel: scoreLabel(score), _nextAction: nextBestAction(l, score) };
+        return { ...l, _score: score, _scoreLabel: scoreLabel(score), _nextAction: nextBestAction(l, score), _ai: aiSummary(l) };
       })
       .sort((a, b) => b._score - a._score)
-      .slice(0, limit);
+      .slice(0, limit)
+      // The widget needs a summary, not every activity and note.
+      .map(({ activities, notes, aiScore, ...rest }) => rest);
 
     res.json({ success: true, data: scored });
   } catch (err) { next(err); }
 });
+// POST /api/leads/:id/ai-score/feedback — "AI got it wrong" (or undo). Saved
+// for review only: it changes neither the score nor the lead.
+router.post("/:id/ai-score/feedback", async (req, res, next) => {
+  try {
+    const visibility = require("../utils/visibility");
+    const lead = await Lead.findOne({ _id: req.params.id, orgId: req.user.orgId }).select("orgId assignedTo createdBy aiScore").lean();
+    if (!lead || !visibility.canSeeLead(req.user, lead)) return res.status(404).json({ success: false, message: "Lead not found" });
+    if (!lead.aiScore) return res.status(400).json({ success: false, message: "This lead has no AI score" });
+    const wrong = req.body?.wrong !== false;
+    await Lead.updateOne({ _id: lead._id }, { $set: { "aiScore.feedback": wrong
+      ? { wrong: true, by: req.user._id, byName: req.user.name, at: new Date() }
+      : { wrong: false, by: req.user._id, byName: req.user.name, at: new Date() } } });
+    res.json({ success: true, wrong });
+  } catch (err) { next(err); }
+});
+
 // GET /api/leads/stale — leads not updated in 7+ days, non-closed (admin/manager only)
 router.get("/stale", authorize("admin", "manager"), async (req, res, next) => {
   try {

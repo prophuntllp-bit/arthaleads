@@ -30,6 +30,10 @@ const schema = new mongoose.Schema(
     arthaCachedTokens: { type: Number, default: 0 },
     arthaOutputTokens: { type: Number, default: 0 },
     arthaCostMicroUsd: { type: Number, default: 0 },
+
+    // AI lead scoring (services/aiLeadScore.js): one call per scored lead.
+    leadScoreCalls:    { type: Number, default: 0 },
+    leadScoreTokens:   { type: Number, default: 0 },
   },
   { timestamps: true }
 );

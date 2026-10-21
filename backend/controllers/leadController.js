@@ -415,7 +415,14 @@ const leadController = {
       // org could bulk-export for free, and everyone's download silently
       // stopped at 10 rows unless they had bumped rows-per-page first.
       if (raw === "1") {
-        return res.json({ success: true, leads: sourceLeads, total: sourceLeads.length, truncated });
+        // The same score Hot Today shows, for the download's Score and AI columns.
+        const sc = require("../utils/leadScorer");
+        const leads = sourceLeads.map((l) => {
+          if (l._type === "project") return l; // project leads are never scored
+          const n = sc.scoreLead(l);
+          return { ...l, _score: n, _scoreLabel: sc.scoreLabel(n), _ai: sc.aiSummary(l) };
+        });
+        return res.json({ success: true, leads, total: leads.length, truncated });
       }
 
       // A ready Excel file in the ArthaLeads look (the phone app's export; the

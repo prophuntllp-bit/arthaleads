@@ -8,6 +8,7 @@ const fs = require("fs");
 const path = require("path");
 const ExcelJS = require("exceljs");
 const { buildThemedWorkbook } = require("./sheetTheme");
+const scorer = require("../leadScorer");
 
 const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
@@ -57,6 +58,13 @@ function leadRows(source, now = Date.now()) {
       Phone:         str(lead.phone),
       Status:        str(lead.status),
       Priority:      str(lead.priority),
+      // The Hot Today score (rules, plus the AI's read of the last 14 days).
+      // Project leads are never scored.
+      ...(() => {
+        if (lead._type === "project") return { Score: "", AIReason: "" };
+        const ai = scorer.aiSummary(lead);
+        return { Score: scorer.scoreLead(lead), AIReason: ai ? `${ai.level[0].toUpperCase()}${ai.level.slice(1)}: ${ai.reason}` : "" };
+      })(),
       Project:       str(lead.projectName),
       AssignedTo:    str(lead.assignedToName),
       Email:         str(lead.email),
