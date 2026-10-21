@@ -60,6 +60,7 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 - [claude] 2026-10-21 IST: WhatsApp bot waits ~5 s of customer quiet before answering typed text so bursts get one reply. backend/routes/whatsappRoutes.js (respondAsBot queue), tests
+- [claude] 2026-10-21 IST: Leads Excel download in ArthaLeads theme (orange header, filters on, frozen header, source cells in the Leads pill colours, coloured status/priority, real dates and rupee budgets). frontend/src/utils/sheetExport.js, frontend/src/pages/Leads.jsx, frontend/package.json (exceljs)
 
 
 

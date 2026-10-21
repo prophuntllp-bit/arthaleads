@@ -18,7 +18,8 @@ const COMPACT_BTN = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl tex
 const COMPACT_BTN_DANGER = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition disabled:opacity-60";
 const COMPACT_INPUT_CLS = "rounded-xl py-1.5 text-sm text-app";
 const COMPACT_INPUT_STYLE = { background: "var(--app-surface-low)", border: "1px solid var(--app-border)", outline: "none" };
-import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
+import { read as xlsxRead, utils as xlsxUtils } from "xlsx";
+import { downloadXlsx } from "../utils/sheetExport";
 import DateTimePicker from "../components/DateTimePicker";
 import CustomSelect from "../components/CustomSelect";
 import {
@@ -592,10 +593,7 @@ export default function ProjectDetail() {
         const a = document.createElement("a"); a.href = url; a.download = `${filename}.csv`; a.click();
         URL.revokeObjectURL(url);
       } else {
-        const ws = xlsxUtils.json_to_sheet(rows);
-        const wb = xlsxUtils.book_new();
-        xlsxUtils.book_append_sheet(wb, ws, "Leads");
-        xlsxWriteFile(wb, `${filename}.xlsx`);
+        await downloadXlsx(rows, `${filename}.xlsx`, { sheetName: "Leads" });
       }
       toast.success(`Exported ${rows.length} lead${rows.length !== 1 ? "s" : ""}`);
     } catch (err) {
@@ -650,10 +648,7 @@ export default function ProjectDetail() {
         a.href = url; a.download = `${filename}.csv`; a.click();
         URL.revokeObjectURL(url);
       } else {
-        const ws = xlsxUtils.json_to_sheet(rows);
-        const wb = xlsxUtils.book_new();
-        xlsxUtils.book_append_sheet(wb, ws, "Prospective");
-        xlsxWriteFile(wb, `${filename}.xlsx`);
+        await downloadXlsx(rows, `${filename}.xlsx`, { sheetName: "Prospective" });
       }
       toast.success(`Exported ${rows.length} lead${rows.length !== 1 ? "s" : ""}`);
     } catch (err) {
