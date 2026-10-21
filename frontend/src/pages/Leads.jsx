@@ -698,35 +698,81 @@ export default function Leads() {
       // midnight and 5:30am IST was exported as the previous day.
       const istDay = (d) => (d ? new Date(new Date(d).getTime() + 5.5 * 3600000).toISOString().slice(0, 10) : "");
 
-      const rows = source.map((lead) => ({
-        Name:          str(lead.name),
-        Phone:         str(lead.phone),           // kept as string - no numeric coercion
-        Email:         str(lead.email),
-        Source:        str(lead.source),
-        LeadSource:    str(lead.leadSourceLabel),  // sub-source / campaign label
-        // The website and the exact page the form was on, same as the
-        // Source column in the table (these were missing from downloads).
-        Website:       str(lead.sourceDomain),
-        Page:          pagePath(lead.sourcePage),
-        PageURL:       lead.sourcePage ? String(lead.sourcePage).split("?")[0] : "",
-        Status:        str(lead.status),
-        Priority:      str(lead.priority),
-        PropertyType:  str(lead.propertyType),
-        BHK:           str(lead.bhk),
-        Purpose:       str(lead.purpose),
-        BudgetMin:     lead.budget?.min ?? "",
-        BudgetMax:     lead.budget?.max ?? "",
-        FollowUpDate:  istDay(lead.followUpDate),
-        FollowUpDate2: istDay(lead.followUp2),
-        FollowUpNote:  str(lead.followUpNote),
-        Remark:        str(lead.remark),
-        Remark1:       str(lead.remark1),
-        Remark2:       str(lead.remark2),
-        "Lead Outcome": str(lead.booking),
-        AssignedTo:    str(lead.assignedToName),
-        Project:       str(lead.projectName),
-        CreatedAt:     istDay(lead.createdAt),
-      }));
+      // Date and time in IST, "2026-10-21 14:30" (the sheet turns it into a real Excel date).
+      const istStamp = (d) => (d ? new Date(new Date(d).getTime() + 5.5 * 3600000).toISOString().slice(0, 16).replace("T", " ") : "");
+      const hoursBetween = (a, b) => (a && b ? Math.max(0, Math.round(((new Date(b) - new Date(a)) / 3600000) * 10) / 10) : "");
+      // Every call on the lead: team calls (logged as "called" activities) and
+      // Vistrow Voice AI calls. The newest one is shown as "Last Call".
+      const callsOf = (lead) => {
+        const team = (lead.activities || []).filter((a) => a.type === "called").map((a) => ({
+          at: a.createdAt, what: { answered: "Answered", missed: "Missed", initiated: "Dialled" }[a.meta?.status] || "Called",
+        }));
+        const ai = (lead.voiceCalls || []).map((c) => ({ at: c.createdAt, what: `AI call${c.sentiment ? `: ${c.sentiment}` : ""}` }));
+        const all = [...team, ...ai].sort((x, y) => new Date(y.at || 0) - new Date(x.at || 0));
+        return { count: all.length || "", last: all[0] ? `${all[0].what}${all[0].at ? `, ${fmtDate(all[0].at)}` : ""}` : "" };
+      };
+      // Facebook / website form questions, one column each ("Form: <question>"),
+      // in the order they first appear. The prefix keeps a question called
+      // "Budget" from being read as the Budget column if the sheet is imported back.
+      const formCols = [];
+      for (const l of source) for (const f of l.formResponses || []) {
+        const col = `Form: ${String(f.label || f.fieldKey).trim().slice(0, 60)}`;
+        if (!formCols.includes(col) && formCols.length < 20) formCols.push(col);
+      }
+
+      // Most-used columns first; website details and form answers at the end.
+      const rows = source.map((lead) => {
+        const calls = callsOf(lead);
+        const row = {
+          Name:          str(lead.name),
+          Phone:         str(lead.phone),           // kept as string - no numeric coercion
+          Status:        str(lead.status),
+          Priority:      str(lead.priority),
+          Project:       str(lead.projectName),
+          AssignedTo:    str(lead.assignedToName),
+          Email:         str(lead.email),
+          Source:        str(lead.source),
+          LeadSource:    str(lead.leadSourceLabel),  // sub-source / campaign label
+          Campaign:      str(lead.campaignRef?.headline),
+          CreatedAt:     istStamp(lead.createdAt),
+          LeadAgeDays:   lead.createdAt ? Math.floor((Date.now() - new Date(lead.createdAt)) / 86400000) : "",
+          FirstContacted: istStamp(lead.firstContactedAt),
+          ResponseHours: hoursBetween(lead.createdAt, lead.firstContactedAt),
+          FollowUpDate:  istDay(lead.followUpDate),
+          FollowUpDate2: istDay(lead.followUp2),
+          FollowUpNote:  str(lead.followUpNote),
+          SiteVisitDate: istStamp(lead.siteVisitDate),
+          VisitDone:     lead.siteVisitDate ? (lead.siteVisitDone ? "Yes" : "No") : "",
+          "Lead Outcome": str(lead.booking),
+          PropertyType:  str(lead.propertyType),
+          BHK:           str(lead.bhk),
+          Purpose:       str(lead.purpose),
+          BudgetMin:     lead.budget?.min ?? "",
+          BudgetMax:     lead.budget?.max ?? "",
+          City:          str(lead.city),
+          PreferredLocation: str(lead.preferredLocation),
+          Timeline:      str(lead.timeline),
+          Calls:         calls.count,
+          LastCall:      calls.last,
+          Remark:        str(lead.remark),
+          Remark1:       str(lead.remark1),
+          Remark2:       str(lead.remark2),
+          Remark3:       str(lead.remark3),
+          Remark4:       str(lead.remark4),
+          Tags:          (lead.tags || []).join(", "),
+          // The website and the exact page the form was on, same as the
+          // Source column in the table.
+          Website:       str(lead.sourceDomain),
+          Page:          pagePath(lead.sourcePage),
+          PageURL:       lead.sourcePage ? String(lead.sourcePage).split("?")[0] : "",
+        };
+        for (const c of formCols) row[c] = "";
+        for (const f of lead.formResponses || []) {
+          const col = `Form: ${String(f.label || f.fieldKey).trim().slice(0, 60)}`;
+          if (col in row) row[col] = str(f.value);
+        }
+        return row;
+      });
 
       toast.dismiss(tid);
       if (rows.length === 0) { toast.error("No leads to export"); return; }
@@ -745,8 +791,8 @@ export default function Leads() {
       const bySource = rows.reduce((acc, r) => { (acc[r.Source || "Other"] ||= []).push(r); return acc; }, {});
       const sourceNames = Object.keys(bySource).sort((a, b) => bySource[b].length - bySource[a].length);
       if (type === "excel" && sourceNames.length > 1) {
-        await downloadXlsxSheets(Object.fromEntries(sourceNames.map((n) => [n, bySource[n]])), `leads-${label}-${date}.xlsx`);
-      } else if (type === "excel") await downloadXlsx(rows, `leads-${label}-${date}.xlsx`, { sheetName: "Leads" });
+        await downloadXlsxSheets(Object.fromEntries(sourceNames.map((n) => [n, bySource[n]])), `leads-${label}-${date}.xlsx`, { summary: true });
+      } else if (type === "excel") await downloadXlsx(rows, `leads-${label}-${date}.xlsx`, { sheetName: "Leads", summary: true });
       else downloadCsv(rows, `leads-${label}-${date}.csv`);
 
       toast.success(`Exported ${rows.length} lead${rows.length !== 1 ? "s" : ""}`);
@@ -813,11 +859,13 @@ export default function Leads() {
       "Prospect","Party","Buyer","Person","Contact","Customer"
     ) || splitName || (inferredCols.name ? String(row[inferredCols.name] ?? "").trim() : "");
 
-    const phone = col(
+    const phoneRaw = col(
       "Phone","Phone Number","PhoneNumber","Mobile","Mobile Number","MobileNumber",
       "Contact Number","ContactNumber","Cell","WhatsApp","Whatsapp Number","WhatsappNumber",
       "Mob","Tel","Telephone"
     ) || (inferredCols.phone ? String(row[inferredCols.phone] ?? "").trim() : "");
+    // "+91 98765 43210" (how our own downloads show it) is stored as 919876543210.
+    const phone = /^\+?[\d\s\-()]+$/.test(phoneRaw) ? phoneRaw.replace(/\D/g, "") : phoneRaw;
 
     const email = col(
       "Email","Email Address","EmailAddress","Email ID","EmailID","Mail","E-mail","E Mail"
@@ -984,8 +1032,12 @@ export default function Leads() {
         rows = parseCsvText(text);
       } else {
         const workbook = xlsxRead(buffer, { type: "array" });
-        const firstSheet = workbook.SheetNames[0];
-        rows = xlsxUtils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
+        // Our own downloads start with a "Summary" sheet and then one sheet per
+        // source: read every lead sheet. Any other file: its first sheet.
+        const names = workbook.SheetNames.includes("Summary")
+          ? workbook.SheetNames.filter((n) => n !== "Summary")
+          : workbook.SheetNames.slice(0, 1);
+        rows = names.flatMap((n) => xlsxUtils.sheet_to_json(workbook.Sheets[n], { defval: "" }));
       }
       if (!rows.length) { toast.error("File is empty"); return; }
 
