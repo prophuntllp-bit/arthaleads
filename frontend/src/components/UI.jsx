@@ -123,17 +123,21 @@ export function SourceBadge({ source, lead }) {
   const color = SOURCE_COLORS[source] || "bg-gray-100 text-gray-600";
   if (lead && source !== "Vistrow Voice" && leadHadAiCall(lead)) {
     // Two-tone pill: where the lead came from, plus the AI call on it.
+    // The source colour as a hex for the gradient (SOURCE_COLORS holds
+    // Tailwind classes such as "bg-[#f88025] text-white").
+    const hex = (color.match(/#[0-9a-fA-F]{6}/) || ["#64748B"])[0];
     const last = [...lead.voiceCalls].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0];
     const when = last?.createdAt ? ` · ${new Date(last.createdAt).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}` : "";
     return (
       <span
-        className={`badge !p-0 overflow-hidden ${color}`}
+        className="badge justify-between gap-2 text-white"
+        style={{ background: `linear-gradient(90deg, ${hex} 0%, ${hex} 40%, #9333ea 78%, #ec4899 100%)` }}
         title={`Came in via ${source}, then a Vistrow AI call${when}`}
       >
-        {/* flex-1: in a stretched column (the Leads list) the source half
-            fills the pill, so no empty white tail shows after "AI call". */}
-        <span className={`flex-1 px-2.5 py-1 ${color}`}>{source}</span>
-        <span className={`shrink-0 px-2.5 py-1 ${SOURCE_COLORS["Vistrow Voice"]}`}>AI call</span>
+        {/* One pill blending the source colour into Vistrow purple: no hard
+            line between the two (owner, 21 Oct 2026). */}
+        <span>{source}</span>
+        <span className="font-semibold">AI call</span>
       </span>
     );
   }
