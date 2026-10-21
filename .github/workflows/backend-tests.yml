@@ -37,6 +37,11 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      # The bot's "wait until the customer is quiet" pause (5 s in the app)
+      # would add minutes to tests that are not about it.
+      # mergeQuickMessages.db.test.js sets its own value.
+      WA_BOT_QUIET_MS: "0"
     steps:
       - uses: actions/checkout@v4
 
