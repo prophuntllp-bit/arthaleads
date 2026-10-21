@@ -70,6 +70,18 @@ const ids = (rows) => rows.map((r) => String(r._id)).sort().join(",");
   check(ids(asA) === ids(want), "admin filtering by agent A sees exactly what A sees");
   check((await list(X)).length === 1, "another organisation's admin sees only their own lead");
 
+  // ── Excel / CSV download (GET /leads/export) ──────────────────────────────
+  // The download's Summary sheet (team performance, hot leads, follow-ups) is
+  // built only from the leads this returns, so an agent's file can never show
+  // a colleague's leads or numbers (owner rule, 21 Oct 2026).
+  const exported = async (user, idList) => (await leadService.getAllUnified(
+    { page: 1, limit: 5000, type: "all" }, user,
+    { fetchCap: 5000, ...(idList ? { ids: idList.map(String) } : {}) })).leads || [];
+  check(ids(await exported(A)) === ids(want), "agent's download holds only their own leads");
+  const picked = await exported(A, [L.aAssigned._id, L.bOnly._id, L.unassigned._id, L.otherOrg._id]);
+  check(ids(picked) === ids([L.aAssigned]), "agent asking to download a colleague's or an unassigned lead by id gets only their own", picked.map((r) => r.name).join(" | "));
+  check((await exported(M)).length === 7, "manager's download covers the whole organisation");
+
   // ── single records (lead panel, calls, Artha get_lead) ────────────────────
   check(visibility.canSeeLead(A, L.aAssigned) && visibility.canSeeLead(A, L.aCreated), "canSeeLead: own assigned and own created");
   check(!visibility.canSeeLead(A, L.bOnly) && !visibility.canSeeLead(A, L.unassigned), "canSeeLead: not a colleague's or an unassigned lead");
