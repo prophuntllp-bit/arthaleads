@@ -34,6 +34,19 @@ export function downloadCsv(rows, filename, opts) {
   download(new Blob([toCsv(rows, opts)], { type: "text/csv;charset=utf-8" }), filename);
 }
 
+// The ArthaLeads logo for the Summary sheet. If it can't be fetched the sheet
+// shows the name in text instead; a download never fails over a logo.
+async function logoBase64() {
+  try {
+    const res = await fetch("/excel-logo.png");
+    if (!res.ok) return null;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  } catch { return null; }
+}
+
 export function downloadXlsx(rows, filename, { sheetName = "Leads", ...opts } = {}) {
   return downloadXlsxSheets({ [sheetName]: rows }, filename, opts);
 }
@@ -47,6 +60,7 @@ export async function downloadXlsxSheets(sheets, filename, opts = {}) {
   const wb = buildThemedWorkbook(ExcelJS, sheets, {
     ...(opts.textColumns ? { textColumns: opts.textColumns } : {}),
     summary: !!opts.summary,
+    logo: opts.summary ? await logoBase64() : null,
   });
   const buf = await wb.xlsx.writeBuffer();
   download(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), filename);

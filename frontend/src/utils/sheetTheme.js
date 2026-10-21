@@ -211,7 +211,7 @@ function addSheet(wb, title, rows, textColumns, tab) {
 }
 
 // ── Summary sheet ────────────────────────────────────────────────────────────
-function addSummary(wb, allRows) {
+function addSummary(wb, allRows, logo) {
   const ws = wb.addWorksheet("Summary", {
     properties: { tabColor: { argb: argb(BRAND) } },
     views: [{ showGridLines: false }],
@@ -222,9 +222,18 @@ function addSummary(wb, allRows) {
   const now = new Date(Date.now() + 5.5 * 3600000);
   const stamp = `${now.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" })}, ${now.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "UTC" }).toUpperCase()} IST`;
 
-  ws.getCell("B2").value = "ArthaLeads";
-  ws.getCell("B2").font = { bold: true, size: 22, color: { argb: argb(BRAND) } };
-  ws.getRow(2).height = 34;
+  // The logo (mark + wordmark, public/excel-logo.png, 1116 x 220). Without it,
+  // the name in the logo's colours: "Artha" orange, "Leads" black.
+  ws.getRow(2).height = 40;
+  if (logo) {
+    const id = wb.addImage({ base64: logo, extension: "png" });
+    ws.addImage(id, { tl: { col: 1, row: 1.1 }, ext: { width: 233, height: 46 }, editAs: "absolute" });
+  } else {
+    ws.getCell("B2").value = { richText: [
+      { text: "Artha", font: { bold: true, size: 22, color: { argb: argb(BRAND) } } },
+      { text: "Leads", font: { bold: true, size: 22, color: { argb: "FF111111" } } },
+    ] };
+  }
   ws.getCell("B3").value = `Leads report: ${total.toLocaleString("en-IN")} lead${total === 1 ? "" : "s"}, downloaded ${stamp}`;
   ws.getCell("B3").font = { size: 11, color: { argb: "FF6B7280" } };
 
@@ -332,13 +341,14 @@ function addSummary(wb, allRows) {
 
 // sheets: { "WhatsApp": [rows], "Website": [rows] } (one sheet per entry).
 // Excel sheet names are at most 31 characters and cannot contain : \ / ? * [ ].
-export function buildThemedWorkbook(ExcelJS, sheets, { textColumns = TEXT_DEFAULT, summary = false } = {}) {
+// logo: the PNG as base64, for the top of the Summary sheet.
+export function buildThemedWorkbook(ExcelJS, sheets, { textColumns = TEXT_DEFAULT, summary = false, logo = null } = {}) {
   const wb = new ExcelJS.Workbook();
   wb.creator = "ArthaLeads";
   wb.company = "ArthaLeads";
   wb.created = new Date();
   const used = new Set(summary ? ["summary"] : []);
-  if (summary) addSummary(wb, Object.values(sheets).flat());
+  if (summary) addSummary(wb, Object.values(sheets).flat(), logo);
   for (const [name, rows] of Object.entries(sheets)) {
     let title = String(name).replace(/[:\\/?*[\]]/g, " ").trim().slice(0, 31) || "Leads";
     for (let i = 2; used.has(title.toLowerCase()); i++) title = `${title.slice(0, 28)} ${i}`;
