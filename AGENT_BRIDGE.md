@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+- [claude] 2026-10-21 IST: WhatsApp bot waits ~5 s of customer quiet before answering typed text so bursts get one reply. backend/routes/whatsappRoutes.js (respondAsBot queue), tests
 
 
 
