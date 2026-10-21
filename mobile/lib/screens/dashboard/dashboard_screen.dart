@@ -507,7 +507,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   Expanded(child: Text('Artha insights', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: t.text))),
                 ]),
                 const SizedBox(height: 2),
-                Text('From your numbers for $_scope', style: TextStyle(fontSize: 12.5, color: t.textSoft)),
+                Text('From your numbers $_scope', style: TextStyle(fontSize: 12.5, color: t.textSoft)),
                 const SizedBox(height: 14),
                 FutureBuilder<List<String>>(
                   future: _insightsFuture,
@@ -829,6 +829,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      showDragHandle: true,
       builder: (ctx) => DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.85,
