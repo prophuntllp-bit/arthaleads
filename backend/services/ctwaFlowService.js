@@ -704,6 +704,10 @@ module.exports = function createCtwaFlowService({
   }
 
   // ── Follow-up nudges ───────────────────────────────────────────────────────
+  // Applies to button-flow chats AND (since 21 Oct 2026) ordinary AI chats of
+  // an agent with "Follow up if they go quiet" on. In an ordinary chat the
+  // nudge repeats the assistant's last question, and is sent only when that
+  // last message actually asked something.
   // Someone who stops answering mid-flow gets one gentle nudge (about 15
   // minutes after the bot's last message) and one final reminder shortly
   // before the 24h reply window closes, each re-sending the pending question
@@ -727,17 +731,20 @@ module.exports = function createCtwaFlowService({
       WaAgent.findById(conv.agentId).lean(),
       Organization.findById(conv.orgId),
     ]);
-    if (!agent?.ctwaFlow?.enabled || !agent.ctwaFlow.nudgesEnabled || !org) return false;
+    if (!agent?.ctwaFlow?.nudgesEnabled || !org) return false;
+    const inFlow = !!conv.flowState?.step;
     // Nothing is sent once the feature or the assistant has been switched off since the last message:
     // a downgrade, a paused assistant, the org-wide bot switch, WhatsApp disconnected, or a human taking over.
-    if (levelOf(org.plan) < levelOf("enterprise")) return false;
+    // Button-flow nudges are Enterprise (the flow is); chat nudges come with the AI agent (Growth).
+    if (inFlow && !agent.ctwaFlow.enabled) return false;
+    if (levelOf(org.plan) < levelOf(inFlow ? "enterprise" : "growth")) return false;
     if (agent.status && agent.status !== "active") return false;
     if (org.whatsapp?.botEnabled === false || !org.whatsapp?.enabled) return false;
     if (conv.botEnabled === false) return false;
     if (isWithinBusinessHours && !isWithinBusinessHours(org)) return false;
 
     const [last, lastIn] = await Promise.all([
-      WaMessage.findOne({ conversationId: conv._id }).sort({ timestamp: -1 }).select("direction sender timestamp").lean(),
+      WaMessage.findOne({ conversationId: conv._id }).sort({ timestamp: -1 }).select("direction sender timestamp body isGreeting isNotice").lean(),
       WaMessage.findOne({ conversationId: conv._id, direction: "inbound" }).sort({ timestamp: -1 }).select("timestamp").lean(),
     ]);
     // Only while the bot spoke last: a human reply, or the customer's own
@@ -753,7 +760,7 @@ module.exports = function createCtwaFlowService({
     else if (count === 0 && sinceBot >= 15 * MIN && sinceBot <= 3 * HOUR) kind = "first";
     if (!kind) return false;
 
-    const content = pendingStepContent(agent, conv);
+    const content = inFlow ? pendingStepContent(agent, conv) : chatQuestion(last);
     if (!content) return false;
     const vars = { name: conv.contactName || "there" };
     const prefix = kind === "final"
@@ -767,13 +774,26 @@ module.exports = function createCtwaFlowService({
     return true;
   }
 
+  // The question an ordinary AI chat is waiting on: the last sentence with a
+  // "?" in the assistant's last message. Nothing to chase without one (a
+  // thank-you, a hand-off note, the away message), so no nudge.
+  function chatQuestion(last) {
+    if (!last || last.isNotice || last.isGreeting) return null;
+    const body = String(last.body || "").trim();
+    if (!body.includes("?")) return null;
+    const parts = body.split(/(?<=[.!?])\s+|\n+/).map((x) => x.trim()).filter(Boolean);
+    const q = [...parts].reverse().find((x) => x.endsWith("?")) || body;
+    return { bodyText: q.slice(0, 600) };
+  }
+
   async function runNudges(now = new Date()) {
+    // Every chat the bot is handling, not only button-flow ones; nudgeOne
+    // decides per chat (agent setting, plan, who spoke last, timing).
     const convs = await WaConversation.find({
-      "flowState.step": { $exists: true, $ne: null },
       botEnabled: true,
       nudgeCount: { $lt: 2 },
       lastMessageAt: { $gte: new Date(now - 23 * HOUR) },
-    }).limit(300);
+    }).limit(1000);
     let sent = 0;
     for (const c of convs) {
       try { if (await nudgeOne(c, now)) sent++; }

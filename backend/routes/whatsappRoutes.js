@@ -1281,7 +1281,7 @@ async function respondAsBotNow(org, conv, { interactiveId, msgText, isNewConvers
     return;
   }
 
-  if (isNewConversation && agent.greeting?.trim()) {
+  if (isNewConversation && agent.greetingEnabled !== false && agent.greeting?.trim()) {
     await sendBotGreeting(org, agent, conv);
   }
   await triggerBotReply(org, agent, conv, msgText);
@@ -1821,7 +1821,7 @@ function personaFor(agent) {
   return PERSONA_POOL[h % PERSONA_POOL.length];
 }
 
-async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef, { isFirstBotReply = false, sourceProjectId = null } = {}) {
+async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef, { isFirstBotReply = false, sourceProjectId = null, greetingMode = "none" } = {}) {
   const botName = personaFor(agent);
 
   const projectFilter = { orgId: org._id, isArchived: { $ne: true } };
@@ -1895,8 +1895,17 @@ async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef, 
   // handed over budget/purpose/etc. before the customer said a word — that
   // used to read as "enough to recommend" on turn one, so the very first
   // bot reply dumped a full price-and-area pitch instead of a conversation.
+  // greetingMode: "off" = the agent's greeting is switched off because the
+  // customer was already welcomed (e.g. by the ad's own Meta greeting); "sent"
+  // = our greeting message went out just before this reply; "none" = nobody
+  // has greeted yet, so this reply does it. Never two hellos in a row.
+  const opener = greetingMode === "off"
+    ? "Do NOT greet them, say hello or introduce yourself: they have already been welcomed (for example by the ad's own greeting). Reply directly to what they wrote"
+    : greetingMode === "sent"
+      ? "A greeting message was already sent to them just before this reply, so do NOT say hello or introduce yourself again. Reply directly to what they wrote"
+      : "Warmly greet them by name";
   const firstReplyRule = isFirstBotReply
-    ? "- This is your very first reply in this conversation. Even if the lead form already gave you budget, purpose, or property type (see Customer context below), do not jump straight into a full recommendation with a specific project, price, or area yet — that reads as a canned info-dump, not a conversation. Warmly greet them by name, acknowledge in one line what they're looking for, and ask ONE qualifying question about whatever is still unknown. Save the specific project recommendation for your next reply, after they answer.\n"
+    ? `- This is your very first reply in this conversation. Even if the lead form already gave you budget, purpose, or property type (see Customer context below), do not jump straight into a full recommendation with a specific project, price, or area yet — that reads as a canned info-dump, not a conversation. ${opener}, acknowledge in one line what they're looking for, and ask ONE qualifying question about whatever is still unknown. Save the specific project recommendation for your next reply, after they answer.\n`
     : "";
 
   return `You are ${botName}, on the sales team at ${org.name} (India), chatting with a prospective customer over WhatsApp. Your job is NOT to be an information desk that answers whatever is asked — it is to qualify the lead first, understand fit, and then recommend the right option.
@@ -2376,7 +2385,9 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     }
     const MEDIA_NAMES = { photos: "photos", videos: "the video", brochure: "the brochure", floorplan: "the floor plan" };
     const listNames = (keys) => keys.map((k) => MEDIA_NAMES[k]).join(" and ");
-    const systemPrompt = await buildProjectGroundedPrompt(org, agent, leadContext, conversation.campaignRef, { isFirstBotReply, sourceProjectId: sourceProject?._id });
+    const greetingMode = agent?.greetingEnabled === false ? "off"
+      : recentMsgs.some((m) => m.direction === "outbound" && m.isGreeting) ? "sent" : "none";
+    const systemPrompt = await buildProjectGroundedPrompt(org, agent, leadContext, conversation.campaignRef, { isFirstBotReply, sourceProjectId: sourceProject?._id, greetingMode });
 
     // Lead details are read from the chat by scheduleLeadEnrich (handleInbound),
     // for bot, button-flow and person-handled chats alike.
@@ -3041,7 +3052,7 @@ router.post("/settings/test", authorize("admin", "super_admin"), async (req, res
 // manage them as real records.
 
 const AGENT_FIELDS = [
-  "name", "description", "greeting", "businessContext", "groundRules",
+  "name", "description", "greeting", "greetingEnabled", "businessContext", "groundRules",
   "projectIds", "systemPrompt", "language", "adIds", "status", "personaName",
   "shareProjectPhotos", "shareBrochure", "shareVideos", "shareFloorPlan", "ctwaFlow",
 ];
@@ -3193,6 +3204,7 @@ async function sanitizeAgentBody(orgId, body) {
     out.adIds = [...new Set((Array.isArray(out.adIds) ? out.adIds : [])
       .map((a) => String(a).trim()).filter(Boolean))];
   }
+  if (out.greetingEnabled !== undefined) out.greetingEnabled = out.greetingEnabled !== false;
   if (out.shareProjectPhotos !== undefined) out.shareProjectPhotos = out.shareProjectPhotos === true;
   if (out.shareBrochure      !== undefined) out.shareBrochure      = out.shareBrochure === true;
   if (out.shareVideos        !== undefined) out.shareVideos        = out.shareVideos === true;
@@ -3380,6 +3392,7 @@ router.post("/agents/preview", authorize("admin", "super_admin"), async (req, re
     const agent = {
       name: clean.name || "Artha Assistant",
       greeting: clean.greeting || "",
+      greetingEnabled: clean.greetingEnabled !== false,
       businessContext: clean.businessContext || "",
       groundRules: clean.groundRules || "",
       projectIds: clean.projectIds || [],
@@ -3389,7 +3402,8 @@ router.post("/agents/preview", authorize("admin", "super_admin"), async (req, re
       shareBrochure: clean.shareBrochure === true,
     };
 
-    const systemPrompt = await buildProjectGroundedPrompt(org, agent, "", null, { isFirstBotReply: history.length === 0 });
+    const greetingMode = !agent.greetingEnabled ? "off" : agent.greeting.trim() ? "sent" : "none";
+    const systemPrompt = await buildProjectGroundedPrompt(org, agent, "", null, { isFirstBotReply: history.length === 0, greetingMode });
     const turns = (Array.isArray(history) ? history : []).slice(-10)
       .filter((m) => m && typeof m.body === "string")
       .map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.body.slice(0, 2000) }));
@@ -3443,7 +3457,7 @@ router.post("/agents/preview", authorize("admin", "super_admin"), async (req, re
       // text a real customer gets, which read as the assistant ignoring its
       // own Greeting field. Sent only on what the client reports as this
       // preview session's first turn, same condition as the real flow.
-      greeting: history.length === 0 && agent.greeting?.trim() ? agent.greeting.trim() : null,
+      greeting: history.length === 0 && agent.greetingEnabled && agent.greeting?.trim() ? agent.greeting.trim() : null,
     });
   } catch (err) {
     res.status(500).json({ message: err?.response?.data?.error?.message || err.message });
@@ -4413,6 +4427,7 @@ router._handleInbound = handleInbound;
 router._noteWhyDetailsEmpty = noteWhyDetailsEmpty;   // also used by one-off backfills
 router._matchByMessageText = matchByMessageText;
 router._triggerBotReply = triggerBotReply;
+router._buildProjectGroundedPrompt = buildProjectGroundedPrompt;
 router._sendBotNotice = sendBotNotice;            // the Vistrow call heads-up (utils/vistrowWhatsAppHeadsUp.js)
 router._resolveAgentForConversation = resolveAgentForConversation;
 

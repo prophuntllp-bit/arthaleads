@@ -272,7 +272,7 @@ export default function AgentBuilder() {
   const [readiness, setReadiness] = useState(null);
 
   const [form, setForm] = useState({
-    name: "", personaName: "", description: "", status: "draft", greeting: "",
+    name: "", personaName: "", description: "", status: "draft", greeting: "", greetingEnabled: true,
     businessContext: "", groundRules: "", projectIds: [],
     systemPrompt: "", language: "auto", adIds: [],
     shareProjectPhotos: false, shareBrochure: false, shareVideos: false, shareFloorPlan: false,
@@ -312,7 +312,7 @@ export default function AgentBuilder() {
         const a = agentRes.data.agent;
         setForm({
           name: a.name || "", personaName: a.personaName || "", description: a.description || "", status: a.status || "draft",
-          greeting: a.greeting || "", businessContext: a.businessContext || "",
+          greeting: a.greeting || "", greetingEnabled: a.greetingEnabled !== false, businessContext: a.businessContext || "",
           groundRules: a.groundRules || "",
           projectIds: (a.projectIds || []).map((p) => String(p?._id || p)),
           systemPrompt: a.systemPrompt || "", language: a.language || "auto",
@@ -534,14 +534,62 @@ export default function AgentBuilder() {
             <h3 className="text-base font-bold text-app">How it talks</h3>
 
             <div>
-              <label className="text-xs font-semibold text-app-soft mb-1 block">
-                Greeting <span className="font-normal">(optional)</span>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <label className="text-xs font-semibold text-app-soft">
+                  Greeting <span className="font-normal">(optional)</span>
+                </label>
+                <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
+                  <input type="checkbox" checked={form.greetingEnabled !== false}
+                    onChange={(e) => set({ greetingEnabled: e.target.checked })} />
+                  <span className="text-xs font-semibold text-app">{form.greetingEnabled !== false ? "On" : "Off"}</span>
+                </label>
+              </div>
+              {form.greetingEnabled !== false ? (
+                <>
+                  <input className="input w-full" placeholder="Hi {{name}} 👋 Thanks for reaching out, how can I help you find your next home?"
+                    value={form.greeting} onChange={(e) => set({ greeting: e.target.value })} />
+                  <p className="text-xs text-app-soft mt-1">
+                    Sent as the first message when someone new writes in, and the assistant won't say hello again after
+                    it. Leave it empty to let the assistant greet in its own first reply. Use <code>{"{{name}}"}</code>.
+                    Turn this off if your Click-to-WhatsApp ad already shows Meta's automated greeting, so customers
+                    aren't welcomed twice.
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-app-soft rounded-xl px-3 py-2.5" style={{ background: "var(--app-surface-low)" }}>
+                  Off: no greeting is sent, and the assistant doesn't say hello or introduce itself. It answers the
+                  customer's message straight away. Use this when your Click-to-WhatsApp ad already welcomes people
+                  with Meta's automated greeting.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2 rounded-2xl border p-4" style={{ borderColor: "var(--app-border)" }}>
+              <label className="flex items-start gap-2.5 text-sm cursor-pointer">
+                <input type="checkbox" className="mt-0.5 shrink-0"
+                  checked={form.ctwaFlow.nudgesEnabled === true} onChange={(e) => setFlow({ nudgesEnabled: e.target.checked })} />
+                <span>
+                  <span className="text-app font-semibold block">Follow up if they go quiet</span>
+                  <span className="text-xs text-app-soft">
+                    If a customer stops replying after the assistant asked them something, send one gentle reminder
+                    after about 15 minutes and one last reminder shortly before the 24-hour reply window closes. In a
+                    normal chat it repeats the assistant's last question; in the button flow it re-sends the question
+                    with its buttons. Business hours only, never more than two, and they stop as soon as the customer
+                    writes back or someone from your team takes over.
+                  </span>
+                </span>
               </label>
-              <input className="input w-full" placeholder="Hi {{name}} 👋 Thanks for reaching out — how can I help you find your next home?"
-                value={form.greeting} onChange={(e) => set({ greeting: e.target.value })} />
-              <p className="text-xs text-app-soft mt-1">
-                Sent automatically as the first message when someone new writes in. Use <code>{"{{name}}"}</code>.
-              </p>
+              {form.ctwaFlow.nudgesEnabled === true && (
+                <div>
+                  <label className="text-xs font-semibold text-app-soft block mb-1">First reminder wording</label>
+                  <input className="input w-full" placeholder="Just checking in 🙂" maxLength={200}
+                    value={form.ctwaFlow.nudgeText || ""} onChange={(e) => setFlow({ nudgeText: e.target.value })} />
+                  <p className="text-[11px] text-app-soft mt-1">
+                    Use <code>{"{{name}}"}</code>. Keep this to a short "just checking in": it is sent directly above the
+                    question being repeated, so don't ask anything here yourself.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div>
@@ -849,34 +897,6 @@ export default function AgentBuilder() {
                     ]}
                     style={{ ...SELECT_STYLE, marginTop: 6 }} />
                 </>
-              )}
-            </div>
-
-            <div className="space-y-2 rounded-2xl border p-4" style={{ borderColor: "var(--app-border)" }}>
-              <label className="flex items-start gap-2.5 text-sm cursor-pointer">
-                <input type="checkbox" className="mt-0.5 shrink-0"
-                  checked={form.ctwaFlow.nudgesEnabled === true} onChange={(e) => setFlow({ nudgesEnabled: e.target.checked })} />
-                <span>
-                  <span className="text-app font-semibold block">Follow up if they go quiet</span>
-                  <span className="text-xs text-app-soft">
-                    If someone stops answering mid-flow, send one gentle reminder after about 15 minutes and one last
-                    reminder shortly before the 24-hour reply window closes, each with the question and its buttons again.
-                    Business hours only, never more than two, and they stop as soon as the customer writes back.
-                  </span>
-                </span>
-              </label>
-              {form.ctwaFlow.nudgesEnabled === true && (
-                <div>
-                  <label className="text-xs font-semibold text-app-soft block mb-1">First reminder wording</label>
-                  <input className="input w-full" placeholder="Just checking in 🙂" maxLength={200}
-                    value={form.ctwaFlow.nudgeText || ""} onChange={(e) => setFlow({ nudgeText: e.target.value })} />
-                  <p className="text-[11px] text-app-soft mt-1">
-                    Use <code>{"{{name}}"}</code>. Keep this to a short "just checking in" — it's sent directly above the
-                    pending question and its buttons, so don't ask anything here yourself. A lead who answers a question
-                    posed in THIS text instead of tapping one of the real buttons below it won't match any option, and
-                    the whole button flow ends right there.
-                  </p>
-                </div>
               )}
             </div>
 
