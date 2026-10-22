@@ -29,6 +29,8 @@
 // private closures in that file, and reaching into a route file from a
 // service would invert the codebase's normal dependency direction.
 const { levelOf } = require("../middlewares/planGate");
+const flowAnswer = require("../utils/flowAnswer");
+const AiUsage = require("../models/AiUsage");
 const { noDashes } = require("../utils/botText");
 const { normalizePurpose, parseIndianCurrencyRange, normalizeBhk, normalizePropertyType, normalizeTimeline, fillTemplate: fill } = require("../utils/formFieldMapper");
 
@@ -527,10 +529,11 @@ module.exports = function createCtwaFlowService({
     // instead of tapping it is answering the question, not leaving the flow.
     // Matched only against what is on screen right now (the current
     // question, or the closing buttons), and only on a clear match.
+    const current = questions.find((q) => q.id === step);
+    let typedBudget = null;
     if (!interactiveId && msgText) {
       const norm = (t) => String(t || "").toLowerCase().normalize("NFKD").replace(/[^a-z0-9₹+ ]/g, " ").replace(/\s+/g, " ").trim();
       const said = norm(msgText);
-      const current = questions.find((q) => q.id === step);
       const onScreen = current ? current.options.map((o) => ({ id: o.id, label: o.label }))
         : step === "closing" ? getClosingButtons(agent).map((b) => ({ id: b.id, label: b.title })) : [];
       if (said && said.length <= 40) {
@@ -540,6 +543,37 @@ module.exports = function createCtwaFlowService({
         });
         if (hits.length === 1) interactiveId = hits[0].id;
       }
+
+      // A typed budget ("1.5 cr", "150 lakh", "around 90"): the button its
+      // amount falls in, or, when it fits none, the amount itself still
+      // answers the question (22 Oct 2026: "1.5 cr" used to end the flow).
+      // Any agent's budget question: one mapped to budget, or whose buttons
+      // are all rupee ranges.
+      if (!interactiveId && current && (current.mapsTo === "budget" || current.options.every((o) => flowAnswer.optionRange(o)))) {
+        const b = flowAnswer.matchBudget(msgText, current.options);
+        if (b?.option) interactiveId = b.option.id;
+        else if (b?.amount) typedBudget = b.amount;
+      }
+
+      // Anything else ("next month", "for my family", "haan call karo"): a
+      // small AI check maps it to one on-screen button, only when clear. A
+      // question is never read as an answer.
+      if (!interactiveId && !typedBudget && onScreen.length && !flowAnswer.looksLikeQuestion(msgText)) {
+        const pick = await flowAnswer.aiMatch(current ? fill(current.questionText, vars) : (agent.ctwaFlow.closingPrompt || "How would you like to continue?"),
+          onScreen, msgText, (usage) => AiUsage.updateOne(
+            { orgId: org._id, month: new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 7) },
+            { $inc: { flowMatchCalls: 1, flowMatchTokens: usage?.total_tokens || 0 } }, { upsert: true },
+          ).catch(() => {}));
+        if (pick) interactiveId = pick.id;
+      }
+    }
+
+    // A budget amount that fits none of the buttons still answers the budget
+    // question: saved on the lead, and the flow moves on.
+    if (typedBudget && current) {
+      await applyQuestionAnswer(conversation.leadId, current, { label: String(msgText).slice(0, 60), min: typedBudget.min, max: typedBudget.max || typedBudget.min });
+      await advancePast(questions.indexOf(current));
+      return true;
     }
 
     let matchedQuestionIndex = -1, matchedOption = null;
@@ -669,10 +703,44 @@ module.exports = function createCtwaFlowService({
       if (lastBot && new Date(lastBot.timestamp) > new Date(inboundAt)) return true;
     }
 
-    // No known button matched — a free-typed message. Exit the flow rather
-    // than dead-ending; the normal GPT agent answers it instead.
+    // Not an answer: a question ("where is the plot?") or something else.
+    // The first time at a question, the AI answers it and the question is
+    // asked once more (resumeFlow, after the reply), so one question doesn't
+    // end the flow. If they still don't answer, the flow ends as before and
+    // the AI carries on with the chat.
+    if (current && msgText && conversation.flowState?.reasked !== step) {
+      await WaConversation.updateOne({ _id: conversation._id }, { $set: { "flowState.reasked": step, "flowState.resumeAfterReply": true } });
+      return false;
+    }
     await exitFlow();
     return false;
+  }
+
+  /** The pending question's text while the AI answers a side question, else null. */
+  async function pendingResume(agent, conversationId) {
+    const conv = await WaConversation.findById(conversationId).select("flowState contactName").lean();
+    if (!conv?.flowState?.resumeAfterReply) return null;
+    const q = getQualifyingQuestions(agent).find((x) => x.id === conv.flowState.step);
+    return q ? fill(q.questionText, { name: conv.contactName || "there" }) : null;
+  }
+
+  /**
+   * After the AI answered a side question mid-flow: ask the pending question
+   * again, with its buttons. Once per question (flowState.reasked).
+   */
+  async function resumeFlow(org, agent, conversationId) {
+    const conv = await WaConversation.findById(conversationId);
+    if (!conv?.flowState?.resumeAfterReply) return false;
+    await WaConversation.updateOne({ _id: conv._id }, { $unset: { "flowState.resumeAfterReply": 1 } });
+    if (!conv.botEnabled) return false; // a person took over meanwhile
+    const q = getQualifyingQuestions(agent).find((x) => x.id === conv.flowState.step);
+    if (!q) return false;
+    const stepMsg = questionStep(q, { name: conv.contactName || "there" });
+    stepMsg.bodyText = `Coming back to my earlier question:
+
+${stepMsg.bodyText}`;
+    await sendFlowStep(org, conv, agent.name || "Artha Assistant", stepMsg);
+    return true;
   }
 
   // The other true terminal (besides terminalAdvisor above): a picked
@@ -802,5 +870,5 @@ module.exports = function createCtwaFlowService({
     return { checked: convs.length, sent };
   }
 
-  return { shouldStartFlow, startFlow, advanceFlow, runNudges, getQualifyingQuestions, applyQuestionAnswer };
+  return { shouldStartFlow, startFlow, advanceFlow, pendingResume, resumeFlow, runNudges, getQualifyingQuestions, applyQuestionAnswer };
 };

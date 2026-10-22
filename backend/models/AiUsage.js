@@ -30,6 +30,11 @@ const schema = new mongoose.Schema(
     arthaCachedTokens: { type: Number, default: 0 },
     arthaOutputTokens: { type: Number, default: 0 },
     arthaCostMicroUsd: { type: Number, default: 0 },
+
+    // Button flows: a small model call reading a typed reply as a button
+    // (utils/flowAnswer.js aiMatch), only when the rules couldn't.
+    flowMatchCalls:    { type: Number, default: 0 },
+    flowMatchTokens:   { type: Number, default: 0 },
   },
   { timestamps: true }
 );
