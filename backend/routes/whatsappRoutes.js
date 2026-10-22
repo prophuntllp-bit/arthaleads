@@ -1031,10 +1031,22 @@ async function treatAsKnownNumber(org, lead, campaignRef) {
 // settings stay as they are. A chat that never had a lead (leadId null, e.g. a
 // broadcast recipient replying) is left exactly as before (owner decision).
 // Runs inside withConvSetupLock.
-async function relinkConversationLead(org, conv, { phone, name, referral }) {
+//
+// 22 Oct 2026 (owner): a lead moved into a project is archived in Leads on
+// purpose, and the team works it in the project. Its customer writing again
+// stays with the project (no second, empty lead in Leads): the project lead
+// gets an activity line and its people an alert. Any other deleted or
+// archived lead is re-created with the old lead's details carried over, so
+// the new record isn't empty.
+async function relinkConversationLead(org, conv, { phone, name, referral, msgText }) {
   if (!conv.leadId) return;
-  const linked = await Lead.findById(conv.leadId).select("isDeleted isArchived").lean();
+  const linked = await Lead.findById(conv.leadId).lean();
   if (linked && !linked.isDeleted && !linked.isArchived) return; // live lead: nothing to do
+  if (linked && !linked.isDeleted && linked.isArchived) {
+    const ProjectLead = require("../models/ProjectLead");
+    const inProject = await ProjectLead.findOne({ orgId: org._id, fromLeadId: linked._id }).sort({ createdAt: -1 });
+    if (inProject) { await noteProjectLeadReply(org, conv, inProject, msgText); return; }
+  }
   const reason = !linked || linked.isDeleted ? "deleted" : "archived";
   const campaignRef = campaignRefFromReferral(referral);
   let lead = await findLiveLeadByPhone(org._id, phone);
@@ -1052,10 +1064,60 @@ async function relinkConversationLead(org, conv, { phone, name, referral }) {
       description: `Lead re-created: this number messaged on WhatsApp after its previous lead was ${reason}`,
       meta: { previousLeadId: conv.leadId, reason },
     } } });
+    if (linked) await carryForwardLeadDetails(linked, lead._id);
   }
   await WaConversation.updateOne({ _id: conv._id }, { $set: { leadId: lead._id } });
   await Lead.updateOne({ _id: lead._id }, { $set: { whatsappConversationId: conv._id } });
   conv.leadId = lead._id;
+}
+
+// A returning customer's new lead starts with what the old one knew: where
+// they came from (source, ad), what they want (purpose, budget, type,
+// location, timeline), their form answers, notes and remarks. Only fills
+// what the new lead doesn't have yet.
+async function carryForwardLeadDetails(prev, newLeadId) {
+  const lead = await Lead.findById(newLeadId).lean();
+  if (!lead) return;
+  const empty = (v) => v === undefined || v === null || v === "" || v === "N/A";
+  const set = {};
+  for (const k of ["leadSourceLabel", "sourceDomain", "sourcePage", "preferredLocation", "city", "timeline", "requirements", "remark", "remark1", "remark2", "remark3", "remark4", "bhk", "propertyType"]) {
+    if (!empty(prev[k]) && empty(lead[k])) set[k] = prev[k];
+  }
+  // The schema fills purpose with "Buy" by default, so "blank" never applies:
+  // a real earlier answer wins over that default.
+  if (!empty(prev.purpose) && (empty(lead.purpose) || lead.purpose === "Buy")) set.purpose = prev.purpose;
+  if (prev.campaignRef?.adId && !lead.campaignRef?.adId) set.campaignRef = prev.campaignRef;
+  if (prev.budget?.max > 0 && !(lead.budget?.max > 0)) set.budget = prev.budget;
+  if ((prev.formResponses || []).length && !(lead.formResponses || []).length) set.formResponses = prev.formResponses;
+  const update = Object.keys(set).length ? { $set: set } : {};
+  if ((prev.notes || []).length) update.$push = { notes: { $each: prev.notes.map(({ _id, ...n }) => n) } };
+  if (Object.keys(update).length) await Lead.updateOne({ _id: newLeadId }, update);
+}
+
+// The customer of a lead that was moved into a project wrote again: tell the
+// project's people (the lead's own owner, else the project's agents) and log
+// it on the project lead. At most once every 6 hours per lead.
+async function noteProjectLeadReply(org, conv, projectLead, msgText) {
+  try {
+    const last = (projectLead.activities || []).filter((a) => a.meta?.whatsappReply).slice(-1)[0];
+    if (last && Date.now() - new Date(last.createdAt).getTime() < 6 * 3600e3) return;
+    const said = String(msgText || "").replace(/\s+/g, " ").trim().slice(0, 80);
+    await require("../models/ProjectLead").updateOne({ _id: projectLead._id }, { $push: { activities: {
+      type: "note_added",
+      description: `Replied on WhatsApp${said ? `: "${said}"` : ""}`,
+      meta: { whatsappReply: true, conversationId: conv._id },
+    } } });
+    const project = await Project.findById(projectLead.project).select("name assignedTo").lean();
+    const ids = projectLead.assignedTo ? [projectLead.assignedTo] : (project?.assignedTo || []);
+    const payload = {
+      type: "hot_lead",
+      title: `${projectLead.name || conv.contactName || conv.contactPhone} replied on WhatsApp`,
+      body: `${project?.name ? `${project.name}: ` : ""}${said || "new message"}`,
+      data: { url: `/projects/${projectLead.project}` },
+    };
+    if (ids.length) ids.forEach((u) => sendPushToUser(u, payload).catch(() => {}));
+    else await notifyUnclaimedLead(org, payload);
+  } catch (err) { console.error("[WhatsApp] project lead reply note failed:", err.message); }
 }
 
 async function handleInbound(org, parsed) {
@@ -1104,7 +1166,7 @@ async function handleInbound(org, parsed) {
     // it otherwise.
     if (!conv.botEnabled) autoAssignConversation(org, conv).catch(() => {});
   } else {
-    await relinkConversationLead(org, conv, { phone, name, referral });
+    await relinkConversationLead(org, conv, { phone, name, referral, msgText });
   }
   return { conv, isNewConversation };
   });

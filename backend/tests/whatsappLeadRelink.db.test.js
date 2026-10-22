@@ -130,6 +130,61 @@ test("(e) existing chat with no lead (leadId null, e.g. a broadcast recipient re
   assert.equal(sent.length, 0, "nothing handed to Vistrow");
 });
 
+// 22 Oct 2026 (owner): a lead moved into a project stays with the project.
+test("(f) lead moved into a project: no new lead in Leads; the project lead logs the reply, once per 6 hours", async () => {
+  const phone = nextPhone();
+  const { old, conv } = await oldChat(phone, { isArchived: true });
+  const ProjectLead = require("../models/ProjectLead");
+  const projectId = oid();
+  await mongoose.connection.collection("projects").insertOne({ _id: projectId, orgId: ORG, name: "Khopoli Plots", assignedTo: [] });
+  const pl = await ProjectLead.create({ orgId: ORG, project: projectId, name: "Ravi Old", phone, fromLeadId: old._id, importedBy: oid() });
+  await inbound(phone, "Hi, is the 2000 sqft plot still available?");
+  assert.equal((await liveLeads(phone)).length, 0, "no second lead in Leads");
+  assert.equal(String((await WaConversation.findById(conv._id).lean()).leadId), String(old._id), "the chat stays on the original lead");
+  let acts = (await ProjectLead.findById(pl._id).lean()).activities.filter((a) => a.meta?.whatsappReply);
+  assert.equal(acts.length, 1);
+  assert.match(acts[0].description, /^Replied on WhatsApp: "Hi, is the 2000 sqft plot still available\?"$/);
+  await inbound(phone, "Please call me");
+  acts = (await ProjectLead.findById(pl._id).lean()).activities.filter((a) => a.meta?.whatsappReply);
+  assert.equal(acts.length, 1, "not logged again within 6 hours");
+});
+
+test("(g) a re-created lead carries the old lead's details over", async () => {
+  const phone = nextPhone();
+  const { old } = await oldChat(phone, {
+    isDeleted: true, leadSourceLabel: "Facebook Ad · Wellness Capital", purpose: "Invest", timeline: "1-3 Months",
+    campaignRef: { adId: "1202", headline: "Wellness Capital" }, budget: { min: 8900000, max: 12500000, currency: "INR" },
+    propertyType: "Plot", preferredLocation: "Khopoli", remark1: "Wants corner plot",
+    formResponses: [{ fieldKey: "q1", label: "When do you plan to buy?", value: "1-3 months" }],
+    notes: [{ text: "Called once, asked for brochure", addedByName: "Sheetal" }],
+  });
+  await inbound(phone, "Hello again");
+  const [lead] = await liveLeads(phone);
+  assert.ok(lead && String(lead._id) !== String(old._id), "a new live lead");
+  assert.equal(lead.leadSourceLabel, "Facebook Ad · Wellness Capital");
+  assert.equal(lead.purpose, "Invest");
+  assert.equal(lead.timeline, "1-3 Months");
+  assert.equal(lead.campaignRef.adId, "1202");
+  assert.equal(lead.budget.max, 12500000);
+  assert.equal(lead.propertyType, "Plot");
+  assert.equal(lead.preferredLocation, "Khopoli");
+  assert.equal(lead.remark1, "Wants corner plot");
+  assert.equal(lead.formResponses.length, 1);
+  assert.equal(lead.notes[0].text, "Called once, asked for brochure");
+  assert.ok(lead.activities.some((a) => String(a.meta?.previousLeadId) === String(old._id)), "linked to the old record");
+});
+
+test("(h) purpose buttons in an agent's own words are saved", async () => {
+  const { normalizePurpose: n } = require("../utils/formFieldMapper");
+  assert.equal(n("Future Villa / Self Use"), "Buy");
+  assert.equal(n("Second Home"), "Buy");
+  assert.equal(n("Investment"), "Invest");
+  assert.equal(n("Rental income"), "Invest");
+  assert.equal(n("For rent"), "Rent");
+  assert.equal(n("Parent home"), null, "'parent' is not 'rent'");
+  assert.equal(n("Just exploring"), null);
+});
+
 (async () => {
   mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri());
