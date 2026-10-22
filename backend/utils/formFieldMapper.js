@@ -117,7 +117,16 @@ const PURPOSE_VALUE_MAP = {
 
 function normalizePurpose(raw) {
   const key = String(raw || "").toLowerCase().replace(/[^a-z]/g, "");
-  return PURPOSE_VALUE_MAP[key] || null;
+  if (PURPOSE_VALUE_MAP[key]) return PURPOSE_VALUE_MAP[key];
+  // Button labels agents write in their own words (22 Oct 2026: "Future
+  // Villa / Self Use" and "Second Home" saved nothing, so the lead kept "N/A").
+  // By meaning: returns or rental income is investing, renting is renting,
+  // living in it (own, family, second or holiday home, villa) is buying.
+  const text = String(raw || "").toLowerCase();
+  if (/invest|roi|return|appreciation|resale|rental income|passive income/.test(text)) return "Invest";
+  if (/\b(rent|renting|lease|leasing|tenant)\b/.test(text)) return "Rent";
+  if (/self|own use|end use|live|living|family|personal|second home|holiday home|weekend home|farm ?house|villa|retire|stay|buy|purchase/.test(text)) return "Buy";
+  return null;
 }
 
 function normalizePropertyType(raw) {
