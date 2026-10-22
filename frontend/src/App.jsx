@@ -121,6 +121,10 @@ function InstallBanner() {
   useEffect(() => {
     // Already installed as PWA - don't show banner
     if (isInStandaloneMode()) return;
+    // Not on the marketing site: visitors there have no account yet, so the app is
+    // no use to them, and the banner covered the hero buttons on phones. The site
+    // has its own Start-free-trial bar (MobileCtaBar) and /download-app instead.
+    if (isMarketingHost()) return;
     if (dismissed) return;
 
     // Android: offer the real app. Delayed like the iOS card so it does not

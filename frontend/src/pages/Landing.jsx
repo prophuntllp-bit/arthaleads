@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { FEATURES, HOME_FEATURES } from "../data/features";
 import {
-  ChevronRight, ChevronLeft, Check, ArrowRight, BarChart3, Users, Zap, Building2, PhoneCall, Bell, TrendingUp, Shield, Facebook, Mail, Phone, MapPin, ChevronDown, PlayCircle, Layers, Clock, Filter, FileSpreadsheet, UserCheck, QrCode, Sparkles, FileText, Camera, Bot, Headphones, Handshake, RotateCcw,
+  ChevronRight, ChevronLeft, Check, ArrowRight, BarChart3, Users, Zap, Building2, PhoneCall, Bell, TrendingUp, Shield, Facebook, Mail, Phone, MapPin, ChevronDown, PlayCircle, Layers, Filter, FileSpreadsheet, UserCheck, QrCode, Sparkles, FileText, Camera, Bot, Headphones, Handshake,
 } from "lucide-react";
 import WhatsAppLogo, { waButtonClass } from "../components/WhatsAppLogo";
 import PublicNav from "../components/PublicNav";
@@ -16,8 +16,10 @@ import IntroVideo from "../components/IntroVideo";
 import api from "../services/api";
 import BlogCard from "../components/BlogCard";
 import { HeroTour } from "../components/ProductTour";
+import HeroLeadFlow from "../components/HeroLeadFlow";
+import FeatureBento from "../components/FeatureBento";
 import { PLAN_PRICING, formatINR } from "../utils/plan";
-import { Reveal, CountUp, Spotlight, Magnetic } from "../components/motion/Motion";
+import { Reveal, Spotlight, Magnetic } from "../components/motion/Motion";
 
 // Small text in the brand orange uses the darker accessible shade (see --brand-text in styles.css).
 const smallText = (c) => (c === "#ff6b00" ? "var(--brand-text)" : c);
@@ -149,6 +151,7 @@ function Hero({ isDark }) {
         {/* ── The real product ── */}
         <div className="relative max-w-6xl mx-auto">
           <HeroTour isDark={isDark} />
+          <HeroLeadFlow isDark={isDark} />
         </div>
 
         <div className="flex items-center justify-center gap-8 sm:gap-12 mt-12 lg:mt-14">
@@ -159,7 +162,8 @@ function Hero({ isDark }) {
               { num: `₹${PLAN_PRICING.starter.monthly}`, label: "Per user / month" },
             ].map((s) => (
               <div key={s.label} className="text-center">
-                <CountUp value={s.num} className="block text-2xl sm:text-3xl font-black text-[#ff6b00] tabular-nums" />
+                {/* Plain text: these are facts, not counts, and "24/7" counting up read as "4/7" mid-way. */}
+                <span className="block text-2xl sm:text-3xl font-black text-[#ff6b00] tabular-nums whitespace-nowrap">{s.num}</span>
                 <div className="text-xs sm:text-sm mt-0.5" style={{ color: softClr }}>{s.label}</div>
               </div>
             ))}
@@ -278,14 +282,13 @@ function Features({ isDark }) {
   const bg       = isDark ? "#0d0d1a" : "#ffffff";
   const heading  = isDark ? "#ffffff" : "#111827";
   const body     = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
-  const itemText = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
   const rule     = isDark ? "rgba(255,255,255,0.06)" : "#f0f0f2";
 
   return (
     <section id="features" className="py-16 lg:py-24" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <Reveal className="max-w-3xl mb-14 lg:mb-20">
+        <Reveal className="max-w-3xl mb-10 lg:mb-14">
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--brand-text)]">
             Powerful Features
           </span>
@@ -301,22 +304,7 @@ function Features({ isDark }) {
           </p>
         </Reveal>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 xl:gap-x-16 gap-y-12 lg:gap-y-16">
-          {HOME_FEATURES.map(({ icon: Icon, color, title, short, desc }, i) => (
-            <Reveal key={title} delay={(i % 3) * 90 + Math.floor(i / 3) * 60}>
-            <Spotlight className="group -m-5 p-5 rounded-3xl transition-transform duration-300 hover:-translate-y-1" color={`${color}1f`}>
-              <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-5 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
-                style={{ background: `${color}14` }}>
-                <Icon className="w-5 h-5" style={{ color }} />
-              </div>
-              <h3 className="font-bold text-[17px] mb-2" style={{ color: heading }}>{title}</h3>
-              <p className="text-[15px] leading-relaxed" style={{ color: itemText }}>
-                {short || desc}
-              </p>
-            </Spotlight>
-            </Reveal>
-          ))}
-        </div>
+        <FeatureBento features={HOME_FEATURES} isDark={isDark} />
 
         <div className="mt-16 lg:mt-20 pt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
           style={{ borderTop: `1px solid ${rule}` }}>
@@ -1050,48 +1038,44 @@ function WhoItsFor({ isDark }) {
 // testimonials until real ones exist. Lead export is a Growth+ feature
 // (planGate in leadRoutes), so it is worded that way.
 const TRUST_FACTS = [
-  { icon: Clock,      title: "14-day free trial",        body: "Every Growth feature on your own leads. No credit card, and you can cancel any time." },
-  { icon: RotateCcw,  title: "7-day money-back",         body: "Changed your mind after paying? New subscriptions get a full refund within 7 days.", link: { to: "/refund", label: "Refund policy" } },
-  { icon: WhatsAppLogo, title: "Official WhatsApp API",  body: "Built on Meta's WhatsApp Business Platform, not a browser extension or an unofficial tool." },
-  { icon: Shield,     title: "Your data kept separate",  body: "Each company's data is isolated, and role-based access shows agents only the leads assigned to them.", link: { to: "/security", label: "How we protect data" } },
-  { icon: FileSpreadsheet, title: "Your leads stay yours", body: "Import from CSV or Excel on every plan, and export your leads to CSV or Excel on Growth and Enterprise." },
-  { icon: MapPin,     title: "Made in Pune",             body: "Built and supported in Pune, India, by Vistrow, for the way Indian property teams sell." },
+  { big: "14 days",  title: "Free trial",              body: "Every Growth feature on your own leads. No credit card, cancel any time." },
+  { big: "7 days",   title: "Money-back",              body: "Changed your mind after paying? New subscriptions get a full refund.", link: { to: "/refund", label: "Refund policy" } },
+  { big: "Official", title: "WhatsApp Business API",   body: "Built on Meta's platform, not a browser extension or an unofficial tool.", Icon: WhatsAppLogo },
+  { big: "Isolated", title: "Your company's data",     body: "Each company's data is kept apart, and agents see only the leads assigned to them.", link: { to: "/security", label: "How we protect data" } },
+  { big: "Yours",    title: "Your leads",              body: "Import CSV or Excel on every plan; export on Growth and Enterprise." },
+  { big: "Pune",     title: "Built and supported in",  body: "By Vistrow, for the way Indian property teams sell." },
 ];
 
-function TrustFacts({ isDark }) {
-  const bg      = isDark ? "#0d0d1a" : "#ffffff";
-  const heading = isDark ? "#ffffff" : "#111827";
-  const body    = isDark ? "rgba(255,255,255,0.58)" : "#4b5563";
-  const cardBdr = isDark ? "rgba(255,255,255,0.08)" : "#ececec";
-  const iconBg  = isDark ? "rgba(255,107,0,0.12)" : "#fff3ea";
-  const linkClr = isDark ? "#fb923c" : "#c2410c";
-
+// A dark band on purpose: it breaks the run of white sections, and the facts read
+// as big, scannable statements instead of six identical icon cards.
+function TrustFacts() {
+  const line = "rgba(255,255,255,0.09)";
   return (
-    <section id="trust" className="py-16 lg:py-24" style={{ background: bg }}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Reveal className="max-w-2xl mx-auto text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl font-black mb-4 leading-[1.15]" style={{ color: heading }}>
-            What you can{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">count on</span>
+    <section id="trust" className="relative overflow-hidden py-16 lg:py-24" style={{ background: "#0f0f17" }}>
+      <div aria-hidden="true" className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] max-w-[140vw] h-[420px] rounded-full blur-3xl pointer-events-none"
+        style={{ background: "radial-gradient(ellipse at center, rgba(255,107,0,0.18), transparent 70%)" }} />
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Reveal className="max-w-2xl mb-12 lg:mb-14">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#fb923c]">Before you hand us your leads</span>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mt-4 leading-[1.1] text-white" style={{ textWrap: "balance" }}>
+            What you can count on
           </h2>
-          <p className="text-base sm:text-lg leading-relaxed" style={{ color: body }}>
-            Plain promises about how Arthaleads works, before you hand it your leads.
-          </p>
         </Reveal>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-10">
-          {TRUST_FACTS.map(({ icon: Icon, title, body: text, link }, i) => (
-            <Reveal key={title} delay={(i % 3) * 90 + Math.floor(i / 3) * 60} className="pt-6 border-t" style={{ borderColor: cardBdr }}>
-              <Spotlight className="group flex gap-4 -m-4 p-4 rounded-3xl transition-transform duration-300 hover:-translate-y-1" color="rgba(255,107,0,0.12)">
-              <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" style={{ background: iconBg }}>
-                {Icon === WhatsAppLogo ? <WhatsAppLogo className="w-5 h-5" /> : <Icon className="w-5 h-5 text-[#ff6b00]" />}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3" style={{ borderTop: `1px solid ${line}` }}>
+          {TRUST_FACTS.map(({ big, title, body: text, link, Icon }, i) => (
+            <Reveal key={big} delay={(i % 3) * 80}
+              className={`group py-7 sm:pr-6 lg:pr-8 transition-colors duration-300 hover:bg-white/[0.02] ${i % 2 ? "sm:pl-6" : ""} ${i % 3 ? "lg:pl-8 lg:border-l" : "lg:pl-0"}`}
+              style={{ borderBottom: `1px solid ${line}`, borderColor: line }}>
+              <div className="flex items-center gap-3">
+                <span className="text-4xl lg:text-5xl font-black tracking-tight leading-none text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffb347] transition-transform duration-300 group-hover:translate-x-1">
+                  {big}
+                </span>
+                {Icon && <Icon className="w-7 h-7" />}
               </div>
-              <div>
-                <h3 className="font-bold text-[17px] mb-1.5" style={{ color: heading }}>{title}</h3>
-                <p className="text-[15px] leading-relaxed" style={{ color: body }}>
-                  {text}{link && <>{" "}<Link to={link.to} className="font-semibold underline underline-offset-2" style={{ color: linkClr }}>{link.label}</Link></>}
-                </p>
-              </div>
-              </Spotlight>
+              <h3 className="mt-3 font-bold text-[16px] text-white">{title}</h3>
+              <p className="mt-1.5 text-[14.5px] leading-relaxed" style={{ color: "rgba(255,255,255,0.58)" }}>
+                {text}{link && <>{" "}<Link to={link.to} className="font-semibold underline underline-offset-2 text-[#fb923c]">{link.label}</Link></>}
+              </p>
             </Reveal>
           ))}
         </div>
@@ -1368,7 +1352,7 @@ export default function Landing() {
       <IntroVideo isDark={isDark} />
       <HowItWorks isDark={isDark} />
       <About isDark={isDark} />
-      <TrustFacts isDark={isDark} />
+      <TrustFacts />
       <PlansStrip isDark={isDark} />
       <LatestPosts isDark={isDark} />
       <FAQ isDark={isDark} />

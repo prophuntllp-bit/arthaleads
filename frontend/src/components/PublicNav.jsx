@@ -11,6 +11,7 @@ import WhatsAppLogo from "./WhatsAppLogo";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { CRM_LOGIN_URL, CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import { ScrollProgress } from "./motion/Motion";
+import MobileCtaBar from "./MobileCtaBar";
 
 // The chat widget is not needed for first paint; load it once the page is idle.
 const MarketingChatBot = lazy(() => import("./MarketingChatBot"));
@@ -474,6 +475,7 @@ export default function PublicNav({ onScrollTo }) {
       <ScrollProgress />
       <NavInner onScrollTo={onScrollTo} />
       <IdleChatBot />
+      <MobileCtaBar />
     </>
   );
 }

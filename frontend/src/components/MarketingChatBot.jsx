@@ -128,7 +128,7 @@ export default function MarketingChatBot() {
     <>
       {/* Floating button with pulse ring — exact match to the in-app HelpBot launcher */}
       {!open && (
-        <div className="fixed z-[997]" style={{ right: 20, bottom: `calc(20px + env(safe-area-inset-bottom, 0px))` }}>
+        <div className="mkt-chat-launcher fixed z-[997] transition-[bottom,opacity] duration-300" style={{ right: 20, bottom: `calc(20px + var(--mcta-h, 0px) + env(safe-area-inset-bottom, 0px))` }}>
           <span className="absolute inset-0 rounded-full animate-ping pointer-events-none" style={{ background: "rgba(255,107,0,0.35)" }} />
           <button
             type="button"
