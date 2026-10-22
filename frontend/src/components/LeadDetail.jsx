@@ -12,6 +12,7 @@ import { useSoftPhone } from "../context/SoftPhoneContext";
 import CustomSelect from "./CustomSelect";
 import CopyButton from "./CopyButton";
 import { fmtCurrency, fmtDate, fmtDateTime, STATUS_OPTIONS } from "../utils/constants";
+import WaMessageMedia, { messageText } from "./WaMessageMedia";
 
 // Incoming (lead called us) vs outgoing (we called the lead). Kept visually
 // identical to the badge on the Calls page so the two screens agree.
@@ -1023,20 +1024,10 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                         <p className="text-[10px] font-bold mb-1 px-1 text-app-soft">{msg.senderName}</p>
                       )}
                       <div className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 ${isOut ? "rounded-tr-[4px] wa-bubble-out" : "rounded-tl-[4px] wa-bubble-in"}`}>
-                        {msg.mediaType === "image" && msg.mediaUrl && (
-                          <img src={msg.mediaUrl} alt={msg.body || "Photo"} className="rounded-xl mb-1.5 max-w-full max-h-64 object-cover" loading="lazy" />
-                        )}
-                        {msg.mediaType === "document" && msg.mediaUrl && (
-                          <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer"
-                            className="flex items-center gap-2 rounded-xl px-2.5 py-2 mb-1.5 transition hover:opacity-80"
-                            style={{ background: "rgba(0,0,0,0.05)" }}>
-                            <FileText className="w-5 h-5 shrink-0" style={{ color: "#ef4444" }} />
-                            <span className="text-xs font-semibold truncate">{msg.body || "Document"}</span>
-                          </a>
-                        )}
-                        {msg.body && (!msg.mediaType || msg.mediaType === "text" || (msg.mediaType !== "image" && msg.mediaType !== "document")) && (
-                          <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{msg.body}</p>
-                        )}
+                        <WaMessageMedia msg={msg} />
+                        {(() => { const t = msg.direction === "inbound" ? messageText(msg) : ((msg.mediaType === "image" || msg.mediaType === "document") ? "" : msg.body); return t ? (
+                          <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{t}</p>
+                        ) : null; })()}
                         {msg.interactiveOptions?.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mt-2 pt-2" style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}>
                             {msg.interactiveOptions.map((o) => (

@@ -280,7 +280,10 @@ function parseMetaMessages(payload) {
         } else if (["image", "audio", "video", "document", "sticker"].includes(msg.type)) {
           const label = { image: "Image", audio: "Voice note", video: "Video", document: "Document", sticker: "Sticker" }[msg.type];
           const caption = msg[msg.type]?.caption || msg.document?.filename || "";
-          out.push({ ...base, msgText: caption ? `[${label}] ${caption}` : `[${label}]`, msgType: msg.type, referral: msg.referral || null });
+          out.push({ ...base, msgText: caption ? `[${label}] ${caption}` : `[${label}]`, msgType: msg.type, referral: msg.referral || null,
+            // The file itself is fetched from Meta with this id (utils/waInboundMedia.js).
+            mediaId: msg[msg.type]?.id || null, mimeType: msg[msg.type]?.mime_type || "", filename: msg.document?.filename || "",
+            caption: msg[msg.type]?.caption || "" });
         } else if (msg.type === "location") {
           out.push({ ...base, msgText: `[Location] ${msg.location?.name || msg.location?.address || ""}`.trim(), msgType: "location" });
         } else if (msg.type === "reaction") {
@@ -1021,7 +1024,7 @@ async function relinkConversationLead(org, conv, { phone, name, referral }) {
 }
 
 async function handleInbound(org, parsed) {
-  const { phone, name, msgId, msgText, msgType, referral, interactiveId } = parsed;
+  const { phone, name, msgId, msgText, msgType, referral, interactiveId, mediaId, mimeType, filename, caption } = parsed;
   if (!phone || !msgText) return;
 
   const { conv, isNewConversation } = await withConvSetupLock(`${org._id}:${phone}`, async () => {
@@ -1083,12 +1086,21 @@ async function handleInbound(org, parsed) {
   // customer who ever tapped a button, not just CTWA leads.
   const MEDIA_TYPES = new Set(["image", "audio", "document", "sticker", "video"]);
   const inboundTimestamp = new Date();
-  await WaMessage.create({
+  const inboundDoc = await WaMessage.create({
     orgId: org._id, conversationId: conv._id, waMsgId: msgId || undefined,
     direction: "inbound", sender: "customer", senderName: name,
     body: msgText, mediaType: MEDIA_TYPES.has(msgType) ? msgType : "text",
+    waMediaId: mediaId || undefined,
     status: "delivered", timestamp: inboundTimestamp,
   });
+  // The photo / voice note / file itself, copied into our storage so the team
+  // can see it (22 Oct 2026: every customer photo was an empty bubble, and
+  // Meta sends the id only once, so it can't be fetched later).
+  let inboundMedia = null;
+  if (MEDIA_TYPES.has(msgType) && msgType !== "sticker" && mediaId) {
+    inboundMedia = await require("../utils/waInboundMedia").fetchAndStore(org, { mediaId, mimeType, filename });
+    if (inboundMedia) await WaMessage.updateOne({ _id: inboundDoc._id }, { $set: { mediaUrl: inboundMedia.url } });
+  }
   await WaConversation.findByIdAndUpdate(conv._id, {
     lastMessageAt: new Date(), lastMessagePreview: msgText.slice(0, 80),
     contactName: conv.contactName || name,
@@ -1152,8 +1164,22 @@ async function handleInbound(org, parsed) {
     catch (err) { console.error("[WhatsApp Bot] unsupported notice failed:", err.message); }
   }
 
-  // Photos, voice notes and the like are saved above for the team; the bot can only read text and taps.
-  const botCanRead = ["text", "button", "interactive"].includes(msgType);
+  // Text and taps are read as before. A photo is now read too: the bot looks at
+  // it (and its caption). Voice notes, videos and documents get a short
+  // acknowledgement and the team is told. Until 22 Oct 2026 all of these got
+  // silence and no alert, so an unassigned chat of photos went unanswered.
+  const isPhoto = msgType === "image";
+  const otherMedia = ["audio", "video", "document"].includes(msgType);
+  const hasCaption = !!String(caption || "").trim();
+  if (isPhoto || otherMedia) notifyHotSignal(org, conv, { image: "sent a photo", audio: "sent a voice note", video: "sent a video", document: "sent a document" }[msgType]).catch(() => {});
+  if (conv.botEnabled && otherMedia && !hasCaption) {
+    try { await maybeNoticeMedia(org, conv, msgType); }
+    catch (err) { console.error("[WhatsApp Bot] media notice failed:", err.message); }
+  }
+  const botCanRead = ["text", "button", "interactive"].includes(msgType) || isPhoto || (otherMedia && hasCaption);
+  // The photo itself, for the model to look at (small enough to send inline).
+  const image = isPhoto && inboundMedia?.buffer && inboundMedia.size <= 4 * 1024 * 1024
+    ? { dataUrl: `data:${inboundMedia.contentType};base64,${inboundMedia.buffer.toString("base64")}` } : null;
   if (conv.botEnabled && botCanRead) {
     // No sinceTimestamp here. That guard reads "has the bot said anything
     // since this message arrived?", which is true for the second of two quick
@@ -1161,7 +1187,7 @@ async function handleInbound(org, parsed) {
     // the second tap was silently dropped: a "Photos & Videos" tap right after
     // "Location Details" never sent the photos. The queue below already keeps
     // turns in order; inboundKey stops the same message being answered twice.
-    await respondAsBot(org, conv, { interactiveId, msgText, isNewConversation: isNewConversation || movedToAnotherAgent, inboundKey: msgId || `t${inboundTimestamp.getTime()}`, inboundAt: inboundTimestamp });
+    await respondAsBot(org, conv, { interactiveId, msgText, image, isNewConversation: isNewConversation || movedToAnotherAgent, inboundKey: msgId || `t${inboundTimestamp.getTime()}`, inboundAt: inboundTimestamp });
   }
 }
 
@@ -1224,6 +1250,8 @@ function respondAsBot(org, conv, args) {
         const later = q.pending[q.pending.length - 1];
         if (later) {
           if (args.isNewConversation) later.args.isNewConversation = true;
+          // A photo then "what's the price of this?": the reply still sees the photo.
+          if (args.image && !later.args.image) later.args.image = args.image;
           markAnswered(id, args.inboundKey);
           return;
         }
@@ -1245,7 +1273,7 @@ function respondAsBot(org, conv, args) {
   return next;
 }
 
-async function respondAsBotNow(org, conv, { interactiveId, msgText, isNewConversation, sinceTimestamp, inboundAt }) {
+async function respondAsBotNow(org, conv, { interactiveId, msgText, image = null, isNewConversation, sinceTimestamp, inboundAt }) {
   // Two independent paths can both end up owing a reply to the same inbound
   // message — the live webhook, and resumeBotIfOwed firing right as someone
   // flips "Bot ON" back on for a thread whose last message arrived while it
@@ -1301,7 +1329,7 @@ async function respondAsBotNow(org, conv, { interactiveId, msgText, isNewConvers
     // the flow asks its pending question again, once (ctwaFlowService).
     const pending = await ctwaFlow.pendingResume(agent, conv._id);
     if (pending) {
-      await triggerBotReply(org, agent, conv, msgText, { flowPending: pending });
+      await triggerBotReply(org, agent, conv, msgText, { flowPending: pending, image });
       await ctwaFlow.resumeFlow(org, agent, conv._id);
       return;
     }
@@ -1315,7 +1343,7 @@ async function respondAsBotNow(org, conv, { interactiveId, msgText, isNewConvers
   if (isNewConversation && agent.greetingEnabled !== false && agent.greeting?.trim()) {
     await sendBotGreeting(org, agent, conv);
   }
-  await triggerBotReply(org, agent, conv, msgText);
+  await triggerBotReply(org, agent, conv, msgText, { image });
 }
 
 /**
@@ -1392,6 +1420,19 @@ const NOTICE_TEXT = {
     marathi:    "Sorry, mala toh message ughadta aala nahi. Tumhi to punha normal text kinva photo mhanun pathvu shakta ka?",
     devanagari: "क्षमा करें, वह संदेश मुझसे खुल नहीं पाया। कृपया उसे दोबारा सामान्य टेक्स्ट या फोटो के रूप में भेजें।",
   },
+  // A voice note or a file with no text: the bot can't open it (22 Oct 2026).
+  voiceNote: {
+    english:    "Thanks for the voice note! I can't play voice notes here. Could you type your question? Our team will also listen to it.",
+    hinglish:   "Voice note ke liye shukriya! Main yahan voice note sun nahi sakta. Kya aap apna sawaal type kar sakte hain? Hamari team bhi ise sunegi.",
+    marathi:    "Voice note sathi dhanyavad! Mala ithe voice note aikta yet nahi. Tumcha prashna type karu shakta ka? Amchi team pan to aikel.",
+    devanagari: "वॉइस नोट के लिए धन्यवाद! मैं यहाँ वॉइस नोट नहीं सुन सकता। क्या आप अपना सवाल टाइप कर सकते हैं? हमारी टीम भी इसे सुनेगी।",
+  },
+  fileReceived: {
+    english:    "Thanks, I've received it and shared it with our team. Is there anything you'd like to know in the meantime?",
+    hinglish:   "Shukriya, mujhe mil gaya aur maine hamari team ko bhej diya hai. Tab tak aap kuch jaanna chahenge?",
+    marathi:    "Dhanyavad, mala milale ani mi amchya team la pathavle ahe. Toparyant tumhala kahi jananyacha ahe ka?",
+    devanagari: "धन्यवाद, मुझे मिल गया और मैंने हमारी टीम को भेज दिया है। तब तक आप कुछ जानना चाहेंगे?",
+  },
   firstContact: {
     english:    "Hi {name}! Thanks for messaging {org}. Which project or property are you looking for? Our team will also be with you shortly.",
     hinglish:   "Hi {name}! {org} ko message karne ke liye shukriya. Aap kaunsa project ya property dekh rahe hain? Hamari team bhi jaldi aapse judegi.",
@@ -1452,6 +1493,19 @@ async function maybeNoticeUnsupported(org, conversation) {
   if (recent) return;
   const lang = await customerLanguage(conversation);
   await sendBotNotice(org, conversation, noticeText("unsupported", lang, org, conversation));
+}
+
+// A voice note, video or document with no text: one short acknowledgement,
+// at most once an hour per chat (several files in a row get one reply).
+async function maybeNoticeMedia(org, conversation, msgType) {
+  if (levelOf(org.plan) < levelOf("growth")) return;
+  const recent = await WaMessage.exists({
+    conversationId: conversation._id, direction: "outbound", isNotice: true,
+    timestamp: { $gte: new Date(Date.now() - 60 * 60 * 1000) },
+  });
+  if (recent) return;
+  const lang = await customerLanguage(conversation);
+  await sendBotNotice(org, conversation, noticeText(msgType === "audio" ? "voiceNote" : "fileReceived", lang, org, conversation));
 }
 
 /**
@@ -2483,7 +2537,14 @@ async function triggerBotReply(org, agent, conversation, inboundText, opts = {})
         role: m.direction === "inbound" ? "user" : "assistant",
         content: m.body,
       })),
-      { role: "user", content: inboundText },
+      // A photo from the customer goes in as an image the model can look at.
+      opts.image?.dataUrl
+        ? { role: "user", content: [
+          { type: "text", text: inboundText },
+          { type: "image_url", image_url: { url: opts.image.dataUrl, detail: "low" } },
+        ] }
+        : { role: "user", content: inboundText },
+      ...(opts.image?.dataUrl ? [{ role: "system", content: "The customer's last message is a photo (attached). Look at it and reply about what it shows: if it is an ad, a brochure page or a property you have data for, say which project it is and help with it; if it is a document or something you cannot use, thank them and ask what they would like to know. Never describe people in the photo." }] : []),
       ...(plan?.send.length ? [{ role: "system", content: `The customer just asked for ${listNames(plan.send)} of ${mediaProject.name}. It is being sent to them right now, along with your reply. Say in one short line that you are sending it. Do not say the team will send it, and do not add any [SHARE_...] tag.` }] : []),
       ...(plan?.missing.length ? [{ role: "system", content: `The customer asked for ${listNames(plan.missing)} of ${mediaProject.name}, but that is not available to send yet. Say warmly that the team will share it shortly, and add [NEEDS_TEAM] at the end.` }] : []),
       ...(opts.flowPending ? [{ role: "system", content: `Right after your reply, the customer will be asked this again, with buttons: "${opts.flowPending}". So answer their message briefly and helpfully, and do not ask any question of your own or invite them to book or share anything.` }] : []),
@@ -4626,6 +4687,7 @@ router._mediaPlan = mediaPlan;
 router._personaFor = personaFor;
 router._maybeSwitchAgent = maybeSwitchAgent;
 router._handleInbound = handleInbound;
+router._parseMetaMessages = parseMetaMessages;
 router._noteWhyDetailsEmpty = noteWhyDetailsEmpty;   // also used by one-off backfills
 router._matchByMessageText = matchByMessageText;
 router._triggerBotReply = triggerBotReply;
