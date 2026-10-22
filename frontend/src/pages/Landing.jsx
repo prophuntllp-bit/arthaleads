@@ -16,7 +16,7 @@ import IntroVideo from "../components/IntroVideo";
 import api from "../services/api";
 import BlogCard from "../components/BlogCard";
 import { HeroTour } from "../components/ProductTour";
-import HeroLeadFlow from "../components/HeroLeadFlow";
+import HeroChat from "../components/HeroChat";
 import FeatureBento from "../components/FeatureBento";
 import { PLAN_PRICING, formatINR } from "../utils/plan";
 import { Reveal, Spotlight, Magnetic } from "../components/motion/Motion";
@@ -62,17 +62,6 @@ const MagicBricksLogo = ({ size = 16 }) => (
 
 // ── Hero ──────────────────────────────────────────────────────────────────────
 
-const TICKER_LEADS = [
-  { name: "Raj Patil",      src: "Facebook", srcClr: "#1877F2", action: "New Lead",          city: "Pune" },
-  { name: "Priya Sharma",   src: "WhatsApp", srcClr: "#25D366", action: "Site Visit Booked", city: "Mumbai" },
-  { name: "Amit Deshmukh",  src: "Google",   srcClr: "#EA4335", action: "Contacted",          city: "Nagpur" },
-  { name: "Sneha Kulkarni", src: "Facebook", srcClr: "#1877F2", action: "Proposal Sent",      city: "Pune" },
-  { name: "Vikram Patil",   src: "99acres",  srcClr: "#e63946", action: "New Lead",           city: "Nashik" },
-  { name: "Neha Joshi",     src: "WhatsApp", srcClr: "#25D366", action: "Booked ✓",           city: "Pune" },
-  { name: "Rahul Mehta",    src: "Google",   srcClr: "#EA4335", action: "Follow-up Due",      city: "Thane" },
-  { name: "Kavya Nair",     src: "Facebook", srcClr: "#1877F2", action: "Site Visit Done",    city: "Pune" },
-];
-
 function Hero({ isDark }) {
   const heroBg     = isDark ? "#0d0d1a" : "linear-gradient(180deg, #fff7f0 0%, #fffaf6 45%, #ffffff 100%)";
   const headingClr = isDark ? "#ffffff" : "#111827";
@@ -82,9 +71,6 @@ function Hero({ isDark }) {
   const btnText    = isDark ? "rgba(255,255,255,0.70)" : "#374151";
   const btnBg      = isDark ? "transparent" : "rgba(255,255,255,0.7)";
   const gridOpacity = isDark ? "0.03" : "0.035";
-  const chipText   = isDark ? "rgba(255,255,255,0.85)" : "#111827";
-  const tickerBg   = isDark ? "rgba(255,255,255,0.04)" : "#ffffff";
-  const tickerBdr  = isDark ? "rgba(255,255,255,0.07)" : "#e5e7eb";
 
   return (
     <section id="hero" className="relative overflow-hidden" style={{ background: heroBg }}>
@@ -92,41 +78,37 @@ function Hero({ isDark }) {
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute left-1/2 -translate-x-1/2 top-[38%] w-[900px] max-w-[120vw] h-[520px] rounded-full blur-3xl"
           style={{ background: "radial-gradient(ellipse at center, rgba(255,107,0,0.16) 0%, transparent 70%)" }} />
-        {/* Two slow aurora blobs drifting behind the headline */}
-        <div className="absolute -top-24 left-[8%] w-[520px] max-w-[80vw] h-[420px] rounded-full blur-3xl opacity-70"
-          style={{ background: "radial-gradient(circle, rgba(255,170,0,0.18), transparent 65%)", animation: "aurora-drift 18s ease-in-out infinite" }} />
-        <div className="absolute -top-10 right-[6%] w-[460px] max-w-[70vw] h-[380px] rounded-full blur-3xl opacity-60"
-          style={{ background: "radial-gradient(circle, rgba(255,107,0,0.14), transparent 65%)", animation: "aurora-drift 22s ease-in-out infinite reverse" }} />
         <div className="absolute inset-0"
           style={{ opacity: gridOpacity, backgroundImage: "linear-gradient(rgba(255,107,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,1) 1px,transparent 1px)", backgroundSize: "60px 60px",
             maskImage: "linear-gradient(to bottom, black 0%, transparent 55%)", WebkitMaskImage: "linear-gradient(to bottom, black 0%, transparent 55%)" }} />
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12 lg:pt-40 lg:pb-16">
-        {/* ── Copy, centred above the product ── */}
-        <div className="text-center max-w-3xl mx-auto">
-          <h1 className="text-4xl sm:text-5xl lg:text-[3.6rem] xl:text-[4rem] font-black leading-[1.05] tracking-[-0.02em] mb-6"
+        {/* ── Split hero: the promise on the left, the promise happening on the right ── */}
+        <div className="grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] gap-12 lg:gap-10 items-center">
+        <div className="text-center lg:text-left max-w-2xl mx-auto lg:mx-0">
+          <h1 className="text-4xl sm:text-5xl lg:text-[3.6rem] xl:text-[4.1rem] font-black leading-[1.04] tracking-[-0.02em] mb-6"
             style={{ color: headingClr, textWrap: "balance" }}>
             {/* The keyword line is part of the h1 (it is what the page ranks for); the slogan follows as plain words, no sr-only copy, so the heading text is not doubled. */}
             <span className="block text-sm sm:text-base font-semibold uppercase tracking-[0.18em] mb-5 text-[color:var(--brand-text)]">AI-powered real estate CRM for India</span>{" "}
             <span>
-              {["Manage", "Every", "Lead."].map((w, i) => (
+              {/* Lead with what other CRMs do not do: the AI answers the enquiry, at any hour. */}
+              {["Every", "enquiry", "answered."].map((w, i) => (
                 <span key={w} className="word-rise" style={{ animationDelay: `${80 + i * 90}ms` }}>{w}&nbsp;</span>
               ))}
               <span className="block">
-                {["Close", "More", "Deals."].map((w, i) => (
+                {["Even", "at", "1 AM."].map((w, i) => (
                   <span key={w} className="word-rise text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00] pb-1"
                     style={{ animationDelay: `${380 + i * 90}ms` }}>{w}{i < 2 ? " " : ""}</span>
                 ))}
               </span>
             </span>
           </h1>
-          <p className="text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-9" style={{ color: bodyClr, textWrap: "pretty" }}>
-            Arthaleads is real estate CRM software for builders, developers and channel partners in India.
-            It brings every property enquiry - Facebook ads, Google campaigns, WhatsApp chats and walk-ins -
-            into one workspace, and replies on WhatsApp while your team sleeps.
+          <p className="text-lg sm:text-xl leading-relaxed max-w-xl mx-auto lg:mx-0 mb-9" style={{ color: bodyClr, textWrap: "pretty" }}>
+            Arthaleads is the real estate CRM for Indian builders and channel partners. Facebook, Google and
+            WhatsApp enquiries land in one place, and the AI replies, qualifies and books the site visit.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-4">
             <Magnetic>
               <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
                 className="shine-btn flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 text-base">
@@ -139,7 +121,7 @@ function Hero({ isDark }) {
               <PlayCircle className="w-5 h-5" /> Watch the 2-min film
             </button>
           </div>
-          <p className="text-sm mb-12 lg:mb-14" style={{ color: softClr }}>
+          <p className="text-sm" style={{ color: softClr }}>
             14-day free trial, no card needed ·{" "}
             <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
               className="font-semibold underline-offset-4 hover:underline" style={{ color: isDark ? "#4ade80" : "#15803d" }}>
@@ -148,10 +130,15 @@ function Hero({ isDark }) {
           </p>
         </div>
 
-        {/* ── The real product ── */}
-        <div className="relative max-w-6xl mx-auto">
+        <HeroChat />
+        </div>
+
+        {/* ── The rest of the product, below the fold of the promise ── */}
+        <div className="relative max-w-6xl mx-auto mt-20 lg:mt-28">
+          <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] mb-5 text-[color:var(--brand-text)]">
+            And everything after the first reply
+          </p>
           <HeroTour isDark={isDark} />
-          <HeroLeadFlow isDark={isDark} />
         </div>
 
         <div className="flex items-center justify-center gap-8 sm:gap-12 mt-12 lg:mt-14">
@@ -169,33 +156,10 @@ function Hero({ isDark }) {
             ))}
           </div>
 
-        {/* ── Live lead ticker ── */}
-        <div className="mt-12 lg:mt-16 relative overflow-hidden"
-          style={{ maskImage: "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)", WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)" }}>
-          <div style={{ display: "flex", gap: 10, animation: "tickerScroll 30s linear infinite", width: "max-content" }}>
-            {[...TICKER_LEADS, ...TICKER_LEADS].map(({ name, src, srcClr, action, city }, i) => (
-              <div key={i} style={{
-                display: "flex", alignItems: "center", gap: 7,
-                padding: "6px 14px", borderRadius: 999, flexShrink: 0,
-                background: tickerBg, border: `1px solid ${tickerBdr}`,
-              }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: srcClr, display: "inline-block", flexShrink: 0 }} />
-                <span style={{ fontSize: 12, fontWeight: 600, color: chipText }}>{name}</span>
-                <span style={{ fontSize: 11, color: softClr }}>·</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: chipText }}>{src}</span>
-                <span style={{ fontSize: 11, color: softClr }}>·</span>
-                <span style={{ fontSize: 11, color: isDark ? "rgba(255,255,255,0.55)" : "#6b7280" }}>{action}</span>
-                <span style={{ fontSize: 10, color: softClr, marginLeft: 2 }}>{city}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* The scrolling "live lead" ticker was removed: made-up names scrolling by read as fake activity,
+            and the hero already has the product clips and the lead-flow cards moving. */}
 
         <style>{`
-          @keyframes tickerScroll {
-            from { transform: translateX(0); }
-            to   { transform: translateX(-50%); }
-          }
           @media (prefers-reduced-motion: reduce) {
             #hero * { animation: none !important; }
           }

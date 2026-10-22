@@ -111,6 +111,7 @@ function isInStandaloneMode() {
 //   Desktop  The APK is useless here, so the PWA prompt stays exactly as it
 //            was. beforeinstallprompt fires on desktop Chrome too.
 function InstallBanner() {
+  const { user } = useAuth();
   const [prompt, setPrompt]           = useState(null);
   const [showIOS, setShowIOS]         = useState(false);
   const [showAndroid, setShowAndroid] = useState(false);
@@ -125,6 +126,9 @@ function InstallBanner() {
     // no use to them, and the banner covered the hero buttons on phones. The site
     // has its own Start-free-trial bar (MobileCtaBar) and /download-app instead.
     if (isMarketingHost()) return;
+    // Only for people already signed in to the CRM. A first-time visitor (on the
+    // login or signup page, or any public page) has no account for the app yet.
+    if (!user) return;
     if (dismissed) return;
 
     // Android: offer the real app. Delayed like the iOS card so it does not
@@ -144,7 +148,7 @@ function InstallBanner() {
     const handler = (e) => { e.preventDefault(); setPrompt(e); };
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, [dismissed]);
+  }, [dismissed, user]);
 
   const dismiss = () => {
     setDismissed(true);
@@ -172,6 +176,8 @@ function InstallBanner() {
   };
 
   // Android: the native app, not a shortcut
+  if (!user) return null;
+
   if (showAndroid && !dismissed) {
     return (
       <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm">
