@@ -291,7 +291,18 @@ export default function AgentBuilder() {
     if (!next.length) return f;
     return { ...f, ctwaFlow: { ...f.ctwaFlow, closingButtons: next } };
   });
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [section, setSection] = useState("basics");
+  const [openQuestion, setOpenQuestion] = useState(null);
+  const [previewTab, setPreviewTab] = useState("chat");
+  // What was last loaded or saved, to show "Unsaved changes" and warn on leave.
+  const [savedSnapshot, setSavedSnapshot] = useState(null);
+  const dirty = savedSnapshot !== null ? JSON.stringify(form) !== savedSnapshot : !!form.name.trim();
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
   const [adDraft, setAdDraft] = useState("");
   const [testPhoneDraft, setTestPhoneDraft] = useState("");
 
@@ -310,7 +321,7 @@ export default function AgentBuilder() {
       setProjects(projRes.data?.data || []);
       if (agentRes) {
         const a = agentRes.data.agent;
-        setForm({
+        const loaded = {
           name: a.name || "", personaName: a.personaName || "", description: a.description || "", status: a.status || "draft",
           greeting: a.greeting || "", greetingEnabled: a.greetingEnabled !== false, businessContext: a.businessContext || "",
           groundRules: a.groundRules || "",
@@ -334,8 +345,10 @@ export default function AgentBuilder() {
                 closingButtons: resolveClosingButtons(a.ctwaFlow),
               }
             : DEFAULT_CTWA_FLOW,
-        });
-        setShowAdvanced(!!a.systemPrompt);
+        };
+        setForm(loaded);
+        setSavedSnapshot(JSON.stringify(loaded));
+        if (a.systemPrompt) setSection("advanced");
         setReadiness(a.readiness);
       }
     }).catch(() => toast.error("Could not load this assistant"))
@@ -357,6 +370,7 @@ export default function AgentBuilder() {
       } else {
         const { data } = await api.patch(`/whatsapp/agents/${id}`, form);
         setReadiness(data.agent.readiness);
+        setSavedSnapshot(JSON.stringify(form));
         toast.success("Saved");
       }
     } catch (e) { toast.error(e.response?.data?.message || "Could not save"); }
@@ -462,592 +476,568 @@ export default function AgentBuilder() {
     );
   }
 
+  // ── The page in sections (22 Oct 2026 redesign) ─────────────────────────
+  // One section on screen at a time instead of seven cards down one long
+  // page; a left list says what each holds and whether it is done; Save
+  // stays in a sticky bar; the preview sits beside whatever is being edited.
   const narrowScope = form.projectIds.length > 0 && form.projectIds.length < projects.length / 2;
+  const flow = form.ctwaFlow;
+  const qCount = flow.qualifyingQuestions.length;
+  const sendCount = [form.shareProjectPhotos, form.shareBrochure, form.shareVideos, form.shareFloorPlan].filter(Boolean).length;
+  const testingLock = flow.testPhones.length > 0 && form.status === "active";
+  const hasContext = !!(form.businessContext.trim() || form.systemPrompt.trim());
+  const hasRules = !!(form.groundRules.trim() || form.systemPrompt.trim());
+  const SECTIONS = [
+    { key: "basics",    label: "Basics",            summary: form.name.trim() ? (form.description.trim() ? "Done" : "Say what it does") : "Needs a name", state: form.name.trim() && form.description.trim() ? "ok" : "todo" },
+    { key: "talk",      label: "How it talks",      summary: form.greetingEnabled === false ? "No greeting (ad greets)" : form.greeting.trim() ? "Greets with your text" : "Greets in its own words", state: hasContext && hasRules ? "ok" : "todo" },
+    { key: "knowledge", label: "What it knows",     summary: projects.length === 0 ? "No projects yet" : form.projectIds.length ? `${form.projectIds.length} of ${projects.length} projects` : `All ${projects.length} projects`, state: projects.length === 0 || narrowScope ? "warn" : "ok" },
+    { key: "questions", label: "Button questions",  summary: !flowAllowed ? "Enterprise plan" : flow.enabled ? `${qCount} question${qCount === 1 ? "" : "s"}` : "Off", state: flow.enabled ? "ok" : "off" },
+    { key: "send",      label: "What it can send",  summary: sendCount ? `${sendCount} of 4 on` : "Nothing yet", state: sendCount ? "ok" : "off" },
+    { key: "live",      label: "Ads and go live",   summary: testingLock ? "Locked to test numbers" : form.status !== "active" ? STATUSES.find((s) => s.value === form.status)?.label.split(" ")[0] : form.adIds.length ? `${form.adIds.length} ad${form.adIds.length === 1 ? "" : "s"} routed` : "Every conversation", state: testingLock ? "danger" : form.status === "active" ? "ok" : "off" },
+  ];
+  const DOT = { ok: "#16a34a", todo: "#f59e0b", warn: "#f59e0b", off: "#d1d5db", danger: "#dc2626" };
+  const current = SECTIONS.find((s) => s.key === section) || SECTIONS[0];
+  const currentIdx = SECTIONS.indexOf(current);
+  const goTo = (key) => { setSection(key); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const sectionTitle = (title, sub) => (
+    <div>
+      <h2 className="text-lg font-bold text-app">{title}</h2>
+      {sub && <p className="text-sm text-app-soft mt-0.5">{sub}</p>}
+    </div>
+  );
+  const Toggle = ({ on, onChange, label }) => (
+    <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)}
+      className="relative shrink-0 rounded-full transition"
+      style={{ width: 46, height: 26, background: on ? "var(--app-primary)" : "#d1d5db" }}>
+      <span className="absolute top-[3px] rounded-full bg-white shadow transition-all" style={{ width: 20, height: 20, left: on ? 23 : 3 }} />
+    </button>
+  );
+  const Row = ({ title, hint, children }) => (
+    <div className="flex items-start justify-between gap-4 rounded-2xl p-4" style={{ border: "1px solid var(--app-border)" }}>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-app">{title}</p>
+        {hint && <p className="text-xs text-app-soft mt-0.5 leading-relaxed">{hint}</p>}
+      </div>
+      {children}
+    </div>
+  );
 
   return (
     <div className="stitch-page">
-      <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
-        <button onClick={() => navigate("/conversations/agent")}
-          className="flex items-center gap-1.5 text-sm font-semibold text-app-soft hover:text-app transition">
-          <ArrowLeft className="w-4 h-4" /> All agents
-        </button>
-        {!isNew && (
-          <button onClick={remove}
-            className="btn-secondary rounded-full px-3.5 py-2 text-xs font-semibold flex items-center gap-1.5">
-            <Trash2 className="w-3.5 h-3.5" /> Delete
+      {/* Sticky bar: name, status, setup score, Save. Nothing to scroll for. */}
+      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 mb-5"
+        style={{ background: "var(--app-surface-solid)", borderBottom: "1px solid var(--app-border)" }}>
+        <div className="flex items-center gap-3 flex-wrap">
+          <button onClick={() => { if (!dirty || window.confirm("Leave without saving your changes?")) navigate("/conversations/agent"); }}
+            className="flex items-center gap-1.5 text-sm font-semibold text-app-soft hover:text-app transition">
+            <ArrowLeft className="w-4 h-4" /> All agents
           </button>
-        )}
-      </div>
-
-      <div className="mb-6">
-        <h1 className="text-lg font-bold text-app">{isNew ? "New agent" : form.name || "Agent"}</h1>
-        <p className="text-xs text-app-soft">
-          What this assistant knows, how it talks, and which messages reach it
-        </p>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px] items-start">
-        <div className="space-y-5 min-w-0">
-          <div className="card p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
-              <h3 className="text-base font-bold text-app">Identity</h3>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="text-xs font-semibold text-app-soft mb-1 block">Name</label>
-                <input className="input w-full" placeholder="e.g. Arohi"
-                  value={form.name} onChange={(e) => set({ name: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-app-soft mb-1 block">Status</label>
-                <CustomSelect value={form.status} onChange={(v) => set({ status: v })}
-                  options={STATUSES} style={SELECT_STYLE} />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-app-soft mb-1 block">
-                Name customers hear <span className="font-normal">(when someone asks "what is your name")</span>
-              </label>
-              <input className="input w-full" placeholder="e.g. Riya. Leave blank to use a friendly name automatically"
-                value={form.personaName} onChange={(e) => set({ personaName: e.target.value })} />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-app-soft mb-1 block">
-                What it does <span className="font-normal">(for your team, never sent to customers)</span>
-              </label>
-              <input className="input w-full" placeholder="e.g. Qualifies leads and books site visits for Treetopia"
-                value={form.description} onChange={(e) => set({ description: e.target.value })} />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-app-soft mb-1 block">Reply language</label>
-              <CustomSelect value={form.language} onChange={(v) => set({ language: v })}
-                options={LANGUAGES} style={SELECT_STYLE} />
-            </div>
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <h1 className="text-base font-bold text-app truncate">{isNew ? "New agent" : form.name || "Agent"}</h1>
+            <span className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full"
+              style={form.status === "active"
+                ? { background: "rgba(22,163,74,0.12)", color: "#15803d" }
+                : form.status === "paused" ? { background: "rgba(245,158,11,0.14)", color: "#b45309" }
+                : { background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: form.status === "active" ? "#16a34a" : form.status === "paused" ? "#f59e0b" : "#9ca3af" }} />
+              {form.status === "active" ? "Live" : form.status === "paused" ? "Paused" : "Draft"}
+            </span>
           </div>
+          {readiness && (
+            <button type="button" onClick={() => goTo(readiness.checks.find((c) => !c.ok)?.key === "knowledge" ? "knowledge" : readiness.checks.find((c) => !c.ok) ? (["context", "rules", "greeting"].includes(readiness.checks.find((c) => !c.ok).key) ? "talk" : "basics") : "basics")}
+              className="hidden sm:flex items-center gap-2 text-left" title={readiness.checks.filter((c) => !c.ok).map((c) => c.label).join(", ") || "All set"}>
+              <svg width="34" height="34" viewBox="0 0 36 36" aria-hidden="true">
+                <circle cx="18" cy="18" r="15" fill="none" stroke="var(--app-border)" strokeWidth="4" />
+                <circle cx="18" cy="18" r="15" fill="none" stroke={readiness.score === readiness.total ? "#16a34a" : "var(--app-primary)"} strokeWidth="4"
+                  strokeDasharray={`${(readiness.score / readiness.total) * 94.2} 94.2`} strokeLinecap="round" transform="rotate(-90 18 18)" />
+                <text x="18" y="22" textAnchor="middle" fontSize="10.5" fontWeight="700" fill="var(--app-text)">{readiness.score}/{readiness.total}</text>
+              </svg>
+              <span className="text-[11px] leading-tight text-app-soft">
+                Setup<br />
+                <strong className="text-app">{readiness.score === readiness.total ? "All set" : readiness.checks.find((c) => !c.ok)?.label}</strong>
+              </span>
+            </button>
+          )}
+          {dirty && <span className="text-xs font-semibold" style={{ color: "#b45309" }}>Unsaved changes</span>}
+          {!isNew && (
+            <button onClick={remove} title="Delete this agent" aria-label="Delete this agent"
+              className="btn-secondary rounded-full w-9 h-9 flex items-center justify-center">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <button onClick={save} disabled={saving}
+            className="btn-primary rounded-full px-5 py-2 text-sm font-bold flex items-center gap-1.5 disabled:opacity-40">
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+            {saving ? "Saving…" : isNew ? "Create agent" : "Save"}
+          </button>
+        </div>
+      </div>
 
-          <div className="card p-5 space-y-4">
-            <h3 className="text-base font-bold text-app">How it talks</h3>
-
-            <div>
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <label className="text-xs font-semibold text-app-soft">
-                  Greeting <span className="font-normal">(optional)</span>
-                </label>
-                <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
-                  <input type="checkbox" checked={form.greetingEnabled !== false}
-                    onChange={(e) => set({ greetingEnabled: e.target.checked })} />
-                  <span className="text-xs font-semibold text-app">{form.greetingEnabled !== false ? "On" : "Off"}</span>
-                </label>
-              </div>
-              {form.greetingEnabled !== false ? (
-                <>
-                  <input className="input w-full" placeholder="Hi {{name}} 👋 Thanks for reaching out, how can I help you find your next home?"
-                    value={form.greeting} onChange={(e) => set({ greeting: e.target.value })} />
-                  <p className="text-xs text-app-soft mt-1">
-                    Sent as the first message when someone new writes in, and the assistant won't say hello again after
-                    it. Leave it empty to let the assistant greet in its own first reply. Use <code>{"{{name}}"}</code>.
-                    Turn this off if your Click-to-WhatsApp ad already shows Meta's automated greeting, so customers
-                    aren't welcomed twice.
-                  </p>
-                </>
-              ) : (
-                <p className="text-xs text-app-soft rounded-xl px-3 py-2.5" style={{ background: "var(--app-surface-low)" }}>
-                  Off: no greeting is sent, and the assistant doesn't say hello or introduce itself. It answers the
-                  customer's message straight away. Use this when your Click-to-WhatsApp ad already welcomes people
-                  with Meta's automated greeting.
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2 rounded-2xl border p-4" style={{ borderColor: "var(--app-border)" }}>
-              <label className="flex items-start gap-2.5 text-sm cursor-pointer">
-                <input type="checkbox" className="mt-0.5 shrink-0"
-                  checked={form.ctwaFlow.nudgesEnabled === true} onChange={(e) => setFlow({ nudgesEnabled: e.target.checked })} />
-                <span>
-                  <span className="text-app font-semibold block">Follow up if they go quiet</span>
-                  <span className="text-xs text-app-soft">
-                    If a customer stops replying after the assistant asked them something, send one gentle reminder
-                    after about 15 minutes and one last reminder shortly before the 24-hour reply window closes. In a
-                    normal chat it repeats the assistant's last question; in the button flow it re-sends the question
-                    with its buttons. Business hours only, never more than two, and they stop as soon as the customer
-                    writes back or someone from your team takes over.
+      <div className="grid gap-5 lg:grid-cols-[224px_minmax(0,1fr)_380px] items-start">
+        {/* Section list: a row of pills on a phone, a column on a desktop. */}
+        <nav aria-label="Agent sections" className="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-visible -mx-4 px-4 lg:mx-0 lg:px-0 pb-1 lg:pb-0 lg:sticky lg:top-[76px]">
+          {SECTIONS.map((s, i) => {
+            const active = s.key === section;
+            return (
+              <button key={s.key} type="button" onClick={() => goTo(s.key)}
+                className="shrink-0 lg:shrink flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition"
+                style={active
+                  ? { background: "var(--app-card-solid, var(--app-surface-solid))", border: "1px solid rgba(var(--app-primary-rgb),0.45)" }
+                  : { border: "1px solid transparent" }}>
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: DOT[s.state] }} />
+                <span className="min-w-0">
+                  <span className={`block text-[13px] font-semibold leading-tight whitespace-nowrap ${active ? "" : "text-app"}`} style={active ? { color: "var(--app-primary)" } : undefined}>
+                    {i + 1}. {s.label}
                   </span>
+                  <span className="hidden lg:block text-[11px] text-app-soft truncate">{s.summary}</span>
                 </span>
-              </label>
-              {form.ctwaFlow.nudgesEnabled === true && (
+              </button>
+            );
+          })}
+          <button type="button" onClick={() => goTo("advanced")}
+            className="shrink-0 lg:shrink lg:mt-3 rounded-xl px-3 py-2 text-left text-xs font-semibold text-app-soft hover:text-app transition whitespace-nowrap"
+            style={section === "advanced" ? { color: "var(--app-primary)" } : undefined}>
+            Advanced
+          </button>
+        </nav>
+
+        <div className="min-w-0 space-y-4">
+          {section === "basics" && (
+            <div className="card p-5 space-y-4">
+              {sectionTitle("Basics", "Who this assistant is. Two minutes.")}
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="text-xs font-semibold text-app-soft block mb-1">First reminder wording</label>
-                  <input className="input w-full" placeholder="Just checking in 🙂" maxLength={200}
-                    value={form.ctwaFlow.nudgeText || ""} onChange={(e) => setFlow({ nudgeText: e.target.value })} />
-                  <p className="text-[11px] text-app-soft mt-1">
-                    Use <code>{"{{name}}"}</code>. Keep this to a short "just checking in": it is sent directly above the
-                    question being repeated, so don't ask anything here yourself.
-                  </p>
+                  <label className="text-xs font-semibold text-app-soft mb-1 block">Name (for your team)</label>
+                  <input className="input w-full" placeholder="e.g. Khopoli Project Advisor"
+                    value={form.name} onChange={(e) => set({ name: e.target.value })} />
                 </div>
-              )}
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-app-soft mb-1 block">
-                Business context <span className="font-normal">(optional)</span>
-              </label>
-              <textarea className="input w-full resize-none" rows={3}
-                placeholder="Who you are, service area, working hours, anything the assistant should know about your business."
-                value={form.businessContext} onChange={(e) => set({ businessContext: e.target.value })} />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-app-soft mb-1 block">
-                Ground rules <span className="font-normal">(optional)</span>
-              </label>
-              <textarea className="input w-full resize-none" rows={3}
-                placeholder="Dos and don'ts — e.g. never discuss competitor pricing, always ask for a preferred visit time before booking a site visit."
-                value={form.groundRules} onChange={(e) => set({ groundRules: e.target.value })} />
-              {/(₹|rs\.?\s?\d|inr\s?\d)\s?[\d,.]+\s?(l\b|lakh|lac|cr\b|crore|k\b)?/i.test(form.groundRules || "") && (
-                <p className="text-xs mt-1.5 font-semibold" style={{ color: "#dc2626" }}>
-                  These rules contain a price. Prices typed here go stale the moment you edit the project,
-                  and the assistant may still quote the old one. Set prices on the Projects page instead;
-                  the assistant always reads those live.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="card p-5 space-y-3">
-            <div className="flex items-center gap-2">
-              <Building2 className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
-              <h3 className="text-base font-bold text-app">What it can discuss</h3>
-            </div>
-            <p className="text-sm text-app-soft">
-              Answers come from your real Projects, not a crawled website. Edit a price on the Projects
-              page and the next reply reflects it — nothing to re-sync.
-            </p>
-            <p className="text-xs text-app-soft">Leave everything unchecked to allow all of your active projects.</p>
-
-            {projects.length === 0 ? (
-              <p className="text-xs text-app-soft italic rounded-xl px-3 py-2.5" style={{ background: "var(--app-surface-low)" }}>
-                No projects yet — add some on the Projects page first.
-              </p>
-            ) : (
-              <div className="rounded-xl divide-y max-h-64 overflow-y-auto" style={{ border: "1px solid var(--app-border)" }}>
-                {projects.map((p) => (
-                  <label key={p._id} className="flex items-center gap-2.5 px-3 py-2 text-sm cursor-pointer hover:bg-[var(--app-surface-low)]">
-                    <input type="checkbox" className="shrink-0"
-                      checked={form.projectIds.includes(p._id)} onChange={() => toggleProject(p._id)} />
-                    <span className="flex-1 min-w-0 truncate text-app">{p.name}</span>
-                    {p.location && <span className="text-xs text-app-soft truncate shrink-0 max-w-[40%]">{p.location}</span>}
-                  </label>
-                ))}
-              </div>
-            )}
-
-            {form.projectIds.length > 0 && (
-              <div className="text-xs rounded-xl px-3 py-2 flex items-start gap-2"
-                style={narrowScope
-                  ? { background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.35)", color: "#b45309" }
-                  : { background: "rgba(var(--app-primary-rgb),0.08)", color: "var(--app-primary)" }}>
-                {narrowScope && <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />}
-                <span>
-                  This assistant can only discuss <strong>{form.projectIds.length} of your {projects.length}</strong> active
-                  project{projects.length === 1 ? "" : "s"}. Ask it about any of the others and it will say your team
-                  will follow up. Uncheck everything to allow all {projects.length}.
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="card p-5 space-y-3">
-            <div className="flex items-center gap-2">
-              <ImageIcon className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
-              <h3 className="text-base font-bold text-app">What it can send</h3>
-            </div>
-            <p className="text-sm text-app-soft">
-              Off by default. Some teams want a human to qualify a lead before anything visual goes out —
-              this is that gate, separate from what the assistant is allowed to talk about.
-            </p>
-            <label className="flex items-start gap-2.5 text-sm cursor-pointer">
-              <input type="checkbox" className="mt-0.5 shrink-0"
-                checked={form.shareProjectPhotos} onChange={(e) => set({ shareProjectPhotos: e.target.checked })} />
-              <span>
-                <span className="text-app font-semibold block">Can send project photos</span>
-                <span className="text-xs text-app-soft">
-                  Only for projects that actually have photos uploaded — add them on the Projects page.
-                </span>
-              </span>
-            </label>
-            <label className="flex items-start gap-2.5 text-sm cursor-pointer">
-              <input type="checkbox" className="mt-0.5 shrink-0"
-                checked={form.shareBrochure} onChange={(e) => set({ shareBrochure: e.target.checked })} />
-              <span>
-                <span className="text-app font-semibold block">Can send the brochure (PDF)</span>
-                <span className="text-xs text-app-soft">
-                  Only for projects that have a brochure uploaded — add one on the Projects page.
-                </span>
-              </span>
-            </label>
-            <label className="flex items-start gap-2.5 text-sm cursor-pointer">
-              <input type="checkbox" className="mt-0.5 shrink-0"
-                checked={form.shareVideos} onChange={(e) => set({ shareVideos: e.target.checked })} />
-              <span>
-                <span className="text-app font-semibold block">Can send the project video</span>
-                <span className="text-xs text-app-soft">
-                  Only for projects that have a video uploaded (up to 10MB) — add one on the Projects page.
-                </span>
-              </span>
-            </label>
-            <label className="flex items-start gap-2.5 text-sm cursor-pointer">
-              <input type="checkbox" className="mt-0.5 shrink-0"
-                checked={form.shareFloorPlan} onChange={(e) => set({ shareFloorPlan: e.target.checked })} />
-              <span>
-                <span className="text-app font-semibold block">Can send the floor plan (PDF)</span>
-                <span className="text-xs text-app-soft">
-                  Only for projects that have a floor plan uploaded — add one on the Projects page.
-                </span>
-              </span>
-            </label>
-            <p className="text-xs text-app-soft rounded-xl px-3 py-2" style={{ background: "var(--app-surface-low)" }}>
-              Works on the direct Arthaleads connection only — not on AiSensy, Wati or Interakt. The
-              assistant only ever sends what's relevant to what was just discussed, never on the first reply.
-            </p>
-          </div>
-
-          <div className="card p-5 space-y-3">
-            <div className="flex items-center gap-2">
-              <Megaphone className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
-              <h3 className="text-base font-bold text-app">Route ads to this agent</h3>
-            </div>
-            <p className="text-sm text-app-soft">
-              Running a Click-to-WhatsApp ad? Paste its Ad ID (from Ads Manager — the ad, not the
-              campaign). Anyone who messages in from that ad reaches this assistant, whichever one is
-              your default.
-            </p>
-            <div className="flex items-center gap-2">
-              <input className="input flex-1 font-mono text-xs" placeholder="Ad ID e.g. 1202101234567890"
-                value={adDraft} onChange={(e) => setAdDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAd(); } }} />
-              <button type="button" onClick={addAd} disabled={!adDraft.trim()}
-                className="btn-secondary rounded-full px-3.5 py-2 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40">
-                <Plus className="w-3.5 h-3.5" /> Add
-              </button>
-            </div>
-            {form.adIds.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {form.adIds.map((ad) => (
-                  <span key={ad} className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full"
-                    style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
-                    {ad}
-                    <button type="button" onClick={() => set({ adIds: form.adIds.filter((a) => a !== ad) })}
-                      className="text-app-soft hover:text-red-500 transition">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="card p-5 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <MousePointerClick className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
-                <h3 className="text-base font-bold text-app">CTWA button flow</h3>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
-                  style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>
-                  <Lock className="w-2.5 h-2.5" /> Enterprise
-                </span>
-              </div>
-              <label className="inline-flex items-center gap-2 shrink-0" style={{ cursor: flowAllowed ? "pointer" : "not-allowed", opacity: flowAllowed ? 1 : 0.55 }}
-                title={flowAllowed ? undefined : "The button flow is part of the Enterprise plan"}>
-                <input type="checkbox" checked={form.ctwaFlow.enabled} disabled={!flowAllowed}
-                  onChange={(e) => setFlow({ enabled: e.target.checked })} />
-                <span className="text-xs font-semibold text-app">{form.ctwaFlow.enabled ? "On" : "Off"}</span>
-              </label>
-            </div>
-            <p className="text-sm text-app-soft">
-              Replace the first few free-text qualifying questions with real WhatsApp buttons/lists — your own
-              questions, in your own order — followed by what they want next and a site-visit time. Answers write
-              straight onto the lead when they clearly map to a field; anything else is still recorded, just not
-              forced onto the wrong one. Anyone who free-types instead of tapping drops back into this assistant's
-              usual conversation.
-            </p>
-            <p className="text-xs rounded-xl px-3 py-2.5" style={form.ctwaFlow.testPhones.length && form.status === "active"
-                ? { background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)", color: "#dc2626" }
-                : { background: "rgba(var(--app-primary-rgb),0.08)", color: "var(--app-primary)" }}>
-              {form.ctwaFlow.testPhones.length
-                ? (form.status === "active"
-                    ? <><strong>This assistant is live, but locked to testing</strong> — only the {form.ctwaFlow.testPhones.length} number{form.ctwaFlow.testPhones.length > 1 ? "s" : ""} below get this flow. Every real lead reaching it right now silently falls back to the normal conversation instead. Clear the list below to actually turn this flow on for real leads.</>
-                    : <>Locked to testing — only the {form.ctwaFlow.testPhones.length} number{form.ctwaFlow.testPhones.length > 1 ? "s" : ""} below get this flow right now. Everyone else, including genuine leads, gets the normal conversation. Clear the list below once you're done verifying it.</>)
-                : form.adIds.length
-                ? <>Runs for every new lead this assistant answers: the {form.adIds.length} ad{form.adIds.length > 1 ? "s" : ""} routed above, and any other ad whose message names this assistant's project, so a new ad never silently loses the flow.</>
-                : <>"Route ads to this agent" above is empty, so this runs for <strong>every</strong> conversation this assistant handles — including genuine leads reaching it right now. Add test numbers below to restrict it to just your own team while you verify it, or add an Ad ID above once you're ready to restrict it to actual ad clicks.</>}
-            </p>
-
-            <div className="rounded-2xl p-4 space-y-2" style={{ border: "1px solid var(--app-border)" }}>
-              <p className="text-xs font-semibold text-app">
-                Test phone numbers <span className="font-normal text-app-soft">(temporary — for verifying live before real leads see it)</span>
-              </p>
-              <p className="text-xs text-app-soft">
-                Add your own WhatsApp numbers here. While this list isn't empty, the button flow only replies to
-                these numbers — every other conversation this assistant handles falls back to the normal chat,
-                so you can message the number yourself and watch it work without touching real leads.
-              </p>
-              <div className="flex items-center gap-2">
-                <input className="input flex-1 font-mono text-xs" placeholder="e.g. 919876543210"
-                  value={testPhoneDraft} onChange={(e) => setTestPhoneDraft(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTestPhone(); } }} />
-                <button type="button" onClick={addTestPhone} disabled={!testPhoneDraft.trim()}
-                  className="btn-secondary rounded-full px-3.5 py-2 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40">
-                  <Plus className="w-3.5 h-3.5" /> Add
-                </button>
-              </div>
-              {form.ctwaFlow.testPhones.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {form.ctwaFlow.testPhones.map((p) => (
-                    <span key={p} className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full"
-                      style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
-                      {p}
-                      <button type="button" onClick={() => setFlow({ testPhones: form.ctwaFlow.testPhones.filter((x) => x !== p) })}
-                        className="text-app-soft hover:text-red-500 transition">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
+                <div>
+                  <label className="text-xs font-semibold text-app-soft mb-1 block">Name customers hear</label>
+                  <input className="input w-full" placeholder="e.g. Riya"
+                    value={form.personaName} onChange={(e) => set({ personaName: e.target.value })} />
                 </div>
-              )}
-            </div>
-
-            <div className="rounded-2xl p-4 space-y-3" style={{ border: "1px solid var(--app-border)" }}>
-              <p className="text-[11px] font-bold uppercase tracking-wide text-app-soft">Message 1 of 2 — sent first, plain text (optional)</p>
+              </div>
               <div>
-                <label className="text-xs font-semibold text-app-soft block mb-1">Welcome message</label>
-                <textarea className="input w-full resize-none" rows={2}
-                  placeholder="Hi {{name}} 👋 Thanks for your interest in {{project}}!"
-                  value={form.ctwaFlow.welcomeText} onChange={(e) => setFlow({ welcomeText: e.target.value })} />
-                <p className="text-[11px] text-app-soft mt-1">
-                  Use <code>{"{{name}}"}</code> and <code>{"{{project}}"}</code>. Sent on its own — a greeting bundled
-                  into the same message as the first question reads as the bot talking over itself. Leave this blank
-                  if the ad's own "Automated greeting" (Ads Manager → Conversations) already covers it — the flow
-                  then opens straight with the first question below, no double greeting.
+                <label className="text-xs font-semibold text-app-soft mb-1 block">What it does (one line, for your team)</label>
+                <input className="input w-full" placeholder="e.g. Registers people for the 31 Oct webinar and answers questions about it"
+                  value={form.description} onChange={(e) => set({ description: e.target.value })} />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="text-xs font-semibold text-app-soft mb-1 block">Reply language</label>
+                  <CustomSelect value={form.language} onChange={(v) => set({ language: v })} options={LANGUAGES} style={SELECT_STYLE} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-app-soft mb-1 block">Status</label>
+                  <CustomSelect value={form.status} onChange={(v) => set({ status: v })} options={STATUSES} style={SELECT_STYLE} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {section === "talk" && (
+            <div className="card p-5 space-y-4">
+              {sectionTitle("How it talks", "The greeting, what it knows about your business, and its rules.")}
+              <Row title="Send a greeting first" hint={form.greetingEnabled === false
+                ? "Off: the first reply goes straight to the point. Right when your ad already greets people."
+                : "Turn this off if your Click-to-WhatsApp ad already greets people, so nobody is welcomed twice."}>
+                <Toggle on={form.greetingEnabled !== false} onChange={(v) => set({ greetingEnabled: v })} label="Send a greeting first" />
+              </Row>
+              {form.greetingEnabled !== false && (
+                <div>
+                  <label className="text-xs font-semibold text-app-soft mb-1 block">Greeting text <span className="font-normal">(optional, {"{{name}}"} works)</span></label>
+                  <input className="input w-full" placeholder="Hi {{name}} 👋 Thanks for reaching out. How can I help you find your next home?"
+                    value={form.greeting} onChange={(e) => set({ greeting: e.target.value })} />
+                  <p className="text-xs text-app-soft mt-1">Leave empty and it greets in its own words.</p>
+                </div>
+              )}
+              <Row title="Follow up if they go quiet" hint="If someone stops replying after a question, one gentle reminder after 15 minutes and one more before the day ends. Business hours only.">
+                <Toggle on={flow.nudgesEnabled === true} onChange={(v) => setFlow({ nudgesEnabled: v })} label="Follow up if they go quiet" />
+              </Row>
+              {flow.nudgesEnabled === true && (
+                <div>
+                  <label className="text-xs font-semibold text-app-soft mb-1 block">Reminder wording</label>
+                  <input className="input w-full" placeholder="Just checking in 🙂" maxLength={200}
+                    value={flow.nudgeText || ""} onChange={(e) => setFlow({ nudgeText: e.target.value })} />
+                  <p className="text-xs text-app-soft mt-1">Sent just above the repeated question, so keep it short.</p>
+                </div>
+              )}
+              <div>
+                <label className="text-xs font-semibold text-app-soft mb-1 block">About your business</label>
+                <textarea className="input w-full resize-none" rows={3}
+                  placeholder="Who you are, the areas you cover, working hours, anything it should know."
+                  value={form.businessContext} onChange={(e) => set({ businessContext: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-app-soft mb-1 block">Ground rules</label>
+                <textarea className="input w-full resize-none" rows={3}
+                  placeholder="Dos and don'ts. e.g. Never discuss other builders' prices. Always ask for a preferred visit day before booking."
+                  value={form.groundRules} onChange={(e) => set({ groundRules: e.target.value })} />
+                {/(₹|rs\.?\s?\d|inr\s?\d)\s?[\d,.]+\s?(l\b|lakh|lac|cr\b|crore|k\b)?/i.test(form.groundRules || "") && (
+                  <p className="text-xs mt-1.5 font-semibold" style={{ color: "#dc2626" }}>
+                    There is a price in these rules. Prices here go stale; set them on the Projects page and the assistant always reads the live one.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {section === "knowledge" && (
+            <div className="card p-5 space-y-4">
+              {sectionTitle("What it knows", "Answers come from your Projects page. Change a price there and the next reply uses it.")}
+              {projects.length === 0 ? (
+                <p className="text-sm text-app-soft rounded-xl px-3 py-2.5" style={{ background: "var(--app-surface-low)" }}>
+                  No projects yet. Add one on the Projects page first.
                 </p>
-              </div>
-            </div>
-
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wide text-app-soft mb-2">
-                Qualifying questions — sent one at a time, in this order
-              </p>
-              <div className="space-y-3">
-                {form.ctwaFlow.qualifyingQuestions.map((q, i) => (
-                  <QualifyingQuestionEditor key={q.id} question={q} index={i} total={form.ctwaFlow.qualifyingQuestions.length}
-                    allQuestions={form.ctwaFlow.qualifyingQuestions}
-                    onChange={(next) => updateQuestion(i, next)}
-                    onRemove={() => removeQuestion(i)}
-                    onMoveUp={() => moveQuestion(i, -1)}
-                    onMoveDown={() => moveQuestion(i, 1)} />
-                ))}
-              </div>
-              <button type="button" onClick={addQuestion} disabled={form.ctwaFlow.qualifyingQuestions.length >= MAX_QUALIFYING_QUESTIONS}
-                className="btn-secondary rounded-full px-3.5 py-2 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40 w-full mt-3">
-                <Plus className="w-3.5 h-3.5" /> Add another question
-              </button>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-app-soft block mb-1">Closing prompt</label>
-              <input className="input w-full" placeholder="Would you like to talk to our advisor, or book a site visit?"
-                value={form.ctwaFlow.closingPrompt} onChange={(e) => setFlow({ closingPrompt: e.target.value })} />
-              <p className="text-[11px] text-app-soft mt-1">
-                Use <code>{"{{name}}"}</code>. The one fixed ending — sent once every question above has been asked
-                (or straight away if the lead already answered all of them elsewhere). Rename its buttons, or turn one
-                off if it doesn't suit this campaign. At least one has to stay.
-              </p>
-              <div className="space-y-2 mt-2">
-                {CLOSING_DEFAULTS.map((d) => {
-                  const row = form.ctwaFlow.closingButtons.find((b) => b.id === d.id);
-                  const isLast = !!row && form.ctwaFlow.closingButtons.length === 1;
-                  return (
-                    <div key={d.id} className="flex items-center gap-2.5">
-                      <input type="checkbox" className="shrink-0" checked={!!row} disabled={isLast}
-                        title={isLast ? "At least one button has to stay" : row ? "Turn this button off" : "Turn this button on"}
-                        onChange={(e) => setClosingButton(d.id, e.target.checked ? {} : null)} />
-                      <input className="input flex-1" maxLength={CLOSING_TITLE_MAX} disabled={!row}
-                        value={row ? row.label : d.label}
-                        onChange={(e) => setClosingButton(d.id, { label: e.target.value })} />
-                      <span className="hidden sm:block text-[11px] text-app-soft w-44 shrink-0">{d.hint}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="text-[11px] text-app-soft mt-1">
-                Button names are limited to {CLOSING_TITLE_MAX} characters, the most WhatsApp allows.
-              </p>
-              {form.ctwaFlow.closingButtons.some((b) => b.id === "site_visit") && (
+              ) : (
                 <>
-                  <p className="text-[11px] text-app-soft mt-2">Where the site visit button leads:</p>
-                  <CustomSelect value={form.ctwaFlow.closingSiteVisitNext || ""} onChange={(v) => setFlow({ closingSiteVisitNext: v })}
-                    options={[
-                      { value: "", label: "Auto-detect (a question where every option books a visit)" },
-                      { value: CLOSING_BOOK_IMMEDIATELY, label: "Book immediately — no question asked" },
-                      ...form.ctwaFlow.qualifyingQuestions.filter((q) => q.options.length).map((q) => ({ value: q.id, label: `Ask: ${q.questionText.slice(0, 50) || "(untitled question)"}` })),
-                    ]}
-                    style={{ ...SELECT_STYLE, marginTop: 6 }} />
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <p className="text-sm text-app">
+                      {form.projectIds.length === 0
+                        ? <>Can discuss <strong>all {projects.length}</strong> active projects.</>
+                        : <>Can discuss <strong>{form.projectIds.length} of {projects.length}</strong> projects. For the others it says your team will follow up.</>}
+                    </p>
+                    {form.projectIds.length > 0 && (
+                      <button type="button" onClick={() => set({ projectIds: [] })} className="text-xs font-semibold" style={{ color: "var(--app-primary)" }}>Allow all</button>
+                    )}
+                  </div>
+                  <div className="rounded-xl divide-y max-h-72 overflow-y-auto" style={{ border: "1px solid var(--app-border)" }}>
+                    {projects.map((p) => (
+                      <label key={p._id} className="flex items-center gap-2.5 px-3 py-2.5 text-sm cursor-pointer hover:bg-[var(--app-surface-low)]">
+                        <input type="checkbox" className="shrink-0" checked={form.projectIds.includes(p._id)} onChange={() => toggleProject(p._id)} />
+                        <span className="flex-1 min-w-0 truncate text-app">{p.name}</span>
+                        {p.location && <span className="text-xs text-app-soft truncate shrink-0 max-w-[40%]">{p.location}</span>}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-app-soft">Tick nothing to allow every active project, or tick only the ones this assistant is for.</p>
                 </>
               )}
             </div>
+          )}
 
-            {!isNew && form.ctwaFlow.enabled && <FlowFunnel agentId={id} />}
-            <p className="text-[11px] text-app-soft text-center">
-              Preview of this flow is alongside "Try it" →
-            </p>
-          </div>
-
-          <div className="card p-5 space-y-3">
-            <button type="button" onClick={() => setShowAdvanced((v) => !v)}
-              className="flex items-center gap-1.5 text-xs font-semibold text-app-soft hover:text-app transition">
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
-              Advanced: replace everything above with one custom prompt
-            </button>
-            {showAdvanced && (
-              <div>
-                <textarea className="input w-full resize-none" rows={5}
-                  placeholder="Leave blank to use the settings above. Writing anything here overrides them entirely."
-                  value={form.systemPrompt} onChange={(e) => set({ systemPrompt: e.target.value })} />
-                <p className="text-xs text-app-soft mt-1">
-                  When this is filled in, the greeting, business context, ground rules and project list are
-                  all ignored — you are fully in control of the prompt.
-                </p>
+          {section === "questions" && (
+            <div className="card p-5 space-y-4">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                {sectionTitle("Button questions", "Asked one at a time with WhatsApp buttons. Typed answers like \"1.5 cr\" count too.")}
+                <label className="inline-flex items-center gap-2 shrink-0" style={{ cursor: flowAllowed ? "pointer" : "not-allowed", opacity: flowAllowed ? 1 : 0.6 }}
+                  title={flowAllowed ? undefined : "Part of the Enterprise plan"}>
+                  {!flowAllowed && <Lock className="w-3.5 h-3.5 text-app-soft" />}
+                  <span className="text-xs font-semibold text-app">{flow.enabled ? "On" : "Off"}</span>
+                  <Toggle on={flow.enabled} onChange={(v) => flowAllowed && setFlow({ enabled: v })} label="Button questions on or off" />
+                </label>
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Try it + the CTWA flow preview, alongside the form rather than
-            under it, so you can change a ground rule or a button label and
-            immediately re-check it without losing your place. */}
-        <div className="space-y-4 lg:sticky lg:top-4">
-        <div className="card p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
-            <h3 className="text-base font-bold text-app">Try it</h3>
-          </div>
+              {!flow.enabled ? (
+                <p className="text-sm text-app-soft rounded-xl px-3 py-2.5" style={{ background: "var(--app-surface-low)" }}>
+                  Off. The assistant qualifies people in free text instead. Turn this on to ask your questions with tappable buttons and save the answers on the lead.
+                </p>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-xs font-semibold text-app-soft mb-1 block">Welcome line <span className="font-normal">(optional, sent before the first question)</span></label>
+                    <textarea className="input w-full resize-none" rows={2}
+                      placeholder="Hi {{name}} 👋 Thanks for your interest in {{project}}!"
+                      value={flow.welcomeText} onChange={(e) => setFlow({ welcomeText: e.target.value })} />
+                    <p className="text-xs text-app-soft mt-1">Leave empty if your ad already greets people.</p>
+                  </div>
 
-          {readiness && readiness.score < readiness.total && (
-            <div className="text-xs rounded-xl px-3 py-2"
-              style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.35)", color: "#b45309" }}>
-              <strong>Setup {readiness.score}/{readiness.total}.</strong>{" "}
-              {readiness.checks.filter((c) => !c.ok).map((c) => c.label).join(" · ")}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-app-soft">Questions, in this order</p>
+                    {flow.qualifyingQuestions.map((q, i) => (
+                      <QualifyingQuestionEditor key={q.id} question={q} index={i} total={qCount}
+                        allQuestions={flow.qualifyingQuestions}
+                        open={openQuestion === q.id || !q.questionText.trim()}
+                        onToggle={() => setOpenQuestion(openQuestion === q.id ? null : q.id)}
+                        onChange={(next) => updateQuestion(i, next)}
+                        onRemove={() => removeQuestion(i)}
+                        onMoveUp={() => moveQuestion(i, -1)}
+                        onMoveDown={() => moveQuestion(i, 1)} />
+                    ))}
+                    <button type="button" onClick={() => { addQuestion(); setOpenQuestion(null); }} disabled={qCount >= MAX_QUALIFYING_QUESTIONS}
+                      className="btn-secondary rounded-full px-3.5 py-2 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40 w-full">
+                      <Plus className="w-3.5 h-3.5" /> Add a question
+                    </button>
+                  </div>
+
+                  <div className="rounded-2xl p-4 space-y-3" style={{ border: "1px solid var(--app-border)" }}>
+                    <p className="text-sm font-semibold text-app">At the end, it offers</p>
+                    <div className="space-y-2">
+                      {CLOSING_DEFAULTS.map((d) => {
+                        const row = flow.closingButtons.find((b) => b.id === d.id);
+                        const isLast = !!row && flow.closingButtons.length === 1;
+                        return (
+                          <div key={d.id} className="flex items-center gap-2.5">
+                            <input type="checkbox" className="shrink-0" checked={!!row} disabled={isLast}
+                              title={isLast ? "At least one button has to stay" : undefined}
+                              onChange={(e) => setClosingButton(d.id, e.target.checked ? {} : null)} />
+                            <input className="input flex-1" maxLength={CLOSING_TITLE_MAX} disabled={!row}
+                              value={row ? row.label : d.label}
+                              onChange={(e) => setClosingButton(d.id, { label: e.target.value })} />
+                            <span className="hidden sm:block text-[11px] text-app-soft w-40 shrink-0">{d.hint}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-app-soft mb-1 block">Closing question <span className="font-normal">({"{{name}}"} works)</span></label>
+                      <input className="input w-full" placeholder="Would you like to talk to our advisor, or book a site visit?"
+                        value={flow.closingPrompt} onChange={(e) => setFlow({ closingPrompt: e.target.value })} />
+                    </div>
+                    {flow.closingButtons.some((b) => b.id === "site_visit") && (
+                      <div>
+                        <label className="text-xs font-semibold text-app-soft mb-1 block">When they tap the site visit button</label>
+                        <CustomSelect value={flow.closingSiteVisitNext || ""} onChange={(v) => setFlow({ closingSiteVisitNext: v })}
+                          options={[
+                            { value: "", label: "Ask the visit-time question if there is one, else book at once" },
+                            { value: CLOSING_BOOK_IMMEDIATELY, label: "Book at once, no question" },
+                            ...flow.qualifyingQuestions.filter((q) => q.options.length).map((q) => ({ value: q.id, label: `Ask: ${q.questionText.slice(0, 50) || "(untitled question)"}` })),
+                          ]}
+                          style={SELECT_STYLE} />
+                      </div>
+                    )}
+                  </div>
+
+                  {!isNew && <FlowFunnel agentId={id} />}
+                </>
+              )}
             </div>
           )}
 
-          <p className="text-sm text-app-soft">
-            Tries exactly what is on screen now, saved or not. Nothing is sent over WhatsApp and no
-            WhatsApp credit is used.
-          </p>
+          {section === "send" && (
+            <div className="card p-5 space-y-3">
+              {sectionTitle("What it can send", "Off by default. Only files uploaded on the Projects page are ever sent, and never in the first reply.")}
+              {[
+                ["shareProjectPhotos", "Project photos"],
+                ["shareVideos", "Project video", "up to 10 MB"],
+                ["shareBrochure", "Brochure (PDF)"],
+                ["shareFloorPlan", "Floor plan (PDF)"],
+              ].map(([key, label, note]) => (
+                <Row key={key} title={label} hint={note}>
+                  <Toggle on={!!form[key]} onChange={(v) => set({ [key]: v })} label={label} />
+                </Row>
+              ))}
+              <p className="text-xs text-app-soft">Works on the direct Arthaleads connection only, not on AiSensy, Wati or Interakt.</p>
+            </div>
+          )}
 
-          <div className="rounded-2xl p-3 space-y-2 overflow-y-auto"
-            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", minHeight: 180, maxHeight: 340 }}>
-            {tryLog.length === 0 && (
-              <p className="text-xs text-app-soft italic text-center py-8">
-                Try “what projects do you have in Pune?” or “price of a 2BHK?”
-              </p>
-            )}
-            {tryLog.map((m, i) => (
-              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed whitespace-pre-wrap break-words ${
-                  m.role === "user" ? "rounded-tr-[4px] wa-bubble-out" : "rounded-tl-[4px]"}`}
-                  style={m.role === "error"
-                    ? { background: "rgba(239,68,68,0.10)", color: "#b91c1c", border: "1px solid rgba(239,68,68,0.28)" }
-                    : m.role === "assistant"
-                      ? { background: "var(--app-card-solid)", color: "var(--app-text)", border: "1px solid var(--app-border)" }
-                      : undefined}>
-                  {m.isGreeting && (
-                    <span className="block text-[10px] font-bold mb-1" style={{ color: "var(--app-primary)" }}>
-                      Sent automatically — real Greeting text, not generated
-                    </span>
-                  )}
-                  {m.body}
-                  {(m.wantsPhotos || m.wantsBrochure || m.wantsVideos || m.wantsFloorPlan) && (
-                    <span className="block text-[10px] font-bold mt-1.5" style={{ color: "var(--app-primary)" }}>
-                      📎 would send {[m.wantsPhotos && "project photos", m.wantsVideos && "the video", m.wantsFloorPlan && "the floor plan", m.wantsBrochure && "the brochure"].filter(Boolean).join(" and ")} here — not sent in Try It
-                    </span>
-                  )}
-                  {m.handoff && (
-                    <span className="block text-[10px] font-bold mt-1.5" style={{ color: "#b45309" }}>
-                      → would hand this thread to a human
-                    </span>
-                  )}
+          {section === "live" && (
+            <div className="card p-5 space-y-4">
+              {sectionTitle("Ads and go live", "Which conversations reach this assistant, and how to test it safely.")}
+              <Row title="Status" hint={form.status === "active" ? "Answering customers now." : form.status === "paused" ? "Not answering. Chats go to your team." : "Still being written. Not answering."}>
+                <div className="w-48 shrink-0"><CustomSelect value={form.status} onChange={(v) => set({ status: v })} options={STATUSES} style={SELECT_STYLE} /></div>
+              </Row>
+
+              <div className="rounded-2xl p-4 space-y-2" style={{ border: "1px solid var(--app-border)" }}>
+                <p className="text-sm font-semibold text-app">Click-to-WhatsApp ads</p>
+                <p className="text-xs text-app-soft">Paste the Ad ID from Ads Manager (the ad, not the campaign). Anyone messaging from that ad reaches this assistant.</p>
+                <div className="flex items-center gap-2">
+                  <input className="input flex-1 font-mono text-xs" placeholder="Ad ID e.g. 1202101234567890"
+                    value={adDraft} onChange={(e) => setAdDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAd(); } }} />
+                  <button type="button" onClick={addAd} disabled={!adDraft.trim()}
+                    className="btn-secondary rounded-full px-3.5 py-2 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40">
+                    <Plus className="w-3.5 h-3.5" /> Add
+                  </button>
                 </div>
-              </div>
-            ))}
-            {trying && (
-              <div className="flex justify-start">
-                <div className="rounded-2xl rounded-tl-[4px] px-3.5 py-2"
-                  style={{ background: "var(--app-card-solid)", border: "1px solid var(--app-border)" }}>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-app-soft" />
-                </div>
-              </div>
-            )}
-            <div ref={tryEndRef} />
-          </div>
-
-          <div className="flex items-end gap-2">
-            <input className="input flex-1" placeholder="Ask what a customer would ask…"
-              value={tryInput} onChange={(e) => setTryInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); runTry(); } }} />
-            <button type="button" onClick={runTry} disabled={!tryInput.trim() || trying}
-              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition disabled:opacity-40"
-              style={{ background: tryInput.trim() ? "var(--app-primary)" : "var(--app-surface-low)" }}>
-              <Send className={`w-4 h-4 ${tryInput.trim() ? "text-white" : "text-app-soft"}`} />
-            </button>
-          </div>
-
-          {tryMeta && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 flex-wrap text-xs">
-                <span className="px-2.5 py-1 rounded-full font-semibold"
-                  style={tryMeta.projectsInScope === 0 && !tryMeta.usingCustomPrompt
-                    ? { background: "rgba(239,68,68,0.10)", color: "#b91c1c" }
-                    : { background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}>
-                  {tryMeta.usingCustomPrompt
-                    ? "Using your custom prompt"
-                    : `Knows ${tryMeta.projectsInScope} of ${tryMeta.activeProjects} projects`}
-                </span>
-                {tryLog.length > 0 && (
-                  <button type="button" onClick={() => setTryLog([])}
-                    className="text-xs font-semibold text-app-soft hover:text-app transition">Clear</button>
+                {form.adIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {form.adIds.map((ad) => (
+                      <span key={ad} className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full"
+                        style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
+                        {ad}
+                        <button type="button" onClick={() => set({ adIds: form.adIds.filter((a) => a !== ad) })} aria-label={`Remove ad ${ad}`}
+                          className="text-app-soft hover:text-red-500 transition"><X className="w-3 h-3" /></button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-app-soft">No ads yet{form.ctwaFlow.enabled ? ", so the button questions run for every conversation this assistant handles" : ""}.</p>
                 )}
-                <button type="button" onClick={() => setShowPrompt((v) => !v)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-app-soft hover:text-app transition ml-auto">
-                  <Eye className="w-3.5 h-3.5" />
-                  {showPrompt ? "Hide" : "Show"} what it was told
-                </button>
               </div>
-              {showPrompt && (
-                <pre className="text-[11px] leading-relaxed rounded-xl p-3 overflow-auto whitespace-pre-wrap break-words"
-                  style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)", maxHeight: 280 }}>
-                  {tryMeta.systemPrompt}
-                </pre>
+
+              <div className="rounded-2xl p-4 space-y-2" style={testingLock
+                ? { border: "1px solid rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.05)" }
+                : { border: "1px solid var(--app-border)" }}>
+                <p className="text-sm font-semibold text-app">Test with your own number first</p>
+                <p className="text-xs text-app-soft">While any number is listed here, only those numbers get the button questions. Everyone else gets the normal chat. Clear the list when you are done.</p>
+                <div className="flex items-center gap-2">
+                  <input className="input flex-1 font-mono text-xs" placeholder="e.g. 919876543210"
+                    value={testPhoneDraft} onChange={(e) => setTestPhoneDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTestPhone(); } }} />
+                  <button type="button" onClick={addTestPhone} disabled={!testPhoneDraft.trim()}
+                    className="btn-secondary rounded-full px-3.5 py-2 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40">
+                    <Plus className="w-3.5 h-3.5" /> Add
+                  </button>
+                </div>
+                {flow.testPhones.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {flow.testPhones.map((p) => (
+                      <span key={p} className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full"
+                        style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
+                        {p}
+                        <button type="button" onClick={() => setFlow({ testPhones: flow.testPhones.filter((x) => x !== p) })} aria-label={`Remove ${p}`}
+                          className="text-app-soft hover:text-red-500 transition"><X className="w-3 h-3" /></button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {testingLock && (
+                  <p className="text-xs font-semibold" style={{ color: "#dc2626" }}>
+                    This assistant is live but locked to {flow.testPhones.length} test number{flow.testPhones.length > 1 ? "s" : ""}. Real leads are getting the normal chat, not the button questions. Clear the list to go live for everyone.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {section === "advanced" && (
+            <div className="card p-5 space-y-3">
+              {sectionTitle("Advanced", "Write the whole instruction yourself. Most teams never need this.")}
+              <textarea className="input w-full resize-none" rows={8}
+                placeholder="Leave empty to use the settings in the other sections. Anything written here replaces them entirely."
+                value={form.systemPrompt} onChange={(e) => set({ systemPrompt: e.target.value })} />
+              <p className="text-xs text-app-soft">
+                When this is filled in, the greeting, business context, ground rules and project list are all ignored.
+              </p>
+            </div>
+          )}
+
+          {section !== "advanced" && (
+            <div className="flex items-center justify-between gap-3">
+              <button type="button" disabled={currentIdx === 0} onClick={() => goTo(SECTIONS[currentIdx - 1].key)}
+                className="btn-secondary rounded-full px-4 py-2 text-xs font-semibold disabled:opacity-40">
+                ← {currentIdx > 0 ? SECTIONS[currentIdx - 1].label : "Back"}
+              </button>
+              {currentIdx < SECTIONS.length - 1 ? (
+                <button type="button" onClick={() => goTo(SECTIONS[currentIdx + 1].key)}
+                  className="btn-secondary rounded-full px-4 py-2 text-xs font-semibold">
+                  Next: {SECTIONS[currentIdx + 1].label} →
+                </button>
+              ) : (
+                <button onClick={save} disabled={saving} className="btn-primary rounded-full px-5 py-2 text-xs font-bold disabled:opacity-40">
+                  {isNew ? "Create agent" : "Save"}
+                </button>
               )}
             </div>
           )}
         </div>
 
-        <CtwaFlowPreviewPanel flow={form.ctwaFlow}
-          projectName={projects.find((p) => form.projectIds.includes(String(p._id)))?.name} />
-        </div>
-      </div>
+        {/* Preview beside the form: a chat you type into, or the button flow tapped through. */}
+        <div className="space-y-3 lg:sticky lg:top-[76px]">
+          <div className="flex items-center gap-1 rounded-full p-1" style={{ background: "var(--app-surface-low)" }}>
+            {[["chat", "Chat preview"], ["flow", "Button flow"]].map(([k, label]) => (
+              <button key={k} type="button" onClick={() => setPreviewTab(k)}
+                className="flex-1 rounded-full py-1.5 text-xs font-semibold transition"
+                style={previewTab === k ? { background: "var(--app-card-solid, var(--app-surface-solid))", color: "var(--app-primary)", boxShadow: "var(--app-shadow-sm, 0 1px 2px rgba(0,0,0,0.08))" } : { color: "var(--app-text-soft)" }}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {previewTab === "chat" ? (
+          <div className="card p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
+              <h3 className="text-base font-bold text-app">Try it</h3>
+            </div>
 
-      <div className="flex justify-end gap-2 mt-6 pt-4" style={{ borderTop: "1px solid var(--app-border)" }}>
-        <button onClick={save} disabled={saving}
-          className="btn-primary rounded-full px-6 py-2.5 text-sm font-bold flex items-center gap-1.5 disabled:opacity-40">
-          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-          {saving ? "Saving…" : isNew ? "Create agent" : "Save changes"}
-        </button>
+            <p className="text-xs text-app-soft">
+              Uses what is on screen now, saved or not. Nothing is sent on WhatsApp, no credit used.
+            </p>
+
+            <div className="rounded-2xl p-3 space-y-2 overflow-y-auto"
+              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", minHeight: 180, maxHeight: 340 }}>
+              {tryLog.length === 0 && (
+                <p className="text-xs text-app-soft italic text-center py-8">
+                  Try “what projects do you have in Pune?” or “price of a 2BHK?”
+                </p>
+              )}
+              {tryLog.map((m, i) => (
+                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed whitespace-pre-wrap break-words ${
+                    m.role === "user" ? "rounded-tr-[4px] wa-bubble-out" : "rounded-tl-[4px]"}`}
+                    style={m.role === "error"
+                      ? { background: "rgba(239,68,68,0.10)", color: "#b91c1c", border: "1px solid rgba(239,68,68,0.28)" }
+                      : m.role === "assistant"
+                        ? { background: "var(--app-card-solid)", color: "var(--app-text)", border: "1px solid var(--app-border)" }
+                        : undefined}>
+                    {m.isGreeting && (
+                      <span className="block text-[10px] font-bold mb-1" style={{ color: "var(--app-primary)" }}>
+                        Sent automatically — real Greeting text, not generated
+                      </span>
+                    )}
+                    {m.body}
+                    {(m.wantsPhotos || m.wantsBrochure || m.wantsVideos || m.wantsFloorPlan) && (
+                      <span className="block text-[10px] font-bold mt-1.5" style={{ color: "var(--app-primary)" }}>
+                        📎 would send {[m.wantsPhotos && "project photos", m.wantsVideos && "the video", m.wantsFloorPlan && "the floor plan", m.wantsBrochure && "the brochure"].filter(Boolean).join(" and ")} here — not sent in Try It
+                      </span>
+                    )}
+                    {m.handoff && (
+                      <span className="block text-[10px] font-bold mt-1.5" style={{ color: "#b45309" }}>
+                        → would hand this thread to a human
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {trying && (
+                <div className="flex justify-start">
+                  <div className="rounded-2xl rounded-tl-[4px] px-3.5 py-2"
+                    style={{ background: "var(--app-card-solid)", border: "1px solid var(--app-border)" }}>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-app-soft" />
+                  </div>
+                </div>
+              )}
+              <div ref={tryEndRef} />
+            </div>
+
+            <div className="flex items-end gap-2">
+              <input className="input flex-1" placeholder="Ask what a customer would ask…"
+                value={tryInput} onChange={(e) => setTryInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); runTry(); } }} />
+              <button type="button" onClick={runTry} disabled={!tryInput.trim() || trying}
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition disabled:opacity-40"
+                style={{ background: tryInput.trim() ? "var(--app-primary)" : "var(--app-surface-low)" }}>
+                <Send className={`w-4 h-4 ${tryInput.trim() ? "text-white" : "text-app-soft"}`} />
+              </button>
+            </div>
+
+            {tryMeta && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  <span className="px-2.5 py-1 rounded-full font-semibold"
+                    style={tryMeta.projectsInScope === 0 && !tryMeta.usingCustomPrompt
+                      ? { background: "rgba(239,68,68,0.10)", color: "#b91c1c" }
+                      : { background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}>
+                    {tryMeta.usingCustomPrompt
+                      ? "Using your custom prompt"
+                      : `Knows ${tryMeta.projectsInScope} of ${tryMeta.activeProjects} projects`}
+                  </span>
+                  {tryLog.length > 0 && (
+                    <button type="button" onClick={() => setTryLog([])}
+                      className="text-xs font-semibold text-app-soft hover:text-app transition">Clear</button>
+                  )}
+                  <button type="button" onClick={() => setShowPrompt((v) => !v)}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-app-soft hover:text-app transition ml-auto">
+                    <Eye className="w-3.5 h-3.5" />
+                    {showPrompt ? "Hide" : "Show"} what it was told
+                  </button>
+                </div>
+                {showPrompt && (
+                  <pre className="text-[11px] leading-relaxed rounded-xl p-3 overflow-auto whitespace-pre-wrap break-words"
+                    style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)", maxHeight: 280 }}>
+                    {tryMeta.systemPrompt}
+                  </pre>
+                )}
+              </div>
+            )}
+          </div>
+
+          ) : (
+            <CtwaFlowPreviewPanel flow={form.ctwaFlow}
+              projectName={projects.find((p) => form.projectIds.includes(String(p._id)))?.name} />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1346,14 +1336,38 @@ function ChipRowEditor({ label, rows, max, onChange, presets }) {
 // label-only ChipRowEditor. Replaces what used to be three separate fixed
 // Purpose/Budget/Timeline sections with one repeatable card, since the
 // qualifying phase is now an open-ended tenant-authored list.
-function QualifyingQuestionEditor({ question, index, total, allQuestions, onChange, onRemove, onMoveUp, onMoveDown }) {
+function QualifyingQuestionEditor({ question, index, total, allQuestions, open = true, onToggle, onChange, onRemove, onMoveUp, onMoveDown }) {
   const setQ = (patch) => onChange({ ...question, ...patch });
   const presets = MAPS_TO_PRESETS[question.mapsTo];
+  const mapsLabel = (MAPS_TO_OPTIONS.find((o) => o.value === question.mapsTo)?.label || "").replace(/\s*\(.*\)$/, "");
+  if (!open) {
+    return (
+      <div className="flex items-center gap-3 rounded-2xl px-4 py-3" style={{ border: "1px solid var(--app-border)" }}>
+        <span className="w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-extrabold shrink-0"
+          style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>{index + 1}</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-app truncate">{question.questionText || "(untitled question)"}</p>
+          <p className="text-[11px] text-app-soft truncate">
+            {question.options.length ? question.options.map((o) => o.label).join(" · ") : "No buttons yet"}
+            {question.mapsTo !== "none" && mapsLabel ? ` · saves to ${mapsLabel}` : ""}
+          </p>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button type="button" onClick={onMoveUp} disabled={index === 0} title="Move up" aria-label="Move up"
+            className="p-1 rounded-lg text-app-soft hover:text-app transition disabled:opacity-30"><ChevronUp className="w-3.5 h-3.5" /></button>
+          <button type="button" onClick={onMoveDown} disabled={index === total - 1} title="Move down" aria-label="Move down"
+            className="p-1 rounded-lg text-app-soft hover:text-app transition disabled:opacity-30"><ChevronDown className="w-3.5 h-3.5" /></button>
+          <button type="button" onClick={onToggle} className="btn-secondary rounded-full px-3 py-1.5 text-xs font-semibold">Edit</button>
+        </div>
+      </div>
+    );
+  }
   return (
-    <div className="rounded-2xl p-4 space-y-3" style={{ border: "1px solid var(--app-border)" }}>
+    <div className="rounded-2xl p-4 space-y-3" style={{ border: "1px solid rgba(var(--app-primary-rgb),0.45)", background: "rgba(var(--app-primary-rgb),0.04)" }}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-bold uppercase tracking-wide text-app-soft">Question {index + 1} of {total}</p>
+        <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--app-primary)" }}>Question {index + 1} of {total}</p>
         <div className="flex items-center gap-1">
+          {onToggle && <button type="button" onClick={onToggle} className="btn-secondary rounded-full px-3 py-1 text-xs font-semibold mr-1">Done</button>}
           <button type="button" onClick={onMoveUp} disabled={index === 0} title="Move up"
             className="p-1 rounded-lg text-app-soft hover:text-app transition disabled:opacity-30 disabled:hover:text-app-soft">
             <ChevronUp className="w-3.5 h-3.5" />
@@ -1376,12 +1390,12 @@ function QualifyingQuestionEditor({ question, index, total, allQuestions, onChan
       </div>
 
       <div>
-        <label className="text-xs font-semibold text-app-soft block mb-1">Maps to</label>
+        <label className="text-xs font-semibold text-app-soft block mb-1">Save the answer as</label>
         <CustomSelect value={question.mapsTo} onChange={(v) => setQ({ mapsTo: v })} options={MAPS_TO_OPTIONS} style={SELECT_STYLE} />
         <p className="text-[11px] text-app-soft mt-1">
           {question.mapsTo === "none"
-            ? "The answer is just recorded and shown on the lead's Info tab — nothing is forced onto a specific field."
-            : "Only written to this field when the tapped option actually resolves to something real for it — anything else is recorded instead of guessed at, same as the field above."}
+            ? "Kept on the lead's Info tab as it was answered."
+            : "Written to this field on the lead when the answer fits it."}
         </p>
       </div>
 

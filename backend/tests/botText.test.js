@@ -19,6 +19,10 @@ test("number ranges read 'to'", () => {
   assert.equal(noDashes("Possession in 1–3 months"), "Possession in 1 to 3 months");
   assert.equal(noDashes("Budget ₹45 — ₹60 lakh"), "Budget ₹45 to ₹60 lakh");
   assert.equal(noDashes("2—3 BHK"), "2 to 3 BHK");
+  // A unit before the dash is still a range (22 Oct 2026: "₹79L – ₹1Cr" became "₹79L, ₹1Cr").
+  assert.equal(noDashes("1. ₹79L – ₹1Cr\n2. ₹1Cr – ₹1.5Cr"), "1. ₹79L to ₹1Cr\n2. ₹1Cr to ₹1.5Cr");
+  assert.equal(noDashes("1.5 Cr – 2 Cr"), "1.5 Cr to 2 Cr");
+  assert.equal(noDashes("plots – villas"), "plots, villas");
 });
 
 test("a dash used as a bullet becomes a hyphen; one at a line end disappears", () => {
