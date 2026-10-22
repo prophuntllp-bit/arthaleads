@@ -10,6 +10,8 @@ const waMessageSchema = new mongoose.Schema({
   body:            { type: String, default: "" },
   mediaType:       { type: String, enum: ["text", "image", "audio", "document", "sticker", "video"], default: "text" },
   mediaUrl:        { type: String, default: "" },
+  // Meta's id for a file the customer sent (fetched into mediaUrl on arrival).
+  waMediaId:       { type: String },
   status:          { type: String, enum: ["sent", "delivered", "read", "failed"], default: "sent" },
   // The configured Greeting is sent verbatim before the bot ever sees the
   // customer's message — it doesn't count as a real qualifying reply, so it
