@@ -1290,8 +1290,16 @@ async function respondAsBotNow(org, conv, { interactiveId, msgText, isNewConvers
   if (flowAllowed && conv.flowState?.step) {
     const handled = await ctwaFlow.advanceFlow(org, agent, conv, { interactiveId, msgText, inboundAt });
     if (handled) return;
-    // advanceFlow already cleared flowState on a no-match — fall through to
-    // the normal reply below so this message still gets answered.
+    // A side question mid-flow ("where is the plot?"): the AI answers it, then
+    // the flow asks its pending question again, once (ctwaFlowService).
+    const pending = await ctwaFlow.pendingResume(agent, conv._id);
+    if (pending) {
+      await triggerBotReply(org, agent, conv, msgText, { flowPending: pending });
+      await ctwaFlow.resumeFlow(org, agent, conv._id);
+      return;
+    }
+    // Otherwise advanceFlow cleared flowState — fall through to the normal
+    // reply below so this message still gets answered.
   } else if (flowAllowed && !conv.flowState?.step && ctwaFlow.shouldStartFlow(agent, conv, { isNewConversation })) {
     await ctwaFlow.startFlow(org, agent, conv);
     return;
@@ -2383,7 +2391,9 @@ function languageInstruction(lang) {
   }
 }
 
-async function triggerBotReply(org, agent, conversation, inboundText) {
+// opts.flowPending: a button question the flow will ask again right after this
+// reply, so the reply answers the customer and asks nothing itself.
+async function triggerBotReply(org, agent, conversation, inboundText, opts = {}) {
   // Template generation already refuses to run without a key and says so. This
   // path used to sail straight into a 401 from OpenAI and swallow it.
   if (!process.env.OPENAI_API_KEY) {
@@ -2447,6 +2457,7 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
       { role: "user", content: inboundText },
       ...(plan?.send.length ? [{ role: "system", content: `The customer just asked for ${listNames(plan.send)} of ${mediaProject.name}. It is being sent to them right now, along with your reply. Say in one short line that you are sending it. Do not say the team will send it, and do not add any [SHARE_...] tag.` }] : []),
       ...(plan?.missing.length ? [{ role: "system", content: `The customer asked for ${listNames(plan.missing)} of ${mediaProject.name}, but that is not available to send yet. Say warmly that the team will share it shortly, and add [NEEDS_TEAM] at the end.` }] : []),
+      ...(opts.flowPending ? [{ role: "system", content: `Right after your reply, the customer will be asked this again, with buttons: "${opts.flowPending}". So answer their message briefly and helpfully, and do not ask any question of your own or invite them to book or share anything.` }] : []),
       ...(alreadySent.kinds.size ? [{ role: "system", content: `Already sent in this chat today: ${listNames([...alreadySent.kinds])}. They are above in the chat. Do not offer, promise or say you are sending them again, and do not add a [SHARE_...] tag for them. If the customer refers to them, point to what was already shared and move the conversation on.` }] : []),
       // Last, so it outweighs the language of earlier assistant turns.
       { role: "system", content: `Language for this reply: ${languageInstruction(

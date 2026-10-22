@@ -103,6 +103,11 @@ const waConversationSchema = new mongoose.Schema({
       // not a fixed name, plus the fixed backbone steps "menu"/"site_visit".
       step:      { type: String, trim: true },
       startedAt: { type: Date, default: Date.now },
+      // A typed reply that wasn't an answer (ctwaFlowService, 22 Oct 2026):
+      // the question it was set aside at (asked again only once), and whether
+      // that re-ask is still owed after the AI's answer.
+      reasked:          { type: String },
+      resumeAfterReply: { type: Boolean },
     },
     default: undefined,
   },

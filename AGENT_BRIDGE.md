@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+- [claude] 2026-10-22 IST: Button flows read typed replies (budgets like "1.5 cr", AI check for other answers) and re-ask once after answering a side question; every agent. backend/services/ctwaFlowService.js, new utils/flowAnswer.js, routes/whatsappRoutes.js (handleInbound + triggerBotReply opts), models/WaConversation.js (flowState fields), models/AiUsage.js
 - [claude] 2026-10-21 IST: AI lead scoring on top of the rule score (reads last 14 days of WhatsApp + call summaries, skips bulk imports until the customer replies). backend/models/Lead.js, utils/leadScorer.js, new services/aiLeadScore.js, utils/scheduler.js, routes/whatsappRoutes.js (inbound stamp + list scores), routes/enablexRoutes.js (call stamp), routes/leadRoutes.js (/hot, feedback), services/leadService.js (import mark), frontend Dashboard Hot Today
 
 
