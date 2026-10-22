@@ -26,7 +26,7 @@ export default function PublicFooter() {
               />
             </div>
             <p style={{ color: text }} className="text-sm leading-relaxed max-w-xs">
-              India's real estate CRM for developers, brokers &amp; channel partners. Built in Pune.
+              India's real estate CRM for developers, brokers &amp; channel partners. Built in Pune by Vistrow Technologies.
             </p>
             <a
               href="mailto:contact@arthaleads.com"
@@ -138,7 +138,7 @@ export default function PublicFooter() {
         </div>
 
         <div style={{ borderTop: `1px solid ${border}`, paddingTop: "1.5rem" }} className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p style={{ color: text }} className="text-xs">© {new Date().getFullYear()} Arthaleads · Pune, India</p>
+          <p style={{ color: text }} className="text-xs">© {new Date().getFullYear()} Arthaleads, a Vistrow Technologies product · Pune, India</p>
           <a
             href="https://www.vistrow.com"
             target="_blank"
