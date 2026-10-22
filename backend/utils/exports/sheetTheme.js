@@ -89,16 +89,20 @@ function asDate(v) {
   return { date: new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0))), timed: !!m[4] };
 }
 
-// 919958545000 -> "+91 99585 45000", 9958545000 -> "99585 45000". The space
-// also stops Excel flagging every phone as "number stored as text".
+// 919958545000 -> "91 99585 45000", 9958545000 -> "99585 45000". The spaces
+// stop Excel flagging every phone as "number stored as text". No leading "+"
+// (22 Oct 2026): pasted into Google Sheets, "+91 99585 45000" is read as a
+// formula and every phone showed #ERROR!.
 function prettyPhone(v) {
   const s = String(v ?? "").trim();
   const d = s.replace(/\D/g, "");
   if (!/^\+?[\d\s\-()]+$/.test(s) || d.length < 10) return s;
   if (d.length === 10) return `${d.slice(0, 5)} ${d.slice(5)}`;
-  if (d.length === 12 && d.startsWith("91")) return `+91 ${d.slice(2, 7)} ${d.slice(7)}`;
-  if (d.startsWith("0")) return `${d.slice(0, d.length - 10)} ${d.slice(-10, -5)} ${d.slice(-5)}`;
-  return `+${d.slice(0, d.length - 10)} ${d.slice(-10, -5)} ${d.slice(-5)}`;
+  if (d.length === 12 && d.startsWith("91")) return `91 ${d.slice(2, 7)} ${d.slice(7)}`;
+  if (d.length === 11 && d.startsWith("0")) return `0${d.slice(1, 6)} ${d.slice(6)}`;
+  // Other countries: where their code ends can't be told without the "+", so
+  // just group in threes (971 501 234 567); still text, never a formula.
+  return d.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
 function sourcePill(cell, source) {
