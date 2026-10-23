@@ -12,7 +12,6 @@ import 'core/theme_state.dart';
 import 'screens/login_screen.dart';
 import 'screens/shell.dart';
 import 'widgets/app_splash.dart';
-import 'widgets/skeleton.dart';
 import 'widgets/update_gate.dart';
 
 void main() async {
@@ -79,24 +78,12 @@ class _AuthGate extends StatelessWidget {
     final auth = context.watch<AuthState>();
 
     if (auth.restoring) {
-      // A returning user is heading for the dashboard, so show its skeleton
-      // for the /auth/me wait — the launch then reads as one continuous load
-      // into the real dashboard rather than spinner, then skeleton, then
-      // content. Before the stored token is read we cannot know where this
-      // lands, but that phase is a local storage call and passes in a frame
-      // or two, so it carries the launch mark rather than flashing the
-      // wrong layout -- which also means the native splash hands over to an
-      // identical screen instead of to a bare rectangle.
-      return Scaffold(
-        // SafeArea because this stands in for the Shell, which normally
-        // supplies an app bar — without it the first card slides under the
-        // status bar and looks clipped.
-        body: SafeArea(
-          child: auth.restoringKnownSession
-              ? const DashboardSkeleton()
-              : const AppSplash(),
-        ),
-      );
+      // Only while the stored sign-in is read, or on the one launch with no
+      // saved profile (AuthState._openFromSaved): every other launch opens
+      // the app at once and Home fills each card in place from its own
+      // saved data (23 Oct 2026: the generic dashboard placeholder that sat
+      // here for the /auth/me wait is gone).
+      return const Scaffold(body: SafeArea(child: AppSplash()));
     }
     if (auth.orgBlockReason != null) {
       return _OrgBlockedScreen(reason: auth.orgBlockReason!);
