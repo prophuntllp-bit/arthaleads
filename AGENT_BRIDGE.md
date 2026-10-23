@@ -102,6 +102,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+- [claude] 2026-10-23 IST: mobile launch: signed-in profile saved on the phone (SharedPreferences auth_profile_v1, core/auth_state.dart), so returning users open straight into the app; /auth/me runs right after, 401 signs out and clears it, offline keeps the saved profile. main.dart gate shows AppSplash only when nothing is saved; widgets/skeleton.dart deleted (unused). staging d0321c3c, main 57882184. Checked on a phone (Home with real numbers 0.6 s after launch). Not released.
+
 - [claude] 2026-10-23 IST: mobile placeholders: badges and tinted tiles drawn in the card colour while loading (widgets/card_skeleton.dart, skeletonizer containersColor). staging fd0ac633, main 74cac5fa. Checked on a phone. Not released.
 
 - [claude] 2026-10-23 IST: mobile loading placeholders (staging 3a87699a, main 97bbaffb): new widgets/card_skeleton.dart (skeletonizer ^3.0.0). Leads, Follow-ups, Dump, Calls, WhatsApp chats, Tasks, Projects, Developers, Invoices, Team, Bookings, Pipeline, Attendance, Performance now draw their REAL cards with sample rows as shimmer while loading (taps blocked). Home/Reports load section by section and open from a per-user SharedPreferences cache (dash_cache_v1_<userId>, last30days only). Checked on a phone. Not released.
