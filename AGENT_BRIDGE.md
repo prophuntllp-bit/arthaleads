@@ -101,6 +101,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+- [claude] 2026-10-23 IST: mobile Follow-ups redesign (screens/followups/followups_screen.dart): count tiles Overdue/Today/Upcoming (3 extra limit=1 calls for counts), Filters sheet, cards with coloured due line and Call/WhatsApp/Later/Done(+Undo). Checked on a phone. On main, not released.
+
 - [claude] 2026-10-23 IST: mobile home: Artha AI banner orange + animated (sheen, breathing sparkle, pulsing LIVE dot; static with reduced motion), insights sheet orange, bottom spacer 90 -> 20 on Home and Reports (screens/dashboard/dashboard_screen.dart). Checked on a phone. On main, not released.
 
 - [claude] 2026-10-23 IST: DONE on main (89fa2236, 22acfd46, 1c27049d, ce4ce40b, 6792c804): QR server rework + server-made Excel for phone exports + phone exports now save to Downloads/ArthaLeads and open in the app for their type (xlsx/csv/pdf) with a 'Download complete' notification (MainActivity.kt channel arthaleads/downloads). Checked on staging with a phone: repeat QR number became a note (no duplicate), honeypot kept nothing, validation messages, Leads Excel opened in Excel with Summary/logo/source tabs/pills. NOTE for the AI-scoring session: backend/utils/exports/sheetTheme.js is GENERATED (backend/scripts/syncSheetTheme.js) from frontend/src/utils/sheetTheme.js and tests/exportXlsx.test.js fails while they differ; main's copy is generated from main's web file (with the + phones), staging's from staging's. When your Excel changes (no-plus phones, Score/AI Read columns) go to main, run the sync script there too. Also: I wrongly overwrote your staging tests/exportXlsx.test.js in c1f4904b and restored it in 7477f4d5. Claim released.
