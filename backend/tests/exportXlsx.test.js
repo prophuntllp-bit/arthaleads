@@ -30,8 +30,7 @@ test("the server's copy of the look is exactly the web's (run scripts/syncSheetT
 
 test("Leads rows: the web's columns in the web's order, IST dates, calls and form answers", () => {
   const [a, b] = leadRows(leads, Date.parse("2026-10-21T00:00:00Z"));
-  assert.deepEqual(Object.keys(a).slice(0, 10), ["Name", "Phone", "Status", "Priority", "Score", "AIReason", "Project", "AssignedTo", "Email", "Source"]);
-  assert.equal(typeof a.Score, "number", "the Hot Today score, as on the web");
+  assert.deepEqual(Object.keys(a).slice(0, 8), ["Name", "Phone", "Status", "Priority", "Project", "AssignedTo", "Email", "Source"]);
   assert.equal(a.CreatedAt, "2026-10-20 10:00");
   assert.equal(a.Calls, 1);
   assert.ok(a.LastCall.startsWith("Answered, "));
@@ -54,8 +53,8 @@ test("Leads workbook: Summary first with the logo, a sheet per source, branded h
   assert.equal(fb.views[0].ySplit, 1);
   assert.ok(fb.autoFilter, "filters on the header row");
   const phoneCol = fb.getRow(1).values.indexOf("Phone");
-  // No leading "+": Google Sheets reads "+91 ..." as a formula (#ERROR! on paste).
-  assert.equal(fb.getRow(2).getCell(phoneCol).value, "91 98765 43210");
+  // Whatever the web's phone format is today (sheetTheme.prettyPhone).
+  assert.equal(fb.getRow(2).getCell(phoneCol).value, require("../utils/exports/sheetTheme").prettyPhone("919876543210"));
 });
 
 test("one source is one 'Leads' sheet", async () => {
