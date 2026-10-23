@@ -118,6 +118,26 @@ async function sendProviderMessage(org, to, body, template = null) {
 // until the reply arrives (Meta clears it on the reply, or after 25 seconds).
 // Without it a bot reply took 4 to 8 seconds of silence (owner, 23 Oct 2026).
 // Meta only; never waited on, never fails anything.
+// A message that only acknowledges ("ok", "thanks", "👍", "theek hai").
+const ACK_WORD = "(?:o+k+|okay+|okie|okey|k+|thanks?|thank\\s*(?:you|u)|thanku|thx|ty|done|sure|fine|great|nice|cool|alright|perfect|got\\s*it|noted|haan|ha|ji|ho|theek\\s*hai|thik\\s*hai|ach+ha|acha|bara|sir|madam|mam|ma'am|bhai|👍|🙏|👌|✅|😊|🙂)";
+const ACK_RE = new RegExp(`^${ACK_WORD}(?:[\\s,.!]+${ACK_WORD})*[\\s.!\\u{1F3FB}-\\u{1F3FF}]*$`, "iu");
+/**
+ * True when the customer only acknowledged something and the bot has nothing
+ * left to say: their message is "ok" / "thanks" / "👍" and the bot's last
+ * message asked nothing (no question mark, no buttons). 23 Oct 2026: every
+ * "Ok" after a finished chat got another goodbye, three in a row. When the
+ * bot's last message was a question, "ok" is an answer and is replied to.
+ */
+async function isQuietAck(conv, { msgType, msgText, interactiveId }) {
+  if (interactiveId || msgType !== "text" || conv.flowState?.step) return false;
+  if (!ACK_RE.test(String(msgText || "").trim())) return false;
+  const lastOut = await WaMessage.findOne({ conversationId: conv._id, direction: "outbound" })
+    .sort({ timestamp: -1 }).select("body interactiveOptions").lean();
+  if (!lastOut) return false; // nothing said yet: greet them
+  if (lastOut.interactiveOptions?.length) return false;
+  return !String(lastOut.body || "").includes("?");
+}
+
 function sendTypingIndicator(org, msgId) {
   const { provider, apiKey, phoneNumberId } = org.whatsapp || {};
   if (provider !== "meta" || !msgId || !apiKey || !phoneNumberId) return;
@@ -1170,7 +1190,10 @@ async function handleInbound(org, parsed) {
     waMediaId: mediaId || undefined,
     status: "delivered", timestamp: inboundTimestamp,
   });
-  if (conv.botEnabled && !isPlaceholderBody(msgText)) sendTypingIndicator(org, msgId);
+  // "ok" / "thanks" after the bot has finished talking: no reply, so no
+  // "typing..." either (it would show and then nothing come).
+  const quietAck = conv.botEnabled ? await isQuietAck(conv, { msgType, msgText, interactiveId }).catch(() => false) : false;
+  if (conv.botEnabled && !quietAck && !isPlaceholderBody(msgText)) sendTypingIndicator(org, msgId);
 
   // The photo / voice note / file itself, copied into our storage so the team
   // can see it (22 Oct 2026: every customer photo was an empty bubble, and
@@ -1276,7 +1299,7 @@ async function handleInbound(org, parsed) {
     try { testRun = await maybeRestartTestRun(org, conv, { clickRef, msgText }); }
     catch (err) { console.error("[WhatsApp Bot] test restart check failed:", err.message); }
   }
-  if (conv.botEnabled && botCanRead) {
+  if (conv.botEnabled && botCanRead && (!quietAck || testRun)) {
     // No sinceTimestamp here. That guard reads "has the bot said anything
     // since this message arrived?", which is true for the second of two quick
     // taps (the reply to the FIRST tap goes out after the second arrived), so
