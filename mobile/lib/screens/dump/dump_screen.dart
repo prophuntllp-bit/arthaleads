@@ -7,8 +7,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 
+import '../../core/file_output.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/auth_state.dart';
@@ -220,10 +220,8 @@ class _DumpScreenState extends State<DumpScreen> {
     ];
     final csv = const ListToCsvConverter().convert(rows);
     final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    await Share.shareXFiles([
-      XFile.fromData(Uint8List.fromList(utf8.encode(csv)),
-          name: 'arthaleads-dump-leads-$dateStr.csv', mimeType: 'text/csv'),
-    ]);
+    if (!mounted) return;
+    await FileOutput.saveAndOpen(context, Uint8List.fromList(utf8.encode(csv)), 'arthaleads-dump-leads-$dateStr.csv', 'text/csv');
   }
 
   bool _exportingXlsx = false;
@@ -238,7 +236,7 @@ class _DumpScreenState extends State<DumpScreen> {
     final suffix = _selected.isNotEmpty ? '-selected-${_selected.length}' : '';
     setState(() => _exportingXlsx = true);
     try {
-      await XlsxExport.shareRows({
+      await XlsxExport.saveRows(context, {
         'kind': 'dump',
         'leads': [for (final l in source) {for (final k in keep) if (l[k] != null) k: l[k]}],
         'filename': 'arthaleads-dump-leads$suffix-$dateStr',

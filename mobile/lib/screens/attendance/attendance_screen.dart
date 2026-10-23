@@ -5,9 +5,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/file_output.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
@@ -249,13 +249,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         },
       );
       final bytes = res.data as List<int>;
-      await Share.shareXFiles([
-        XFile.fromData(
-          Uint8List.fromList(bytes),
-          name: 'attendance.csv',
-          mimeType: 'text/csv',
-        ),
-      ]);
+      if (!mounted) return;
+      await FileOutput.saveAndOpen(context, Uint8List.fromList(bytes), 'attendance.csv', 'text/csv');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -9,9 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/file_output.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
@@ -817,7 +817,8 @@ class LeadsScreenState extends State<LeadsScreen> {
       // Excel: the server makes the file in the web's look (Summary sheet,
       // a sheet per source, orange header, filters, pills), same columns.
       if (asExcel) {
-        await XlsxExport.shareLeads(
+        await XlsxExport.saveLeads(
+          context,
           _selected.isNotEmpty
               ? {'ids': _selected.join(','), 'filtersText': '${_selected.length} selected leads'}
               : {
@@ -854,13 +855,8 @@ class LeadsScreenState extends State<LeadsScreen> {
       final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
       final rows = <List<dynamic>>[_exportHeader, ...source.map(_exportRow)];
       final csv = const ListToCsvConverter().convert(rows);
-      await Share.shareXFiles([
-        XFile.fromData(
-          Uint8List.fromList(utf8.encode(csv)),
-          name: 'arthaleads-leads-$date.csv',
-          mimeType: 'text/csv',
-        ),
-      ]);
+      if (!mounted) return;
+      await FileOutput.saveAndOpen(context, Uint8List.fromList(utf8.encode(csv)), 'arthaleads-leads-$date.csv', 'text/csv');
     } catch (e) {
       _snack(ApiClient.errorMessage(e, 'Export failed'), error: true);
     } finally {

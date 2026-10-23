@@ -8,8 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
-import 'package:share_plus/share_plus.dart';
 
+import '../../core/file_output.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
@@ -213,13 +213,8 @@ class _CreditsPageState extends State<CreditsPage> {
       final csv = const ListToCsvConverter().convert(data);
       final bytes = Uint8List.fromList(utf8.encode('﻿$csv'));
       final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      await Share.shareXFiles([
-        XFile.fromData(
-          bytes,
-          name: 'whatsapp-credits-statement-${_rangeSlug(_stmtRange)}-$today.csv',
-          mimeType: 'text/csv',
-        ),
-      ]);
+      if (!mounted) return;
+      await FileOutput.saveAndOpen(context, bytes, 'whatsapp-credits-statement-${_rangeSlug(_stmtRange)}-$today.csv', 'text/csv');
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart' show Response;
 import 'package:flutter/material.dart';
-import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/file_output.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
@@ -214,7 +214,8 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           ? inv['customInvoiceNumber']
           : inv['invoiceNumber'];
       final customer = (inv['customerName'] as String? ?? 'invoice').replaceAll(RegExp(r'\s+'), '_');
-      await Printing.sharePdf(bytes: bytes, filename: 'Invoice-$number-$customer.pdf');
+      if (!mounted) return;
+      await FileOutput.saveAndOpen(context, bytes, 'Invoice-$number-$customer.pdf', 'application/pdf');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(

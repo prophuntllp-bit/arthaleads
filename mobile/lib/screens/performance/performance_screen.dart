@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/file_output.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/auth_state.dart';
@@ -576,10 +576,13 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
           build: (context) => pdfBody(),
         ),
       );
-      await Printing.sharePdf(
-        bytes: await document.save(),
-        filename:
-            'Arthaleads-Performance-${DateFormat('yyyy-MM-dd').format(DateTime.now())}.pdf',
+      final pdfBytes = await document.save();
+      if (!mounted) return;
+      await FileOutput.saveAndOpen(
+        context,
+        pdfBytes,
+        'Arthaleads-Performance-${DateFormat('yyyy-MM-dd').format(DateTime.now())}.pdf',
+        'application/pdf',
       );
     } catch (error) {
       if (mounted) {
