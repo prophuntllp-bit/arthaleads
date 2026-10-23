@@ -1,129 +1,88 @@
-// Rule-based lead scoring — pure function, no DB calls.
-// Returns an integer 0–100 representing lead "hotness".
+// Lead score: how likely a lead is to buy, 0 to 100, from what the CUSTOMER
+// said and did, plus what the team recorded. Pure function, no DB calls.
 //
-// Score buckets:
-//   80–100 → "Hot"  🔥
-//   60–79  → "Warm" 🌡️
-//   40–59  → "Lukewarm"
-//   0–39   → "Cold"
+// Rebuilt 23 Oct 2026 (owner: "giving points just for some activity is wrong";
+// a lead that only sent voice notes saying nothing scored 60). No points for
+// sending a message, for being new, for the source, or for the default
+// "New" / "Medium". The parts:
 //
-// Factors (raw total clamped to 0–100):
-//   Status 0–25, Priority 0–20, Budget max 0–15, Booking 0–20,
-//   Site visit done 0–10, Activities 0–10, Notes 0–5, Follow-up due 0–15,
-//   Customer active recently 0–20, New lead 0–10, First contacted 0–10,
-//   Source warmth 0–5, Idle for weeks −6 to −20,
-//   AI read of the last 14 days of chat and calls −20 to +20 (aiAdjust below).
+//   Button flow (lead.engagement, written by ctwaFlowService):
+//     answered budget +8, answered purpose +4,
+//     timeline within 30 days +12, 1-3 months +8, 3-6 months +4,
+//     closing: booked a site visit +20, asked for the advisor / a call +15,
+//     registered for the event +10, "Not now" -10.
+//   The chat (lead.aiScore v2, services/aiLeadScore.js): strong buying intent
+//     +20 to +30, interested +10 to +20, nothing of substance 0, not
+//     interested -30; only when the AI is at least 60% sure and quotes the
+//     customer. Lapses 14 days after the activity it read.
+//   Gone quiet: the two parts above x0.7 after 7 days without a customer
+//     message, x0.4 after 14.
+//   The team: status Contacted +5, Site Visit +15, Negotiation +20,
+//     site visit done +10, booked +20, follow-up due soon up to +10.
+//   Closed Lost is 0.
 //
+// Score buckets: 80+ Hot, 60+ Warm, 40+ Lukewarm, below 40 Cold.
 // Every screen scores from the same lead fields, so the Dashboard, the
 // WhatsApp list, Artha and the Excel download always agree.
 
 const AI_WINDOW_MS = 14 * 86400000;
+const DAY = 86400000;
 
-// The AI's adjustment (services/aiLeadScore.js), while the activity it read
-// is under 14 days old. Older than that it lapses: the lead is back to its
-// plain rule score.
-function aiAdjust(lead, now = Date.now()) {
+// The chat's part, while the activity the AI read is under 14 days old. Only
+// reads from 23 Oct 2026 on (v 2) count: earlier ones scored activity.
+function aiPoints(lead, now = Date.now()) {
   const a = lead.aiScore;
-  if (!a || !a.adjust || !a.signalAt) return 0;
+  if (!a || a.v !== 2 || !a.signalAt) return 0;
   if (now - new Date(a.signalAt).getTime() > AI_WINDOW_MS) return 0;
-  return Math.max(-20, Math.min(20, a.adjust));
+  return Math.max(-30, Math.min(30, Number(a.points) || 0));
 }
+const aiAdjust = aiPoints; // older name, kept for callers
 function aiFresh(lead, now = Date.now()) {
   const a = lead.aiScore;
-  return !!(a && a.reason && a.signalAt && now - new Date(a.signalAt).getTime() <= AI_WINDOW_MS);
+  return !!(a && a.v === 2 && a.reason && a.signalAt && now - new Date(a.signalAt).getTime() <= AI_WINDOW_MS);
+}
+
+function timelinePoints(label) {
+  const t = String(label || "").toLowerCase();
+  if (!t) return 0;
+  if (/(30|thirty)\s*days|immediate|this month|within a month|1 month|asap|urgent/.test(t)) return 12;
+  if (/1\s*(-|–|to)\s*3/.test(t)) return 8;
+  if (/3\s*(-|–|to)\s*6/.test(t)) return 4;
+  return 0;
+}
+const CLOSING_POINTS = { site_visit: 20, handoff: 15, register: 10, declined: -10 };
+
+/** The score's parts, for screens that explain it. */
+function scoreParts(lead, now = Date.now()) {
+  const e = lead.engagement || {};
+  const flow = (e.flow?.budget ? 8 : 0) + (e.flow?.purpose ? 4 : 0) + timelinePoints(e.flow?.timeline);
+  const closing = CLOSING_POINTS[e.closing] || 0;
+  const chat = aiPoints(lead, now);
+
+  // Gone quiet: what they said counts for less as it ages.
+  const lastSaid = [lead.lastCustomerSignalAt, e.at].filter(Boolean).map((d) => new Date(d).getTime()).sort((a, b) => b - a)[0];
+  const idleDays = lastSaid ? (now - lastSaid) / DAY : 0;
+  const fade = idleDays > 14 ? 0.4 : idleDays > 7 ? 0.7 : 1;
+  let conversation = flow + closing + chat;
+  if (conversation > 0) conversation = conversation * fade;
+
+  let team = ({ Contacted: 5, "Site Visit": 15, Negotiation: 20 })[lead.status] || 0;
+  if (lead.siteVisitDone) team += 10;
+  if (lead.booking === "Booked") team += 20;
+  if (lead.followUpDate) {
+    const daysUntil = (new Date(lead.followUpDate) - now) / DAY;
+    if (daysUntil <= 0 && daysUntil > -7) team += 10;
+    else if (daysUntil > 0 && daysUntil <= 1) team += 8;
+    else if (daysUntil > 1 && daysUntil <= 3) team += 5;
+    else if (daysUntil > 3 && daysUntil <= 7) team += 3;
+  }
+
+  const total = lead.status === "Closed Lost" ? 0 : Math.max(0, Math.min(100, Math.round(conversation + team)));
+  return { total, flow, closing, chat, fade, team };
 }
 
 function scoreLead(lead) {
-  let s = 0;
-
-  // Status (higher pipeline stage = warmer)
-  const statusPts = { Negotiation: 25, "Site Visit": 20, Contacted: 15, New: 8, "Closed Won": 0, "Closed Lost": 0 };
-  s += statusPts[lead.status] || 0;
-
-  // Priority
-  const priorityPts = { Hot: 20, High: 15, Medium: 8, Low: 3 };
-  s += priorityPts[lead.priority] || 0;
-
-  // Budget max in INR
-  const budgetMax = lead.budget?.max || 0;
-  if (budgetMax >= 1e7) s += 15;        // 1 Cr+
-  else if (budgetMax >= 5e6) s += 10;   // 50 L+
-  else if (budgetMax >= 2e6) s += 5;    // 20 L+
-
-  // Booking (strong buying signal)
-  if (lead.booking && !["", "Not Interested", "Not Reachable", "Low Budget"].includes(lead.booking)) {
-    s += lead.booking === "Booked" ? 20 : 10;
-  }
-
-  // Site visit completed
-  if (lead.siteVisitDone) s += 10;
-
-  // Engagement depth
-  const actCount = (lead.activities || []).length;
-  if (actCount >= 5) s += 10;
-  else if (actCount >= 2) s += 5;
-
-  const noteCount = (lead.notes || []).length;
-  if (noteCount >= 3) s += 5;
-  else if (noteCount > 0) s += 2;
-
-  // Follow-up urgency. A follow-up missed by months is a forgotten task, not
-  // a hot lead, so the boost fades once it is more than a week overdue.
-  if (lead.followUpDate) {
-    const daysUntil = (new Date(lead.followUpDate) - Date.now()) / 86400000;
-    if (daysUntil <= -30) s += 2;
-    else if (daysUntil <= -7) s += 6;
-    else if (daysUntil <= 0) s += 15;  // overdue this week → highest urgency
-    else if (daysUntil <= 1) s += 12;  // tomorrow
-    else if (daysUntil <= 3) s += 8;   // this few days
-    else if (daysUntil <= 7) s += 4;   // this week
-  }
-
-  // The customer wrote back recently (WhatsApp). The strongest live signal
-  // there is: they are in the conversation right now.
-  // _lastReplyAt (Hot Today's WhatsApp lookup) or the lead's own record of
-  // when the customer last wrote or talked on a call.
-  const replyAt = [lead._lastReplyAt, lead.lastCustomerSignalAt].filter(Boolean).map((d) => new Date(d)).sort((a, b) => b - a)[0];
-  if (replyAt) {
-    const hrs = (Date.now() - replyAt) / 3600000;
-    if (hrs <= 24) s += 20;
-    else if (hrs <= 72) s += 12;
-    else if (hrs <= 168) s += 6;
-  }
-
-  // A lead that just arrived is worth more than one sitting for months.
-  if (lead.createdAt) {
-    const days = (Date.now() - new Date(lead.createdAt)) / 86400000;
-    if (days <= 1) s += 10;
-    else if (days <= 3) s += 6;
-    else if (days <= 7) s += 3;
-  }
-
-  // Nothing has happened on it for weeks: cool it down, whatever it scored
-  // on paper months ago.
-  const lastTouch = replyAt && replyAt > new Date(lead.updatedAt || 0)
-    ? replyAt : lead.updatedAt;
-  if (lastTouch) {
-    const idle = (Date.now() - new Date(lastTouch)) / 86400000;
-    if (idle > 60) s -= 20;
-    else if (idle > 30) s -= 12;
-    else if (idle > 14) s -= 6;
-  }
-
-  // Recency of first contact (fresh leads respond better)
-  if (lead.firstContactedAt) {
-    const hoursAgo = (Date.now() - new Date(lead.firstContactedAt)) / 3600000;
-    if (hoursAgo <= 24) s += 10;
-    else if (hoursAgo <= 48) s += 5;
-  }
-
-  // Source warmth (WhatsApp = highest intent)
-  if (lead.source === "WhatsApp") s += 5;
-  else if (["Facebook", "Google"].includes(lead.source)) s += 3;
-
-  s += aiAdjust(lead);
-
-  return Math.max(0, Math.min(Math.round(s), 100));
+  return scoreParts(lead).total;
 }
 
 function scoreLabel(score) {
@@ -152,7 +111,7 @@ function nextBestAction(lead, score) {
 function aiSummary(lead) {
   if (!aiFresh(lead)) return null;
   const a = lead.aiScore;
-  return { level: a.level, reason: a.reason, adjust: aiAdjust(lead), signals: a.signals || [], scoredAt: a.scoredAt, wrong: !!a.feedback?.wrong };
+  return { level: a.level, intent: a.intent, reason: a.reason, adjust: aiPoints(lead), points: aiPoints(lead), evidence: a.evidence || [], signals: a.signals || [], scoredAt: a.scoredAt, wrong: !!a.feedback?.wrong };
 }
 
-module.exports = { scoreLead, scoreLabel, nextBestAction, aiSummary, aiAdjust };
+module.exports = { scoreLead, scoreParts, scoreLabel, nextBestAction, aiSummary, aiAdjust, aiPoints };

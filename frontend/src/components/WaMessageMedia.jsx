@@ -41,7 +41,13 @@ export default function WaMessageMedia({ msg }) {
     return <video src={url} controls preload="metadata" playsInline className="rounded-xl mb-1.5 max-w-full max-h-64 bg-black" />;
   }
   if (type === "audio") {
-    return <audio src={url} controls preload="metadata" className="mb-1.5 w-60 max-w-full" />;
+    return (
+      <>
+        <audio src={url} controls preload="metadata" className="mb-1.5 w-60 max-w-full" />
+        {/* What was said, written out on arrival (backend utils/transcribe.js). */}
+        {msg.transcript && <p className="mb-1 max-w-60 text-[12px] italic opacity-80">&ldquo;{msg.transcript}&rdquo;</p>}
+      </>
+    );
   }
   if (type === "document") {
     return (

@@ -10,6 +10,8 @@ const waMessageSchema = new mongoose.Schema({
   body:            { type: String, default: "" },
   mediaType:       { type: String, enum: ["text", "image", "audio", "document", "sticker", "video"], default: "text" },
   mediaUrl:        { type: String, default: "" },
+  // A voice note as text (utils/transcribe.js, 23 Oct 2026).
+  transcript:      { type: String, default: undefined },
   // Meta's id for a file the customer sent (fetched into mediaUrl on arrival).
   waMediaId:       { type: String },
   status:          { type: String, enum: ["sent", "delivered", "read", "failed"], default: "sent" },

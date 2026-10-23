@@ -3,9 +3,12 @@
 // The rule score (utils/leadScorer.js) only sees filled-in fields. This adds
 // what is in the WhatsApp chat and the call summaries: "wants a visit on
 // Saturday, loan approved" or "just browsing, budget far below the project".
-// The AI returns hot / warm / cold, a confidence and one plain reason; that
-// moves the rule score by at most 20 points (10 when unsure). It never
-// assigns, archives or drops a lead: it only reorders who to call first.
+// Since 23 Oct 2026 (owner: "the points should come from the conversation")
+// the AI names the customer's intent and quotes the customer's own messages
+// it judged from; that is the chat's share of the score (see INTENT_POINTS),
+// counted only when it is at least 60% sure and the quotes are really in the
+// chat. It never assigns, archives or drops a lead: it only reorders who to
+// call first.
 //
 // Owner rules (21 Oct 2026):
 //   - only leads whose CUSTOMER did something in the last 14 days, and only
@@ -33,7 +36,12 @@ const DAILY_LIMIT = Number(process.env.AI_SCORE_DAILY_LIMIT ?? 300); // per comp
 const PER_RUN = 60;
 const MODEL = process.env.AI_SCORE_MODEL || "gpt-4o-mini";
 const MAX_MESSAGES = 40;
-const ADJUST = { hot: 20, warm: 5, cold: -20 };
+// What the customer's own messages show, and what that is worth. "strong" and
+// "interested" scale with how sure the AI is (60% gets the low end).
+const INTENT_POINTS = { strong: [20, 30], interested: [10, 20], neutral: [0, 0], not_interested: [-30, -30], vendor: [0, 0] };
+const INTENT_LEVEL = { strong: "hot", interested: "warm", neutral: "cold", not_interested: "cold", vendor: "cold" };
+const MIN_CONFIDENCE = 0.6;
+const VERSION = 2;
 const SIGNALS = ["visit_wanted", "visit_booked", "budget_confirmed", "loan_ready", "timeline_soon", "decision_maker",
   "asked_price", "asked_documents", "comparing_options", "price_objection", "just_browsing", "not_interested", "wrong_budget", "no_reply_to_questions"];
 const CLOSED = ["Closed Won", "Closed Lost"];
@@ -76,10 +84,14 @@ async function evidence(lead, now = Date.now()) {
   const convs = await WaConversation.find({ orgId: lead.orgId, leadId: lead._id }).select("_id").lean();
   const msgs = convs.length ? await WaMessage.find({
     conversationId: { $in: convs.map((c) => c._id) }, timestamp: { $gte: since },
-  }).sort({ timestamp: -1 }).limit(MAX_MESSAGES).select("direction sender body mediaType timestamp").lean() : [];
-  const chat = msgs.reverse()
-    .filter((m) => m.body || m.mediaType !== "text")
-    .map((m) => `${m.direction === "inbound" ? "Customer" : m.sender === "bot" ? "Assistant" : "Sales team"}: ${m.body ? scrub(m.body) : `(${m.mediaType})`}`);
+  }).sort({ timestamp: -1 }).limit(MAX_MESSAGES).select("direction sender body transcript mediaType timestamp").lean() : [];
+  msgs.reverse();
+  const said = (m) => m.transcript ? `(voice note) ${scrub(m.transcript)}` : m.body ? scrub(m.body) : `(${m.mediaType})`;
+  const chat = msgs
+    .filter((m) => m.body || m.transcript || m.mediaType !== "text")
+    .map((m) => `${m.direction === "inbound" ? "Customer" : m.sender === "bot" ? "Assistant" : "Sales team"}: ${said(m)}`);
+  // The customer's own words, to check the AI's quotes against.
+  const customerText = msgs.filter((m) => m.direction === "inbound").map((m) => m.transcript || m.body || "").join("\n");
 
   const calls = (lead.activities || [])
     .filter((a) => a.type === "called" && a.createdAt && new Date(a.createdAt) >= since && (a.meta?.summary || a.meta?.intent))
@@ -102,23 +114,26 @@ async function evidence(lead, now = Date.now()) {
     lead.siteVisitDone ? "Site visit: done" : lead.siteVisitDate ? "Site visit: scheduled" : "",
     lead.booking ? `Outcome so far: ${lead.booking}` : "",
   ].filter(Boolean).join("\n");
-  return { chat, calls, voice, fields };
+  return { chat, calls, voice, fields, customerText };
 }
 
 function promptFor(ev) {
   return [
     { role: "system", content:
-`You judge how likely a real estate lead in India is to buy soon, from the last ${WINDOW_DAYS} days of their WhatsApp chat and calls. Chats may be in English, Hindi, Marathi or Hinglish.
-Answer only with JSON: {"level":"hot"|"warm"|"cold","confidence":0 to 1,"reason":"...","signals":[...],"nextStep":"..."}
-- hot: clear buying intent now (wants a visit, asks price/payment/documents, budget fits, timeline soon).
-- warm: interested but undecided, or too little said to tell.
-- cold: just browsing, not interested, budget far off, or stopped answering questions.
-- reason: one short sentence in plain English for a sales agent, quoting what the customer actually said or did. No dashes as punctuation.
+`You read the last ${WINDOW_DAYS} days of a real estate lead's WhatsApp chat and calls (India; English, Hindi, Marathi or Hinglish) and judge what the CUSTOMER's own messages show. Messages from the Assistant or Sales team, and the ad's pre-filled first message, are not the customer's intent.
+Answer only with JSON: {"intent":"strong"|"interested"|"neutral"|"not_interested"|"vendor","confidence":0 to 1,"evidence":["..."],"reason":"...","signals":[...],"nextStep":"..."}
+- strong: the customer asks for a site visit, price, payment plan, availability, documents or booking, or says they want to buy soon.
+- interested: the customer asks real questions about the project (location, size, amenities, possession) or answers the questions with intent.
+- neutral: only greetings, "ok", "thanks", emojis, an unclear voice note, or nothing of substance. Activity alone is NOT interest.
+- not_interested: says they are not interested, bought elsewhere, wrong number, or the budget is far off.
+- vendor: selling their own services (marketing, ads, leads, software), not buying.
+- evidence: up to 3 short quotes copied exactly from the Customer's messages that show this. Empty for neutral.
+- reason: one short sentence for a sales agent, in plain English. No dashes as punctuation.
 - signals: only from ${JSON.stringify(SIGNALS)}.
 - nextStep: what the agent should do next, at most 8 words.
-- Judge only from what is below. When there is little to go on, say warm with low confidence.` },
+- When there is little to go on, answer neutral.` },
     { role: "user", content:
-`Lead details:
+`Lead details (filled in by forms or the team; not the customer's words in the chat):
 ${ev.fields}
 
 WhatsApp (oldest first):
@@ -129,21 +144,32 @@ ${[...ev.calls, ...ev.voice].join("\n") || "(no calls)"}` },
   ];
 }
 
+const norm = (t) => String(t || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+
 // The model's answer, checked. Anything malformed is null (the lead keeps its
-// rule score and is not retried until something new happens).
-function parse(text) {
+// score without the chat's share and is not retried until something new
+// happens). Points only when the AI is sure enough and at least one quote is
+// really in the customer's messages (calls count as their own evidence).
+function parse(text, ev = {}) {
   let j;
   try { j = JSON.parse(String(text || "").replace(/^```(json)?|```$/g, "").trim()); } catch { return null; }
-  const level = String(j.level || "").toLowerCase();
-  if (!(level in ADJUST)) return null;
+  const intent = String(j.intent || "").toLowerCase();
+  if (!(intent in INTENT_POINTS)) return null;
   const confidence = Math.max(0, Math.min(1, Number(j.confidence) || 0));
   const clean = (s, n) => String(s || "").replace(/\s*[–—]\s*/g, ", ").replace(/\s+/g, " ").trim().slice(0, n);
   const reason = clean(j.reason, 200);
   if (!reason) return null;
-  // Unsure answers count half: one odd chat can't wreck the ranking.
-  const adjust = Math.round(ADJUST[level] * (confidence >= 0.6 ? 1 : 0.5));
+  const said = norm(ev.customerText);
+  const evidence = (Array.isArray(j.evidence) ? j.evidence : []).map((q) => clean(q, 160)).filter(Boolean).slice(0, 3);
+  const quoted = evidence.filter((q) => norm(q).length >= 2 && said.includes(norm(q)));
+  const fromCalls = (ev.calls?.length || 0) + (ev.voice?.length || 0) > 0;
+  const [lo, hi] = INTENT_POINTS[intent];
+  let points = 0;
+  if (confidence >= MIN_CONFIDENCE && (quoted.length || fromCalls || lo === 0)) {
+    points = Math.round(lo + (hi - lo) * Math.min(1, (confidence - MIN_CONFIDENCE) / (1 - MIN_CONFIDENCE)));
+  }
   return {
-    level, confidence, reason, adjust,
+    v: VERSION, intent, level: INTENT_LEVEL[intent], confidence, reason, points, adjust: points, evidence: quoted,
     signals: (Array.isArray(j.signals) ? j.signals : []).filter((s) => SIGNALS.includes(s)).slice(0, 6),
     nextStep: clean(j.nextStep, 80),
   };
@@ -167,14 +193,17 @@ async function scoreOne(lead, now = Date.now()) {
   try { out = await callModel(promptFor(ev)); }
   catch (err) { logger.warn(`[ai-score] model call failed for lead ${lead._id}: ${err.message}`); return null; }
   recordUsage(lead.orgId, out.usage);
-  const read = parse(out.text);
+  const read = parse(out.text, ev);
   const aiScore = read
     ? { ...read, scoredAt: new Date(now), signalAt, model: out.model || MODEL }
     // Unreadable answer: remember we looked, so the sweep doesn't retry it
-    // every five minutes; the old adjustment (if any) is dropped.
-    : { level: "warm", adjust: 0, confidence: 0, reason: "", scoredAt: new Date(now), signalAt, model: out.model || MODEL };
+    // every five minutes; the chat adds nothing to the score.
+    : { v: VERSION, intent: "neutral", level: "cold", points: 0, adjust: 0, confidence: 0, reason: "", scoredAt: new Date(now), signalAt, model: out.model || MODEL };
   // Only if no newer customer activity arrived while the model was thinking.
-  await Lead.updateOne({ _id: lead._id, lastCustomerSignalAt: signalAt }, { $set: { aiScore } });
+  const update = { $set: { aiScore } };
+  // Someone selling their own services: marked, so the team and the bot skip it.
+  if (read?.intent === "vendor" && read.confidence >= MIN_CONFIDENCE) update.$addToSet = { tags: "Not a buyer" };
+  await Lead.updateOne({ _id: lead._id, lastCustomerSignalAt: signalAt }, update);
   return read ? aiScore : null;
 }
 
@@ -197,6 +226,8 @@ async function runSweep(now = Date.now()) {
     $expr: { $or: [
       { $eq: [{ $ifNull: ["$aiScore.signalAt", null] }, null] },
       { $lt: ["$aiScore.signalAt", "$lastCustomerSignalAt"] },
+      // Read before 23 Oct 2026's conversation-based score: read again once.
+      { $ne: [{ $ifNull: ["$aiScore.v", 1] }, VERSION] },
     ] },
   }).sort({ lastCustomerSignalAt: -1 }).limit(PER_RUN).lean();
 
@@ -220,7 +251,7 @@ async function markSignal(leadId, at = new Date()) {
 }
 
 module.exports = {
-  runSweep, scoreOne, markSignal, eligible, parse, scrub, WINDOW_DAYS,
+  runSweep, scoreOne, markSignal, eligible, parse, scrub, WINDOW_DAYS, INTENT_POINTS, VERSION,
   _setModel: (fn) => { callModel = fn || defaultModel; },
   _promptFor: promptFor, _evidence: evidence,
 };

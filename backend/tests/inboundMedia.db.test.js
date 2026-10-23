@@ -35,6 +35,9 @@ axios.post = async (url, body) => {
   aiRequests.push(body);
   return { data: { choices: [{ message: { content: "That's the Khopoli plots ad. Plots start at ₹79L. Would you like the location?" } }], usage: {} } };
 };
+// Voice notes as text (utils/transcribe.js): nothing heard unless a test says so.
+let heard = "";
+require("../utils/transcribe")._setCall(async () => heard);
 const storage = require("../utils/storage");
 storage.put = async (key, buffer, contentType) => { stored.push({ key, contentType, size: buffer.length }); return `https://api.example.com/api/media/${key}`; };
 
@@ -89,6 +92,20 @@ test("a voice note is saved and gets a short reply asking them to type; no AI ca
   const before = textsTo(phone).length;
   await deliver(phone, { type: "audio", audio: { id: "media-voice", mime_type: "audio/ogg" } });
   assert.equal(textsTo(phone).length, before);
+});
+
+test("a voice note with something said: written out, shown, and the bot answers what was said", async () => {
+  const phone = nextPhone();
+  aiRequests.length = 0;
+  heard = "I want to visit the site on Saturday, what is the price?";
+  await deliver(phone, { type: "audio", audio: { id: "media-voice", mime_type: "audio/ogg" } });
+  heard = "";
+  const m = await lastIn(phone);
+  assert.equal(m.transcript, "I want to visit the site on Saturday, what is the price?");
+  assert.equal(replyCalls().length, 1, "the AI replied");
+  const turn = JSON.stringify(replyCalls()[0].messages.filter((x) => x.role === "user"));
+  assert.match(turn, /\(voice note\) I want to visit the site on Saturday/);
+  assert.ok(!textsTo(phone).some((t) => /can't play voice notes/.test(t)), "no 'please type'");
 });
 
 test("a document is saved and acknowledged", async () => {

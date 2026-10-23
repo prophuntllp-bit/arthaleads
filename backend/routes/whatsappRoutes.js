@@ -928,7 +928,7 @@ async function maybeSendAwayMessage(org, agent, conversation) {
 // One shared field list rather than a separate one per route, so the two
 // views can never quietly drift into scoring a lead on incomplete data.
 const LEAD_SCORE_FIELDS = "name status statusSetBy priority propertyType bhk preferredLocation budget source phone arthaSuggest "
-  + "booking siteVisitDone activities notes followUpDate firstContactedAt createdAt updatedAt lastCustomerSignalAt aiScore";
+  + "booking siteVisitDone activities notes followUpDate firstContactedAt createdAt updatedAt lastCustomerSignalAt aiScore engagement";
 
 // Attaches the same rule-based hotness score the Dashboard's "Hot Today"
 // widget already uses (see leadScorer.js) onto each conversation's populated
@@ -1203,6 +1203,13 @@ async function handleInbound(org, parsed) {
     inboundMedia = await require("../utils/waInboundMedia").fetchAndStore(org, { mediaId, mimeType, filename });
     if (inboundMedia) await WaMessage.updateOne({ _id: inboundDoc._id }, { $set: { mediaUrl: inboundMedia.url } });
   }
+  // A voice note, as text: the bot answers what was said, and the AI score
+  // and the lead-details reader read it (utils/transcribe.js).
+  let transcript = "";
+  if (msgType === "audio" && inboundMedia?.buffer) {
+    transcript = await require("../utils/transcribe").transcribe(inboundMedia.buffer, inboundMedia.contentType);
+    if (transcript) await WaMessage.updateOne({ _id: inboundDoc._id }, { $set: { transcript } });
+  }
   // Independent writes, run side by side: each is a round trip to the
   // database, and the reply waited for all of them in turn.
   await Promise.all([
@@ -1283,11 +1290,11 @@ async function handleInbound(org, parsed) {
   const otherMedia = ["audio", "video", "document"].includes(msgType);
   const hasCaption = !!String(caption || "").trim();
   if (isPhoto || otherMedia) notifyHotSignal(org, conv, { image: "sent a photo", audio: "sent a voice note", video: "sent a video", document: "sent a document" }[msgType]).catch(() => {});
-  if (conv.botEnabled && otherMedia && !hasCaption) {
+  if (conv.botEnabled && otherMedia && !hasCaption && !transcript) {
     try { await maybeNoticeMedia(org, conv, msgType); }
     catch (err) { console.error("[WhatsApp Bot] media notice failed:", err.message); }
   }
-  const botCanRead = ["text", "button", "interactive"].includes(msgType) || isPhoto || (otherMedia && hasCaption);
+  const botCanRead = ["text", "button", "interactive"].includes(msgType) || isPhoto || (otherMedia && hasCaption) || !!transcript;
   // The photo itself, for the model to look at (small enough to send inline).
   const image = isPhoto && inboundMedia?.buffer && inboundMedia.size <= 4 * 1024 * 1024
     ? { dataUrl: `data:${inboundMedia.contentType};base64,${inboundMedia.buffer.toString("base64")}` } : null;
@@ -1310,7 +1317,7 @@ async function handleInbound(org, parsed) {
     // sentence like an ad's pre-filled text) is answered at once; a short
     // "Hi" still waits in case more is coming.
     const quick = testRun || (isNewConversation && (!!clickRef?.adId || String(msgText || "").trim().split(/\s+/).length >= 4));
-    await respondAsBot(org, conv, { interactiveId, msgText, image, isNewConversation: isNewConversation || movedToAnotherAgent || testRun, testRun, quick, inboundKey: msgId || `t${inboundTimestamp.getTime()}`, inboundAt: inboundTimestamp });
+    await respondAsBot(org, conv, { interactiveId, msgText: transcript ? `(voice note) ${transcript}` : msgText, image, isNewConversation: isNewConversation || movedToAnotherAgent || testRun, testRun, quick, inboundKey: msgId || `t${inboundTimestamp.getTime()}`, inboundAt: inboundTimestamp });
   }
 }
 
@@ -2417,9 +2424,9 @@ async function readLeadDetailsFromChat(conversation, recentMsgs, { org } = {}) {
     // customer's own words: label it so, and never take a location from it.
     const first = await WaMessage.findOne({ conversationId: conversation._id, direction: "inbound" }).sort({ timestamp: 1 }).select("_id").lean();
     const isPrefill = (m) => !!first && String(m._id) === String(first._id);
-    const laterInbound = recentMsgs.filter((m) => m.direction === "inbound" && !isPrefill(m)).map((m) => m.body || "");
+    const laterInbound = recentMsgs.filter((m) => m.direction === "inbound" && !isPrefill(m)).map((m) => m.transcript || m.body || "");
     const transcript = recentMsgs
-      .map((m) => `${m.direction === "inbound" ? (isPrefill(m) ? "Customer (pre-written ad message, not their own words)" : "Customer") : "Assistant"}: ${m.body}`)
+      .map((m) => `${m.direction === "inbound" ? (isPrefill(m) ? "Customer (pre-written ad message, not their own words)" : "Customer") : "Assistant"}: ${m.transcript ? `(voice note) ${m.transcript}` : m.body}`)
       .join("\n").slice(0, 4000);
     if (!transcript.trim()) return;
 
@@ -2514,7 +2521,7 @@ async function inferAnsweredFromTranscript(org, agent, conversation, questions) 
       .sort({ timestamp: -1 }).limit(20).lean();
     recentMsgs.reverse();
     const transcript = recentMsgs
-      .map((m) => `${m.direction === "inbound" ? "Customer" : "Assistant"}: ${m.body}`)
+      .map((m) => `${m.direction === "inbound" ? "Customer" : "Assistant"}: ${m.transcript ? `(voice note) ${m.transcript}` : m.body}`)
       .join("\n").slice(0, 4000);
     if (!transcript.trim()) return;
 
@@ -2694,7 +2701,7 @@ async function triggerBotReply(org, agent, conversation, inboundText, opts = {})
       { role: "system", content: systemPrompt },
       ...recentMsgs.map(m => ({
         role: m.direction === "inbound" ? "user" : "assistant",
-        content: m.body,
+        content: m.transcript ? `(voice note) ${m.transcript}` : m.body,
       })),
       // A photo from the customer goes in as an image the model can look at.
       opts.image?.dataUrl
