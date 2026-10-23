@@ -21,7 +21,7 @@
 //     pick), and never on a field a person changed after creation
 //     (lead.detailsSetByPerson, set by leadService.update).
 
-const SUGGESTABLE = ["propertyType", "purpose", "bhk", "preferredLocation", "budget"];
+const SUGGESTABLE = ["propertyType", "purpose", "bhk", "preferredLocation", "budget", "timeline"];
 
 // Words that only point at a place ("Baner side", "near Baner"), ignored when
 // comparing, so "Baner-Balewadi side" and "Baner / Balewadi" are one place.
@@ -100,7 +100,7 @@ function showValue(k, v) {
 
 // "Budget ₹1 Cr, Purpose Buy" in a fixed order.
 function describeFields(fields) {
-  return [...SUGGESTABLE, "timeline"].filter((k) => fields[k] !== undefined).map((k) => `${LABEL[k]} ${showValue(k, fields[k])}`).join(", ");
+  return SUGGESTABLE.filter((k) => fields[k] !== undefined).map((k) => `${LABEL[k]} ${showValue(k, fields[k])}`).join(", ");
 }
 
 module.exports = { planFieldFill, suggestionsFrom, untouchedDefaults, sameValue, isBlank, describeFields, showValue, SUGGESTABLE, LABEL };

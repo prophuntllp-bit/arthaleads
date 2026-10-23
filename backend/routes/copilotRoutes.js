@@ -198,7 +198,7 @@ router.get("/features", async (req, res, next) => {
 // normal lead update (history entry signed "(via Artha)"); "dismiss" drops
 // them and remembers not to suggest those values again. Same visibility as
 // the lead itself.
-const SUGGEST_KEYS = ["propertyType", "purpose", "bhk", "preferredLocation", "budget"];
+const SUGGEST_KEYS = ["propertyType", "purpose", "bhk", "preferredLocation", "budget", "timeline"];
 const lakhs = (n) => (n >= 1e7 ? `${+(n / 1e7).toFixed(2)} Cr` : `${+(n / 1e5).toFixed(1)} L`);
 function budgetLine(b) {
   if (!b || (!b.min && !b.max)) return "empty";
@@ -213,7 +213,7 @@ router.post("/suggestions/:leadId", async (req, res) => {
       return res.status(403).json({ success: false, message: "Artha suggestions are not turned on for your company." });
     }
     const Lead = require("../models/Lead");
-    const lead = await Lead.findOne({ _id: req.params.leadId, orgId: req.orgId }).select("assignedTo createdBy orgId arthaSuggest propertyType purpose bhk preferredLocation budget").lean();
+    const lead = await Lead.findOne({ _id: req.params.leadId, orgId: req.orgId }).select("assignedTo createdBy orgId arthaSuggest propertyType purpose bhk preferredLocation budget timeline").lean();
     if (!lead || !visibility.canSeeLead(req.user, lead)) return res.status(404).json({ success: false, message: "Lead not found." });
     const pending = lead.arthaSuggest?.fields || {};
     const action = req.body?.action === "dismiss" ? "dismiss" : "save";
@@ -223,7 +223,9 @@ router.post("/suggestions/:leadId", async (req, res) => {
     const unset = Object.fromEntries(wanted.flatMap((k) => [[`arthaSuggest.fields.${k}`, ""], [`arthaSuggest.from.${k}`, ""]]));
     // Suggestions come from the WhatsApp chat unless marked as from a Vistrow Voice call.
     const fromCall = wanted.filter((k) => lead.arthaSuggest?.from?.[k] === "vistrow_voice").length;
+    const fromFlow = wanted.filter((k) => lead.arthaSuggest?.from?.[k] === "button_flow").length;
     const sourceText = fromCall === wanted.length ? "the customer's Vistrow Voice call"
+      : fromFlow === wanted.length ? "the customer's answers to the WhatsApp button questions"
       : fromCall ? "the customer's WhatsApp messages and Vistrow Voice call" : "the customer's WhatsApp messages";
     if (action === "dismiss") {
       const push = Object.fromEntries(wanted.map((k) => [`arthaSuggest.dismissed.${k}`, pending[k]]));
@@ -234,7 +236,7 @@ router.post("/suggestions/:leadId", async (req, res) => {
     for (const k of wanted) updates[k] = k === "budget" ? { min: pending.budget.min || 0, max: pending.budget.max || 0, currency: "INR" } : pending[k];
     const leadService = require("../services/leadService");
     const { runWith } = require("../utils/requestContext");
-    const LABEL = { propertyType: "Property type", purpose: "Purpose", bhk: "BHK", preferredLocation: "Preferred location", budget: "Budget" };
+    const LABEL = { propertyType: "Property type", purpose: "Purpose", bhk: "BHK", preferredLocation: "Preferred location", budget: "Budget", timeline: "Timeline" };
     const show = (k, v) => k === "budget" ? budgetLine(v) : (v && v !== "N/A" ? String(v) : "empty");
     const changes = wanted.map((k) => `${LABEL[k]}: ${show(k, lead[k])} to ${show(k, updates[k])}`).join("; ");
     const updated = await runWith({ via: "artha" }, async () => {

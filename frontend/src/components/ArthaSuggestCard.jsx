@@ -8,8 +8,8 @@ import { notifyDataChanged } from "../hooks/useAppRefresh";
 // Details the customer stated on WhatsApp (or on a Vistrow Voice call) that differ from what the lead holds
 // (lead.arthaSuggest.fields, filled by the server's chat reader). Nothing is
 // changed until someone presses Save; Dismiss stops that value coming back.
-const LABEL = { propertyType: "Property type", purpose: "Purpose", bhk: "BHK", preferredLocation: "Location", budget: "Budget" };
-const ORDER = ["preferredLocation", "bhk", "budget", "propertyType", "purpose"];
+const LABEL = { propertyType: "Property type", purpose: "Purpose", bhk: "BHK", preferredLocation: "Location", budget: "Budget", timeline: "Timeline" };
+const ORDER = ["preferredLocation", "bhk", "budget", "propertyType", "purpose", "timeline"];
 
 const lakhs = (n) => (n >= 1e7 ? `${+(n / 1e7).toFixed(2)} Cr` : `${+(n / 1e5).toFixed(1)} L`);
 function show(key, v) {
@@ -31,7 +31,10 @@ export default function ArthaSuggestCard({ lead, onChanged, compact = false }) {
   // Suggestions come from the WhatsApp chat unless the server marked them as
   // from a Vistrow Voice call (lead.arthaSuggest.from).
   const fromCall = keys.filter((k) => lead.arthaSuggest?.from?.[k] === "vistrow_voice").length;
-  const where = fromCall === keys.length ? "on the Vistrow Voice call" : fromCall ? "in the WhatsApp chat and the call" : "in the WhatsApp chat";
+  const fromFlow = keys.filter((k) => lead.arthaSuggest?.from?.[k] === "button_flow").length;
+  const where = fromCall === keys.length ? "on the Vistrow Voice call"
+    : fromFlow === keys.length ? "in their WhatsApp button answers"
+    : fromCall ? "in the WhatsApp chat and the call" : "in the WhatsApp chat";
 
   const act = async (action) => {
     // Save: the ticked rows. Dismiss: everything still shown.

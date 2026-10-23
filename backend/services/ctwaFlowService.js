@@ -273,14 +273,26 @@ module.exports = function createCtwaFlowService({
   // First question at or after `from` the lead hasn't already answered
   // elsewhere — asking someone for a budget they typed into the form five
   // minutes ago is the fastest way to lose them.
-  async function nextUnansweredIndex(questions, from, leadId) {
+  // Answers already on the lead only count when they were given for this
+  // campaign: a lead created in the last day from one of this agent's own ads
+  // (or with no ad at all, e.g. the form they filled just before writing).
+  // 23 Oct 2026: a customer who had enquired about another project weeks ago
+  // clicked the webinar ad and got the closing question straight away, every
+  // question skipped on the strength of the old project's answers.
+  const FRESH_LEAD_MS = 24 * 3600 * 1000;
+  // trustLead: the Inbox's "Start qualification flow", which first reads the
+  // answers out of the chat so far (inferAnsweredFromTranscript): those count.
+  async function nextUnansweredIndex(questions, from, leadId, agent = null, { trustLead = false } = {}) {
     let lead = null;
     // purpose/propertyType were missing here entirely — leadKnows() had no
     // case for them, so a question mapped to either NEVER counted as
     // answered even when the lead record already had a real value, and the
     // flow always re-asked it. Selected here now that leadKnows() actually
     // checks them.
-    if (leadId) lead = await Lead.findById(leadId).select("budget timeline bhk purpose propertyType city preferredLocation streetAddress").lean();
+    if (leadId) lead = await Lead.findById(leadId).select("budget timeline bhk purpose propertyType city preferredLocation streetAddress createdAt campaignRef").lean();
+    const fresh = lead && Date.now() - new Date(lead.createdAt).getTime() < FRESH_LEAD_MS
+      && (!lead.campaignRef?.adId || !agent || (agent.adIds || []).includes(lead.campaignRef.adId));
+    if (!fresh && !trustLead) lead = null;
     let i = from;
     while (i < questions.length && leadKnows(lead, questions[i].mapsTo)) i++;
     return i;
@@ -416,7 +428,7 @@ module.exports = function createCtwaFlowService({
    * "Start qualification flow" recovery button on an existing thread) just
    * needs the flow's actual first question, not a second hello.
    */
-  async function startFlow(org, agent, conversation) {
+  async function startFlow(org, agent, conversation, { trustLead = false } = {}) {
     const botName = agent.name || "Artha Assistant";
     const vars = { name: conversation.contactName || "there", project: (await resolveFlowProject(org, agent))?.name || "" };
     const alreadyGreeted = await WaMessage.exists({ conversationId: conversation._id, direction: "outbound", sender: "bot" });
@@ -426,17 +438,17 @@ module.exports = function createCtwaFlowService({
     }
     const questions = getQualifyingQuestions(agent);
     if (!questions.length) return; // sanitizeCtwaFlow blocks enabling without this — never crash live traffic over it regardless
-    const firstIdx = await nextUnansweredIndex(questions, 0, conversation.leadId);
+    const firstIdx = await nextUnansweredIndex(questions, 0, conversation.leadId, agent, { trustLead });
     if (firstIdx >= questions.length) {
       // Everything we'd ask is already on the lead — straight to closing.
       const closingSent = await sendFlowStep(org, conversation, botName, { ...closingStep(agent, vars), previewLabel: "Started qualification" });
-      if (closingSent) await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: "closing", startedAt: new Date() }, flowFunnel: { startedAt: new Date(), stepsReached: ["closing"], lastStep: "closing" } });
+      if (closingSent) await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: "closing", startedAt: new Date(), ...(trustLead ? { trustLead: true } : {}) }, flowFunnel: { startedAt: new Date(), stepsReached: ["closing"], lastStep: "closing" } });
       return;
     }
     const first = questions[firstIdx];
     const questionSent = await sendFlowStep(org, conversation, botName, { ...questionStep(first, vars), previewLabel: "Started qualification" });
     if (questionSent) {
-      await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: first.id, startedAt: new Date() }, flowFunnel: { startedAt: new Date(), stepsReached: [first.id], lastStep: first.id } });
+      await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: first.id, startedAt: new Date(), ...(trustLead ? { trustLead: true } : {}) }, flowFunnel: { startedAt: new Date(), stepsReached: [first.id], lastStep: first.id } });
     }
   }
 
@@ -468,6 +480,25 @@ module.exports = function createCtwaFlowService({
    * answer to the same question, exactly like the "Additional Questions"
    * leftovers a webhook-sourced lead gets.
    */
+  // A button-flow answer for one lead field: written when the field is empty
+  // (or still the "Buy" / "N/A" placeholder); a different real value already
+  // on the lead is not overwritten but offered on the Artha card ("Update
+  // budget to ...?"), like a detail read from the chat or a call. Same value,
+  // or one the team dismissed before: nothing.
+  async function fillOrSuggest(leadId, key, value) {
+    if (!leadId || value == null || value === "") return;
+    const { isBlank, sameValue, untouchedDefaults } = require("../utils/leadFieldFill");
+    const lead = await Lead.findById(leadId).select(`${key} arthaSuggest source detailsSetByPerson`).lean();
+    if (!lead) return;
+    const write = key === "budget" ? { "budget.min": value.min || 0, "budget.max": value.max || 0 } : { [key]: value };
+    const placeholder = isBlank(key, lead[key]) || untouchedDefaults(lead).includes(key) || (key === "purpose" && lead.purpose === "Buy");
+    if (placeholder) { await Lead.updateOne({ _id: leadId }, { $set: write }); return; }
+    if (sameValue(value, lead[key])) return;
+    if ((lead.arthaSuggest?.dismissed?.[key] || []).some((d) => sameValue(value, d))) return;
+    const shown = key === "budget" ? { min: value.min || 0, max: value.max || 0 } : value;
+    await Lead.updateOne({ _id: leadId }, { $set: { [`arthaSuggest.fields.${key}`]: shown, [`arthaSuggest.from.${key}`]: "button_flow", "arthaSuggest.at": new Date() } });
+  }
+
   async function applyQuestionAnswer(leadId, question, option) {
     const value = option.label;
     let mapped = null;
@@ -478,31 +509,31 @@ module.exports = function createCtwaFlowService({
         // so "blank" never applied and an "Investment" tap was silently
         // dropped. The customer's latest tap is the best evidence we have, so
         // it wins (this also lets them change their mind).
-        if (mapped && leadId) await Lead.updateOne({ _id: leadId }, { $set: { purpose: mapped } });
+        if (mapped) await fillOrSuggest(leadId, "purpose", mapped);
         break;
       case "budget": {
         const range = option.max > 0 ? { min: option.min || 0, max: option.max } : parseIndianCurrencyRange(value);
-        if (range) { mapped = range; await updateLeadIfBlank(leadId, { "budget.min": range.min, "budget.max": range.max }); }
+        if (range) { mapped = range; await fillOrSuggest(leadId, "budget", range); }
         break;
       }
       case "timeline":
         mapped = normalizeTimeline(value);
-        if (mapped) await updateLeadIfBlank(leadId, { timeline: mapped });
+        if (mapped) await fillOrSuggest(leadId, "timeline", mapped);
         break;
       case "bhk":
         mapped = normalizeBhk(value);
-        if (mapped) await updateLeadIfBlank(leadId, { bhk: mapped });
+        if (mapped) await fillOrSuggest(leadId, "bhk", mapped);
         break;
       case "propertyType":
         mapped = normalizePropertyType(value);
-        if (mapped) await updateLeadIfBlank(leadId, { propertyType: mapped });
+        if (mapped) await fillOrSuggest(leadId, "propertyType", mapped);
         break;
       case "city":
       case "preferredLocation":
       case "streetAddress": {
         const trimmed = String(value || "").trim();
         mapped = trimmed || null;
-        if (mapped) await updateLeadIfBlank(leadId, { [question.mapsTo]: mapped });
+        if (mapped) await fillOrSuggest(leadId, question.mapsTo, mapped);
         break;
       }
       default:
@@ -561,7 +592,7 @@ module.exports = function createCtwaFlowService({
     // next still-unanswered question in array order, or closing once none
     // are left.
     const advancePast = async (questionIndex) => {
-      const nextIdx = await nextUnansweredIndex(questions, questionIndex + 1, conversation.leadId);
+      const nextIdx = await nextUnansweredIndex(questions, questionIndex + 1, conversation.leadId, agent, { trustLead: !!conversation.flowState?.trustLead });
       await goTo(questions[nextIdx]?.id ?? NEXT_CLOSING);
     };
 

@@ -108,6 +108,9 @@ const waConversationSchema = new mongoose.Schema({
       // that re-ask is still owed after the AI's answer.
       reasked:          { type: String },
       resumeAfterReply: { type: Boolean },
+      // Started from the Inbox after reading answers out of the chat: those
+      // answers count even on an older lead (ctwaFlowService nextUnansweredIndex).
+      trustLead:        { type: Boolean },
     },
     default: undefined,
   },
