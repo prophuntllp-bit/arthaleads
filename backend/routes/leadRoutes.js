@@ -36,7 +36,7 @@ router.get("/hot", planGate("growth"), async (req, res, next) => {
     if (req.user.role === "agent") filter.assignedTo = req.user._id;
 
     const leads = await Lead.find(filter)
-      .select("name phone status priority source budget booking siteVisitDone followUpDate firstContactedAt activities notes assignedToName assignedTo propertyType bhk preferredLocation purpose createdAt updatedAt lastCustomerSignalAt aiScore")
+      .select("name phone status priority source budget booking siteVisitDone followUpDate firstContactedAt activities notes assignedToName assignedTo propertyType bhk preferredLocation purpose createdAt updatedAt lastCustomerSignalAt aiScore engagement")
       .populate("assignedTo", "name")
       .lean();
 
