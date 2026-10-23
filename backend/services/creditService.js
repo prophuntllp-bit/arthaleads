@@ -168,7 +168,7 @@ async function quote(orgId, category, count = 1) {
  * Fits when balance - reserved + overdraft limit covers it. Throws
  * InsufficientCreditsError and holds nothing if it does not.
  */
-async function reserve(orgId, { category, count = 1 } = {}) {
+async function reserve(orgId, { category, count = 1, out = null } = {}) {
   if (!VALID_CATEGORIES.includes(category)) {
     throw new Error(`Unknown credit category: ${category}`);
   }
@@ -183,7 +183,8 @@ async function reserve(orgId, { category, count = 1 } = {}) {
   if (category === "service") {
     const yyyymm = currentYyyyMm();
     for (let attempt = 0; attempt < 6 && freeCount === 0; attempt++) {
-      const cur = (await Organization.findById(orgId).select("credits.freeService").lean())?.credits?.freeService || {};
+      // The first look reuses the read above; only a lost race reads again.
+      const cur = (attempt === 0 ? orgDoc.credits?.freeService : (await Organization.findById(orgId).select("credits.freeService").lean())?.credits?.freeService) || {};
       const used = cur.yyyymm === yyyymm ? (cur.used || 0) : 0;
       const n = Math.max(0, Math.min(count, allowance - used));
       if (n === 0) break;
@@ -194,6 +195,9 @@ async function reserve(orgId, { category, count = 1 } = {}) {
     }
   }
   const q = { count, freeCount, billableCount: count - freeCount, ratePaise: rate, totalPaise: (count - freeCount) * rate };
+  // `out` tells the caller how many were free, which used to take a separate
+  // quote() read of the same record before every bot reply.
+  if (out) out.freeCount = freeCount;
   const giveBackFree = () => freeCount > 0
     ? Organization.updateOne({ _id: orgId, "credits.freeService.yyyymm": currentYyyyMm() }, { $inc: { "credits.freeService.used": -freeCount } }).catch(() => {})
     : null;

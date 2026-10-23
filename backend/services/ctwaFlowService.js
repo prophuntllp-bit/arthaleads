@@ -131,10 +131,10 @@ module.exports = function createCtwaFlowService({
    */
   async function sendFlowStep(org, conversation, botName, { bodyText, buttons, list, previewLabel }) {
     bodyText = noDashes(bodyText);
-    const q = await credits.quote(org._id, "service", 1);
+    const q = { freeCount: 0 };
     let held = 0;
     try {
-      held = await credits.reserve(org._id, { category: "service", count: 1 });
+      held = await credits.reserve(org._id, { category: "service", count: 1, out: q });
     } catch (err) {
       if (err instanceof credits.InsufficientCreditsError) {
         console.warn(`[CTWA Flow] org ${org._id} out of credits — flow step skipped`);
