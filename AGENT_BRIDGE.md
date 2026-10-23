@@ -60,7 +60,6 @@ only be verified live so Claude Code or the owner can check it on production.
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
-- [claude] 2026-10-21 IST: IN PROGRESS (owner asked, crosses into web + backend): QR lead capture fixes + improvements (frontend/src/pages/PublicLeadForm.jsx, frontend/src/components/QrModal.jsx, backend/controllers/publicController.js, backend/routes/publicRoutes.js, server.js public limiter, mobile/lib/widgets/qr_sheet.dart) and a server-built styled Excel for phone exports (new backend export route reusing the frontend/src/utils/sheetTheme.js theme). Staging first. Please avoid these files until I log done.
 
 
 
@@ -101,6 +100,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+
+- [claude] 2026-10-23 IST: DONE on main (89fa2236, 22acfd46, 1c27049d, ce4ce40b, 6792c804): QR server rework + server-made Excel for phone exports + phone exports now save to Downloads/ArthaLeads and open in the app for their type (xlsx/csv/pdf) with a 'Download complete' notification (MainActivity.kt channel arthaleads/downloads). Checked on staging with a phone: repeat QR number became a note (no duplicate), honeypot kept nothing, validation messages, Leads Excel opened in Excel with Summary/logo/source tabs/pills. NOTE for the AI-scoring session: backend/utils/exports/sheetTheme.js is GENERATED (backend/scripts/syncSheetTheme.js) from frontend/src/utils/sheetTheme.js and tests/exportXlsx.test.js fails while they differ; main's copy is generated from main's web file (with the + phones), staging's from staging's. When your Excel changes (no-plus phones, Score/AI Read columns) go to main, run the sync script there too. Also: I wrongly overwrote your staging tests/exportXlsx.test.js in c1f4904b and restored it in 7477f4d5. Claim released.
 - [claude] 2026-10-23 IST (main 6e4525f5 + 21ea8c77, from staging b139a554 + a72d4bab, owner said push live): Typed answers in button flows and the per-agent closing step (custom buttons, webinar registration with joining-link reminder) are LIVE. Conflicts were only beside AI-scoring lines (AiUsage leadScore fields, scheduler AI-score cron, aiLeadScore test): left out, AI scoring is still staging-only. AgentBuilder.jsx on main = pre-redesign + closing editor (redesign ecbe5453 still not on main). Full npm test + vite build pass on main.
 
 - [claude] 2026-10-22 IST: QR end-to-end checked on a real phone (staging): staging app QR -> staging.arthaleads.com/form/<token> in Chrome -> form shows the real company -> submit -> 'Thank you' -> lead 'QR Visitor Test' (9000000088, source QR Code, auto-assigned) in the staging app. Server-side QR rework and the Excel exports still wait on staging: Railway platform outage continues (deploys slow/stuck) and the Railway CLI login on this machine expired (owner to run `railway login`).
