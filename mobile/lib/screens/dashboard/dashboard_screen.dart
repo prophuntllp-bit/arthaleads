@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -12,7 +13,8 @@ import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/deep_link.dart';
 import '../../core/theme.dart';
-import '../../widgets/skeleton.dart';
+import '../../widgets/card_skeleton.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/whatsapp_send_sheet.dart';
 import '../../widgets/date_range_picker.dart';
@@ -92,7 +94,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _waConnected = false;
   Map<String, dynamic>? _attendance;
   bool _requireSelfie = true;
-  bool _loading = true;
   bool _refreshing = false;
   bool _analyticsError = false;
   bool _clocking = false;
@@ -110,7 +111,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _load();
+    // Sample content shimmers in each section's place until its data lands;
+    // the last data kept on the phone shows at once when there is some.
+    _placeholders();
+    _restoreCache().whenComplete(_load);
     _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) _load(background: true);
     });
@@ -145,61 +149,124 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// Ticks on every load, so the morning brief refreshes with the rest.
   final _briefRefresh = ValueNotifier<int>(0);
 
+  /// Sections still waiting for their first data. Each shimmers in place
+  /// (SectionSkeleton) and fills in as soon as its own request answers, so
+  /// a slow one never holds up the rest (23 Oct 2026: the screen used to
+  /// wait for all nine requests behind a generic grey placeholder).
+  final Set<String> _pending = {'analytics', 'hot', 'due', 'attendance'};
+
+  void _placeholders() {
+    final now = DateTime.now();
+    _analytics = {
+      'totalLeads': 120, 'previousPeriodLeads': 100, 'allTimeTotal': 1200, 'todayFollowUps': 4,
+      'byStatus': {'New': 40, 'Contacted': 30, 'Site Visit': 8, 'Closed Won': 2},
+      'bySource': {'Facebook': 40, 'WhatsApp': 50, 'Website': 30},
+      'speedToLead': {'total': 120, 'within1h': 60, 'within5m': 20, 'notContacted': 30},
+      'sourcePerformance': [{'source': 'WhatsApp', 'visits': 8}],
+      'upcomingItems': [
+        {...SampleData.lead(1), 'followUpDate': now.add(const Duration(hours: 20)).toIso8601String()},
+      ],
+      'byAgent': [], 'recentActivity': [],
+    };
+    _hot = [for (var i = 0; i < 3; i++) SampleData.lead(i)];
+    _due = [SampleData.lead(2)];
+  }
+
+  String get _cacheKey => 'dash_cache_v1_${context.read<AuthState>().user?['_id'] ?? ''}';
+
+  /// The last home data, kept per person for the default range, so the app
+  /// opens on real numbers at once and refreshes them quietly.
+  Future<void> _restoreCache() async {
+    try {
+      final raw = (await SharedPreferences.getInstance()).getString(_cacheKey);
+      if (raw == null || !mounted) return;
+      final c = (jsonDecode(raw) as Map).cast<String, dynamic>();
+      if (_dateRange != 'last30days' || !_pending.contains('analytics')) return;
+      List<Map<String, dynamic>> maps(dynamic v) => [for (final x in (v as List?) ?? const []) if (x is Map) x.cast<String, dynamic>()];
+      setState(() {
+        _analytics = (c['analytics'] as Map?)?.cast<String, dynamic>() ?? _analytics;
+        _hot = maps(c['hot']);
+        _due = maps(c['due']);
+        _attendance = (c['attendance'] as Map?)?.cast<String, dynamic>();
+        _automations = maps(c['automations']);
+        _waConnected = c['wa'] == true;
+        overdueFollowUps.value = _due.where(_isOverdue).length;
+        _pending.clear();
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _saveCache() async {
+    if (_dateRange != 'last30days' || _analyticsError || _analytics == null) return;
+    try {
+      (await SharedPreferences.getInstance()).setString(_cacheKey, jsonEncode({
+        'analytics': _analytics,
+        'hot': _hot,
+        'due': _due,
+        'attendance': _attendance,
+        'automations': _automations,
+        'wa': _waConnected,
+      }));
+    } catch (_) {}
+  }
+
   Future<void> _load({bool background = false}) async {
     if (_refreshing) return;
-    if (_analytics != null) _briefRefresh.value++;
-    setState(() {
-      _refreshing = true;
-      if (!background && _analytics == null) _loading = true;
-    });
-    // Parallel fetch — mirrors the web dashboard's parallel-fetch fix.
+    if (_lastLoadedAt != null) _briefRefresh.value++;
+    _refreshing = true;
     // Stale leads, project stats, team attendance and automations are
     // admin/manager only on the server; an agent would just collect 403s.
     final staff = context.read<AuthState>().isAdmin;
     Future<dynamic> staffGet(String path) => staff ? _tryGet(path) : Future.value(null);
-    final results = await Future.wait<dynamic>([
-      _tryGet('/leads/analytics', dateRangeParams(_dateRange)),
-      _tryGet('/leads/hot', {'limit': 5}),
-      _tryGet('/leads/followups-due'),
-      staffGet('/leads/stale'),
-      staffGet('/projects/stats'),
-      staffGet('/attendance/team-today'),
-      staffGet('/automations'),
-      _tryGet('/attendance/status'),
-      _tryGet('/whatsapp/status'),
+    List<Map<String, dynamic>> list(dynamic v) => ((v as List?) ?? []).cast<Map<String, dynamic>>();
+    // Each request fills its own part of the screen the moment it answers.
+    Future<void> piece(Future<dynamic> request, void Function(dynamic res) apply) =>
+        request.then((res) {
+          if (mounted) setState(() => apply(res));
+        });
+    await Future.wait([
+      piece(_tryGet('/leads/analytics', dateRangeParams(_dateRange)), (res) {
+        final analytics = (res?.data['data'] as Map?)?.cast<String, dynamic>();
+        if (analytics != null) {
+          _analytics = analytics;
+        } else if (_pending.contains('analytics')) {
+          _analytics = null; // never leave the sample numbers showing
+        }
+        _analyticsError = analytics == null;
+        _pending.remove('analytics');
+      }),
+      piece(_tryGet('/leads/hot', {'limit': 5}), (res) {
+        _hot = list(res?.data['data']);
+        _pending.remove('hot');
+      }),
+      piece(_tryGet('/leads/followups-due'), (res) {
+        final dueRaw = res?.data['data'];
+        _due = dueRaw is List
+            ? dueRaw.cast<Map<String, dynamic>>()
+            : dueRaw is Map && dueRaw['leads'] is List
+            ? (dueRaw['leads'] as List).cast<Map<String, dynamic>>()
+            : [];
+        overdueFollowUps.value = _due.where(_isOverdue).length;
+        _pending.remove('due');
+      }),
+      piece(staffGet('/leads/stale'), (res) => _stale = list(res?.data['data'])),
+      piece(staffGet('/projects/stats'), (res) => _projects = list(res?.data['data'])),
+      piece(staffGet('/attendance/team-today'), (res) => _team = list(res?.data['data'])),
+      piece(staffGet('/automations'), (res) => _automations = list(res?.data['automations'])),
+      piece(_tryGet('/attendance/status'), (res) {
+        _attendance = (res?.data['data'] as Map?)?.cast<String, dynamic>();
+        _requireSelfie = res?.data['requireSelfie'] as bool? ?? _requireSelfie;
+        _pending.remove('attendance');
+      }),
+      piece(_tryGet('/whatsapp/status'), (res) => _waConnected = res?.data['connected'] == true),
     ]);
     if (!mounted) return;
-    final analytics = (results[0]?.data['data'] as Map?)
-        ?.cast<String, dynamic>();
     setState(() {
-      if (analytics != null) _analytics = analytics;
-      _analyticsError = analytics == null;
-      _hot = ((results[1]?.data['data'] as List?) ?? [])
-          .cast<Map<String, dynamic>>();
-      final dueRaw = results[2]?.data['data'];
-      _due = dueRaw is List
-          ? dueRaw.cast<Map<String, dynamic>>()
-          : dueRaw is Map && dueRaw['leads'] is List
-          ? (dueRaw['leads'] as List).cast<Map<String, dynamic>>()
-          : [];
-      _stale = ((results[3]?.data['data'] as List?) ?? [])
-          .cast<Map<String, dynamic>>();
-      _projects = ((results[4]?.data['data'] as List?) ?? [])
-          .cast<Map<String, dynamic>>();
-      _team = ((results[5]?.data['data'] as List?) ?? [])
-          .cast<Map<String, dynamic>>();
-      _automations = ((results[6]?.data['automations'] as List?) ?? [])
-          .cast<Map<String, dynamic>>();
-      _attendance = (results[7]?.data['data'] as Map?)?.cast<String, dynamic>();
-      _requireSelfie =
-          results[7]?.data['requireSelfie'] as bool? ?? _requireSelfie;
-      _waConnected = results[8]?.data['connected'] == true;
-      overdueFollowUps.value = _due.where(_isOverdue).length;
       _goalOverride = null;
-      _loading = false;
       _refreshing = false;
       _lastLoadedAt = DateTime.now();
     });
+    _saveCache();
   }
 
   Future<void> _editGoal(int current) async {
@@ -1900,16 +1967,15 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     // First load only — _load() keeps _loading false on background refreshes,
     // so this never replaces content the user is already reading.
-    if (_loading) {
-      return const DashboardSkeleton();
-    }
 
     return RefreshIndicator(
       color: AppColors.primary,
       onRefresh: _load,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        children: widget.reports ? _reportsBody(context, a, isAdmin) : _homeBody(context, auth, a, role),
+        children: widget.reports
+            ? [SectionSkeleton(loading: _pending.contains('analytics'), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: _reportsBody(context, a, isAdmin)))]
+            : _homeBody(context, auth, a, role),
       ),
     );
   }
@@ -1934,11 +2000,11 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   /// Home: what to act on today, then the numbers.
   List<Widget> _homeBody(BuildContext context, AuthState auth, Map<String, dynamic>? a, String? role) => [
-        FadeSlideIn(child: _homeHeader(context, auth, a)),
+        SectionSkeleton(loading: _pending.contains('analytics'), child: _homeHeader(context, auth, a)),
         const SizedBox(height: 12),
         _arthaBanner(context),
         const SizedBox(height: 12),
-        _prioritiesCard(context, a),
+        SectionSkeleton(loading: _pending.any({'analytics', 'hot', 'due'}.contains), child: _prioritiesCard(context, a)),
         if (role == 'agent' && a != null && ((a['allTimeTotal'] as num?)?.toInt() ?? 0) == 0) ...[
           const SizedBox(height: 12),
           Container(
@@ -1964,16 +2030,16 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ],
         const SizedBox(height: 12),
-        _attendanceRow(context),
+        SectionSkeleton(loading: _pending.contains('attendance'), child: _attendanceRow(context)),
         if (_analyticsError) ..._errorBanner(),
         if (a != null) ...[
           const SizedBox(height: 12),
-          FadeSlideIn(delay: const Duration(milliseconds: 40), child: _performanceCard(context, a)),
+          SectionSkeleton(loading: _pending.contains('analytics'), child: _performanceCard(context, a)),
         ],
         const SizedBox(height: 12),
-        _actionBar(context),
+        SectionSkeleton(loading: _pending.contains('due'), child: _actionBar(context)),
         const SizedBox(height: 12),
-        _hotAndUpcoming(context, a),
+        SectionSkeleton(loading: _pending.any({'analytics', 'hot'}.contains), child: _hotAndUpcoming(context, a)),
         // Setup steps (connect Facebook, add a teammate): last, so a new
         // company's checklist does not push today's work down. Admin jobs an
         // agent cannot do from the app, so agents do not get it.

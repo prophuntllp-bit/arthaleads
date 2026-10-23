@@ -81,6 +81,7 @@ dependencies:
   # runtime of its own to run the FB SDK in.
   webview_flutter: ^4.10.0
   speech_to_text: ^7.5.0
+  skeletonizer: ^3.0.0
 
 dev_dependencies:
   flutter_test:

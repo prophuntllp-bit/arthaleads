@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/card_skeleton.dart';
 import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
@@ -527,6 +528,21 @@ class _TasksScreenState extends State<TasksScreen> {
     if (saved == true) _load();
   }
 
+  /// While the first page loads: sample tasks drawn by the real list, shimmering.
+  bool get _sampling => _loading && _tasks.isEmpty;
+  List<Map<String, dynamic>> get _taskRows => _sampling
+      ? [
+          for (var i = 0; i < 6; i++)
+            {
+              '_id': 'sample$i',
+              'title': ['Call back about the 2 BHK', 'Send the brochure', 'Confirm Saturday site visit'][i % 3],
+              'status': 'pending',
+              'dueDate': DateTime.now().add(Duration(hours: i * 5)).toIso8601String(),
+              'leadName': SampleData.name(i),
+            },
+        ]
+      : _tasks;
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
@@ -639,9 +655,7 @@ class _TasksScreenState extends State<TasksScreen> {
             ),
           ),
           Expanded(
-            child: _loading
-                ? const Center(child: AppSpinner(size: 32))
-                : _tasks.isEmpty
+            child: _tasks.isEmpty && !_loading
                 ? Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -652,14 +666,16 @@ class _TasksScreenState extends State<TasksScreen> {
                       ],
                     ),
                   )
-                : RefreshIndicator(
+                : SectionSkeleton(
+                loading: _sampling,
+                child: RefreshIndicator(
                     color: AppColors.primary,
                     onRefresh: _load,
                     child: ListView.builder(
                       padding: const EdgeInsets.only(bottom: 80, top: 4),
-                      itemCount: _tasks.length,
+                      itemCount: _taskRows.length,
                       itemBuilder: (context, i) {
-                        final t = _tasks[i];
+                        final t = _taskRows[i];
                         final completed = t['status'] == 'completed';
                         final due = DateTime.tryParse(
                           t['dueDate'] as String? ?? '',
@@ -878,6 +894,7 @@ class _TasksScreenState extends State<TasksScreen> {
                       },
                     ),
                   ),
+              ),
           ),
         ],
       ),

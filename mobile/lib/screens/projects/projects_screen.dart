@@ -5,7 +5,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
-import '../../widgets/skeleton.dart';
+import '../../widgets/card_skeleton.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
@@ -131,6 +131,26 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     );
   }
 
+  /// While loading: sample projects drawn by the real list, shimmering.
+  bool get _sampling => _loading && _projects.isEmpty;
+  List<Map<String, dynamic>> get _projectRows => _sampling
+      ? [
+          for (var i = 0; i < 4; i++)
+            {
+              '_id': 'sample$i',
+              'name': ['Skyline Residency', 'Green Valley Plots', 'Lakeview Towers', 'Palm Heights'][i % 4],
+              'location': ['Kharghar', 'Khopoli', 'Wakad', 'Baner'][i % 4],
+              'unitTypes': ['2 BHK', '3 BHK'],
+              'bhkTypes': ['2 BHK', '3 BHK'],
+              'priceMin': 6500000,
+              'priceMax': 12500000,
+              'leadCount': 24,
+              'totalLeads': 24,
+              'assignedTo': [{'name': 'Team member'}],
+            },
+        ]
+      : _projects;
+
   @override
   Widget build(BuildContext context) {
     final canManage = context.watch<AuthState>().isAdmin;
@@ -149,20 +169,20 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             icon: Icons.apartment_rounded,
           ),
           Expanded(
-            child: _loading
-                ? const ProjectListSkeleton()
-                : _projects.isEmpty
+            child: _projects.isEmpty && !_loading
                 ? const Center(
                     child: Text('No projects yet — tap + to add one'),
                   )
-                : RefreshIndicator(
+                : SectionSkeleton(
+                loading: _sampling,
+                child: RefreshIndicator(
                     color: AppColors.primary,
                     onRefresh: _load,
                     child: ListView.builder(
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: _projects.length,
+                      itemCount: _projectRows.length,
                       itemBuilder: (context, i) {
-                        final p = _projects[i];
+                        final p = _projectRows[i];
                         final assigned = (p['assignedTo'] as List? ?? [])
                             .map(
                               (u) => u is Map ? u['name'] as String? ?? '' : '',
@@ -324,6 +344,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                       },
                     ),
                   ),
+              ),
           ),
         ],
       ),

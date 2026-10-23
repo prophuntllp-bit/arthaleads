@@ -7,7 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
-import '../../widgets/skeleton.dart';
+import '../../widgets/card_skeleton.dart';
 import '../../widgets/app_select.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/glass.dart';
@@ -598,11 +598,21 @@ class _CallsScreenState extends State<CallsScreen> {
         slivers: [
           SliverToBoxAdapter(child: _header(auth)),
           if (_loading && _calls.isEmpty)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               // hasScrollBody: false lets the skeleton size to its content
               // inside the sliver instead of being forced to fill the viewport.
               hasScrollBody: false,
-              child: CallListSkeleton(),
+              child: CardsSkeleton(
+                itemBuilder: (_, i) => _callCard(i, {
+                  'leadId': 'sample$i',
+                  'leadName': SampleData.name(i),
+                  'leadPhone': SampleData.phone(i),
+                  'lastStatus': ['completed', 'missed', 'completed'][i % 3],
+                  'lastDirection': 'outbound',
+                  'lastDuration': 95 + i * 20,
+                  'lastCallAt': DateTime.now().subtract(Duration(hours: i + 1)).toIso8601String(),
+                }),
+              ),
             )
           else if (_calls.isEmpty)
             SliverFillRemaining(child: _emptyState())
@@ -749,8 +759,9 @@ class _CallsScreenState extends State<CallsScreen> {
     );
   }
 
-  Widget _callCard(int i) {
-    final row = _calls[i];
+  /// [sample] draws a placeholder row while the first page loads.
+  Widget _callCard(int i, [Map<String, dynamic>? sample]) {
+    final row = sample ?? _calls[i];
     final color = _statusColor(row['lastStatus'] as String?);
     final calling = _callingLeadId == row['leadId'];
     return FadeSlideIn(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/card_skeleton.dart';
 import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
@@ -743,6 +744,24 @@ class _BookingsScreenState extends State<BookingsScreen> {
     if (saved == true) _load();
   }
 
+  /// While loading: sample bookings drawn by the real cards, shimmering.
+  List<Map<String, dynamic>> get _bookingRows => _loading
+      ? [
+          for (var i = 0; i < 5; i++)
+            {
+              '_id': 'sample$i',
+              'customerName': SampleData.name(i),
+              'projectName': 'Skyline Residency',
+              'unitType': '2 BHK',
+              'unitNo': '120${i + 1}',
+              'tower': 'A',
+              'status': ['new', 'invoiced', 'payment_received'][i % 3],
+              'agreementValue': 8500000,
+              'bookingDate': DateTime.now().subtract(Duration(days: i * 4)).toIso8601String(),
+            },
+        ]
+      : _bookings;
+
   @override
   Widget build(BuildContext context) {
     final byStatus = (_summary['byStatus'] as Map?) ?? const {};
@@ -756,9 +775,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
       // bottom-right corner (see _DraggableArthaFab in shell.dart).
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       floatingActionButton: GradientFab(onPressed: () => _openForm()),
-      body: _loading
-          ? const Center(child: AppSpinner(size: 32))
-          : RefreshIndicator(
+      body: SectionSkeleton(
+          loading: _loading,
+          child: RefreshIndicator(
               color: AppColors.primary,
               onRefresh: _load,
               child: ListView(
@@ -823,18 +842,18 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  if (_bookings.isEmpty)
+                  if (_bookingRows.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 48),
                       child: Center(child: Text('No bookings yet')),
                     )
                   else
-                    for (final (i, b) in _bookings.indexed)
+                    for (final (i, b) in _bookingRows.indexed)
                       FadeSlideIn(
                         delay: Duration(milliseconds: 20 * (i % 12)),
                         child: _bookingCard(b),
                       ),
-                  if (_bookings.length < _total)
+                  if (!_loading && _bookings.length < _total)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       child: Center(
@@ -848,7 +867,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ),
                 ],
               ),
-            ),
+            )),
     );
   }
 

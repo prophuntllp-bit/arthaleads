@@ -6,6 +6,7 @@ import '../../core/file_output.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/card_skeleton.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
 import 'invoice_pdf.dart';
@@ -228,6 +229,27 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     }
   }
 
+  /// While loading: sample invoices drawn by the real list, shimmering.
+  bool get _sampling => _loading && _invoices.isEmpty;
+  List<Map<String, dynamic>> _invRows(List<Map<String, dynamic>> shown) => _sampling
+      ? [
+          for (var i = 0; i < 4; i++)
+            {
+              '_id': 'sample$i',
+              'invoiceNumber': 'INV-00${i + 1}',
+              'customerName': SampleData.name(i),
+              'developerName': 'Developer name',
+              'projectName': 'Skyline Residency',
+              'tower': 'A',
+              'unitNo': '120${i + 1}',
+              'unitType': '2 BHK',
+              'status': 'draft',
+              'totalBill': 150000,
+              'totalBrokerage': 125000,
+            },
+        ]
+      : shown;
+
   @override
   Widget build(BuildContext context) {
     final filtered = _invoices;
@@ -262,9 +284,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         ),
         const SizedBox(height: 4),
         Expanded(
-          child: _loading
-              ? const Center(child: AppSpinner(size: 32))
-              : filtered.isEmpty
+          child: filtered.isEmpty && !_loading
                   ? Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -281,14 +301,16 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                         ],
                       ),
                     )
-                  : RefreshIndicator(
+                  : SectionSkeleton(
+                loading: _sampling,
+                child: RefreshIndicator(
                       color: AppColors.primary,
                       onRefresh: _load,
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: filtered.length + (filtered.length < _total ? 1 : 0),
+                        itemCount: _invRows(filtered).length + (!_sampling && filtered.length < _total ? 1 : 0),
                         itemBuilder: (context, i) {
-                          if (i == filtered.length) {
+                          if (i == _invRows(filtered).length) {
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               child: Center(
@@ -301,7 +323,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                               ),
                             );
                           }
-                          final inv = filtered[i];
+                          final inv = _invRows(filtered)[i];
                           final color = _statusColors[inv['status']] ?? const Color(0xFF6B7280);
                           final number = (inv['customInvoiceNumber'] as String?)?.isNotEmpty == true
                               ? inv['customInvoiceNumber']
@@ -439,6 +461,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                         },
                       ),
                     ),
+              ),
         ),
       ],
     );

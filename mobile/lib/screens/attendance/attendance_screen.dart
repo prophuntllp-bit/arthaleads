@@ -11,10 +11,10 @@ import '../../core/file_output.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/card_skeleton.dart';
 import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
-import '../../widgets/motion.dart';
 import 'attendance_capture_sheet.dart';
 
 /// Attendance — GET /attendance/status, POST /attendance/clockin, /clockout,
@@ -644,6 +644,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     return '${mins ~/ 60}h ${mins % 60}m';
   }
 
+  /// While loading: sample days drawn by the real history list, shimmering.
+  List<Map<String, dynamic>> get _historyRows {
+    if (!_loading) return _history;
+    final now = DateTime.now();
+    return [
+      for (var i = 1; i <= 5; i++)
+        {
+          '_id': 'sample$i',
+          'date': now.subtract(Duration(days: i)).toIso8601String(),
+          'clockIn': DateTime(now.year, now.month, now.day - i, 9, 30).toIso8601String(),
+          'clockOut': DateTime(now.year, now.month, now.day - i, 18, 45).toIso8601String(),
+          'dayType': 'full',
+        },
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
@@ -652,11 +668,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final clockedIn = clockIn != null && clockOut == null;
     final done = clockIn != null && clockOut != null;
 
-    if (_loading) {
-      return const Center(child: AppSpinner(size: 32));
-    }
-
-    return Column(
+    return SectionSkeleton(loading: _loading, child: Column(
       children: [
         if (_shiftSummary != null)
           Padding(
@@ -748,7 +760,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 ),
         ),
       ],
-    );
+    ));
   }
 
   Widget _teamTodayView() {
@@ -1179,15 +1191,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     bool done, {
     bool recordsOnly = false,
   }) {
-    final totalMins = _history.fold<int>(
+    final totalMins = _historyRows.fold<int>(
       0,
       (s, r) => s + ((r['totalMinutes'] as int?) ?? 0),
     );
-    final daysPresent = _history.where((r) => r['clockIn'] != null).length;
+    final daysPresent = _historyRows.where((r) => r['clockIn'] != null).length;
     final avgMins = daysPresent > 0 ? totalMins ~/ daysPresent : 0;
-    final lateCount = _history.where((r) => r['isLate'] == true).length;
-    final fullDays = _history.where((r) => r['dayType'] == 'full').length;
-    final halfDays = _history.where((r) => r['dayType'] == 'half').length;
+    final lateCount = _historyRows.where((r) => r['isLate'] == true).length;
+    final fullDays = _historyRows.where((r) => r['dayType'] == 'full').length;
+    final halfDays = _historyRows.where((r) => r['dayType'] == 'half').length;
 
     return RefreshIndicator(
       color: AppColors.primary,
@@ -1278,13 +1290,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               style: Theme.of(context).textTheme.titleSmall,
             ),
           ),
-          if (_history.isEmpty)
+          if (_historyRows.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Center(child: Text('No attendance records yet')),
             )
           else
-            ..._history.map((r) {
+            ..._historyRows.map((r) {
               final inT = _time(r['clockIn']);
               final outT = _time(r['clockOut']);
               return Card(

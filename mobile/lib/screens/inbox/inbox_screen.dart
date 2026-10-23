@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/card_skeleton.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
 import '../automation/automation_screen.dart';
@@ -230,6 +231,23 @@ class _InboxScreenState extends State<InboxScreen> {
     return DateFormat('dd MMM').format(dt);
   }
 
+  /// While the first page loads: sample chats drawn by the real list, shimmering.
+  bool get _sampling => _loading && _conversations.isEmpty;
+  List<Map<String, dynamic>> get _chatRows => _sampling
+      ? [
+          for (var i = 0; i < 8; i++)
+            {
+              '_id': 'sample$i',
+              'contactName': SampleData.name(i),
+              'contactPhone': SampleData.phone(i),
+              'lastMessagePreview': ['Is the 2 BHK still available?', 'Please share the brochure', 'Can I visit on Saturday?'][i % 3],
+              'lastMessageAt': DateTime.now().subtract(Duration(minutes: 7 * (i + 1))).toIso8601String(),
+              'unreadCount': i % 3 == 0 ? 2 : 0,
+              'botEnabled': false,
+            },
+        ]
+      : _conversations;
+
   @override
   Widget build(BuildContext context) {
     if (_connected == false) {
@@ -386,16 +404,16 @@ class _InboxScreenState extends State<InboxScreen> {
           ),
           const SizedBox(height: 4),
           Expanded(
-            child: _loading && _conversations.isEmpty
-                ? const Center(child: AppSpinner(size: 32))
-                : _conversations.isEmpty
+            child: _conversations.isEmpty && !_loading
                 ? const Center(child: Text('No conversations yet'))
-                : RefreshIndicator(
+                : SectionSkeleton(
+                loading: _sampling,
+                child: RefreshIndicator(
                     color: AppColors.primary,
                     onRefresh: () => _load(reset: true),
                     child: ListView.separated(
                       controller: _scroll,
-                      itemCount: _conversations.length,
+                      itemCount: _chatRows.length,
                       separatorBuilder: (_, _) => Padding(
                         padding: const EdgeInsets.only(left: 82),
                         child: Divider(
@@ -405,7 +423,7 @@ class _InboxScreenState extends State<InboxScreen> {
                         ),
                       ),
                       itemBuilder: (context, i) {
-                        final c = _conversations[i];
+                        final c = _chatRows[i];
                         final unread = (c['unreadCount'] as num?)?.toInt() ?? 0;
                         final contactName = _displayName(c);
                         final score = _leadScore(c);
@@ -630,6 +648,7 @@ class _InboxScreenState extends State<InboxScreen> {
                       },
                     ),
                   ),
+              ),
           ),
         ],
       ),

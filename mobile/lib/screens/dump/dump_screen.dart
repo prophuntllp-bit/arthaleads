@@ -14,8 +14,8 @@ import '../../core/constants.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../core/xlsx_export.dart';
+import '../../widgets/card_skeleton.dart';
 import '../../widgets/chips.dart';
-import '../../widgets/motion.dart';
 import '../leads/lead_origin.dart';
 
 /// Dump Leads — GET /leads/dump: pipeline leads that were deleted or marked
@@ -558,7 +558,7 @@ class _DumpScreenState extends State<DumpScreen> {
         ),
         Expanded(
           child: _loading
-              ? const Center(child: AppSpinner(size: 32))
+              ? CardsSkeleton(itemBuilder: (_, i) => _dumpCard({...SampleData.lead(i), 'status': 'Closed Lost'}, 'sample$i', false, false))
               : filtered.isEmpty
                   ? Center(child: Text(_search.isNotEmpty ? 'No matches' : 'Dump is empty'))
                   : RefreshIndicator(
