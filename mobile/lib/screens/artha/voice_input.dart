@@ -402,6 +402,8 @@ class _VoiceMicButtonState extends State<VoiceMicButton> {
         messenger?.showSnackBar(SnackBar(
           content: const Text('Artha needs the microphone to hear you. Allow it in the app settings.'),
           action: SnackBarAction(label: 'Settings', onPressed: _openAppSettings),
+          duration: const Duration(seconds: 6),
+          persist: false, // a SnackBar with a button otherwise stays until tapped
         ));
       case VoiceStart.unavailable:
         messenger?.showSnackBar(const SnackBar(

@@ -6,9 +6,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/file_output.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
@@ -669,12 +669,12 @@ class _LeadsTabState extends State<_LeadsTab> {
     setState(() => _exporting = true);
     try {
       final leads = await _exportSource();
-      if (leads == null) return;
+      if (leads == null || !mounted) return;
       const keep = ['name', 'phone', 'whatsapp', 'email', 'source', 'status', 'booking', 'followUp', 'followUp2', 'remark1', 'remark2', 'remark3', 'remark4', 'remarkNote', 'remarkUpdatedBy', 'remarkUpdatedAt'];
       final tabLabel = widget.isProspective ? 'Prospective' : 'Leads';
       final projectName = (widget.project['name'] as String? ?? 'project').replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
       final selection = _selected.isNotEmpty ? '_${_selected.length}selected' : '';
-      await XlsxExport.shareRows({
+      await XlsxExport.saveRows(context, {
         'kind': 'project',
         'prospective': widget.isProspective,
         'leads': [for (final l in leads) {for (final k in keep) if (l[k] != null) k: l[k]}],
@@ -810,13 +810,8 @@ class _LeadsTabState extends State<_LeadsTab> {
       final tabLabel = widget.isProspective ? 'Prospective' : 'Leads';
       final projectName = (widget.project['name'] as String? ?? 'project')
           .replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
-      await Share.shareXFiles([
-        XFile.fromData(
-          Uint8List.fromList(utf8.encode(csv)),
-          name: '${tabLabel}_$projectName.csv',
-          mimeType: 'text/csv',
-        ),
-      ]);
+      if (!mounted) return;
+      await FileOutput.saveAndOpen(context, Uint8List.fromList(utf8.encode(csv)), '${tabLabel}_$projectName.csv', 'text/csv');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

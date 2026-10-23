@@ -145,7 +145,7 @@ class _QrSheetState extends State<QrSheet> {
       );
       final slug = (widget.projectName ?? orgName).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
       await Share.shareXFiles(
-        [XFile.fromData(png, name: 'enquiry-poster-${slug.isEmpty ? 'qr' : slug}.png', mimeType: 'image/png')],
+        [XFile.fromData(png, name: 'enquiry-poster-${slug.isEmpty ? 'qr' : slug}.png', mimeType: 'image/png')], fileNameOverrides: ['enquiry-poster-${slug.isEmpty ? 'qr' : slug}.png'],
         text: 'Enquiry poster (A4). Print at full size.',
       );
     } catch (e) {
@@ -308,7 +308,7 @@ Future<Uint8List> renderQrPoster({required String url, required String title, St
 
   double text(String s, double size, Color color, {FontWeight weight = FontWeight.w400, double spacing = 0, double width = 1050}) {
     final tp = TextPainter(
-      text: TextSpan(text: s, style: TextStyle(fontSize: size, color: color, fontWeight: weight, letterSpacing: spacing, height: 1.15)),
+      text: TextSpan(text: s, style: TextStyle(fontFamily: 'Inter', fontSize: size, color: color, fontWeight: weight, letterSpacing: spacing, height: 1.15)),
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
       maxLines: 3,
@@ -335,8 +335,9 @@ Future<Uint8List> renderQrPoster({required String url, required String title, St
 
   y += text('Point your phone camera here', 60, ink, weight: FontWeight.w800) + 14;
   y += text('Share your name and number in 30 seconds. Our team will call you back.', 36, soft) + 30;
-  text('Or open $url', 28, const Color(0xFF374151));
-  y = h - 70;
+  y += text('Or open $url', 28, const Color(0xFF374151)) + 36;
+  // At the foot of the page, or under the link if that ran long.
+  y = y > h - 70 ? y : h - 70;
   text('Powered by ArthaLeads', 24, const Color(0xFF9CA3AF));
 
   final image = await recorder.endRecording().toImage(w.toInt(), h.toInt());
