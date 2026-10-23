@@ -77,19 +77,39 @@ export default function DateTimePicker({ value, onChange, placeholder = "dd-mm-y
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
 
+  // Under the trigger, or above it when there's no room below.
+  const place = () => {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const popW = 370, popH = 320;
+    const left = Math.min(rect.left, window.innerWidth - popW - 8);
+    const top  = rect.bottom + popH > window.innerHeight - 8
+      ? rect.top - popH - 4
+      : rect.bottom + 4;
+    setPopPos({ top, left: Math.max(8, left) });
+  };
+
   const openPicker = () => {
     setSt(parseToState(value));
-    if (btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      const popW = 370, popH = 320;
-      const left = Math.min(rect.left, window.innerWidth - popW - 8);
-      const top  = rect.bottom + popH > window.innerHeight - 8
-        ? rect.top - popH - 4
-        : rect.bottom + 4;
-      setPopPos({ top, left: Math.max(8, left) });
-    }
+    place();
     setOpen(true);
   };
+
+  // The popup is fixed to the screen, so it follows the trigger while the
+  // page (or any scrolling panel around it) scrolls, and closes once the
+  // trigger has scrolled out of view.
+  useEffect(() => {
+    if (!open) return;
+    const onScroll = (e) => {
+      if (popRef.current?.contains(e.target)) return; // the hour/minute columns
+      const r = btnRef.current?.getBoundingClientRect();
+      if (!r || r.bottom < 0 || r.top > window.innerHeight) { setOpen(false); return; }
+      place();
+    };
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onScroll);
+    return () => { window.removeEventListener("scroll", onScroll, true); window.removeEventListener("resize", onScroll); };
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const navMonth = (dir) => setSt(s => {
     let m = s.month + dir, y = s.year;
@@ -166,7 +186,9 @@ export default function DateTimePicker({ value, onChange, placeholder = "dd-mm-y
             position: "fixed", zIndex: 9999,
             top: popPos.top, left: popPos.left,
             width: 370,
-            background: "var(--app-surface)",
+            // Solid: --app-surface is the see-through glass tone, which let
+            // the form behind show through the calendar.
+            background: "var(--app-card-solid)",
             border: "1px solid var(--app-border)",
             borderRadius: 16,
             boxShadow: "0 12px 40px rgba(0,0,0,0.22)",
