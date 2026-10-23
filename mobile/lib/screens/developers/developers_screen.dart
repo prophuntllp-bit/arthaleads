@@ -6,10 +6,10 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../widgets/card_skeleton.dart';
 import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
-import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
 
 class DevelopersScreen extends StatefulWidget {
@@ -99,6 +99,20 @@ class _DevelopersScreenState extends State<DevelopersScreen> {
     if (saved == true) _load();
   }
 
+  /// While loading: sample developers drawn by the real list, shimmering.
+  List<Map<String, dynamic>> get _developerRows => _loading
+      ? [
+          for (var i = 0; i < 4; i++)
+            {
+              '_id': 'sample$i',
+              'name': ['Skyline Developers', 'Green Valley Realty', 'Lakeview Builders', 'Palm Group'][i % 4],
+              'address': 'Office 12, Business Park, Navi Mumbai',
+              'gstNo': '27ABCDE1234F1Z5',
+              'defaultBrokeragePercent': 2,
+            },
+        ]
+      : _developers;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -119,11 +133,11 @@ class _DevelopersScreenState extends State<DevelopersScreen> {
             icon: Icons.apartment_rounded,
           ),
           Expanded(
-            child: _loading
-                ? const Center(child: AppSpinner(size: 32))
-                : RefreshIndicator(
+            child: SectionSkeleton(
+                loading: _loading,
+                child: RefreshIndicator(
         onRefresh: _load,
-        child: _developers.isEmpty
+        child: _developerRows.isEmpty
             ? ListView(
                 children: [
                   const SizedBox(height: 100),
@@ -153,9 +167,9 @@ class _DevelopersScreenState extends State<DevelopersScreen> {
               )
             : ListView.builder(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 90),
-                itemCount: _developers.length,
+                itemCount: _developerRows.length,
                 itemBuilder: (context, index) {
-                  final d = _developers[index];
+                  final d = _developerRows[index];
                   return Card(
                     child: Padding(
                       padding: const EdgeInsets.all(14),
@@ -290,7 +304,7 @@ class _DevelopersScreenState extends State<DevelopersScreen> {
                   );
                 },
               ),
-                ),
+                )),
           ),
         ],
       ),

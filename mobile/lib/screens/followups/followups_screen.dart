@@ -8,7 +8,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
-import '../../widgets/skeleton.dart';
+import '../../widgets/card_skeleton.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/chips.dart';
 import '../../widgets/whatsapp_send_sheet.dart';
@@ -467,7 +467,7 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
           child: _loading && _leads.isEmpty
               // Guarded on _leads.isEmpty, so a refresh with rows already on
               // screen keeps them rather than flashing back to placeholders.
-              ? const LeadListSkeleton()
+              ? CardsSkeleton(padding: const EdgeInsets.only(top: 4), itemBuilder: (_, i) => _card(t, SampleData.lead(i)))
               : _leads.isEmpty
                   ? _empty(t)
                   : RefreshIndicator(

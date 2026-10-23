@@ -11,6 +11,7 @@ import '../../core/auth_state.dart';
 import '../../core/deep_link.dart';
 import '../../core/plan.dart';
 import '../../core/theme.dart';
+import '../../widgets/card_skeleton.dart';
 import '../../widgets/cards.dart';
 import '../../widgets/glass.dart';
 import '../../widgets/initials_avatar.dart';
@@ -105,9 +106,27 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
     } catch (_) {}
   }
 
+  /// While the first load runs: sample people drawn by the real cards.
+  bool get _sampling => _loading && _members.isEmpty;
+  List<Map<String, dynamic>> get _memberRows => _sampling
+      ? [
+          for (var i = 0; i < 3; i++)
+            {
+              '_id': 'sample$i',
+              'name': SampleData.name(i),
+              'email': 'person$i@example.com',
+              'role': 'agent',
+              'isActive': true,
+              'totalAssigned': 40 - i * 8,
+              'siteVisits': 6 - i,
+              'closedWon': 2,
+            },
+        ]
+      : _members;
+
   List<Map<String, dynamic>> get _displayMembers => _filterMemberId.isEmpty
-      ? _members
-      : _members.where((m) => m['_id'] == _filterMemberId).toList();
+      ? _memberRows
+      : _memberRows.where((m) => m['_id'] == _filterMemberId).toList();
 
   Future<void> _load({bool isRefresh = false}) async {
     setState(() => isRefresh ? _refreshing = true : _loading = true);
@@ -714,14 +733,14 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
       );
     }
 
-    if (_loading) return const Center(child: AppSpinner(size: 32));
-    if (_members.isEmpty) {
+    if (_loading && !_sampling) return const Center(child: AppSpinner(size: 32));
+    if (_memberRows.isEmpty) {
       return const Center(child: Text('No team performance data yet'));
     }
 
     final members = _displayMembers;
 
-    return RefreshIndicator(
+    return SectionSkeleton(loading: _sampling, child: RefreshIndicator(
       color: AppColors.primary,
       onRefresh: () => _load(isRefresh: true),
       child: ListView(
@@ -903,7 +922,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
             ),
         ],
       ),
-    );
+    ));
   }
 
   /// Mirrors Performance.jsx's "Call Analytics" card — GET /calls/analytics

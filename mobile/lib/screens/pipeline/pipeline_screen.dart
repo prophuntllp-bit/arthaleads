@@ -10,7 +10,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
-import '../../widgets/skeleton.dart';
+import '../../widgets/card_skeleton.dart';
 import '../../widgets/app_select.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/chips.dart';
@@ -305,18 +305,22 @@ class _PipelineScreenState extends State<PipelineScreen> {
     );
   }
 
+  /// While loading: sample leads spread over the columns, shimmering.
+  List<Map<String, dynamic>> get _leadRows => _loading
+      ? [
+          for (var i = 0; i < 12; i++)
+            {...SampleData.lead(i), 'status': statusOptions[i % statusOptions.length]},
+        ]
+      : _leads;
+
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const PipelineSkeleton();
-    }
-
     final grouped = <String, List<Map<String, dynamic>>>{
       for (final s in statusOptions)
-        s: _leads.where((l) => l['status'] == s).toList(),
+        s: _leadRows.where((l) => l['status'] == s).toList(),
     };
 
-    return Column(
+    return SectionSkeleton(loading: _loading, child: Column(
       children: [
         PageHeader(
           title: 'Sales Pipeline',
@@ -646,6 +650,6 @@ class _PipelineScreenState extends State<PipelineScreen> {
           ),
         ),
       ],
-    );
+    ));
   }
 }

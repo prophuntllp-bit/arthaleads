@@ -8,6 +8,7 @@ import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/card_skeleton.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/initials_avatar.dart';
 import '../../widgets/labeled_field.dart';
@@ -429,6 +430,21 @@ class _TeamScreenState extends State<TeamScreen> {
     );
   }
 
+  /// While loading: sample people drawn by the real list, shimmering.
+  bool get _sampling => _loading && _users.isEmpty;
+  List<Map<String, dynamic>> get _userRows => _sampling
+      ? [
+          for (var i = 0; i < 6; i++)
+            {
+              '_id': 'sample$i',
+              'name': SampleData.name(i),
+              'email': 'person$i@example.com',
+              'role': i == 0 ? 'admin' : 'agent',
+              'isActive': true,
+            },
+        ]
+      : _users;
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
@@ -502,9 +518,7 @@ class _TeamScreenState extends State<TeamScreen> {
             ),
           ),
           Expanded(
-            child: _loading
-                ? const Center(child: AppSpinner(size: 32))
-                : _users.isEmpty
+            child: _users.isEmpty && !_loading
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
@@ -533,14 +547,16 @@ class _TeamScreenState extends State<TeamScreen> {
                       ),
                     ),
                   )
-                : RefreshIndicator(
+                : SectionSkeleton(
+                loading: _sampling,
+                child: RefreshIndicator(
               color: AppColors.primary,
               onRefresh: _load,
               child: ListView.builder(
                 padding: const EdgeInsets.only(bottom: 80, top: 8),
-                itemCount: _users.length,
+                itemCount: _userRows.length,
                 itemBuilder: (context, i) {
-                  final u = _users[i];
+                  final u = _userRows[i];
                   final active = u['isActive'] != false;
                   final roleColor = _roleColor(u['role'] as String?);
                   return FadeSlideIn(
@@ -605,6 +621,7 @@ class _TeamScreenState extends State<TeamScreen> {
                 },
               ),
             ),
+              ),
           ),
         ],
       ),
