@@ -8,8 +8,8 @@
 // Every claim must match the product and its plan (data/plans.js, data/features.js,
 // backend planGate, re-checked 23 Oct 2026). Portal leads (99acres, MagicBricks,
 // Housing.com) are a sheet import, never "automatic". There is no channel
-// partner portal: do not claim one. Google Ads sync is not set up: do not
-// claim Google Ads leads. Auto-assignment (to the agent with the fewest open
+// partner portal: do not claim one. Google lead forms (Google Ads) are claimed
+// as Enterprise only, per owner 23 Oct 2026. Auto-assignment (to the agent with the fewest open
 // leads) and duplicate flagging work on every plan; routing rules, Hot Today,
 // AI lead scoring, attendance and source/team reports are Growth.
 import { Building2, QrCode, Facebook, FileSpreadsheet, Shuffle, MapPin, Camera, BarChart3 } from "lucide-react";
@@ -19,11 +19,11 @@ import { PLAN_PRICING } from "../utils/plan";
 
 const FAQS = [
   ["What is the best CRM for builders in India?",
-   "The best one is the one your sales team will actually use. For a builder that means leads kept project by project, automatic capture from Facebook and WhatsApp, an easy way to bring in portal leads, fair routing to telecallers, site visit tracking and per-project reports. Arthaleads does all of this from ₹599 per user per month."],
+   "The best one is the one your sales team will actually use. For a builder that means leads kept project by project, automatic capture from Facebook and WhatsApp (Google lead forms on Enterprise), an easy way to bring in portal leads, fair routing to telecallers, site visit tracking and per-project reports. Arthaleads does all of this from ₹599 per user per month."],
   ["Can I manage several projects in one account?",
    "Yes. Starter includes two projects and Growth has no limit. Each project keeps its own leads, team, brochures, floor plans and videos, and you can move a lead from one project to another without losing its notes, follow-up or history."],
   ["Do leads from 99acres, MagicBricks and Housing.com come in automatically?",
-   "No. Portal leads come in by import: download them from the portal as a sheet and import the CSV or Excel file into the project. Facebook and Instagram lead ads, WhatsApp chats, your website forms and the project's QR code do come in automatically."],
+   "No. Portal leads come in by import: download them from the portal as a sheet and import the CSV or Excel file into the project. Facebook and Instagram lead ads, WhatsApp chats, your website forms and the project's QR code do come in automatically, and Google lead forms do too on Enterprise."],
   ["How do new leads reach my telecallers?",
    "Every new lead gets an owner the moment it arrives, shared out to the agent with the fewest open leads, and that person's phone gets a push alert. On Growth you can add routing rules, for example by campaign, and Hot Today ranks who to call first using AI lead scoring. Overdue follow-ups turn red, and agents can call and log outcomes from the Android app."],
   ["Can the WhatsApp AI answer questions about my project?",
@@ -35,7 +35,7 @@ const FAQS = [
 export default function BuilderCrm() {
   useSEO({
     title: "Builder CRM for Real Estate Developers in India | Arthaleads",
-    description: "Builder CRM for developers in India: project-wise leads from Facebook ads, WhatsApp, portals and site QR codes, routed to telecallers, with site visits tracked.",
+    description: "Builder CRM for developers in India: project-wise leads from Facebook and Google ads, WhatsApp, portals and site QR codes, routed to telecallers, with site visits tracked.",
     canonical: "https://www.arthaleads.com/builder-crm",
   });
 
@@ -44,7 +44,7 @@ export default function BuilderCrm() {
       jsonLd={solutionJsonLd({ name: "Builder CRM", path: "/builder-crm", faqs: FAQS })}
       hero={{
         lines: ["Builder CRM", "for real estate developers"],
-        lede: "Run every project's sales in one place. Leads from Facebook ads, WhatsApp, portals and the site office land in the right project, reach the right telecaller in seconds, and are tracked through site visit to booking.",
+        lede: "Run every project's sales in one place. Leads from Facebook and Google ads, WhatsApp, portals and the site office land in the right project, reach the right telecaller in seconds, and are tracked through site visit to booking.",
         image: "/tour/project.webp",
         imageAlt: "A project in Arthaleads with its RERA number, possession date, price range, configurations and assigned sales team",
         chips: ["New lead · Facebook ad", "Site visit booked"],
@@ -62,7 +62,7 @@ export default function BuilderCrm() {
         intro: "From launch to booking, in four steps.",
         items: [
           { title: "Set up the project", body: "Add the project with its RERA number, location, price range and configurations, upload brochures, floor plans and videos, and assign the sales team." },
-          { title: "Leads arrive", body: "Facebook and Instagram lead ads and WhatsApp chats come in automatically. Portal sheets are imported, and walk-ins scan the project's QR code at the site office." },
+          { title: "Leads arrive", body: "Facebook and Instagram lead ads and WhatsApp chats come in automatically, and Google lead forms do too on Enterprise. Portal sheets are imported, and walk-ins scan the project's QR code at the site office." },
           { title: "Telecallers follow up", body: "Each lead gets an owner and a push alert. Follow-ups are dated, overdue ones turn red, Hot Today shows who to call first, and the WhatsApp AI agent answers buyers at night." },
           { title: "Visits, bookings, reports", body: "Leads move through Site Visit and Negotiation to Closed Won, and managers see conversion by project, by source and by agent." },
         ],
@@ -73,7 +73,7 @@ export default function BuilderCrm() {
         items: [
           { icon: Building2, title: "Project-wise leads", body: "Each project keeps its own leads, team and media. Two projects on Starter, unlimited on Growth. Move leads between projects with their history.", plan: "Starter" },
           { icon: QrCode, title: "QR codes for the site office", body: "Every project gets a QR code for hoardings, brochures and expo stalls. A visitor scans it, fills a short form and becomes a lead, tagged by source.", plan: "Starter" },
-          { icon: Facebook, title: "Facebook lead ads, automatic", body: "Leads from Facebook and Instagram lead forms arrive in seconds with the campaign attached. No downloading sheets from Ads Manager.", plan: "Starter" },
+          { icon: Facebook, title: "Facebook lead ads, automatic", body: "Leads from Facebook and Instagram lead forms arrive in seconds with the campaign attached. No downloading sheets from Ads Manager. Google Ads lead forms are on Enterprise.", plan: "Starter" },
           { icon: FileSpreadsheet, title: "Portal leads by import", body: "Bring in leads from 99acres, MagicBricks and Housing.com by importing the CSV or Excel export. Duplicate phone numbers are skipped.", plan: "Starter" },
           { icon: Shuffle, title: "Routing to telecallers", body: "Every new lead gets an owner the moment it arrives, shared out evenly across the team, so no lead waits and none is called twice. Growth adds routing rules by campaign.", plan: "Starter" },
           { icon: MapPin, title: "Site visit tracking", body: "Site Visit is a stage in the pipeline, so visits are counted per project and per agent instead of being remembered at the weekly meeting.", plan: "Starter" },

@@ -9,7 +9,7 @@ import { useSEO } from "../utils/useSEO";
 const steps = [
   { num: "01", title: "Create your account",  desc: "Request your workspace at arthaleads.com/signup. New workspaces are approved by our team; once yours is approved you can sign in and finish a short setup." },
   { num: "02", title: "Add your team",         desc: "Go to Team settings and invite your telecallers, managers, and admins. Each member gets their own login with role-based access." },
-  { num: "03", title: "Connect your forms",    desc: "In Integrations, connect Facebook Leads, or install the Arthaleads WordPress plugin to capture website form submissions automatically." },
+  { num: "03", title: "Connect your forms",    desc: "In Integrations, connect Facebook Leads (Google Ads lead forms on Enterprise), or install the Arthaleads WordPress plugin to capture website form submissions automatically." },
   { num: "04", title: "Import existing leads", desc: "Upload a CSV or paste a lead list directly into a project. The system detects duplicates and normalises phone numbers automatically." },
   { num: "05", title: "Start tracking",        desc: "Assign leads to agents, track call outcomes, set follow-up reminders, and watch your pipeline move through stages toward a closed deal." },
 ];
