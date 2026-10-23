@@ -1180,6 +1180,14 @@ async function handleInbound(org, parsed) {
   // The photo itself, for the model to look at (small enough to send inline).
   const image = isPhoto && inboundMedia?.buffer && inboundMedia.size <= 4 * 1024 * 1024
     ? { dataUrl: `data:${inboundMedia.contentType};base64,${inboundMedia.buffer.toString("base64")}` } : null;
+  // A test number re-runs its agent's flow from the first question whenever
+  // it clicks the agent's ad or sends the ad's message (owner, 23 Oct 2026:
+  // test numbers must be able to test over and over).
+  let testRun = false;
+  if (botCanRead && !interactiveId) {
+    try { testRun = await maybeRestartTestRun(org, conv, { clickRef, msgText }); }
+    catch (err) { console.error("[WhatsApp Bot] test restart check failed:", err.message); }
+  }
   if (conv.botEnabled && botCanRead) {
     // No sinceTimestamp here. That guard reads "has the bot said anything
     // since this message arrived?", which is true for the second of two quick
@@ -1187,8 +1195,34 @@ async function handleInbound(org, parsed) {
     // the second tap was silently dropped: a "Photos & Videos" tap right after
     // "Location Details" never sent the photos. The queue below already keeps
     // turns in order; inboundKey stops the same message being answered twice.
-    await respondAsBot(org, conv, { interactiveId, msgText, image, isNewConversation: isNewConversation || movedToAnotherAgent, inboundKey: msgId || `t${inboundTimestamp.getTime()}`, inboundAt: inboundTimestamp });
+    await respondAsBot(org, conv, { interactiveId, msgText, image, isNewConversation: isNewConversation || movedToAnotherAgent || testRun, testRun, inboundKey: msgId || `t${inboundTimestamp.getTime()}`, inboundAt: inboundTimestamp });
   }
+}
+
+// An agent's test numbers (ctwaFlow.testPhones) are for testing its flow, so
+// the rules that keep a real customer from being asked twice do not apply to
+// them: clicking the agent's ad, or sending its pre-filled message, moves the
+// chat to that agent, switches the bot back on (after a hand-off, a human
+// reply or a vendor-pitch mute) and starts the flow again from the first
+// question. Returns true when it did.
+async function maybeRestartTestRun(org, conv, { clickRef, msgText }) {
+  const phone = normalizeTestPhone(conv.contactPhone);
+  const agents = await WaAgent.find({ orgId: org._id, status: "active", "ctwaFlow.enabled": true, "ctwaFlow.testPhones.0": { $exists: true } })
+    .select("adIds ctwaFlow.testPhones").lean();
+  const mine = agents.filter((a) => (a.ctwaFlow.testPhones || []).map(normalizeTestPhone).includes(phone));
+  if (!mine.length) return false;
+  let target = clickRef?.adId ? mine.find((a) => (a.adIds || []).includes(clickRef.adId)) : null;
+  if (!target && msgText) {
+    const hit = await adPrefill.matchAgent(org._id, msgText);
+    if (hit) target = mine.find((a) => String(a._id) === String(hit.agent._id));
+  }
+  if (!target) return false;
+  await WaConversation.updateOne({ _id: conv._id }, {
+    $set: { agentId: target._id, agentLocked: true, botEnabled: true, status: "bot" },
+    $unset: { flowState: 1, botPausedReason: 1, botPausedAt: 1, botResumeAt: 1 },
+  });
+  Object.assign(conv, { agentId: target._id, agentLocked: true, botEnabled: true, status: "bot", flowState: undefined });
+  return true;
 }
 
 /**
@@ -1250,6 +1284,7 @@ function respondAsBot(org, conv, args) {
         const later = q.pending[q.pending.length - 1];
         if (later) {
           if (args.isNewConversation) later.args.isNewConversation = true;
+          if (args.testRun) later.args.testRun = true;
           // A photo then "what's the price of this?": the reply still sees the photo.
           if (args.image && !later.args.image) later.args.image = args.image;
           markAnswered(id, args.inboundKey);
@@ -1273,7 +1308,7 @@ function respondAsBot(org, conv, args) {
   return next;
 }
 
-async function respondAsBotNow(org, conv, { interactiveId, msgText, image = null, isNewConversation, sinceTimestamp, inboundAt }) {
+async function respondAsBotNow(org, conv, { interactiveId, msgText, image = null, isNewConversation, sinceTimestamp, inboundAt, testRun = false }) {
   // Two independent paths can both end up owing a reply to the same inbound
   // message — the live webhook, and resumeBotIfOwed firing right as someone
   // flips "Bot ON" back on for a thread whose last message arrived while it
@@ -1295,7 +1330,7 @@ async function respondAsBotNow(org, conv, { interactiveId, msgText, image = null
   // Someone pitching their own services (agency, freelancer) is not a buyer.
   // Checked before any flow step or model call so no tokens or WhatsApp
   // credits are spent on them.
-  if (!interactiveId && looksLikeSolicitation(msgText)) {
+  if (!testRun && !interactiveId && looksLikeSolicitation(msgText)) {
     await muteNonBuyer(conv, "message reads as a vendor pitch");
     return;
   }
@@ -1312,7 +1347,7 @@ async function respondAsBotNow(org, conv, { interactiveId, msgText, image = null
     await WaConversation.findByIdAndUpdate(conv._id, { agentId: agent._id });
     conv.agentId = agent._id;
   }
-  if (!isWithinBusinessHours(org)) {
+  if (!testRun && !isWithinBusinessHours(org)) {
     await maybeSendAwayMessage(org, agent, conv);
     return;
   }

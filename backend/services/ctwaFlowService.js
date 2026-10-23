@@ -78,13 +78,24 @@ module.exports = function createCtwaFlowService({
    * retest repeatedly from the same number instead of needing a fresh one or
    * wiping conversation history every time.
    */
+  // Normalised both sides: a number saved as 10 digits before 23 Oct 2026
+  // never matched the 91-prefixed number WhatsApp sends.
+  function isTestPhone(agent, phone) {
+    const { normalizeTestPhone } = require("../utils/phone");
+    return (agent?.ctwaFlow?.testPhones || []).map(normalizeTestPhone).includes(normalizeTestPhone(phone));
+  }
+
   function shouldStartFlow(agent, conversation, { isNewConversation = true } = {}) {
     if (!agent?.ctwaFlow?.enabled || conversation.flowState?.step) return false;
     if (agent.ctwaFlow.testPhones?.length) {
-      // Normalised both sides: a number saved as 10 digits before 23 Oct 2026
-      // never matched the 91-prefixed number WhatsApp sends.
-      const { normalizeTestPhone } = require("../utils/phone");
-      return agent.ctwaFlow.testPhones.map(normalizeTestPhone).includes(normalizeTestPhone(conversation.contactPhone));
+      if (!isTestPhone(agent, conversation.contactPhone)) return false;
+      // A test number starts the flow with any message, except in the half
+      // hour after a run ended, so questions about what it just did get the
+      // assistant's answer. Its ad or ad message always restarts it
+      // (whatsappRoutes maybeRestartTestRun, which passes isNewConversation).
+      if (isNewConversation) return true;
+      const ended = conversation.flowFunnel?.outcomeAt;
+      return !ended || Date.now() - new Date(ended).getTime() > 30 * 60000;
     }
     if (!isNewConversation) return false;
     // Whether this agent should answer the thread at all is decided before we
@@ -282,7 +293,7 @@ module.exports = function createCtwaFlowService({
   const FRESH_LEAD_MS = 24 * 3600 * 1000;
   // trustLead: the Inbox's "Start qualification flow", which first reads the
   // answers out of the chat so far (inferAnsweredFromTranscript): those count.
-  async function nextUnansweredIndex(questions, from, leadId, agent = null, { trustLead = false } = {}) {
+  async function nextUnansweredIndex(questions, from, leadId, agent = null, { trustLead = false, test = false } = {}) {
     let lead = null;
     // purpose/propertyType were missing here entirely — leadKnows() had no
     // case for them, so a question mapped to either NEVER counted as
@@ -292,7 +303,7 @@ module.exports = function createCtwaFlowService({
     if (leadId) lead = await Lead.findById(leadId).select("budget timeline bhk purpose propertyType city preferredLocation streetAddress createdAt campaignRef").lean();
     const fresh = lead && Date.now() - new Date(lead.createdAt).getTime() < FRESH_LEAD_MS
       && (!lead.campaignRef?.adId || !agent || (agent.adIds || []).includes(lead.campaignRef.adId));
-    if (!fresh && !trustLead) lead = null;
+    if ((!fresh && !trustLead) || test) lead = null;
     let i = from;
     while (i < questions.length && leadKnows(lead, questions[i].mapsTo)) i++;
     return i;
@@ -438,7 +449,8 @@ module.exports = function createCtwaFlowService({
     }
     const questions = getQualifyingQuestions(agent);
     if (!questions.length) return; // sanitizeCtwaFlow blocks enabling without this — never crash live traffic over it regardless
-    const firstIdx = await nextUnansweredIndex(questions, 0, conversation.leadId, agent, { trustLead });
+    const test = isTestPhone(agent, conversation.contactPhone);
+    const firstIdx = await nextUnansweredIndex(questions, 0, conversation.leadId, agent, { trustLead, test });
     if (firstIdx >= questions.length) {
       // Everything we'd ask is already on the lead — straight to closing.
       const closingSent = await sendFlowStep(org, conversation, botName, { ...closingStep(agent, vars), previewLabel: "Started qualification" });
@@ -592,7 +604,7 @@ module.exports = function createCtwaFlowService({
     // next still-unanswered question in array order, or closing once none
     // are left.
     const advancePast = async (questionIndex) => {
-      const nextIdx = await nextUnansweredIndex(questions, questionIndex + 1, conversation.leadId, agent, { trustLead: !!conversation.flowState?.trustLead });
+      const nextIdx = await nextUnansweredIndex(questions, questionIndex + 1, conversation.leadId, agent, { trustLead: !!conversation.flowState?.trustLead, test: isTestPhone(agent, conversation.contactPhone) });
       await goTo(questions[nextIdx]?.id ?? NEXT_CLOSING);
     };
 
