@@ -10,8 +10,12 @@
 // existing rule-based scorer (utils/leadScorer.js) reacts to a CTWA lead
 // exactly the same way it reacts to any other lead. No second scoring system.
 //
-// Only the closing step is fixed (talk to an advisor, or book a site visit —
-// the only two ways this flow is allowed to end). Everything before that,
+// The closing step is built per agent (23 Oct 2026): up to three buttons,
+// each with its own action (hand to the team, end politely, book a site visit,
+// send photos/brochure/location, go to a question, or register for an event),
+// reply text, tag, status and team alert, optionally after asking the customer
+// to type something (their name). Agents saved before that keep the old two
+// buttons, Talk to Advisor and Book Site Visit. Everything before that,
 // including what used to be separate hardcoded "menu" and "site visit"
 // steps, is one tenant-managed, freely reorderable list of questions
 // (WaAgent.ctwaFlow.qualifyingQuestions) — each with its own explicit mapsTo
@@ -288,21 +292,34 @@ module.exports = function createCtwaFlowService({
   // WhatsApp reply-button titles are capped at 20 characters.
   const CLOSING_TITLE_MAX = 20;
 
-  // The closing buttons this agent actually offers. Matching a tap (below)
-  // still uses the full CLOSING_OPTIONS list, so a "Book Site Visit" button
-  // already sitting in an older chat keeps working after a tenant removes it
-  // from the flow.
+  const CLOSING_ACTIONS = ["handoff", "end", "site_visit", "photos", "docs", "location", "question", "register"];
+  // A button saved before closing buttons had actions: its id says what it does.
+  const LEGACY_CLOSING_ACTION = { advisor: "handoff", site_visit: "site_visit" };
+  // While the customer is typing the answer a closing button asked for.
+  const ASK_PREFIX = "__ask__:";
+
+  // The closing buttons this agent offers, each with what it does. Matching a
+  // tap (advanceFlow) also accepts the two legacy ids, so a "Book Site Visit"
+  // button already sitting in an older chat keeps working after a tenant
+  // removes it from the flow.
   function getClosingButtons(agent) {
     const seen = new Set();
     const out = [];
     for (const b of agent?.ctwaFlow?.closingButtons || []) {
-      const known = CLOSING_OPTIONS.find((o) => o.id === b?.id);
+      const id = String(b?.id || "").trim();
       const title = String(b?.label || "").trim().slice(0, CLOSING_TITLE_MAX);
-      if (!known || !title || seen.has(known.id)) continue;
-      seen.add(known.id);
-      out.push({ id: known.id, title });
+      const action = CLOSING_ACTIONS.includes(b?.action) ? b.action : LEGACY_CLOSING_ACTION[id];
+      if (!id || !title || !action || seen.has(id)) continue;
+      seen.add(id);
+      out.push({
+        id, title, action,
+        reply: String(b.reply || ""), tag: String(b.tag || ""), status: String(b.status || ""),
+        notify: b.notify, next: String(b.next || ""),
+        askText: b.askText?.prompt ? { prompt: b.askText.prompt, saveTo: b.askText.saveTo || "notes" } : null,
+      });
+      if (out.length >= 3) break; // WhatsApp's reply-button limit
     }
-    return out.length ? out : CLOSING_OPTIONS;
+    return out.length ? out : CLOSING_OPTIONS.map((o) => ({ ...o, action: LEGACY_CLOSING_ACTION[o.id], reply: "", tag: "", status: "", next: "", askText: null }));
   }
   // The one non-question value an option's `next` may point to — matches
   // whatsappRoutes.js's sanitizeCtwaFlow exactly.
@@ -314,11 +331,40 @@ module.exports = function createCtwaFlowService({
     const buttons = getClosingButtons(agent);
     // The stock wording asks about a site visit, which reads wrong once that
     // button is gone. A prompt the tenant actually wrote is left alone.
-    const offersSiteVisit = buttons.some((b) => b.id === "site_visit");
+    const offersSiteVisit = buttons.some((b) => b.action === "site_visit");
+    const onlyStock = buttons.every((b) => LEGACY_CLOSING_ACTION[b.id] === b.action);
     const saved = agent.ctwaFlow.closingPrompt;
     const stock = !saved || saved === DEFAULT_CLOSING_PROMPT;
-    const text = stock ? (offersSiteVisit ? DEFAULT_CLOSING_PROMPT : CLOSING_ADVISOR_ONLY_PROMPT) : saved;
-    return { bodyText: fill(text, vars), buttons };
+    const text = !stock ? saved
+      : !onlyStock ? "How would you like to continue?"
+      : offersSiteVisit ? DEFAULT_CLOSING_PROMPT : CLOSING_ADVISOR_ONLY_PROMPT;
+    return { bodyText: fill(text, { ...eventVars(agent), ...vars }), buttons: buttons.map((b) => ({ id: b.id, title: b.title })) };
+  }
+
+  // {{event}}, {{time}}, {{link}} for anything an agent with an event writes.
+  function eventVars(agent) {
+    const ev = agent?.ctwaFlow?.event;
+    if (!ev?.title && !ev?.startsAt) return {};
+    let time = "";
+    if (ev.startsAt) {
+      const d = new Date(new Date(ev.startsAt).getTime() + 5.5 * 3600000);
+      const h = d.getUTCHours(), m = String(d.getUTCMinutes()).padStart(2, "0");
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      time = `${d.getUTCDate()} ${months[d.getUTCMonth()]}, ${h % 12 || 12}:${m} ${h >= 12 ? "PM" : "AM"}`;
+    }
+    return { event: ev.title || "the event", time, link: ev.link || "", minutes: String(ev.reminderMinutes || 30) };
+  }
+
+  // What the customer was last asked, for a step id: a question, the closing
+  // buttons, or the typed question a closing button asked.
+  function stepContent(agent, step, vars) {
+    if (step === "closing") return closingStep(agent, vars);
+    if (String(step || "").startsWith(ASK_PREFIX)) {
+      const b = getClosingButtons(agent).find((x) => x.id === step.slice(ASK_PREFIX.length));
+      return b?.askText?.prompt ? { bodyText: fill(b.askText.prompt, { ...eventVars(agent), ...vars }) } : null;
+    }
+    const q = getQualifyingQuestions(agent).find((x) => x.id === step);
+    return q ? questionStep(q, vars) : null;
   }
 
   /**
@@ -329,14 +375,14 @@ module.exports = function createCtwaFlowService({
    * a tenant running several projects usually wants each one's leads landing
    * with that project's own point of contact, not whoever's turn it is.
    */
-  async function terminalAdvisor(org, agent, conversation, botName, project) {
+  async function terminalAdvisor(org, agent, conversation, botName, project, { reply = "", notify = true, reason = "asked to talk to an advisor" } = {}) {
     const advisor = project?.advisorId;
     // The phone number is what actually lets the lead act right now instead
     // of waiting on a callback — WhatsApp auto-links a plain digit string
     // like this into a tappable number. First name only, not the advisor's
     // full name — reads like a person texting, not a formal handoff notice.
     const advisorFirstName = advisor?.name ? advisor.name.trim().split(/\s+/)[0] : "";
-    const line = advisorFirstName
+    const line = reply ? reply : advisorFirstName
       ? `Connecting you with ${advisorFirstName} from our team, they'll reach out to you shortly.${advisor.phone ? ` You can also reach them directly on ${advisor.phone}.` : ""}`
       : "Connecting you with our team, someone will reach out to you shortly.";
     await sendFlowStep(org, conversation, botName, { bodyText: line, previewLabel: "→ Connected to advisor" });
@@ -346,7 +392,7 @@ module.exports = function createCtwaFlowService({
       await autoAssignConversation(org, conversation);
     }
     await funnelOutcome(conversation._id, "advisor");
-    await handOffToHuman(org, conversation, { notify: true, reason: "asked to talk to an advisor" });
+    await handOffToHuman(org, conversation, { notify, reason });
   }
 
   /**
@@ -489,6 +535,7 @@ module.exports = function createCtwaFlowService({
       await funnelOutcome(conversation._id, "exited");
       return WaConversation.findByIdAndUpdate(conversation._id, { $unset: { flowState: 1 } });
     };
+    const closingButtons = getClosingButtons(agent);
 
     // Sends a specific question (or the closing prompt, for the "__closing__"
     // sentinel) and records it as the new step — the one thing every
@@ -530,12 +577,32 @@ module.exports = function createCtwaFlowService({
     // Matched only against what is on screen right now (the current
     // question, or the closing buttons), and only on a clear match.
     const current = questions.find((q) => q.id === step);
+
+    // The customer is typing what a closing button asked for (their name, an
+    // email). A short plain answer is taken; a question gets the AI's answer
+    // and the ask once more, like a question step; anything else ends the flow.
+    if (step.startsWith(ASK_PREFIX)) {
+      const button = closingButtons.find((b) => b.id === step.slice(ASK_PREFIX.length));
+      if (!button) { await exitFlow(); return false; }
+      const said = String(msgText || "").replace(/\s+/g, " ").trim();
+      if (!interactiveId && said && said.length <= 120 && !flowAnswer.looksLikeQuestion(said)) {
+        await saveTypedAnswer(conversation, button.askText?.saveTo, said);
+        return finishClosing(org, agent, conversation, botName, button, questions, goTo);
+      }
+      if (msgText && conversation.flowState?.reasked !== step) {
+        await WaConversation.updateOne({ _id: conversation._id }, { $set: { "flowState.reasked": step, "flowState.resumeAfterReply": true } });
+        return false;
+      }
+      await exitFlow();
+      return false;
+    }
+
     let typedBudget = null;
     if (!interactiveId && msgText) {
       const norm = (t) => String(t || "").toLowerCase().normalize("NFKD").replace(/[^a-z0-9₹+ ]/g, " ").replace(/\s+/g, " ").trim();
       const said = norm(msgText);
       const onScreen = current ? current.options.map((o) => ({ id: o.id, label: o.label }))
-        : step === "closing" ? getClosingButtons(agent).map((b) => ({ id: b.id, label: b.title })) : [];
+        : step === "closing" ? closingButtons.map((b) => ({ id: b.id, label: b.title })) : [];
       if (said && said.length <= 40) {
         const hits = onScreen.filter((o) => {
           const l = norm(o.label);
@@ -581,7 +648,8 @@ module.exports = function createCtwaFlowService({
       const opt = questions[i].options.find((o) => o.id === interactiveId);
       if (opt) { matchedQuestionIndex = i; matchedOption = opt; break; }
     }
-    const closingOpt = CLOSING_OPTIONS.find((o) => o.id === interactiveId);
+    const closingOpt = closingButtons.find((o) => o.id === interactiveId)
+      || (LEGACY_CLOSING_ACTION[interactiveId] ? { id: interactiveId, title: interactiveId, action: LEGACY_CLOSING_ACTION[interactiveId], reply: "", tag: "", status: "", next: "", askText: null } : null);
 
     if (matchedQuestionIndex !== -1) {
       const question = questions[matchedQuestionIndex];
@@ -604,35 +672,8 @@ module.exports = function createCtwaFlowService({
       // always re-sent on tap even if this button is from an earlier,
       // already-passed message: someone scrolling back up to ask for photos
       // again is a legitimate repeat request, not a correction.
-      if (action === "photos" || action === "docs") {
-        const project = await resolveFlowProject(org, agent);
-        if (project) {
-          // The customer tapped this button, so it's an explicit ask — sent
-          // regardless of the free-text "what it can send" toggles. Anything
-          // not uploaded for the project is said plainly, never faked.
-          const wants = action === "photos"
-            ? { wantsPhotos: true, wantsVideos: true }
-            : { wantsBrochure: true, wantsFloorPlan: true };
-          notifyHotSignal?.(org, conversation, action === "photos" ? "asked for photos & videos" : "asked for the floor plan & brochure");
-          const { sent, missing } = (await sendQualifiedMedia(org, agent, conversation, botName, project.name, { ...wants, force: true, project })) || { sent: [], missing: [] };
-          if (missing.length) {
-            const label = missing.map((m) => ({ photos: "photos", videos: "the video", brochure: "the brochure", floorplan: "the floor plan" }[m])).join(" and ");
-            const lead = sent.length ? "The rest" : `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
-            await sendFlowStep(org, conversation, botName, {
-              bodyText: sent.length
-                ? `${lead} isn't ready on my side yet. Our team will send ${label} across shortly.`
-                : `${lead} isn't ready on my side yet, our team will send it across shortly.`,
-            });
-          }
-        }
-      } else if (action === "location") {
-        const project = await resolveFlowProject(org, agent);
-        if (project?.location) {
-          // Just the location: project names usually already say where they
-          // are ("Shapoorji Pallonji Khopoli Plots"), so "<name> is located
-          // at: Near Khopoli" read twice.
-          await sendFlowStep(org, conversation, botName, { bodyText: `📍 Location: ${project.location}` });
-        }
+      if (action === "photos" || action === "docs" || action === "location") {
+        await sendProjectInfo(org, agent, conversation, botName, action);
       }
 
       await applyQuestionAnswer(conversation.leadId, question, matchedOption);
@@ -650,7 +691,7 @@ module.exports = function createCtwaFlowService({
       // that turn move the conversation on, so the closing question comes
       // once, after both answers, instead of between them.
       const waiting = conversation._pendingTaps?.() || [];
-      if (waiting.some((id) => CLOSING_OPTIONS.some((o) => o.id === id)
+      if (waiting.some((id) => closingButtons.some((o) => o.id === id) || LEGACY_CLOSING_ACTION[id]
         || questions.some((q, i) => i >= matchedQuestionIndex && q.options.some((o) => o.id === id)))) {
         return true;
       }
@@ -666,30 +707,15 @@ module.exports = function createCtwaFlowService({
     }
 
     if (closingOpt) {
-      if (closingOpt.id === "advisor") {
-        await terminalAdvisor(org, agent, conversation, botName, await resolveFlowProject(org, agent));
-        await exitFlow();
+      // A typed question first ("May I have your full name?"), then the rest.
+      if (closingOpt.askText?.prompt && closingOpt.action !== "question") {
+        const vars2 = { ...eventVars(agent), name: conversation.contactName || "there" };
+        await sendFlowStep(org, conversation, botName, { bodyText: fill(closingOpt.askText.prompt, vars2) });
+        await WaConversation.updateOne({ _id: conversation._id }, { $set: { "flowState.step": ASK_PREFIX + closingOpt.id }, $unset: { "flowState.reasked": 1 } });
+        await funnelStep(conversation._id, "ask");
         return true;
       }
-      // "Book Site Visit" from the closing prompt. Tenant-configured target
-      // (closingSiteVisitNext) wins outright — a specific question id asks
-      // that question, "__book__" always books immediately. With nothing
-      // configured, fall back to auto-detecting any question whose every
-      // option books a site visit, or book immediately if none exists. This
-      // is deliberately independent of any option's own `next` — it's what
-      // lets "Book Site Visit" lead somewhere different than an ordinary
-      // menu option that also happens to reach a site-visit question.
-      const configuredNext = agent.ctwaFlow.closingSiteVisitNext || "";
-      if (configuredNext !== CTWA_BOOK_IMMEDIATELY) {
-        const target = configuredNext
-          ? questions.find((q) => q.id === configuredNext)
-          : questions.find((q) => q.options.length && q.options.every((o) => o.action === "site_visit"));
-        if (target) {
-          await goTo(target.id);
-          return true;
-        }
-      }
-      return completeSiteVisit(org, conversation, botName, { id: "site_visit", label: "General enquiry" });
+      return finishClosing(org, agent, conversation, botName, closingOpt, questions, goTo);
     }
 
     // Typed before the customer could have seen our latest question (their
@@ -720,8 +746,7 @@ module.exports = function createCtwaFlowService({
   async function pendingResume(agent, conversationId) {
     const conv = await WaConversation.findById(conversationId).select("flowState contactName").lean();
     if (!conv?.flowState?.resumeAfterReply) return null;
-    const q = getQualifyingQuestions(agent).find((x) => x.id === conv.flowState.step);
-    return q ? fill(q.questionText, { name: conv.contactName || "there" }) : null;
+    return stepContent(agent, conv.flowState.step, { name: conv.contactName || "there" })?.bodyText || null;
   }
 
   /**
@@ -733,9 +758,8 @@ module.exports = function createCtwaFlowService({
     if (!conv?.flowState?.resumeAfterReply) return false;
     await WaConversation.updateOne({ _id: conv._id }, { $unset: { "flowState.resumeAfterReply": 1 } });
     if (!conv.botEnabled) return false; // a person took over meanwhile
-    const q = getQualifyingQuestions(agent).find((x) => x.id === conv.flowState.step);
-    if (!q) return false;
-    const stepMsg = questionStep(q, { name: conv.contactName || "there" });
+    const stepMsg = stepContent(agent, conv.flowState.step, { name: conv.contactName || "there" });
+    if (!stepMsg) return false;
     stepMsg.bodyText = `Coming back to my earlier question:
 
 ${stepMsg.bodyText}`;
@@ -747,7 +771,7 @@ ${stepMsg.bodyText}`;
   // site-visit slot. Lead written the same way the rest of this flow writes
   // it — real fields the existing scorer already weights, not a second
   // scoring system — then handed to a human, same as the advisor path.
-  async function completeSiteVisit(org, conversation, botName, opt) {
+  async function completeSiteVisit(org, conversation, botName, opt, { reply = "", notify = true } = {}) {
     if (conversation.leadId) {
       await Lead.updateOne(
         { _id: conversation.leadId },
@@ -763,12 +787,226 @@ ${stepMsg.bodyText}`;
         }
       );
     }
-    await sendFlowStep(org, conversation, botName, { bodyText: "Wonderful! Our team will confirm your visit shortly and take it from here.", previewLabel: "🏡 Site visit requested" });
+    await sendFlowStep(org, conversation, botName, { bodyText: reply || "Wonderful! Our team will confirm your visit shortly and take it from here.", previewLabel: "🏡 Site visit requested" });
     await WaConversation.findByIdAndUpdate(conversation._id, { $unset: { flowState: 1 } });
     await autoAssignConversation(org, conversation);
     await funnelOutcome(conversation._id, "site_visit");
-    await handOffToHuman(org, conversation, { notify: true, reason: "requested a site visit" });
+    await handOffToHuman(org, conversation, { notify, reason: "requested a site visit" });
     return true;
+  }
+
+  // Photos & videos, the brochure & floor plan, or the location of the one
+  // project this flow is about. The customer tapped for it, so it is sent
+  // whatever the free-text "what it can send" switches say; anything not
+  // uploaded is said plainly, never faked.
+  async function sendProjectInfo(org, agent, conversation, botName, action) {
+    const project = await resolveFlowProject(org, agent);
+    if (!project) return;
+    if (action === "location") {
+      // Just the location: project names usually already say where they
+      // are ("Shapoorji Pallonji Khopoli Plots"), so "<name> is located
+      // at: Near Khopoli" read twice.
+      if (project.location) await sendFlowStep(org, conversation, botName, { bodyText: `📍 Location: ${project.location}` });
+      return;
+    }
+    const wants = action === "photos"
+      ? { wantsPhotos: true, wantsVideos: true }
+      : { wantsBrochure: true, wantsFloorPlan: true };
+    notifyHotSignal?.(org, conversation, action === "photos" ? "asked for photos & videos" : "asked for the floor plan & brochure");
+    const { sent, missing } = (await sendQualifiedMedia(org, agent, conversation, botName, project.name, { ...wants, force: true, project })) || { sent: [], missing: [] };
+    if (missing.length) {
+      const label = missing.map((m) => ({ photos: "photos", videos: "the video", brochure: "the brochure", floorplan: "the floor plan" }[m])).join(" and ");
+      const lead = sent.length ? "The rest" : `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
+      await sendFlowStep(org, conversation, botName, {
+        bodyText: sent.length
+          ? `${lead} isn't ready on my side yet. Our team will send ${label} across shortly.`
+          : `${lead} isn't ready on my side yet, our team will send it across shortly.`,
+      });
+    }
+  }
+
+  // What the customer typed when a closing button asked for it.
+  async function saveTypedAnswer(conversation, saveTo, text) {
+    const leadId = conversation.leadId;
+    if (saveTo === "name") {
+      const name = text.replace(/[^\p{L}\p{M} .'-]/gu, "").replace(/\s+/g, " ").trim().slice(0, 60);
+      if (!name) return;
+      await WaConversation.updateOne({ _id: conversation._id }, { $set: { contactName: name } });
+      conversation.contactName = name;
+      if (leadId) {
+        const lead = await Lead.findById(leadId).select("name").lean();
+        await Lead.updateOne({ _id: leadId }, {
+          $set: { name },
+          $push: { activities: { type: "note_added", description: `Gave their name on WhatsApp: ${name}${lead?.name && lead.name !== name ? ` (was "${lead.name}")` : ""}` } },
+        });
+      }
+      return;
+    }
+    if (!leadId) return;
+    if (saveTo === "email" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) {
+      const lead = await Lead.findById(leadId).select("email").lean();
+      if (!lead?.email) await Lead.updateOne({ _id: leadId }, { $set: { email: text.toLowerCase() } });
+      return;
+    }
+    await Lead.updateOne({ _id: leadId }, { $push: { notes: { text: `Said on WhatsApp: "${text}"`, addedByName: "WhatsApp assistant" } } });
+  }
+
+  // The lead remembers which closing button was chosen: a tag, a status if the
+  // button sets one, and a line in its activity.
+  async function recordClosingChoice(leadId, button) {
+    if (!leadId) return;
+    const OPTS = require("../constants/leadOptions");
+    const update = { $push: { activities: { type: "note_added", description: `Chose "${button.title}" on WhatsApp` } } };
+    if (button.tag) update.$addToSet = { tags: button.tag.slice(0, 40) };
+    if (button.status && (OPTS.STATUS || []).includes(button.status)) update.$set = { status: button.status };
+    await Lead.updateOne({ _id: leadId }, update);
+  }
+
+  /**
+   * What a closing button does once tapped (and once anything it asked for
+   * was typed). Every action ends the flow except "question", which carries
+   * on at the chosen question.
+   */
+  async function finishClosing(org, agent, conversation, botName, button, questions, goTo) {
+    const fresh = await WaConversation.findById(conversation._id).select("contactName").lean();
+    const vars = { ...eventVars(agent), name: (fresh?.contactName || conversation.contactName || "there").split(/\s+/)[0] };
+    const reply = button.reply ? fill(button.reply, vars) : "";
+    const endFlow = () => WaConversation.updateOne({ _id: conversation._id }, { $unset: { flowState: 1 } });
+    await recordClosingChoice(conversation.leadId, button);
+
+    switch (button.action) {
+      case "question": {
+        if (button.next && questions.some((q) => q.id === button.next)) { await goTo(button.next); return true; }
+        break; // nowhere to go: treated as "end" below
+      }
+      case "handoff":
+        await terminalAdvisor(org, agent, conversation, botName, await resolveFlowProject(org, agent),
+          { reply, notify: button.notify !== false, reason: `chose "${button.title}"` });
+        await endFlow();
+        return true;
+      case "site_visit": {
+        // Tenant-configured target (closingSiteVisitNext) wins outright — a
+        // specific question id asks that question, "__book__" always books
+        // immediately. With nothing configured, any question whose every
+        // option books a site visit is asked, else it books at once.
+        const configuredNext = button.next || agent.ctwaFlow.closingSiteVisitNext || "";
+        if (configuredNext !== CTWA_BOOK_IMMEDIATELY) {
+          const target = configuredNext
+            ? questions.find((q) => q.id === configuredNext)
+            : questions.find((q) => q.options.length && q.options.every((o) => o.action === "site_visit"));
+          if (target) { await goTo(target.id); return true; }
+        }
+        return completeSiteVisit(org, conversation, botName, { id: "site_visit", label: "General enquiry" }, { reply, notify: button.notify !== false });
+      }
+      case "photos":
+      case "docs":
+      case "location":
+        await sendProjectInfo(org, agent, conversation, botName, button.action);
+        if (reply) await sendFlowStep(org, conversation, botName, { bodyText: reply });
+        await endFlow();
+        await funnelOutcome(conversation._id, button.action);
+        if (button.notify === true) notifyHotSignal?.(org, conversation, `chose "${button.title}"`);
+        return true;
+      case "register":
+        await registerForEvent(org, agent, conversation, botName, button, vars, reply);
+        await endFlow();
+        await funnelOutcome(conversation._id, "registered");
+        if (button.notify !== false) notifyHotSignal?.(org, conversation, `registered for ${vars.event || "the event"}`);
+        return true;
+      default:
+        break;
+    }
+    // "end" (and a "question" button with nowhere to go): a polite last line;
+    // the assistant stays on for anything they write next.
+    await sendFlowStep(org, conversation, botName, { bodyText: reply || "Thank you! Message us here anytime if you need anything." });
+    await endFlow();
+    await funnelOutcome(conversation._id, "ended");
+    if (button.notify === true) notifyHotSignal?.(org, conversation, `chose "${button.title}"`);
+    return true;
+  }
+
+  // Confirms the registration and schedules the joining-link reminder.
+  async function registerForEvent(org, agent, conversation, botName, button, vars, reply) {
+    const ev = agent.ctwaFlow.event || {};
+    const startsAt = ev.startsAt ? new Date(ev.startsAt) : null;
+    const minutes = Number(ev.reminderMinutes) || 30;
+    const text = reply || (startsAt
+      ? `You're registered for ${vars.event} on ${vars.time}. We'll send you the joining link here ${minutes} minutes before it starts.`
+      : `You're registered for ${vars.event}. We'll send you the joining details here before it starts.`);
+    await sendFlowStep(org, conversation, botName, { bodyText: text, previewLabel: "✅ Registered" });
+    if (!startsAt || startsAt <= new Date()) return;
+    const EventReminder = require("../models/EventReminder");
+    const sendAt = new Date(Math.max(Date.now(), startsAt.getTime() - minutes * 60000));
+    const fresh = await WaConversation.findById(conversation._id).select("contactName contactPhone").lean();
+    await EventReminder.updateOne(
+      { agentId: agent._id, conversationId: conversation._id, eventStartsAt: startsAt },
+      { $set: { orgId: org._id, leadId: conversation.leadId || null, phone: fresh?.contactPhone || conversation.contactPhone,
+          name: fresh?.contactName || conversation.contactName || "", eventTitle: ev.title || "", sendAt, status: "pending", error: "" } },
+      { upsert: true },
+    );
+  }
+
+  // ── Event reminders: the joining link, reminderMinutes before the event ─────
+  // Inside the customer's 24-hour reply window it goes as plain text (a free
+  // service message); outside it, only an approved template is allowed, so the
+  // agent's chosen one is sent with its {{n}} filled in. With neither, the
+  // reminder is skipped and the reason kept, rather than failing silently.
+  async function runEventReminders(now = new Date()) {
+    const EventReminder = require("../models/EventReminder");
+    const templates = require("./whatsappTemplateService");
+    const due = await EventReminder.find({ status: "pending", sendAt: { $lte: now } }).sort({ sendAt: 1 }).limit(100);
+    let sent = 0;
+    for (const r of due) {
+      // Claimed first, so two runs can never send the same reminder twice.
+      const claimed = await EventReminder.findOneAndUpdate({ _id: r._id, status: "pending" }, { $set: { status: "sent", sentAt: now } });
+      if (!claimed) continue;
+      const finish = (patch) => EventReminder.updateOne({ _id: r._id }, { $set: patch });
+      try {
+        const [agent, org, conv] = await Promise.all([
+          WaAgent.findById(r.agentId).lean(),
+          Organization.findById(r.orgId),
+          WaConversation.findById(r.conversationId),
+        ]);
+        const ev = agent?.ctwaFlow?.event;
+        if (!agent || !org || !conv || !ev) { await finish({ status: "skipped", error: "agent, chat or event no longer exists" }); continue; }
+        if (ev.startsAt && new Date(ev.startsAt).getTime() < now.getTime() - 60 * 60000) { await finish({ status: "skipped", error: "the event is over" }); continue; }
+        const vars = { ...eventVars(agent), name: String(conv.contactName || r.name || "there").split(/\s+/)[0] };
+        const lastIn = await WaMessage.findOne({ conversationId: conv._id, direction: "inbound" }).sort({ timestamp: -1 }).select("timestamp").lean();
+        const windowOpen = lastIn && now - new Date(lastIn.timestamp) < 23.5 * 3600000;
+        if (windowOpen) {
+          const text = fill(ev.reminderText || "Hi {{name}}, {{event}} starts in {{minutes}} minutes. Join here: {{link}}", vars);
+          const ok = await sendFlowStep(org, conv, agent.name || "Artha Assistant", { bodyText: text, previewLabel: "🔔 Event reminder" });
+          await finish(ok ? { via: "text" } : { status: "failed", error: "send failed or no credits" });
+          if (ok) sent++;
+          continue;
+        }
+        if (!ev.templateName) { await finish({ status: "skipped", error: "the 24-hour window had closed and no template is chosen" }); continue; }
+        const values = (ev.templateVars || []).map((k) => vars[k] || "-");
+        let held = 0;
+        try { held = await credits.reserve(org._id, { category: "utility", count: 1 }); }
+        catch (err) { if (err instanceof credits.InsufficientCreditsError) { await finish({ status: "failed", error: "not enough credits" }); continue; } throw err; }
+        try {
+          const msgId = await sendProviderMessage(org, conv.contactPhone, "", {
+            name: ev.templateName, language: ev.templateLanguage || "en_US",
+            components: templates.buildSendComponents({ components: [] }, values),
+          });
+          await WaMessage.create({
+            orgId: org._id, conversationId: conv._id, waMsgId: msgId || undefined,
+            direction: "outbound", sender: "bot", senderName: agent.name || "Artha Assistant",
+            body: `[${ev.templateName}] ${values.join(" · ")}`, status: "sent", timestamp: new Date(),
+            reservedPaise: held, creditCategory: "utility",
+          });
+          await finish({ via: "template" });
+          sent++;
+        } catch (err) {
+          await credits.release(org._id, held);
+          await finish({ status: "failed", error: String(err?.response?.data?.error?.message || err.message).slice(0, 200) });
+        }
+      } catch (err) {
+        await finish({ status: "failed", error: String(err.message).slice(0, 200) });
+      }
+    }
+    return { sent, checked: due.length };
   }
 
   // ── Follow-up nudges ───────────────────────────────────────────────────────
@@ -786,11 +1024,7 @@ ${stepMsg.bodyText}`;
   const MIN = 60 * 1000, HOUR = 60 * MIN;
 
   function pendingStepContent(agent, conversation) {
-    const step = conversation.flowState?.step;
-    const vars = { name: conversation.contactName || "there" };
-    if (step === "closing") return closingStep(agent, vars);
-    const q = getQualifyingQuestions(agent).find((x) => x.id === step);
-    return q ? questionStep(q, vars) : null;
+    return stepContent(agent, conversation.flowState?.step, { name: conversation.contactName || "there" });
   }
 
   async function nudgeOne(conv, now) {
@@ -870,5 +1104,5 @@ ${stepMsg.bodyText}`;
     return { checked: convs.length, sent };
   }
 
-  return { shouldStartFlow, startFlow, advanceFlow, pendingResume, resumeFlow, runNudges, getQualifyingQuestions, applyQuestionAnswer };
+  return { shouldStartFlow, startFlow, advanceFlow, pendingResume, resumeFlow, runNudges, runEventReminders, getQualifyingQuestions, getClosingButtons, applyQuestionAnswer };
 };

@@ -341,6 +341,14 @@ cron.schedule("*/5 * * * *", () => {
     .catch((err) => logger.error(`[wa-nudges] cron failed: ${err.message}`));
 });
 
+// ── Every minute: event reminders (the joining link, minutes before a webinar
+// someone registered for through an agent's button flow) ───────────────────
+cron.schedule("* * * * *", () => {
+  require("../routes/whatsappRoutes").runEventReminders()
+    .then(({ sent }) => { if (sent) logger.info(`[event-reminders] sent ${sent}`); })
+    .catch((err) => logger.error(`[event-reminders] failed: ${err.message}`));
+});
+
 // ── Every 30 minutes: warn orgs whose WhatsApp credits are running low ───────
 // Half-hourly rather than daily because credits drain in minutes during a
 // campaign, and the whole point is to catch it before replies start failing.

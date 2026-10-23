@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import api from "../../services/api";
 import CustomSelect from "../../components/CustomSelect";
+import DateTimePicker from "../../components/DateTimePicker";
+import { STATUS_OPTIONS } from "../../utils/constants";
 import { useAuth } from "../../context/AuthContext";
 import { canAccess } from "../../utils/plan";
 import toast from "react-hot-toast";
@@ -49,23 +51,117 @@ const NEXT_CLOSING = "__closing__";
 // backend whatsappRoutes.js's sanitizeCtwaFlow / ctwaFlowService.js exactly.
 const CLOSING_BOOK_IMMEDIATELY = "__book__";
 
-// The two ways the flow can end, in the order they're offered. Mirrors
-// ctwaFlowService.js's CLOSING_OPTIONS. A tenant can rename either or leave
-// one out (a campaign aimed at out-of-town investors has no use for a site
-// visit), but never both.
-const CLOSING_DEFAULTS = [
-  { id: "advisor", label: "Talk to Advisor", hint: "Connects the lead with your advisor" },
-  { id: "site_visit", label: "Book Site Visit", hint: "Books a site visit" },
-];
+// The closing step, built per agent (23 Oct 2026): up to three buttons, each
+// with its own action and, optionally, its own reply, tag, status, team alert
+// and a typed question first. Mirrors ctwaFlowService.js's getClosingButtons
+// and whatsappRoutes.js's sanitizeCtwaFlow. A button saved the old way
+// ({ id: "advisor" | "site_visit", label }) keeps its meaning.
 const CLOSING_TITLE_MAX = 20;
+const CLOSING_MAX = 3; // WhatsApp's reply-button limit
 const DEFAULT_CLOSING_PROMPT = "Would you like to talk to our advisor, or book a site visit?";
 const ADVISOR_ONLY_CLOSING_PROMPT = "Would you like to talk to our advisor?";
+const CUSTOM_CLOSING_PROMPT = "How would you like to continue?";
+const CLOSING_ACTIONS = [
+  { value: "handoff",    label: "Connect them to your team" },
+  { value: "site_visit", label: "Book a site visit" },
+  { value: "register",   label: "Register them for your event or webinar" },
+  { value: "photos",     label: "Send photos & videos, then finish" },
+  { value: "docs",       label: "Send floor plan & brochure, then finish" },
+  { value: "location",   label: "Send the project location, then finish" },
+  { value: "question",   label: "Ask another question" },
+  { value: "end",        label: "Thank them and finish" },
+];
+const LEGACY_CLOSING_ACTION = { advisor: "handoff", site_visit: "site_visit" };
+// Actions that alert your team unless the alert is turned off; the others
+// alert only when it is turned on. Matches finishClosing.
+const ALERT_BY_DEFAULT = ["handoff", "site_visit", "register"];
+const CLOSING_SAVE_TO = [
+  { value: "name",  label: "Save it as the lead's name" },
+  { value: "email", label: "Save it as the lead's email (if empty)" },
+  { value: "notes", label: "Save it as a note on the lead" },
+];
+// What the bot says when a button's own reply is left blank (ctwaFlowService.js).
+const CLOSING_REPLY_DEFAULT = {
+  handoff: "Connecting you with our advisor, they'll reach out to you shortly.",
+  site_visit: "Wonderful! Our team will confirm your visit shortly and take it from here.",
+  register: "You're registered for {{event}} on {{time}}. We'll send you the joining link here {{minutes}} minutes before it starts.",
+  end: "Thank you! Message us here anytime if you need anything.",
+};
+const DEFAULT_REMINDER_TEXT = "Hi {{name}}, {{event}} starts in {{minutes}} minutes. Join here: {{link}}";
+const EMPTY_EVENT = { title: "", startsAt: null, link: "", reminderMinutes: 30, reminderText: "", templateName: "", templateLanguage: "", templateVars: [] };
+const EVENT_TEMPLATE_VARS = [
+  { value: "name",  label: "Customer's first name" },
+  { value: "link",  label: "Joining link" },
+  { value: "event", label: "Event name" },
+  { value: "time",  label: "Event date and time" },
+];
+
+const newClosingId = () => `close_${Math.random().toString(36).slice(2, 8)}`;
+function closingButton(b = {}) {
+  return {
+    id: b.id || newClosingId(), label: b.label || "", action: b.action || "end",
+    reply: b.reply || "", tag: b.tag || "", status: b.status || "",
+    notify: typeof b.notify === "boolean" ? b.notify : undefined, next: b.next || "",
+    askText: b.askText?.prompt !== undefined && b.askText !== null ? { prompt: b.askText.prompt || "", saveTo: b.askText.saveTo || "notes" } : null,
+  };
+}
+// Starting points: each fills in the question and the buttons, all editable after.
+const CLOSING_PRESETS = [
+  { key: "site_visit", label: "Site visit", hint: "Talk to Advisor or Book Site Visit", prompt: DEFAULT_CLOSING_PROMPT,
+    buttons: () => [
+      { id: "advisor", label: "Talk to Advisor", action: "handoff" },
+      { id: "site_visit", label: "Book Site Visit", action: "site_visit" },
+    ] },
+  { key: "event", label: "Webinar or event", hint: "Asks the name, reserves a seat, sends the joining link before it starts",
+    prompt: "Shall I reserve your seat for the {{event}} on {{time}}?",
+    buttons: () => [
+      { label: "Reserve my seat", action: "register", tag: "Webinar registered", notify: true,
+        askText: { prompt: "May I have your full name for the registration?", saveTo: "name" },
+        reply: "Thanks {{name}}, your seat is reserved for {{event}} on {{time}}. We'll send the joining link here {{minutes}} minutes before it starts." },
+      { label: "Not now", action: "end", tag: "Webinar not now", notify: false, reply: "No problem! Message us here anytime if you change your mind." },
+    ] },
+  { key: "brochure", label: "Brochure", hint: "Sends the brochure, or connects them to your team",
+    prompt: "Would you like the brochure and floor plan here on WhatsApp?",
+    buttons: () => [
+      { label: "Send brochure", action: "docs", reply: "Here you go! Ask me anything about the project." },
+      { label: "Talk to Advisor", action: "handoff" },
+    ] },
+  { key: "callback", label: "Callback", hint: "Asks when to call and alerts your team",
+    prompt: "Would you like a call from our team?",
+    buttons: () => [
+      { label: "Call me now", action: "handoff", tag: "Callback requested", reply: "Sure! Our team will call you shortly." },
+      { label: "Call me later", action: "handoff", tag: "Callback requested", reply: "Noted, {{name}}. Our team will call you then.",
+        askText: { prompt: "What day and time suits you for a call?", saveTo: "notes" } },
+      { label: "Not now", action: "end", notify: false },
+    ] },
+];
+
 function resolveClosingButtons(flow) {
-  const saved = (Array.isArray(flow?.closingButtons) ? flow.closingButtons : [])
-    .filter((b) => CLOSING_DEFAULTS.some((d) => d.id === b?.id) && String(b.label || "").trim());
   const seen = new Set();
-  const uniq = saved.filter((b) => !seen.has(b.id) && seen.add(b.id)).map((b) => ({ id: b.id, label: String(b.label).slice(0, CLOSING_TITLE_MAX) }));
-  return uniq.length ? uniq : CLOSING_DEFAULTS.map(({ id, label }) => ({ id, label }));
+  const out = [];
+  for (const b of Array.isArray(flow?.closingButtons) ? flow.closingButtons : []) {
+    const action = CLOSING_ACTIONS.some((a) => a.value === b?.action) ? b.action : LEGACY_CLOSING_ACTION[b?.id];
+    if (!b?.id || !action || !String(b.label || "").trim() || seen.has(b.id)) continue;
+    seen.add(b.id);
+    out.push(closingButton({ ...b, action, label: String(b.label).slice(0, CLOSING_TITLE_MAX), askText: b.askText?.prompt ? b.askText : null }));
+    if (out.length >= CLOSING_MAX) break;
+  }
+  return out.length ? out : CLOSING_PRESETS[0].buttons().map(closingButton);
+}
+
+// {{event}}, {{time}}, {{link}}, {{minutes}} — same values and IST wording as
+// ctwaFlowService.js's eventVars.
+function eventVars(ev) {
+  if (!ev?.title && !ev?.startsAt) return {};
+  let time = "";
+  const at = ev.startsAt ? new Date(ev.startsAt) : null;
+  if (at && !Number.isNaN(at.getTime())) {
+    const d = new Date(at.getTime() + 5.5 * 3600000);
+    const h = d.getUTCHours(), m = String(d.getUTCMinutes()).padStart(2, "0");
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    time = `${d.getUTCDate()} ${months[d.getUTCMonth()]}, ${h % 12 || 12}:${m} ${h >= 12 ? "PM" : "AM"}`;
+  }
+  return { event: ev.title || "the event", time, link: ev.link || "", minutes: String(ev.reminderMinutes || 30) };
 }
 
 // Sensible starting point for an Indian real-estate CTWA flow — every label
@@ -124,7 +220,8 @@ const DEFAULT_CTWA_FLOW = {
   ],
   closingPrompt: "Would you like to talk to our advisor, or book a site visit?",
   closingSiteVisitNext: "",
-  closingButtons: CLOSING_DEFAULTS.map(({ id, label }) => ({ id, label })),
+  closingButtons: CLOSING_PRESETS[0].buttons().map(closingButton),
+  closingTemplate: "",
   nudgesEnabled: false,
   nudgeText: "",
   testPhones: [],
@@ -280,17 +377,6 @@ export default function AgentBuilder() {
   });
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const setFlow = (patch) => setForm((f) => ({ ...f, ctwaFlow: { ...f.ctwaFlow, ...patch } }));
-  // patch === null turns a closing button off; an object turns it on and/or
-  // renames it. Offered in the fixed order above, and never left empty.
-  const setClosingButton = (id, patch) => setForm((f) => {
-    const current = f.ctwaFlow.closingButtons;
-    let next;
-    if (patch === null) next = current.filter((b) => b.id !== id);
-    else if (current.some((b) => b.id === id)) next = current.map((b) => (b.id === id ? { ...b, ...patch } : b));
-    else next = CLOSING_DEFAULTS.map((d) => (d.id === id ? { id, label: d.label, ...patch } : current.find((b) => b.id === d.id))).filter(Boolean);
-    if (!next.length) return f;
-    return { ...f, ctwaFlow: { ...f.ctwaFlow, closingButtons: next } };
-  });
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [adDraft, setAdDraft] = useState("");
   const [testPhoneDraft, setTestPhoneDraft] = useState("");
@@ -857,48 +943,7 @@ export default function AgentBuilder() {
               </button>
             </div>
 
-            <div>
-              <label className="text-xs font-semibold text-app-soft block mb-1">Closing prompt</label>
-              <input className="input w-full" placeholder="Would you like to talk to our advisor, or book a site visit?"
-                value={form.ctwaFlow.closingPrompt} onChange={(e) => setFlow({ closingPrompt: e.target.value })} />
-              <p className="text-[11px] text-app-soft mt-1">
-                Use <code>{"{{name}}"}</code>. The one fixed ending — sent once every question above has been asked
-                (or straight away if the lead already answered all of them elsewhere). Rename its buttons, or turn one
-                off if it doesn't suit this campaign. At least one has to stay.
-              </p>
-              <div className="space-y-2 mt-2">
-                {CLOSING_DEFAULTS.map((d) => {
-                  const row = form.ctwaFlow.closingButtons.find((b) => b.id === d.id);
-                  const isLast = !!row && form.ctwaFlow.closingButtons.length === 1;
-                  return (
-                    <div key={d.id} className="flex items-center gap-2.5">
-                      <input type="checkbox" className="shrink-0" checked={!!row} disabled={isLast}
-                        title={isLast ? "At least one button has to stay" : row ? "Turn this button off" : "Turn this button on"}
-                        onChange={(e) => setClosingButton(d.id, e.target.checked ? {} : null)} />
-                      <input className="input flex-1" maxLength={CLOSING_TITLE_MAX} disabled={!row}
-                        value={row ? row.label : d.label}
-                        onChange={(e) => setClosingButton(d.id, { label: e.target.value })} />
-                      <span className="hidden sm:block text-[11px] text-app-soft w-44 shrink-0">{d.hint}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="text-[11px] text-app-soft mt-1">
-                Button names are limited to {CLOSING_TITLE_MAX} characters, the most WhatsApp allows.
-              </p>
-              {form.ctwaFlow.closingButtons.some((b) => b.id === "site_visit") && (
-                <>
-                  <p className="text-[11px] text-app-soft mt-2">Where the site visit button leads:</p>
-                  <CustomSelect value={form.ctwaFlow.closingSiteVisitNext || ""} onChange={(v) => setFlow({ closingSiteVisitNext: v })}
-                    options={[
-                      { value: "", label: "Auto-detect (a question where every option books a visit)" },
-                      { value: CLOSING_BOOK_IMMEDIATELY, label: "Book immediately — no question asked" },
-                      ...form.ctwaFlow.qualifyingQuestions.filter((q) => q.options.length).map((q) => ({ value: q.id, label: `Ask: ${q.questionText.slice(0, 50) || "(untitled question)"}` })),
-                    ]}
-                    style={{ ...SELECT_STYLE, marginTop: 6 }} />
-                </>
-              )}
-            </div>
+            <ClosingStepEditor flow={form.ctwaFlow} setFlow={setFlow} />
 
             {!isNew && form.ctwaFlow.enabled && <FlowFunnel agentId={id} />}
             <p className="text-[11px] text-app-soft text-center">
@@ -1062,22 +1107,305 @@ function fillVars(text, vars) {
   return String(text || "").replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : ""));
 }
 
-// Mirrors ctwaFlowService.js's closing step: the buttons this agent offers
-// (see resolveClosingButtons), reached once every question above has been
-// asked with nothing else ending the flow first. A tap on either id still
-// resolves even if the tenant left that button out of the flow.
-const CLOSING_IDS = CLOSING_DEFAULTS.map((d) => d.id);
+// The last step of the button flow: one question and up to three buttons, each
+// doing whatever this ad needs (book a visit, register for a webinar, send the
+// brochure, ask for a callback...). A starter fills everything in.
+function ClosingStepEditor({ flow, setFlow }) {
+  const buttons = flow.closingButtons || [];
+  const questions = flow.qualifyingQuestions || [];
+  const event = { ...EMPTY_EVENT, ...(flow.event || {}) };
+  const hasRegister = buttons.some((b) => b.action === "register");
+  const [more, setMore] = useState({});
+  const [templates, setTemplates] = useState(null);
+  const [templatesError, setTemplatesError] = useState("");
+
+  const setButtons = (next) => setFlow({ closingButtons: next, closingTemplate: "custom" });
+  const update = (i, patch) => setButtons(buttons.map((b, j) => (j === i ? { ...b, ...patch } : b)));
+  const remove = (i) => { if (buttons.length > 1) setButtons(buttons.filter((_, j) => j !== i)); };
+  const move = (i, d) => {
+    const j = i + d;
+    if (j < 0 || j >= buttons.length) return;
+    const next = [...buttons];
+    [next[i], next[j]] = [next[j], next[i]];
+    setButtons(next);
+  };
+  const add = () => { if (buttons.length < CLOSING_MAX) setButtons([...buttons, closingButton({ label: "", action: "end" })]); };
+  const setEvent = (patch) => setFlow({ event: { ...event, ...patch } });
+
+  const onlyStock = buttons.every((b) => LEGACY_CLOSING_ACTION[b.id] === b.action);
+  const activePreset = flow.closingTemplate || (onlyStock ? "site_visit" : "custom");
+  const applyPreset = (p) => {
+    if (p.key === activePreset) return;
+    if (!window.confirm(`Replace the closing question and buttons with the "${p.label}" starter? You can edit everything after.`)) return;
+    setFlow({
+      closingTemplate: p.key, closingPrompt: p.prompt, closingSiteVisitNext: "",
+      closingButtons: p.buttons().map(closingButton),
+      ...(p.key === "event" && !flow.event ? { event: { ...EMPTY_EVENT } } : {}),
+    });
+  };
+
+  // Approved templates, for the reminder to people outside the 24-hour window.
+  useEffect(() => {
+    if (!hasRegister || templates) return;
+    api.get("/whatsapp/templates")
+      .then(({ data }) => setTemplates((data.templates || []).filter((t) => t.status === "APPROVED")))
+      .catch((e) => { setTemplates([]); setTemplatesError(e.response?.data?.message || "Could not load your WhatsApp templates."); });
+  }, [hasRegister, templates]);
+
+  const chosenTemplate = (templates || []).find((t) => t.name === event.templateName && (!event.templateLanguage || t.language === event.templateLanguage));
+  const templateBody = chosenTemplate?.components?.find((c) => c.type === "BODY")?.text || "";
+  const templateSlots = [...new Set((templateBody.match(/\{\{\s*\d+\s*\}\}/g) || []).map((m) => Number(m.replace(/\D/g, ""))))].sort((a, b) => a - b);
+  const linkOk = !event.link || /^https?:\/\//i.test(event.link.trim());
+  const startsInPast = event.startsAt && new Date(event.startsAt) < new Date();
+
+  const label = "text-xs font-semibold text-app-soft block mb-1";
+  const hint = "text-[11px] text-app-soft mt-1";
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-wide text-app-soft mb-2">The ending: what you offer after the questions</p>
+        <p className="text-[11px] text-app-soft mb-2">Start from what this ad is for, then change anything.</p>
+        <div className="flex flex-wrap gap-2">
+          {[...CLOSING_PRESETS, { key: "custom", label: "Custom", hint: "Your own buttons" }].map((p) => {
+            const on = activePreset === p.key;
+            return (
+              <button key={p.key} type="button" title={p.hint}
+                onClick={() => (p.key === "custom" ? setFlow({ closingTemplate: "custom" }) : applyPreset(p))}
+                className="rounded-full px-3.5 py-2 text-xs font-semibold border transition"
+                style={on
+                  ? { background: "var(--app-primary)", borderColor: "var(--app-primary)", color: "#fff" }
+                  : { background: "var(--app-card-solid)", borderColor: "var(--app-border)", color: "var(--app-text)" }}>
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <label className={label}>Closing question</label>
+        <input className="input w-full" placeholder={onlyStock ? DEFAULT_CLOSING_PROMPT : CUSTOM_CLOSING_PROMPT}
+          value={flow.closingPrompt} onChange={(e) => setFlow({ closingPrompt: e.target.value })} />
+        <p className={hint}>
+          Sent once every question above has been asked. You can use <code>{"{{name}}"}</code>
+          {hasRegister && <>, <code>{"{{event}}"}</code>, <code>{"{{time}}"}</code> and <code>{"{{link}}"}</code></>}.
+        </p>
+      </div>
+
+      <div className="space-y-2.5">
+        {buttons.map((b, i) => {
+          const isMore = !!more[b.id];
+          const alertOn = typeof b.notify === "boolean" ? b.notify : ALERT_BY_DEFAULT.includes(b.action);
+          const canAsk = b.action !== "question";
+          return (
+            <div key={b.id} className="rounded-2xl p-3.5 space-y-2.5" style={{ border: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-app-soft w-14 shrink-0">Button {i + 1}</span>
+                <input className="input flex-1 min-w-0" maxLength={CLOSING_TITLE_MAX} placeholder="Button name, e.g. Reserve my seat"
+                  value={b.label} onChange={(e) => update(i, { label: e.target.value })} />
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="p-1.5 rounded-lg text-app-soft hover:text-app disabled:opacity-30" aria-label="Move up"><ChevronUp className="w-4 h-4" /></button>
+                <button type="button" onClick={() => move(i, 1)} disabled={i === buttons.length - 1} className="p-1.5 rounded-lg text-app-soft hover:text-app disabled:opacity-30" aria-label="Move down"><ChevronDown className="w-4 h-4" /></button>
+                <button type="button" onClick={() => remove(i)} disabled={buttons.length === 1}
+                  title={buttons.length === 1 ? "At least one button has to stay" : "Remove this button"}
+                  className="p-1.5 rounded-lg text-app-soft hover:text-red-500 disabled:opacity-30" aria-label="Remove button"><X className="w-4 h-4" /></button>
+              </div>
+
+              <div>
+                <label className={label}>When tapped</label>
+                <CustomSelect value={b.action} options={CLOSING_ACTIONS}
+                  onChange={(v) => update(i, { action: v, next: "", ...(v === "question" ? { askText: null } : {}) })}
+                  style={SELECT_STYLE} />
+              </div>
+
+              {b.action === "question" && (
+                <div>
+                  <label className={label}>Which question</label>
+                  <CustomSelect value={b.next || ""} onChange={(v) => update(i, { next: v })}
+                    options={[{ value: "", label: "Choose a question" }, ...questions.filter((q) => q.options.length).map((q) => ({ value: q.id, label: q.questionText.slice(0, 60) || "(untitled question)" }))]}
+                    style={SELECT_STYLE} />
+                  {!b.next && <p className="text-[11px] mt-1" style={{ color: "#b45309" }}>Pick a question, or this button just thanks them and finishes.</p>}
+                </div>
+              )}
+
+              {b.action === "site_visit" && (
+                <div>
+                  <label className={label}>Before booking</label>
+                  <CustomSelect value={b.next || flow.closingSiteVisitNext || ""}
+                    onChange={(v) => { update(i, { next: v }); setFlow({ closingSiteVisitNext: "" }); }}
+                    options={[
+                      { value: "", label: "Ask the time question, if there is one" },
+                      { value: CLOSING_BOOK_IMMEDIATELY, label: "Book straight away, no question" },
+                      ...questions.filter((q) => q.options.length).map((q) => ({ value: q.id, label: `Ask: ${q.questionText.slice(0, 50) || "(untitled question)"}` })),
+                    ]}
+                    style={SELECT_STYLE} />
+                </div>
+              )}
+
+              {canAsk && (
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-semibold text-app cursor-pointer">
+                    <input type="checkbox" checked={!!b.askText}
+                      onChange={(e) => update(i, { askText: e.target.checked ? { prompt: "", saveTo: b.action === "register" ? "name" : "notes" } : null })} />
+                    Ask them to type something first
+                  </label>
+                  {b.askText && (
+                    <div className="grid sm:grid-cols-2 gap-2 mt-2">
+                      <input className="input w-full" placeholder="e.g. May I have your full name?"
+                        value={b.askText.prompt} onChange={(e) => update(i, { askText: { ...b.askText, prompt: e.target.value } })} />
+                      <CustomSelect value={b.askText.saveTo} options={CLOSING_SAVE_TO}
+                        onChange={(v) => update(i, { askText: { ...b.askText, saveTo: v } })} style={SELECT_STYLE} />
+                    </div>
+                  )}
+                  {b.askText && !b.askText.prompt.trim() && <p className="text-[11px] mt-1" style={{ color: "#b45309" }}>Write the question, or it is skipped.</p>}
+                </div>
+              )}
+
+              {b.action !== "question" && (
+                <div>
+                  <label className={label}>Reply</label>
+                  <textarea className="input w-full resize-none" rows={2}
+                    placeholder={CLOSING_REPLY_DEFAULT[b.action] ? `Leave blank for: ${CLOSING_REPLY_DEFAULT[b.action]}` : "Optional: a line sent after the files"}
+                    value={b.reply} onChange={(e) => update(i, { reply: e.target.value })} />
+                </div>
+              )}
+
+              <button type="button" onClick={() => setMore((m) => ({ ...m, [b.id]: !isMore }))}
+                className="flex items-center gap-1 text-[11px] font-semibold text-app-soft hover:text-app transition">
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isMore ? "rotate-180" : ""}`} />
+                Tag, status and alert
+                {(b.tag || b.status) && <span className="font-normal">: {[b.tag, b.status].filter(Boolean).join(", ")}</span>}
+              </button>
+              {isMore && (
+                <div className="grid sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className={label}>Tag the lead</label>
+                    <input className="input w-full" maxLength={40} placeholder="e.g. Webinar 31 Oct" value={b.tag} onChange={(e) => update(i, { tag: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className={label}>Set the lead's status</label>
+                    <CustomSelect value={b.status || ""} onChange={(v) => update(i, { status: v })}
+                      options={[{ value: "", label: "Don't change it" }, ...STATUS_OPTIONS.map((st) => ({ value: st, label: st }))]}
+                      style={SELECT_STYLE} />
+                  </div>
+                  <label className="sm:col-span-2 flex items-center gap-2 text-xs font-semibold text-app cursor-pointer">
+                    <input type="checkbox" checked={alertOn} onChange={(e) => update(i, { notify: e.target.checked })} />
+                    Alert your team when someone taps this
+                  </label>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <button type="button" onClick={add} disabled={buttons.length >= CLOSING_MAX}
+        className="btn-secondary rounded-full px-3.5 py-2 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40 w-full">
+        <Plus className="w-3.5 h-3.5" /> {buttons.length >= CLOSING_MAX ? "WhatsApp allows three buttons" : "Add a button"}
+      </button>
+      <p className={hint}>Button names are limited to {CLOSING_TITLE_MAX} characters, the most WhatsApp allows. Every tap is logged on the lead.</p>
+
+      {hasRegister && (
+        <div className="rounded-2xl p-4 space-y-3" style={{ border: "1px solid var(--app-border)" }}>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-app-soft">Your event</p>
+          <div className="grid sm:grid-cols-2 gap-2.5">
+            <div>
+              <label className={label}>Event name</label>
+              <input className="input w-full" maxLength={120} placeholder="e.g. SP Pallonji Webinar" value={event.title} onChange={(e) => setEvent({ title: e.target.value })} />
+            </div>
+            <div>
+              <label className={label}>Date and time (IST)</label>
+              <DateTimePicker value={event.startsAt || ""} onChange={(v) => setEvent({ startsAt: v })}
+                triggerClassName="w-full" triggerStyle={{ padding: "12px 16px", borderRadius: "1rem", fontSize: 14, minWidth: 0 }} />
+              {startsInPast && <p className="text-[11px] mt-1" style={{ color: "#b45309" }}>This time has passed. Nobody new gets a reminder.</p>}
+            </div>
+          </div>
+          {(!event.title.trim() || !event.startsAt) && (
+            <p className="text-[11px]" style={{ color: "#b91c1c" }}>Add the event's name and date and time. A registration button can't be saved without them.</p>
+          )}
+          <div>
+            <label className={label}>Joining link</label>
+            <input className="input w-full" placeholder="https://meet.google.com/..." value={event.link} onChange={(e) => setEvent({ link: e.target.value })} />
+            {!linkOk && <p className="text-[11px] mt-1" style={{ color: "#b91c1c" }}>The link has to start with https://</p>}
+          </div>
+          <div className="grid sm:grid-cols-[160px_1fr] gap-2.5">
+            <div>
+              <label className={label}>Send it (minutes before)</label>
+              <input className="input w-full" type="number" min={5} max={1440} value={event.reminderMinutes}
+                onChange={(e) => setEvent({ reminderMinutes: e.target.value === "" ? "" : Number(e.target.value) })}
+                onBlur={() => setEvent({ reminderMinutes: Math.min(1440, Math.max(5, Number(event.reminderMinutes) || 30)) })} />
+            </div>
+            <div>
+              <label className={label}>Reminder message</label>
+              <textarea className="input w-full resize-none" rows={2} placeholder={DEFAULT_REMINDER_TEXT}
+                value={event.reminderText} onChange={(e) => setEvent({ reminderText: e.target.value })} />
+            </div>
+          </div>
+          <p className={hint}>
+            Use <code>{"{{name}}"}</code>, <code>{"{{event}}"}</code>, <code>{"{{time}}"}</code>, <code>{"{{minutes}}"}</code> and <code>{"{{link}}"}</code>.
+            The reminder goes once to everyone who registered. If you move the event, saved reminders move with it.
+          </p>
+
+          <div>
+            <label className={label}>Approved template, for people who haven't written in 24 hours</label>
+            <p className="text-[11px] text-app-soft mb-1.5">
+              WhatsApp only lets a business send a normal message within 24 hours of the customer's last message.
+              After that, the link can only go as an approved template. Without one, those people don't get the reminder.
+            </p>
+            {templates === null ? (
+              <p className="text-xs text-app-soft flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading your templates...</p>
+            ) : templatesError ? (
+              <p className="text-[11px]" style={{ color: "#b91c1c" }}>{templatesError}</p>
+            ) : (
+              <CustomSelect value={event.templateName ? `${event.templateName}|${event.templateLanguage || ""}` : ""}
+                onChange={(v) => {
+                  if (!v) return setEvent({ templateName: "", templateLanguage: "", templateVars: [] });
+                  const [name, language] = v.split("|");
+                  const t = templates.find((x) => x.name === name && x.language === language);
+                  const body = t?.components?.find((c) => c.type === "BODY")?.text || "";
+                  const n = new Set(body.match(/\{\{\s*\d+\s*\}\}/g) || []).size;
+                  setEvent({ templateName: name, templateLanguage: language, templateVars: ["name", "link", "event", "time"].slice(0, n) });
+                }}
+                options={[{ value: "", label: templates.length ? "None: skip people outside the 24 hours" : "No approved templates yet" },
+                  ...templates.map((t) => ({ value: `${t.name}|${t.language}`, label: `${t.name} (${t.language})` }))]}
+                style={SELECT_STYLE} />
+            )}
+            {chosenTemplate && (
+              <div className="mt-2 space-y-2">
+                <p className="text-[11px] text-app-soft rounded-xl px-3 py-2 whitespace-pre-wrap" style={{ background: "var(--app-surface-low)" }}>{templateBody}</p>
+                {templateSlots.map((n, k) => (
+                  <div key={n} className="flex items-center gap-2">
+                    <code className="text-xs w-12 shrink-0">{`{{${n}}}`}</code>
+                    <div className="flex-1 min-w-0">
+                      <CustomSelect value={event.templateVars[k] || "name"} options={EVENT_TEMPLATE_VARS}
+                        onChange={(v) => { const vars = [...event.templateVars]; vars[k] = v; setEvent({ templateVars: vars.map((x) => x || "name") }); }}
+                        style={SELECT_STYLE} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Mirrors ctwaFlowService.js's closingStep wording: a prompt the tenant wrote
+// is used as is; the stock one changes with the buttons on offer.
 function closingPromptText(flow, buttons) {
   const stock = !flow.closingPrompt || flow.closingPrompt === DEFAULT_CLOSING_PROMPT;
   if (!stock) return flow.closingPrompt;
-  return buttons.some((b) => b.id === "site_visit") ? DEFAULT_CLOSING_PROMPT : ADVISOR_ONLY_CLOSING_PROMPT;
+  if (!buttons.every((b) => LEGACY_CLOSING_ACTION[b.id] === b.action)) return CUSTOM_CLOSING_PROMPT;
+  return buttons.some((b) => b.action === "site_visit") ? DEFAULT_CLOSING_PROMPT : ADVISOR_ONLY_CLOSING_PROMPT;
 }
 
 function CtwaFlowPreviewPanel({ flow, projectName }) {
   const [log, setLog] = useState([]);
   const [step, setStep] = useState(null); // mirrors WaConversation.flowState.step
   const [freeText, setFreeText] = useState("");
-  const vars = { name: "Ananya", project: projectName || "this project" };
+  const vars = { name: "Ananya", project: projectName || "this project", ...eventVars(flow.event) };
 
   const push = (entry) => setLog((l) => [...l, entry]);
 
@@ -1121,12 +1449,12 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
 
   const sendClosing = () => {
     const buttons = resolveClosingButtons(flow);
-    push({ from: "bot", text: closingPromptText(flow, buttons), buttons });
+    push({ from: "bot", text: fillVars(closingPromptText(flow, buttons), vars), buttons, closing: true });
     setStep("closing");
   };
 
-  const bookSiteVisit = () => {
-    push({ from: "bot", text: "Wonderful! Our team will confirm your visit shortly and take it from here." });
+  const bookSiteVisit = (reply = "") => {
+    push({ from: "bot", text: fillVars(reply, vars) || "Wonderful! Our team will confirm your visit shortly and take it from here." });
     push({ from: "bot", note: true, text: "✅ Lead updated: status → Site Visit, booking → Site Visit Booked, activity logged. Bot pauses and a human on your team is assigned and notified." });
     setStep(null);
   };
@@ -1144,7 +1472,7 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
 
     const questions = flow.qualifyingQuestions || [];
     const qIndex = questions.findIndex((q) => q.options.some((o) => o.id === opt.id));
-    const inClosing = CLOSING_IDS.includes(opt.id);
+    const closingBtn = opt.closing ? resolveClosingButtons(flow).find((b) => b.id === opt.id) : null;
 
     if (qIndex !== -1) {
       const action = opt.action || "none";
@@ -1167,19 +1495,69 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
       return;
     }
 
-    if (inClosing) {
-      if (opt.id === "advisor") { pushAdvisorTerminal(); setStep(null); return; }
-      // "Book Site Visit" from the closing prompt — a configured target
-      // wins outright, else auto-detect a question where every option
-      // books a visit, else book immediately. Mirrors ctwaFlowService.js.
-      const configured = flow.closingSiteVisitNext || "";
-      if (configured === CLOSING_BOOK_IMMEDIATELY) { bookSiteVisit(); return; }
-      const target = configured
-        ? questions.find((q) => q.id === configured)
-        : questions.find((q) => q.options.length && q.options.every((o) => o.action === "site_visit"));
-      if (target) sendQuestion(target); else bookSiteVisit();
+    if (closingBtn) {
+      // A typed question first: asked now, the button's action runs once
+      // they answer (see sendFreeText). Mirrors ctwaFlowService.advanceFlow.
+      if (closingBtn.askText?.prompt && closingBtn.action !== "question") {
+        push({ from: "bot", text: fillVars(closingBtn.askText.prompt, vars) });
+        setStep(`__ask__:${closingBtn.id}`);
+        return;
+      }
+      finishClosing(closingBtn, vars);
+    }
+  };
+
+  // Mirrors ctwaFlowService.js's finishClosing.
+  const finishClosing = (b, v) => {
+    const reply = fillVars(b.reply, v);
+    const extras = [b.tag && `tag "${b.tag}"`, b.status && `status → ${b.status}`].filter(Boolean);
+    const alertOn = typeof b.notify === "boolean" ? b.notify : ALERT_BY_DEFAULT.includes(b.action);
+    const logged = `✅ Logged on the lead: chose "${b.label}"${extras.length ? `, ${extras.join(", ")}` : ""}.${alertOn ? " Your team is alerted." : ""}`;
+    const questions = flow.qualifyingQuestions || [];
+    if (b.action === "question") {
+      const target = questions.find((q) => q.id === b.next);
+      if (target) { push({ from: "bot", note: true, text: logged }); sendQuestion(target); return; }
+    }
+    if (b.action === "handoff") {
+      if (reply) push({ from: "bot", text: reply }); else pushAdvisorTerminal();
+      push({ from: "bot", note: true, text: logged });
+      setStep(null);
       return;
     }
+    if (b.action === "site_visit") {
+      const configured = b.next || flow.closingSiteVisitNext || "";
+      if (configured !== CLOSING_BOOK_IMMEDIATELY) {
+        const target = configured
+          ? questions.find((q) => q.id === configured)
+          : questions.find((q) => q.options.length && q.options.every((o) => o.action === "site_visit"));
+        if (target) { sendQuestion(target); return; }
+      }
+      bookSiteVisit(b.reply);
+      return;
+    }
+    if (b.action === "photos" || b.action === "docs" || b.action === "location") {
+      push({ from: "bot", note: true, text: b.action === "photos" ? "🖼️ Sends the project's photos and videos." : b.action === "docs" ? "📄 Sends the floor plan and brochure PDFs." : "📍 Sends the project's location." });
+      if (reply) push({ from: "bot", text: reply });
+      push({ from: "bot", note: true, text: logged });
+      setStep(null);
+      return;
+    }
+    if (b.action === "register") {
+      const ev = flow.event || {};
+      push({ from: "bot", text: reply || fillVars(ev.startsAt ? CLOSING_REPLY_DEFAULT.register : "You're registered for {{event}}. We'll send you the joining details here before it starts.", v) });
+      push({ from: "bot", note: true, text: logged });
+      if (ev.startsAt) {
+        push({ from: "bot", note: true, text: `⏰ ${v.minutes} minutes before ${v.time || "the start"} IST, this goes to them:` });
+        push({ from: "bot", text: fillVars(ev.reminderText || DEFAULT_REMINDER_TEXT, v) });
+      } else {
+        push({ from: "bot", warn: true, text: "Add the event's date and time above, or no joining link is sent." });
+      }
+      setStep(null);
+      return;
+    }
+    push({ from: "bot", text: reply || CLOSING_REPLY_DEFAULT.end });
+    push({ from: "bot", note: true, text: `${logged} The assistant stays on for anything they ask next.` });
+    setStep(null);
   };
 
   const pushAdvisorTerminal = () => {
@@ -1191,6 +1569,21 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
     const text = freeText.trim();
     if (!text) return;
     push({ from: "user", text });
+    // The answer to a closing button's typed question (a question mark means
+    // they asked something instead: the assistant answers, then asks again).
+    if (step?.startsWith("__ask__:")) {
+      const b = resolveClosingButtons(flow).find((x) => `__ask__:${x.id}` === step);
+      setFreeText("");
+      if (b && !/\?\s*$/.test(text)) {
+        const saved = { name: "Lead's name", email: "Lead's email", notes: "A note on the lead" }[b.askText.saveTo] || "A note";
+        push({ from: "bot", note: true, text: `✅ ${saved} saved: "${text}"` });
+        finishClosing(b, { ...vars, name: b.askText.saveTo === "name" ? text.split(/\s+/)[0] : vars.name });
+      } else if (b) {
+        push({ from: "bot", note: true, text: "→ The assistant answers their question, then:" });
+        push({ from: "bot", text: `Coming back to my earlier question:\n\n${fillVars(b.askText.prompt, vars)}` });
+      }
+      return;
+    }
     push({ from: "bot", note: true, text: "→ No button was tapped, so the flow exits here — this assistant's normal AI conversation answers this message instead." });
     setFreeText(""); setStep(null);
   };
@@ -1229,7 +1622,7 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
                 {(m.buttons?.length > 0 || m.list?.length > 0) && (
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
                     {(m.buttons || m.list).map((o) => (
-                      <button key={o.id} type="button" onClick={() => tap(o)}
+                      <button key={o.id} type="button" onClick={() => tap(m.closing ? { ...o, closing: true } : o)}
                         className="text-[11px] font-semibold px-2.5 py-1.5 rounded-full border transition hover:opacity-80"
                         style={{ borderColor: "var(--app-primary)", color: "var(--app-primary)", background: "var(--app-card-solid)" }}>
                         {o.label}
