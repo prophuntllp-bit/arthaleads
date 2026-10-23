@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api_client.dart';
 import 'push_service.dart';
@@ -29,6 +32,7 @@ class AuthState extends ChangeNotifier {
       if (user != null) {
         user = null;
         org = null;
+        _forget();
         notifyListeners();
       }
     };
@@ -66,11 +70,49 @@ class AuthState extends ChangeNotifier {
     }
   }
 
+  /// The signed-in user and org as last confirmed by the server, kept on the
+  /// phone so a returning user goes straight into the app (23 Oct 2026,
+  /// owner: launch sat on a placeholder for the whole /auth/me wait). The
+  /// server still checks every request; /auth/me runs right after and
+  /// replaces this, and a 401 signs out as before.
+  static const _profileKey = 'auth_profile_v1';
+
+  Future<void> _remember() async {
+    if (user == null) return;
+    try {
+      (await SharedPreferences.getInstance()).setString(_profileKey, jsonEncode({'user': user, 'org': org}));
+    } catch (_) {}
+  }
+
+  Future<void> _forget() async {
+    try {
+      (await SharedPreferences.getInstance()).remove(_profileKey);
+    } catch (_) {}
+  }
+
+  Future<bool> _openFromSaved() async {
+    try {
+      final raw = (await SharedPreferences.getInstance()).getString(_profileKey);
+      if (raw == null) return false;
+      final saved = (jsonDecode(raw) as Map).cast<String, dynamic>();
+      final u = (saved['user'] as Map?)?.cast<String, dynamic>();
+      if (u == null) return false;
+      user = u;
+      org = (saved['org'] as Map?)?.cast<String, dynamic>();
+      restoring = false;
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _restore() async {
     await _api.loadToken();
     if (_api.hasToken) {
+      final openedFromSaved = await _openFromSaved();
       restoringKnownSession = true;
-      notifyListeners();
+      if (!openedFromSaved) notifyListeners();
       // Up to 3 attempts with backoff. A single failed /auth/me here used to
       // drop straight to the login screen even though the token was still
       // valid and untouched — indistinguishable from a real logout to
@@ -85,9 +127,23 @@ class AuthState extends ChangeNotifier {
           final res = await _api.dio.get('/auth/me');
           user = (res.data['user'] as Map?)?.cast<String, dynamic>();
           org = (res.data['org'] as Map?)?.cast<String, dynamic>();
+          _remember();
+          if (openedFromSaved) notifyListeners();
           break;
         } on DioException catch (e) {
-          if (e.response?.statusCode == 401 || attempt == 2) break;
+          if (e.response?.statusCode == 401) {
+            // Signed out on the server: leave the saved profile too.
+            if (user != null) {
+              user = null;
+              org = null;
+              _forget();
+              notifyListeners();
+            }
+            break;
+          }
+          // Offline after opening from the saved profile: stay in the app;
+          // each screen shows its own load error and retries.
+          if (attempt == 2) break;
           await Future.delayed(Duration(milliseconds: 1500 * (attempt + 1)));
         }
       }
@@ -110,6 +166,7 @@ class AuthState extends ChangeNotifier {
       user = (res.data['user'] as Map?)?.cast<String, dynamic>();
       org = (res.data['org'] as Map?)?.cast<String, dynamic>();
       orgBlockReason = null;
+      _remember();
       notifyListeners();
     } finally {
       _api.authInProgress = false;
@@ -130,6 +187,7 @@ class AuthState extends ChangeNotifier {
       user = (res.data['user'] as Map?)?.cast<String, dynamic>();
       org = (res.data['org'] as Map?)?.cast<String, dynamic>();
       orgBlockReason = null;
+      _remember();
       notifyListeners();
     } finally {
       _api.authInProgress = false;
@@ -144,6 +202,7 @@ class AuthState extends ChangeNotifier {
       // proceed even if offline — token is cleared locally regardless
     }
     await _api.clearToken();
+    await _forget();
     user = null;
     org = null;
     notifyListeners();
@@ -154,6 +213,7 @@ class AuthState extends ChangeNotifier {
     final res = await _api.dio.get('/auth/me');
     user = (res.data['user'] as Map?)?.cast<String, dynamic>();
     org = (res.data['org'] as Map?)?.cast<String, dynamic>();
+    _remember();
     notifyListeners();
   }
 }
