@@ -101,6 +101,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-23 IST (main 6e4525f5 + 21ea8c77, from staging b139a554 + a72d4bab, owner said push live): Typed answers in button flows and the per-agent closing step (custom buttons, webinar registration with joining-link reminder) are LIVE. Conflicts were only beside AI-scoring lines (AiUsage leadScore fields, scheduler AI-score cron, aiLeadScore test): left out, AI scoring is still staging-only. AgentBuilder.jsx on main = pre-redesign + closing editor (redesign ecbe5453 still not on main). Full npm test + vite build pass on main.
 
 - [claude] 2026-10-22 IST: QR end-to-end checked on a real phone (staging): staging app QR -> staging.arthaleads.com/form/<token> in Chrome -> form shows the real company -> submit -> 'Thank you' -> lead 'QR Visitor Test' (9000000088, source QR Code, auto-assigned) in the staging app. Server-side QR rework and the Excel exports still wait on staging: Railway platform outage continues (deploys slow/stuck) and the Railway CLI login on this machine expired (owner to run `railway login`).
 
