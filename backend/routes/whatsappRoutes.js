@@ -41,6 +41,8 @@ const { looksLikeSolicitation } = require("../utils/solicitationGuard");
 const { limitEmoji } = require("../utils/limitEmoji");
 const OPTS = require("../constants/leadOptions");
 const createCtwaFlowService = require("../services/ctwaFlowService");
+const adPrefill = require("../utils/adPrefill");
+const { normalizeTestPhone } = require("../utils/phone");
 
 // ── Provider: send message ────────────────────────────────────────────────────
 
@@ -1188,6 +1190,15 @@ async function handleInbound(org, parsed) {
     }
   }
 
+  // Meta attaches `referral` only to the message that opened a chat from an
+  // ad, so this text is that ad's pre-filled message (or what the customer
+  // changed it to). Learned per ad, it identifies the ad on later clicks that
+  // arrive with no ad details (utils/adPrefill.js).
+  const clickRef = referral ? campaignRefFromReferral(referral) : null;
+  if (clickRef?.adId && msgType === "text" && !isPlaceholderBody(msgText)) {
+    adPrefill.learn(org._id, clickRef.adId, msgText).catch((err) => console.error("[WhatsApp] ad message learn failed:", err.message));
+  }
+
   // Lead details (BHK, budget, location...) are read from every chat, not
   // only the ones the AI bot answers.
   if (["text", "button", "interactive"].includes(msgType) && conv.leadId) scheduleLeadEnrich(org, conv._id);
@@ -1715,8 +1726,8 @@ async function maybeSwitchAgent(org, conv, { referral, msgText, interactiveId })
     target = await WaAgent.findOne({ orgId: org._id, status: "active", adIds: newRef.adId }).lean();
   }
   if (!target && !interactiveId && msgText && !newRef) {
-    const m = await matchProjectsInText(org, msgText);
-    if (m && String(m.agentId) !== String(conv.agentId || "")) target = await WaAgent.findOne({ _id: m.agentId, status: "active" }).lean();
+    const m = (await matchByPrefill(org, msgText, { strict: true })) || await matchProjectsInText(org, msgText);
+    if (m?.agentId && String(m.agentId) !== String(conv.agentId || "")) target = await WaAgent.findOne({ _id: m.agentId, status: "active" }).lean();
   }
   const set = {};
   const update = {};
@@ -1749,7 +1760,9 @@ async function labelLeadIfWeaker(leadId, label, { replaceGuess = false } = {}) {
 async function labelAdlessLead(org, conv) {
   if (!conv?.leadId || conv.campaignRef?.adId) return null;
   const m = await matchByMessageText(org, conv);
-  await labelLeadIfWeaker(conv.leadId, m?.project ? `WhatsApp enquiry · ${m.project.name}` : "");
+  await labelLeadIfWeaker(conv.leadId, m?.project
+    ? (m.viaPrefill ? `Facebook Ad · ${m.project.name}` : `WhatsApp enquiry · ${m.project.name}`)
+    : m?.viaPrefill ? AD_ORIGIN_UNKNOWN_LABEL : "");
   await noteWhyDetailsEmpty(conv, m).catch((err) => console.error("[WhatsApp] empty-details note failed:", err.message));
   // A routing rule only fires for an ad, so a lead who typed the project's name
   // with no ad behind it was never filed in that project. Name the project and
@@ -1794,7 +1807,9 @@ async function noteWhyDetailsEmpty(conv, match) {
     ? " The first thing they sent was something WhatsApp does not pass on to businesses (for example a view-once photo or a poll), so it could not be shown."
     : "";
   const quote = String(firstReal.body || "").replace(/^\[[A-Za-z ]+\]\s*/, "").slice(0, 160);
-  const where = match?.project
+  const where = match?.viaPrefill
+    ? `this buyer messaged us on WhatsApp with "${quote}", the pre-filled message of our ad ${match.adId}${match.project ? ` (${match.project.name})` : ""}, but Meta did not send the ad details with the chat. The ad${match.project ? " and project were" : " was"} identified from that message.`
+    : match?.project
     ? `this buyer messaged us on WhatsApp with "${quote}", the pre-filled message of our ${match.project.name} ad, but Meta did not send the ad details (ad name and ID) with the chat, so the exact ad is not known. The project was identified from that message.`
     : `this buyer started a WhatsApp chat and Meta did not send any ad details with it, and their message ("${quote}") does not name one of our projects. It may be a direct message rather than an ad click, so the source and project are blank.`;
   const text = `${EMPTY_DETAILS_NOTE_PREFIX} ${where}${opened} Property type, BHK, budget and location stay blank until the buyer shares them in the chat or an agent fills them in.`;
@@ -1830,7 +1845,18 @@ const GENERIC_PROJECT_WORDS = new Set(["project", "projects", "plots", "plot", "
 async function matchByMessageText(org, conversation) {
   const firsts = await WaMessage.find({ conversationId: conversation._id, direction: "inbound" })
     .sort({ timestamp: 1 }).limit(5).select("body").lean();
-  return matchProjectsInText(org, firsts.find((m) => !isPlaceholderBody(m.body))?.body);
+  const text = firsts.find((m) => !isPlaceholderBody(m.body))?.body;
+  return (await matchByPrefill(org, text)) || matchProjectsInText(org, text);
+}
+
+// The agent whose ad pre-fills this text (utils/adPrefill.js), with its
+// project when it has exactly one. Same shape as matchProjectsInText.
+async function matchByPrefill(org, text, opts) {
+  const hit = await adPrefill.matchAgent(org._id, text, opts);
+  if (!hit) return null;
+  const projects = hit.agent.projectIds?.length
+    ? await Project.find({ _id: { $in: hit.agent.projectIds } }).select("name location").limit(2).lean() : [];
+  return { agentId: hit.agent._id, project: projects.length === 1 ? projects[0] : null, adId: hit.adId, viaPrefill: true };
 }
 
 // Inbound entries we store in place of content WhatsApp never handed over
@@ -1863,12 +1889,19 @@ async function matchProjectsInText(org, rawText) {
     const named = a.projectIds.map((id) => byId.get(String(id))).filter((p) => p && wordsOf(p).some((w) => text.includes(w)));
     if (named.length) hits.push({ agentId: a._id, project: named.length === 1 ? named[0] : null });
   }
-  return hits.length === 1 ? hits[0] : null;
+  if (hits.length === 1) return hits[0];
+  // Several agents cover the one project named (23 Oct 2026: a webinar agent
+  // added to the Khopoli project made every Khopoli message ambiguous, and
+  // those leads lost their project and source too). Which agent stays
+  // unknown; the project does not.
+  const ids = new Set(hits.map((h) => String(h.project?._id || "")));
+  if (hits.length > 1 && ids.size === 1 && !ids.has("")) return { agentId: null, project: hits[0].project };
+  return null;
 }
 
 async function resolveAgentByMessageText(org, conversation) {
   const m = await matchByMessageText(org, conversation);
-  return m ? await WaAgent.findById(m.agentId).lean() : null;
+  return m?.agentId ? await WaAgent.findById(m.agentId).lean() : null;
 }
 
 // Stops the bot for good on a conversation that isn't a buyer. Marks the
@@ -3403,7 +3436,7 @@ function sanitizeCtwaFlow(input) {
   // Temporary testing allowlist — digits only (matches WaConversation.contactPhone's
   // "no +, no spaces" shape), deduped, capped well above any real team size.
   clean.testPhones = Array.isArray(input.testPhones)
-    ? [...new Set(input.testPhones.map((p) => String(p || "").replace(/\D/g, "")).filter(Boolean))].slice(0, 25)
+    ? [...new Set(input.testPhones.map(normalizeTestPhone).filter(Boolean))].slice(0, 25)
     : [];
 
   if (clean.enabled && !clean.qualifyingQuestions.length) {
@@ -3581,6 +3614,40 @@ router.patch("/agents/:id", authorize("admin", "super_admin"), async (req, res) 
 });
 
 // Exactly one default per org, so this moves the flag rather than setting it.
+// The pre-filled messages of this agent's ads: learned from real clicks
+// (counted once two clicks opened with the same text) or added by hand.
+router.get("/agents/:id/ad-messages", async (req, res) => {
+  try {
+    const agent = await WaAgent.findOne({ _id: req.params.id, orgId: req.orgId }).select("adIds").lean();
+    if (!agent) return res.status(404).json({ message: "That assistant no longer exists." });
+    const AdPrefill = require("../models/AdPrefill");
+    const rows = await AdPrefill.find({ orgId: req.orgId, adId: { $in: agent.adIds || [] }, hidden: { $ne: true } })
+      .sort({ manual: -1, count: -1 }).limit(50).lean();
+    res.json({ messages: rows.map((r) => ({ id: r._id, adId: r.adId, text: r.sample, count: r.count, manual: r.manual, active: r.manual || r.count >= adPrefill.MIN_CLICKS })) });
+  } catch (err) { sendErr(res, err); }
+});
+
+router.post("/agents/:id/ad-messages", authorize("admin", "super_admin"), async (req, res) => {
+  try {
+    const agent = await WaAgent.findOne({ _id: req.params.id, orgId: req.orgId }).select("adIds").lean();
+    if (!agent) return res.status(404).json({ message: "That assistant no longer exists." });
+    const adId = String(req.body?.adId || "").trim();
+    if (!(agent.adIds || []).includes(adId)) return res.status(400).json({ message: "Add the ad to this assistant first, then its message." });
+    const row = await adPrefill.addManual(req.orgId, adId, String(req.body?.text || ""));
+    res.status(201).json({ message: { id: row._id, adId: row.adId, text: row.sample, count: row.count, manual: true, active: true } });
+  } catch (err) { if (err.status) return res.status(err.status).json({ message: err.message }); sendErr(res, err); }
+});
+
+router.delete("/agents/:id/ad-messages/:msgId", authorize("admin", "super_admin"), async (req, res) => {
+  try {
+    const AdPrefill = require("../models/AdPrefill");
+    // Hidden rather than deleted, so the next click with the same text does
+    // not quietly learn it back.
+    await AdPrefill.updateOne({ _id: req.params.msgId, orgId: req.orgId }, { $set: { hidden: true } });
+    res.json({ ok: true });
+  } catch (err) { sendErr(res, err); }
+});
+
 router.post("/agents/:id/default", authorize("admin", "super_admin"), async (req, res) => {
   try {
     const agent = await WaAgent.findOne({ _id: req.params.id, orgId: req.orgId });
@@ -4675,6 +4742,7 @@ router.get("/unread", async (req, res) => {
 // Called by the scheduler every few minutes (utils/scheduler.js).
 router.runFlowNudges = (now) => ctwaFlow.runNudges(now);
 router.runEventReminders = (now) => ctwaFlow.runEventReminders(now);
+router._matchByMessageText = matchByMessageText;
 router._sanitizeCtwaFlow = sanitizeCtwaFlow;
 router.recoverLostBotReplies = recoverLostBotReplies;
 router.autoCaptureWhatsAppLead = autoCaptureWhatsAppLead; // exposed for tests
