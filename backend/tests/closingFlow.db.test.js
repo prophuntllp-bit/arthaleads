@@ -128,6 +128,34 @@ test("a question while asked for the name: answered, then the name asked again",
   assert.equal((await leadOf(phone)).name, "Meera Joshi");
 });
 
+test("'no' when asked the name is not a name: the seat is still reserved, without one", async () => {
+  const phone = await start(AD_WEBINAR);
+  await tap(phone, "reserve", "Reserve my seat");
+  await say(phone, "no");
+  const lead = await leadOf(phone);
+  assert.notEqual(lead.name, "no");
+  assert.notEqual((await convOf(phone)).contactName, "no");
+  assert.match(last(phone), /^Thanks rs, your seat is reserved/, "their WhatsApp name, never 'Thanks no'");
+  assert.equal(await EventReminder.countDocuments({ conversationId: (await convOf(phone))._id }), 1);
+});
+
+test("'ok' or 'hi' is not a name either: answered, then asked again", async () => {
+  const phone = await start(AD_WEBINAR);
+  await tap(phone, "reserve", "Reserve my seat");
+  await say(phone, "ok");
+  assert.match(last(phone), /May I have your full name/);
+  await say(phone, "my name is Kavita Rao");
+  assert.equal((await leadOf(phone)).name, "Kavita Rao");
+});
+
+test("saving: a registration with no joining link is refused unless the reminder doesn't use one", async () => {
+  const base = { enabled: true, qualifyingQuestions: [{ id: "q", questionText: "Q?", mapsTo: "none", options: [{ id: "a", label: "A" }] }],
+    closingButtons: [{ id: "r", label: "Register", action: "register" }] };
+  const ev = { title: "Site open day", startsAt: new Date(Date.now() + 86400000) };
+  assert.throws(() => wa._sanitizeCtwaFlow({ ...base, event: ev }), /joining link/);
+  assert.ok(wa._sanitizeCtwaFlow({ ...base, event: { ...ev, reminderText: "Hi {{name}}, see you at the site in {{minutes}} minutes." } }));
+});
+
 test("saving: a register button without the event's date is refused; old-style buttons keep their meaning", async () => {
   const base = { enabled: true, qualifyingQuestions: [{ id: "q", questionText: "Q?", mapsTo: "none", options: [{ id: "a", label: "A" }] }] };
   assert.throws(() => wa._sanitizeCtwaFlow({ ...base, closingButtons: [{ id: "r", label: "Register", action: "register" }] }), /event's name and date/);

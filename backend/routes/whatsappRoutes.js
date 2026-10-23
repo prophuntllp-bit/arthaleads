@@ -3424,6 +3424,14 @@ function sanitizeCtwaFlow(input) {
     const e = new Error("A registration button needs the event's name and date and time.");
     e.status = 400; throw e;
   }
+  // The reminder's whole point is the joining link (23 Oct 2026: a test event
+  // with no link sent "Join here:" and nothing after it). An event without a
+  // link (in person) writes its own reminder without {{link}}.
+  if (clean.enabled && clean.closingButtons.some((b) => b.action === "register") && !clean.event.link
+      && (!clean.event.reminderText || /\{\{\s*link\s*\}\}/.test(clean.event.reminderText))) {
+    const e = new Error("Add the joining link: the reminder sends it to everyone who registered. For an event with no link, write a reminder message without {{link}}.");
+    e.status = 400; throw e;
+  }
 
   // Same rule for the closing prompt's own "Book Site Visit" target — a
   // question id or the book-immediately sentinel, or "" to keep the

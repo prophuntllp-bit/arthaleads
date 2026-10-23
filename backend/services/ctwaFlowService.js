@@ -588,9 +588,31 @@ module.exports = function createCtwaFlowService({
       const button = closingButtons.find((b) => b.id === step.slice(ASK_PREFIX.length));
       if (!button) { await exitFlow(); return false; }
       const said = String(msgText || "").replace(/\s+/g, " ").trim();
-      if (!interactiveId && said && said.length <= 120 && !flowAnswer.looksLikeQuestion(said)) {
-        await saveTypedAnswer(conversation, button.askText?.saveTo, said);
-        return finishClosing(org, agent, conversation, botName, button, questions, goTo);
+      if (!interactiveId && said) {
+        // Read against the chat, not taken as is (23 Oct 2026: "no" to "May I
+        // have your full name?" was saved as the name and the seat confirmed
+        // to "Thanks no").
+        const recent = (await WaMessage.find({ conversationId: conversation._id }).sort({ timestamp: -1 }).limit(8).select("direction body").lean())
+          .reverse().map((m) => ({ from: m.direction === "inbound" ? "customer" : "bot", text: m.body }));
+        const read = await flowAnswer.readTypedAnswer(
+          { prompt: button.askText?.prompt || "", saveTo: button.askText?.saveTo || "notes", said, recent, choice: button.title },
+          (usage) => AiUsage.updateOne(
+            { orgId: org._id, month: new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 7) },
+            { $inc: { flowMatchCalls: 1, flowMatchTokens: usage?.total_tokens || 0 } }, { upsert: true },
+          ).catch(() => {}));
+        if (read.kind === "answer") {
+          await saveTypedAnswer(conversation, button.askText?.saveTo, read.value);
+          return finishClosing(org, agent, conversation, botName, button, questions, goTo);
+        }
+        // Would rather not say: what they chose still happens, without it.
+        if (read.kind === "skip") return finishClosing(org, agent, conversation, botName, button, questions, goTo);
+        if (read.kind === "cancel") {
+          await sendFlowStep(org, conversation, botName, { bodyText: read.reply || "No problem! Message us here anytime if you change your mind." });
+          if (conversation.leadId) await Lead.updateOne({ _id: conversation.leadId }, { $push: { activities: { type: "note_added", description: `Chose "${button.title}" on WhatsApp, then changed their mind` } } });
+          await WaConversation.updateOne({ _id: conversation._id }, { $unset: { flowState: 1 } });
+          await funnelOutcome(conversation._id, "ended");
+          return true;
+        }
       }
       if (msgText && conversation.flowState?.reasked !== step) {
         await WaConversation.updateOne({ _id: conversation._id }, { $set: { "flowState.reasked": step, "flowState.resumeAfterReply": true } });
@@ -872,7 +894,11 @@ ${stepMsg.bodyText}`;
    */
   async function finishClosing(org, agent, conversation, botName, button, questions, goTo) {
     const fresh = await WaConversation.findById(conversation._id).select("contactName").lean();
-    const vars = { ...eventVars(agent), name: (fresh?.contactName || conversation.contactName || "there").split(/\s+/)[0] };
+    // A WhatsApp profile name that isn't a person's ("no", "Prophunt Consulting"
+    // still reads fine; "~", "." or "no" alone does not) becomes "there".
+    const { looksLikeCallerName } = require("../utils/personName");
+    const first = String(fresh?.contactName || conversation.contactName || "").trim().split(/\s+/)[0].replace(/[^\p{L}\p{M}]/gu, "");
+    const vars = { ...eventVars(agent), name: looksLikeCallerName(first) ? first : "there" };
     const reply = button.reply ? fill(button.reply, vars) : "";
     const endFlow = () => WaConversation.updateOne({ _id: conversation._id }, { $unset: { flowState: 1 } });
     await recordClosingChoice(conversation.leadId, button);

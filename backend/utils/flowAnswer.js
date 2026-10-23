@@ -108,9 +108,9 @@ function looksLikeQuestion(text) {
 // ── AI fallback ──────────────────────────────────────────────────────────────
 const MODEL = process.env.FLOW_MATCH_MODEL || "gpt-4o-mini";
 let client = null;
-async function defaultModel(messages) {
+async function defaultModel(messages, { maxTokens = 60 } = {}) {
   if (!client) client = new OpenAI({ timeout: 15000, maxRetries: 1 });
-  const res = await client.chat.completions.create({ model: MODEL, messages, temperature: 0, max_tokens: 60, response_format: { type: "json_object" } });
+  const res = await client.chat.completions.create({ model: MODEL, messages, temperature: 0, max_tokens: maxTokens, response_format: { type: "json_object" } });
   return { text: res.choices[0]?.message?.content || "", usage: res.usage };
 }
 let callModel = defaultModel;
@@ -135,7 +135,64 @@ async function aiMatch(questionText, options, said, onUsage) {
   } catch { return null; }
 }
 
+// A reply that only says no / not now / skip, in the languages customers use.
+const REFUSAL_RE = /^(no+|nope|nahi+|nahin|nako|na|nai|not now|later|baad me(i|n)?|skip|cancel|don'?t|nothing|no thanks|no thank you|not interested|rehne do|chhodo)[\s.!]*$/i;
+// "My name is Rahul" / "I am Rahul" / "This is Rahul": just the name.
+const NAME_LEAD_IN_RE = /^(my name is|my name's|name is|i am|i'm|im|this is|it's|its|mera naam|maza nav|majhe nav|naam)\s+/i;
+
+/**
+ * What a customer typed after the bot asked them for something (a closing
+ * button's "ask them to type something first": their name, email or a note),
+ * read against the conversation so far.
+ *   { kind: "answer", value }  the thing asked for
+ *   { kind: "skip" }           won't give it, still wants what they chose
+ *   { kind: "cancel", reply }  changed their mind about what they chose
+ *   { kind: "other" }          a question or something else: answer it, ask again
+ * 23 Oct 2026: "no" to "May I have your full name?" was saved as the name and
+ * the seat confirmed to "Thanks no".
+ * `recent` is the last few messages, [{ from: "customer"|"bot", text }].
+ */
+async function readTypedAnswer({ prompt, saveTo, said, recent = [], choice = "" }, onUsage) {
+  const text = String(said || "").replace(/\s+/g, " ").trim();
+  if (!text) return { kind: "other" };
+  if (!(callModel === defaultModel && !process.env.OPENAI_API_KEY)) {
+    try {
+      const chat = recent.slice(-8).map((m) => `${m.from === "bot" ? "Business" : "Customer"}: ${String(m.text || "").slice(0, 200)}`).join("\n");
+      const out = await callModel([
+        { role: "system", content:
+          "You read one WhatsApp reply for a real-estate business. The customer tapped a button, the business then asked them to type something, and this is their reply. " +
+          "Replies may be in English, Hindi, Marathi or Hinglish. Answer only JSON: " +
+          "{\"kind\":\"answer\",\"value\":\"...\"} when the reply gives what was asked (value: only that, e.g. just the person's name, properly capitalised); " +
+          "{\"kind\":\"skip\"} when they won't give it but still want what they chose; " +
+          "{\"kind\":\"cancel\",\"reply\":\"...\"} when they no longer want what they chose (reply: one short, warm sentence in their language, no dashes); " +
+          "{\"kind\":\"other\"} for a question or anything else. A bare \"no\" to a request for their name usually means they would rather not share it: use skip unless the chat shows they changed their mind. " +
+          "Never treat words like no, ok, yes, hi, or a question, as a name." },
+        { role: "user", content: `Chat so far:\n${chat || "(none)"}\n\nThey tapped: ${choice}\nBusiness asked: ${prompt}\nAsked for: ${saveTo === "name" ? "their name" : saveTo === "email" ? "their email address" : "a short answer"}\nCustomer replied: ${text.slice(0, 300)}` },
+      ], { maxTokens: 120 });
+      onUsage?.(out.usage);
+      const r = JSON.parse(String(out.text || "").replace(/^```(json)?|```$/g, "").trim());
+      if (r?.kind === "answer" && String(r.value || "").trim()) return { kind: "answer", value: String(r.value).trim().slice(0, 120) };
+      if (r?.kind === "skip") return { kind: "skip" };
+      if (r?.kind === "cancel") return { kind: "cancel", reply: String(r.reply || "").trim().slice(0, 300) };
+      if (r?.kind === "other") return { kind: "other" };
+    } catch { /* the rules below */ }
+  }
+  // Rules, for when there is no AI (staging) or it failed.
+  if (looksLikeQuestion(text)) return { kind: "other" };
+  if (REFUSAL_RE.test(text)) return { kind: "skip" };
+  if (saveTo === "email") {
+    const m = text.match(/[^\s@]+@[^\s@]+\.[a-z]{2,}/i);
+    return m ? { kind: "answer", value: m[0] } : { kind: "other" };
+  }
+  if (saveTo === "name") {
+    const { looksLikeCallerName } = require("./personName");
+    const name = text.replace(NAME_LEAD_IN_RE, "").replace(/[.!]+$/, "").trim();
+    return name.split(" ").length <= 4 && looksLikeCallerName(name) ? { kind: "answer", value: name } : { kind: "other" };
+  }
+  return text.length <= 300 ? { kind: "answer", value: text } : { kind: "other" };
+}
+
 module.exports = {
-  readAmount, optionRange, matchBudget, looksLikeQuestion, aiMatch,
+  readAmount, optionRange, matchBudget, looksLikeQuestion, aiMatch, readTypedAnswer,
   _setModel: (fn) => { callModel = fn || defaultModel; },
 };

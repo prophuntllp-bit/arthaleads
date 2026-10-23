@@ -1338,6 +1338,9 @@ function ClosingStepEditor({ flow, setFlow }) {
             <label className={label}>Joining link</label>
             <input className="input w-full" placeholder="https://meet.google.com/..." value={event.link} onChange={(e) => setEvent({ link: e.target.value })} />
             {!linkOk && <p className="text-[11px] mt-1" style={{ color: "#b91c1c" }}>The link has to start with https://</p>}
+            {!event.link.trim() && (!event.reminderText.trim() || /\{\{\s*link\s*\}\}/.test(event.reminderText)) && (
+              <p className="text-[11px] mt-1" style={{ color: "#b91c1c" }}>Add the joining link, or the reminder goes out with "Join here:" and nothing after it. For an event with no link, write a reminder message without {"{{link}}"}.</p>
+            )}
           </div>
           <div className="grid sm:grid-cols-[160px_1fr] gap-2.5">
             <div>
