@@ -341,6 +341,14 @@ cron.schedule("*/5 * * * *", () => {
     .catch((err) => logger.error(`[wa-nudges] cron failed: ${err.message}`));
 });
 
+// ── Every minute: event reminders (the joining link, minutes before a webinar
+// someone registered for through an agent's button flow) ───────────────────
+cron.schedule("* * * * *", () => {
+  require("../routes/whatsappRoutes").runEventReminders()
+    .then(({ sent }) => { if (sent) logger.info(`[event-reminders] sent ${sent}`); })
+    .catch((err) => logger.error(`[event-reminders] failed: ${err.message}`));
+});
+
 // ── Every 5 minutes: AI lead scoring ─────────────────────────────────────────
 // Reads leads whose customer wrote or talked on a call in the last 14 days and
 // has been quiet for 10 minutes since (services/aiLeadScore.js). No-op without

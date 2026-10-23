@@ -3269,6 +3269,7 @@ const AGENT_FIELDS = [
 // real ceiling for either shape.
 const CTWA_OPTION_CAP = 10;
 const CTWA_OPTION_ACTIONS = ["none", "photos", "docs", "location", "advisor", "site_visit"];
+const CTWA_CLOSING_ACTIONS = ["handoff", "end", "site_visit", "photos", "docs", "location", "question", "register"];
 // Generous headroom above the old fixed 3 (purpose/budget/timeline) now that
 // what used to be the separate "what next?" menu and "site visit" steps are
 // just more entries in this same list — a tenant can still add further
@@ -3339,13 +3340,57 @@ function sanitizeCtwaFlow(input) {
       if (o.next && !validNextTargets.has(o.next)) o.next = "";
     }
   }
-  // Which closing buttons to offer. Only the two real endings exist, each at
-  // most once, with a WhatsApp-safe title. Nothing usable left means "use the
-  // defaults" (both), so a flow can never be saved with no way to finish.
+  // The closing buttons, built per agent (23 Oct 2026): up to 3 (WhatsApp's
+  // reply-button limit), each with an action and, optionally, its own reply,
+  // tag, status, team alert and a typed question first. A button saved the
+  // old way ({ id: "advisor" | "site_visit", label }) keeps its meaning.
+  // Nothing usable left means "use the defaults" (Talk to Advisor and Book
+  // Site Visit), so a flow can never be saved with no way to finish.
   const seenClosing = new Set();
+  const legacyAction = { advisor: "handoff", site_visit: "site_visit" };
+  const questionIds = new Set(clean.qualifyingQuestions.map((q) => q.id));
   clean.closingButtons = (Array.isArray(input.closingButtons) ? input.closingButtons : [])
-    .map((b) => ({ id: b?.id, label: String(b?.label || "").trim().slice(0, 20) }))
-    .filter((b) => (b.id === "advisor" || b.id === "site_visit") && b.label && !seenClosing.has(b.id) && seenClosing.add(b.id));
+    .map((b, i) => {
+      const action = CTWA_CLOSING_ACTIONS.includes(b?.action) ? b.action : legacyAction[b?.id];
+      const label = String(b?.label || "").trim().slice(0, 20);
+      const id = String(b?.id || "").trim().slice(0, 40) || `close_${i}`;
+      const askPrompt = String(b?.askText?.prompt || "").trim().slice(0, 300);
+      const status = String(b?.status || "").trim();
+      const next = String(b?.next || "").trim().slice(0, 60);
+      return {
+        id, label, action,
+        reply: String(b?.reply || "").trim().slice(0, 600),
+        tag: String(b?.tag || "").trim().slice(0, 40),
+        status: OPTS.STATUS.includes(status) ? status : "",
+        notify: b?.notify === false ? false : b?.notify === true ? true : undefined,
+        next: action === "question" ? (questionIds.has(next) ? next : "") : action === "site_visit" ? (next === CTWA_BOOK_IMMEDIATELY || questionIds.has(next) ? next : "") : "",
+        ...(askPrompt ? { askText: { prompt: askPrompt, saveTo: ["name", "email", "notes"].includes(b?.askText?.saveTo) ? b.askText.saveTo : "notes" } } : {}),
+      };
+    })
+    .filter((b) => b.action && b.label && !seenClosing.has(b.id) && seenClosing.add(b.id))
+    .slice(0, 3);
+  clean.closingTemplate = String(input.closingTemplate || "").trim().slice(0, 30);
+
+  // The event a "register" button signs people up for (see WaAgent.ctwaFlow.event).
+  if (input.event && typeof input.event === "object") {
+    const startsAt = input.event.startsAt ? new Date(input.event.startsAt) : null;
+    const link = String(input.event.link || "").trim().slice(0, 500);
+    clean.event = {
+      title: String(input.event.title || "").trim().slice(0, 120),
+      startsAt: startsAt && !Number.isNaN(startsAt.getTime()) ? startsAt : null,
+      link: /^https?:\/\//i.test(link) ? link : "",
+      reminderMinutes: Math.min(24 * 60, Math.max(5, Number(input.event.reminderMinutes) || 30)),
+      reminderText: String(input.event.reminderText || "").trim().slice(0, 600),
+      templateName: String(input.event.templateName || "").trim().slice(0, 120),
+      templateLanguage: String(input.event.templateLanguage || "").trim().slice(0, 20),
+      templateVars: (Array.isArray(input.event.templateVars) ? input.event.templateVars : [])
+        .map((v) => String(v || "")).filter((v) => ["name", "link", "event", "time"].includes(v)).slice(0, 5),
+    };
+  }
+  if (clean.enabled && clean.closingButtons.some((b) => b.action === "register") && !(clean.event?.title && clean.event?.startsAt)) {
+    const e = new Error("A registration button needs the event's name and date and time.");
+    e.status = 400; throw e;
+  }
 
   // Same rule for the closing prompt's own "Book Site Visit" target — a
   // question id or the book-immediately sentinel, or "" to keep the
@@ -3516,10 +3561,20 @@ router.patch("/agents/:id", authorize("admin", "super_admin"), async (req, res) 
     if (fields.name !== undefined && !fields.name) {
       return res.status(400).json({ message: "Give the assistant a name." });
     }
+    const before = await WaAgent.findOne({ _id: req.params.id, orgId: req.orgId }).select("ctwaFlow.event").lean();
     const agent = await WaAgent.findOneAndUpdate(
       { _id: req.params.id, orgId: req.orgId }, fields, { new: true, runValidators: true }
     );
     if (!agent) return res.status(404).json({ message: "That assistant no longer exists." });
+    // The event moved (or its reminder lead time changed): pending reminders
+    // for it follow, so nobody gets the link at the old time.
+    const oldEv = before?.ctwaFlow?.event, newEv = agent.ctwaFlow?.event;
+    if (oldEv?.startsAt && newEv?.startsAt && (+new Date(oldEv.startsAt) !== +new Date(newEv.startsAt) || (oldEv.reminderMinutes || 30) !== (newEv.reminderMinutes || 30))) {
+      const EventReminder = require("../models/EventReminder");
+      const sendAt = new Date(Math.max(Date.now(), new Date(newEv.startsAt).getTime() - (newEv.reminderMinutes || 30) * 60000));
+      await EventReminder.updateMany({ agentId: agent._id, status: "pending", eventStartsAt: new Date(oldEv.startsAt) },
+        { $set: { eventStartsAt: new Date(newEv.startsAt), sendAt } }).catch(() => {});
+    }
     const [withR] = await withReadiness(req.orgId, [agent]);
     res.json({ agent: withR });
   } catch (err) { res.status(err.status || 500).json({ message: err.message }); }
@@ -4619,6 +4674,8 @@ router.get("/unread", async (req, res) => {
 
 // Called by the scheduler every few minutes (utils/scheduler.js).
 router.runFlowNudges = (now) => ctwaFlow.runNudges(now);
+router.runEventReminders = (now) => ctwaFlow.runEventReminders(now);
+router._sanitizeCtwaFlow = sanitizeCtwaFlow;
 router.recoverLostBotReplies = recoverLostBotReplies;
 router.autoCaptureWhatsAppLead = autoCaptureWhatsAppLead; // exposed for tests
 

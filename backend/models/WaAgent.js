@@ -170,7 +170,51 @@ const waAgentSchema = new mongoose.Schema(
       // wording, so agents saved before this existed behave exactly as before.
       // A tenant who doesn't want site visits (say a campaign aimed at
       // out-of-town investors) just leaves that one out.
-      closingButtons: [{ _id: false, id: { type: String, enum: ["advisor", "site_visit"] }, label: String }],
+      // The closing buttons (23 Oct 2026: built per ad, not fixed). Up to 3
+      // (WhatsApp's reply-button limit). Each one says what happens on a tap:
+      //   handoff    reply, then hand the chat to the team
+      //   end        reply and end politely (the assistant stays on)
+      //   site_visit book a site visit (closingSiteVisitNext / a slot question)
+      //   photos | docs | location  send it, then reply
+      //   question   go to one of the questions above (next)
+      //   register   register for the event below and schedule its reminder
+      // plus its own reply text, a tag and a status for the lead, whether to
+      // alert the team, and optionally a typed question first (askText, e.g.
+      // "May I have your full name?" saved to the lead's name). Saved before
+      // this existed: { id: "advisor" | "site_visit", label } with no action,
+      // read as handoff / site_visit exactly as before.
+      closingButtons: [{
+        _id: false,
+        id: String,
+        label: String,
+        action: { type: String, enum: ["handoff", "end", "site_visit", "photos", "docs", "location", "question", "register"] },
+        reply: String,
+        tag: String,
+        status: String,
+        notify: Boolean,
+        next: String,
+        askText: { type: { prompt: String, saveTo: { type: String, enum: ["name", "email", "notes"] } }, default: undefined },
+      }],
+      // Which starting point the closing was built from (editor hint only).
+      closingTemplate: { type: String, default: "" },
+      // The event a "register" button signs people up for: a confirmation now,
+      // and the joining link sent automatically reminderMinutes before startsAt
+      // (models/EventReminder.js). Outside WhatsApp's 24-hour window only an
+      // approved template can be sent, so one is chosen here, with what fills
+      // each {{n}} (name | link | event | time).
+      event: {
+        type: {
+          title:            String,
+          startsAt:         Date,
+          link:             String,
+          reminderMinutes:  { type: Number, default: 30 },
+          reminderText:     String,
+          templateName:     String,
+          templateLanguage: String,
+          templateVars:     [String],
+        },
+        default: undefined,
+      },
       // Gentle follow-ups for someone who stops mid-flow: one after ~15 minutes
       // and one shortly before the 24h reply window closes. Off unless enabled.
       nudgesEnabled:   { type: Boolean, default: false },
