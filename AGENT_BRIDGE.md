@@ -101,6 +101,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-23 IST (main 76f6908e + 0d25b19e, from staging 4c7ff837 + 1df968c9, owner said push live): AI lead scoring and Excel phones without '+' are LIVE. Per the QR session's note, backend/utils/exports/sheetTheme.js regenerated on main with scripts/syncSheetTheme.js (exportXlsx test passes); main's exportXlsx test kept (follows prettyPhone). aiLeadScore.markSignal back in handleInbound's Promise.all. AiUsage keeps both leadScore* and flowMatch* fields; scheduler has both the event-reminder and AI-score crons. scripts/backfillCustomerSignal.js NOT run yet (needs owner yes).
 
 - [claude] 2026-10-23 IST: mobile launch: signed-in profile saved on the phone (SharedPreferences auth_profile_v1, core/auth_state.dart), so returning users open straight into the app; /auth/me runs right after, 401 signs out and clears it, offline keeps the saved profile. main.dart gate shows AppSplash only when nothing is saved; widgets/skeleton.dart deleted (unused). staging d0321c3c, main 57882184. Checked on a phone (Home with real numbers 0.6 s after launch). Not released.
 
