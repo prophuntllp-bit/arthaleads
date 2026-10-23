@@ -605,7 +605,7 @@ export default function AgentBuilder() {
               <label className="text-xs font-semibold text-app-soft mb-1 block">
                 What it does <span className="font-normal">(for your team, never sent to customers)</span>
               </label>
-              <input className="input w-full" placeholder="e.g. Qualifies leads and books site visits for Treetopia"
+              <input className="input w-full" placeholder="e.g. Qualifies leads and books site visits for Green Valley Villas"
                 value={form.description} onChange={(e) => set({ description: e.target.value })} />
             </div>
 
@@ -1311,7 +1311,7 @@ function ClosingStepEditor({ flow, setFlow }) {
           <div className="grid sm:grid-cols-2 gap-2.5">
             <div>
               <label className={label}>Event name</label>
-              <input className="input w-full" maxLength={120} placeholder="e.g. SP Pallonji Webinar" value={event.title} onChange={(e) => setEvent({ title: e.target.value })} />
+              <input className="input w-full" maxLength={120} placeholder="e.g. Green Valley Launch Webinar" value={event.title} onChange={(e) => setEvent({ title: e.target.value })} />
             </div>
             <div>
               <label className={label}>Date and time (IST)</label>

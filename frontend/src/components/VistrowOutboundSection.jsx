@@ -442,7 +442,7 @@ export default function VistrowOutboundSection() {
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-12 items-end pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
                   {src.key === "website" && (<>
                     <div className="md:col-span-4"><label className="label">When the form is on a page containing</label>
-                      <input className="input" list="vo-pages" placeholder="/shapoorji-pallonji-khopoli/" value={d.url || ""} onChange={(e) => setDraftField(src.key, { url: e.target.value })} />
+                      <input className="input" list="vo-pages" placeholder="/green-valley-villas/" value={d.url || ""} onChange={(e) => setDraftField(src.key, { url: e.target.value })} />
                       <datalist id="vo-pages">{pageOptions.map((p) => <option key={p} value={p} />)}</datalist></div>
                     <div className="md:col-span-3"><label className="label">Project (optional)</label>
                       <CustomSelect value={d.projectId || ""} onChange={(v) => setDraftField(src.key, { projectId: v })} options={[{ value: "", label: "None" }, ...projectOptions]} placeholder="None" style={FORM_SELECT} /></div>
@@ -567,7 +567,7 @@ export default function VistrowOutboundSection() {
                 <div className="md:col-span-3"><label className="label">Source</label>
                   <CustomSelect value={check.source} onChange={(v) => setCheck({ ...check, source: v, result: null })} style={FORM_SELECT}
                     options={[{ value: "website", label: "Website" }, { value: "facebook", label: "Facebook" }, { value: "whatsapp", label: "WhatsApp" }, { value: "google", label: "Google" }, { value: "other", label: "Anything else" }]} /></div>
-                {check.source === "website" && <div className="md:col-span-6"><label className="label">Page the form was on</label><input className="input" placeholder="https://yoursite.com/shapoorji-pallonji-khopoli/" value={check.pageUrl} onChange={(e) => setCheck({ ...check, pageUrl: e.target.value, result: null })} /></div>}
+                {check.source === "website" && <div className="md:col-span-6"><label className="label">Page the form was on</label><input className="input" placeholder="https://yoursite.com/green-valley-villas/" value={check.pageUrl} onChange={(e) => setCheck({ ...check, pageUrl: e.target.value, result: null })} /></div>}
                 {(check.source === "facebook" || check.source === "whatsapp" || check.source === "google") && <div className="md:col-span-3"><label className="label">Project</label><CustomSelect value={check.projectId} onChange={(v) => setCheck({ ...check, projectId: v, result: null })} options={[{ value: "", label: "No project" }, ...projectOptions]} style={FORM_SELECT} /></div>}
                 {(check.source === "whatsapp" || check.source === "facebook") && <div className="md:col-span-3"><label className="label">Ad ID</label><input className="input font-mono text-sm" value={check.adId} onChange={(e) => setCheck({ ...check, adId: e.target.value, result: null })} /></div>}
                 {check.source === "facebook" && <div className="md:col-span-3"><label className="label">Form ID</label><input className="input font-mono text-sm" value={check.formId} onChange={(e) => setCheck({ ...check, formId: e.target.value, result: null })} /></div>}

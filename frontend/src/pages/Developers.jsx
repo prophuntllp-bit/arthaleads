@@ -161,7 +161,7 @@ function DevModal({ dev, onClose, onSaved }) {
             <div>
               <label className="text-xs font-semibold text-app-soft mb-1 block">Developer / Builder Name *</label>
               <input value={form.name} onChange={e => set("name", e.target.value)}
-                placeholder="e.g. Regency Aawishkar Sarsan Developers LLP"
+                placeholder="e.g. Sunrise Heights Developers LLP"
                 className="input w-full text-sm" />
             </div>
             <div>
