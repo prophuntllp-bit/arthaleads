@@ -101,6 +101,8 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 ## Change log (newest first)
 
+- [claude] 2026-10-23 IST: mobile loading placeholders (staging 3a87699a, main 97bbaffb): new widgets/card_skeleton.dart (skeletonizer ^3.0.0). Leads, Follow-ups, Dump, Calls, WhatsApp chats, Tasks, Projects, Developers, Invoices, Team, Bookings, Pipeline, Attendance, Performance now draw their REAL cards with sample rows as shimmer while loading (taps blocked). Home/Reports load section by section and open from a per-user SharedPreferences cache (dash_cache_v1_<userId>, last30days only). Checked on a phone. Not released.
+
 - [claude] 2026-10-23 IST: mobile Follow-ups redesign (screens/followups/followups_screen.dart): count tiles Overdue/Today/Upcoming (3 extra limit=1 calls for counts), Filters sheet, cards with coloured due line and Call/WhatsApp/Later/Done(+Undo). Checked on a phone. On main, not released.
 
 - [claude] 2026-10-23 IST: mobile home: Artha AI banner orange + animated (sheen, breathing sparkle, pulsing LIVE dot; static with reduced motion), insights sheet orange, bottom spacer 90 -> 20 on Home and Reports (screens/dashboard/dashboard_screen.dart). Checked on a phone. On main, not released.
