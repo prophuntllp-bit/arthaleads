@@ -65,6 +65,8 @@ export function filmJsonLd({ chapters = false } = {}) {
     uploadDate: FILM.uploadDate,
     duration: FILM.duration,
     contentUrl: FILM.contentUrl,
+    // The same film on the Arthaleads YouTube channel.
+    embedUrl: "https://www.youtube.com/embed/htXLDOPHzac",
     inLanguage: "en-IN",
     publisher: {
       "@type": "Organization",

@@ -11,9 +11,9 @@
 // reduced motion get a play button instead of autoplay.
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Play, Volume2, RotateCcw, ArrowRight } from "lucide-react";
+import { Play, Volume2, RotateCcw, ArrowRight, Youtube } from "lucide-react";
 import { filmJsonLd, fmtTime } from "../data/introFilm";
-import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES, YOUTUBE_FILM } from "../utils/crmLinks";
 import WhatsAppLogo from "./WhatsAppLogo";
 import { SITE_MEDIA } from "../data/siteMedia";
 
@@ -141,6 +141,16 @@ export default function IntroVideo({ isDark, id = "tour", chapters = false, seek
   const segBg   = isDark ? "rgba(255,255,255,0.05)" : "#ffffff";
   const segBdr  = isDark ? "rgba(255,255,255,0.10)" : "#e7e1d8";
 
+  // Same film on the Arthaleads YouTube channel, in the language being shown.
+  const ytLink = (
+    <a href={YOUTUBE_FILM[lang]} target="_blank" rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 text-sm font-semibold hover:underline underline-offset-4"
+      style={{ color: heading }}>
+      <Youtube className="w-[18px] h-[18px]" style={{ color: "#FF0000" }} strokeWidth={2} aria-hidden="true" />
+      Watch on YouTube
+    </a>
+  );
+
   return (
     <section id={id} ref={sectionRef}
       className={bare ? "relative scroll-mt-20" : "relative py-16 lg:py-24 overflow-hidden scroll-mt-20"}
@@ -159,13 +169,17 @@ export default function IntroVideo({ isDark, id = "tour", chapters = false, seek
               Two minutes on how Arthaleads replies on WhatsApp, qualifies the buyer, books the
               site visit and hands your team a lead with every answer already filled in.
             </p>
-            <Link to="/product-tour" className="inline-block mt-3 text-sm font-semibold underline underline-offset-4 text-[color:var(--brand-text)]">
-              Watch with chapters and a transcript
-            </Link>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3">
+              <Link to="/product-tour" className="text-sm font-semibold underline underline-offset-4 text-[color:var(--brand-text)]">
+                Watch with chapters and a transcript
+              </Link>
+              {ytLink}
+            </div>
           </div>
           )}
 
           <div className="flex items-center gap-3 self-start md:self-auto shrink-0">
+          {bare && ytLink}
           {!bare && <span className="text-sm font-semibold" style={{ color: heading }}>Watch in</span>}
           <div role="group" aria-label="Video language" className="inline-flex p-1 rounded-full"
             style={{ background: segBg, border: `1px solid ${segBdr}` }}>

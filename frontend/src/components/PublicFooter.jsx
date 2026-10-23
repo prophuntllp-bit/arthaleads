@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Instagram, Facebook, Linkedin, Mail } from "lucide-react";
+import { Instagram, Facebook, Linkedin, Youtube, Mail } from "lucide-react";
 import { PHONE_DISPLAY, PHONE_TEL, waLink, WA_MESSAGES, SOCIAL_LINKS } from "../utils/crmLinks";
 import { usePublicTheme } from "../context/PublicThemeContext";
 
@@ -53,6 +53,7 @@ export default function PublicFooter() {
                 { label: "Arthaleads on Instagram", href: SOCIAL_LINKS.instagram, Icon: Instagram, hover: "#E1306C" },
                 { label: "Arthaleads on Facebook",  href: SOCIAL_LINKS.facebook,  Icon: Facebook,  hover: "#1877F2" },
                 { label: "Arthaleads on LinkedIn",  href: SOCIAL_LINKS.linkedin,  Icon: Linkedin,  hover: "#0A66C2" },
+                { label: "Arthaleads on YouTube",   href: SOCIAL_LINKS.youtube,   Icon: Youtube,   hover: "#FF0000" },
                 { label: "Email Arthaleads",        href: "mailto:contact@arthaleads.com", Icon: Mail, hover: "#ff6b00" },
               ].map(({ label, href, Icon, hover }) => (
                 <a key={label} href={href} aria-label={label} title={label}
