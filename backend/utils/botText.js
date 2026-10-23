@@ -11,7 +11,8 @@
 function noDashes(text) {
   let s = String(text ?? "");
   if (!/[–—]/.test(s)) return s;
-  s = s.replace(/(\d)\s*[–—]\s*(?=[₹$]?\d)/g, "$1 to ");     // number ranges
+  // Number ranges, with or without a unit: "2 – 3", "₹79L – ₹1Cr", "1.5 Cr – 2 Cr".
+  s = s.replace(/(\d(?:\s?(?:L|Lakh|Lac|Cr|Crore|K))?\.?)\s*[–—]\s*(?=[₹$]?\d)/gi, "$1 to ");
   s = s.replace(/^([ \t]*)[–—][ \t]*/gm, "$1- ");          // used as a bullet
   s = s.replace(/[ \t]*[–—]+[ \t]*/g, ", ");               // between words
   s = s.replace(/,\s*([,.!?;:])/g, "$1");                            // ", ." -> "."
