@@ -2307,15 +2307,20 @@ async function readLeadDetailsFromChat(conversation, recentMsgs, { org } = {}) {
     // What the customer said that differs from a value the lead already holds
     // goes to the Artha card for a person to confirm, never straight in.
     const suggest = suggestionsFrom(lead, mapped, setOps);
-    const suggestOps = Object.keys(suggest).length
-      ? { "arthaSuggest.fields": suggest, "arthaSuggest.at": new Date() }
+    // A suggestion from the button flow's answers stays until someone saves
+    // or dismisses it: this read only replaces the ones it made itself.
+    const kept = Object.fromEntries(Object.entries(lead.arthaSuggest?.fields || {})
+      .filter(([k]) => lead.arthaSuggest?.from?.[k] === "button_flow" && !(k in suggest) && !(k in setOps)));
+    const all = { ...kept, ...suggest };
+    const suggestOps = Object.keys(all).length
+      ? { "arthaSuggest.fields": all, "arthaSuggest.at": new Date(), "arthaSuggest.from": Object.fromEntries(Object.keys(kept).map((k) => [k, "button_flow"])) }
       : null;
     const update = {};
     if (Object.keys(setOps).length || suggestOps) update.$set = { ...setOps, ...(suggestOps || {}) };
     if (!suggestOps && lead.arthaSuggest?.fields) update.$unset = { "arthaSuggest.fields": "" };
-    // This read replaces the whole suggestion set, so any per-field source
-    // (a Vistrow Voice call's suggestion) no longer applies.
-    if ((suggestOps || update.$unset) && lead.arthaSuggest?.from) update.$unset = { ...(update.$unset || {}), "arthaSuggest.from": "" };
+    // This read replaces the rest of the suggestion set, so any other per-field
+    // source (a Vistrow Voice call's suggestion) no longer applies.
+    if (!suggestOps && lead.arthaSuggest?.from) update.$unset = { ...(update.$unset || {}), "arthaSuggest.from": "" };
     if (Object.keys(update).length) {
       await Lead.updateOne({ _id: conversation.leadId }, update);
     }
@@ -3979,7 +3984,7 @@ router.post("/conversations/:id/start-flow", async (req, res) => {
     if (conv.leadId) {
       await inferAnsweredFromTranscript(org, agent, conv, ctwaFlow.getQualifyingQuestions(agent));
     }
-    await ctwaFlow.startFlow(org, agent, conv);
+    await ctwaFlow.startFlow(org, agent, conv, { trustLead: true });
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ message: err.message });
