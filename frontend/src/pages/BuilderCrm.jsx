@@ -6,9 +6,12 @@
 // https://claude.ai/artifact/CuDksmB3zWyQ77fbh5jUdH
 //
 // Every claim must match the product and its plan (data/plans.js, data/features.js,
-// backend planGate, checked 16 Oct 2026). Portal leads (99acres, MagicBricks,
+// backend planGate, re-checked 23 Oct 2026). Portal leads (99acres, MagicBricks,
 // Housing.com) are a sheet import, never "automatic". There is no channel
-// partner portal: do not claim one.
+// partner portal: do not claim one. Google Ads sync is not set up: do not
+// claim Google Ads leads. Auto-assignment (to the agent with the fewest open
+// leads) and duplicate flagging work on every plan; routing rules, Hot Today,
+// AI lead scoring, attendance and source/team reports are Growth.
 import { Building2, QrCode, Facebook, FileSpreadsheet, Shuffle, MapPin, Camera, BarChart3 } from "lucide-react";
 import SolutionPage, { solutionJsonLd } from "../components/SolutionPage";
 import { useSEO } from "../utils/useSEO";
@@ -20,11 +23,11 @@ const FAQS = [
   ["Can I manage several projects in one account?",
    "Yes. Starter includes two projects and Growth has no limit. Each project keeps its own leads, team, brochures, floor plans and videos, and you can move a lead from one project to another without losing its notes, follow-up or history."],
   ["Do leads from 99acres, MagicBricks and Housing.com come in automatically?",
-   "No. Portal leads come in by import: download them from the portal as a sheet and import the CSV or Excel file into the project. Facebook and Instagram lead ads and WhatsApp chats do come in automatically, and Google Ads leads do on Enterprise."],
+   "No. Portal leads come in by import: download them from the portal as a sheet and import the CSV or Excel file into the project. Facebook and Instagram lead ads, WhatsApp chats, your website forms and the project's QR code do come in automatically."],
   ["How do new leads reach my telecallers?",
-   "On Growth, routing rules give each new lead an owner straight away, by round robin or by campaign, and that person's phone gets a push alert. Follow-up reminders turn red when overdue, and agents can call and log outcomes from the Android app."],
+   "Every new lead gets an owner the moment it arrives, shared out to the agent with the fewest open leads, and that person's phone gets a push alert. On Growth you can add routing rules, for example by campaign, and Hot Today ranks who to call first using AI lead scoring. Overdue follow-ups turn red, and agents can call and log outcomes from the Android app."],
   ["Can the WhatsApp AI answer questions about my project?",
-   "Yes. On Growth the WhatsApp AI agent answers buyers about your project day and night, shares the brochure and location, asks about budget and timeline, and saves the answers on the lead. Your team can take over any chat."],
+   "Yes. On Growth the WhatsApp AI agent answers buyers about your project and its location day and night, sends the brochure, photos and floor plans, asks about budget and timeline, offers a site visit and saves the answers on the lead. Your team can take over any chat."],
   ["How much does a builder CRM cost?",
    `Arthaleads Starter is ₹${PLAN_PRICING.starter.monthly} and Growth is ₹${PLAN_PRICING.growth.monthly} per user per month, plus 18% GST, with a five-seat minimum. Large developers and multi-branch teams get an Enterprise quote with on-site onboarding and training. Every plan starts with a 14-day free trial.`],
 ];
@@ -60,7 +63,7 @@ export default function BuilderCrm() {
         items: [
           { title: "Set up the project", body: "Add the project with its RERA number, location, price range and configurations, upload brochures, floor plans and videos, and assign the sales team." },
           { title: "Leads arrive", body: "Facebook and Instagram lead ads and WhatsApp chats come in automatically. Portal sheets are imported, and walk-ins scan the project's QR code at the site office." },
-          { title: "Telecallers follow up", body: "Each lead gets an owner and a push alert. Follow-ups are dated, overdue ones turn red, and the WhatsApp AI agent answers buyers at night." },
+          { title: "Telecallers follow up", body: "Each lead gets an owner and a push alert. Follow-ups are dated, overdue ones turn red, Hot Today shows who to call first, and the WhatsApp AI agent answers buyers at night." },
           { title: "Visits, bookings, reports", body: "Leads move through Site Visit and Negotiation to Closed Won, and managers see conversion by project, by source and by agent." },
         ],
       }}
@@ -72,10 +75,10 @@ export default function BuilderCrm() {
           { icon: QrCode, title: "QR codes for the site office", body: "Every project gets a QR code for hoardings, brochures and expo stalls. A visitor scans it, fills a short form and becomes a lead, tagged by source.", plan: "Starter" },
           { icon: Facebook, title: "Facebook lead ads, automatic", body: "Leads from Facebook and Instagram lead forms arrive in seconds with the campaign attached. No downloading sheets from Ads Manager.", plan: "Starter" },
           { icon: FileSpreadsheet, title: "Portal leads by import", body: "Bring in leads from 99acres, MagicBricks and Housing.com by importing the CSV or Excel export. Duplicate phone numbers are skipped.", plan: "Starter" },
-          { icon: Shuffle, title: "Routing to telecallers", body: "Round-robin or campaign-based rules give every new lead an owner the moment it arrives, so no lead waits and none is called twice.", plan: "Growth" },
+          { icon: Shuffle, title: "Routing to telecallers", body: "Every new lead gets an owner the moment it arrives, shared out evenly across the team, so no lead waits and none is called twice. Growth adds routing rules by campaign.", plan: "Starter" },
           { icon: MapPin, title: "Site visit tracking", body: "Site Visit is a stage in the pipeline, so visits are counted per project and per agent instead of being remembered at the weekly meeting.", plan: "Starter" },
-          { icon: Camera, title: "Selfie attendance", body: "Site and field staff clock in from their phone with a selfie and location. Admins see attendance live and download monthly reports.", plan: "Growth" },
-          { icon: BarChart3, title: "Project-wise reports", body: "Conversion by project and by source, team performance, follow-up completion and stale-lead alerts on the admin dashboard.", plan: "Growth" },
+          { icon: Camera, title: "Selfie attendance", body: "Site and field staff clock in from their phone with a selfie and location. Admins see who is in today and export attendance reports.", plan: "Growth" },
+          { icon: BarChart3, title: "Project-wise reports", body: "Conversion by project, leads by source, team performance and stale-lead alerts, so the sales head sees every project on one screen.", plan: "Growth" },
         ],
       }}
       compare={{
@@ -85,7 +88,7 @@ export default function BuilderCrm() {
         rows: [
           ["Where leads live", "A sheet per campaign and agents' phones", "One list per project, with the source on every lead"],
           ["A new Facebook lead", "Downloaded and shared hours later", "Imported automatically and assigned in seconds"],
-          ["Same buyer enquires twice", "Two agents call the same person", "Duplicate detection flags the repeat number (Growth)"],
+          ["Same buyer enquires twice", "Two agents call the same person", "The repeat number is flagged as a duplicate"],
           ["Site visits", "Counted from memory at the weekly meeting", "A pipeline stage, counted per project and per agent"],
           ["Telecaller attendance", "A register or WhatsApp check-ins", "Selfie clock-in with location (Growth)"],
           ["When a salesperson leaves", "Their leads leave with their phone", "Leads, chats and history stay with the company"],
