@@ -567,7 +567,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                   className="input"
                   value={connName}
                   onChange={(e) => setConnName(e.target.value)}
-                  placeholder="e.g. PropHunt LLP - Lead Ads"
+                  placeholder="e.g. Sunrise Realty - Lead Ads"
                 />
               </div>
 
@@ -2131,8 +2131,8 @@ const MATCH_FIELD_PLACEHOLDERS = {
   campaign_id: "e.g. 9655855458173381",
   adset_id:    "e.g. 9655855458173381",
   ad_id:       "e.g. 9655855458173381",
-  domain:      "e.g. shapoorjipallonji.com",
-  page_path:   "e.g. /projects/joyville-hinjewadi",
+  domain:      "e.g. greenvalleyhomes.com",
+  page_path:   "e.g. /projects/green-valley-villas",
 };
 
 function matchFieldHint(source, matchField) {
@@ -2349,7 +2349,7 @@ function LeadRoutingSection() {
               <label className="label">Rule Name</label>
               <input
                 className="input"
-                placeholder="e.g. Joyville Hinjewadi Campaign"
+                placeholder="e.g. Green Valley Villas Campaign"
                 value={form.label}
                 onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
               />

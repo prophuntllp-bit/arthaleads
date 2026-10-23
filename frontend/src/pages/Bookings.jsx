@@ -198,7 +198,7 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block">Project Name *</label>
                 <input value={form.projectName} onChange={e => set("projectName", e.target.value)}
-                  placeholder="Regency Astra / Treetopia" className="input w-full text-sm" />
+                  placeholder="e.g. Green Valley / Sunrise Heights" className="input w-full text-sm" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
