@@ -1432,7 +1432,7 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                 <div className="relative shrink-0 flex h-9 w-9 flex-col items-center justify-center rounded-xl text-center self-start"
                   style={{ background: ss.bg }}
-                  title={lead._ai ? `Includes ${lead._ai.adjust > 0 ? "+" : ""}${lead._ai.adjust} from AI` : "Rule score"}>
+                  title={lead._ai ? `Includes ${lead._ai.points > 0 ? "+" : ""}${lead._ai.points ?? lead._ai.adjust} from what the customer wrote` : "From the button answers and the team's updates"}>
                   <span className="text-[11px] font-black leading-none" style={{ color: ss.color }}>{lead._score}</span>
                   <span className="text-[8px] font-semibold uppercase" style={{ color: ss.color }}>pts</span>
                   {lead._ai && (
@@ -1460,6 +1460,7 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
                       <p className={`min-w-0 text-[11px] leading-snug ${lead._ai.wrong ? "text-app-soft line-through" : "text-app"}`}
                         style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                         {lead._ai.reason}
+                        {lead._ai.evidence?.[0] && <span className="text-app-soft"> &ldquo;{lead._ai.evidence[0]}&rdquo;</span>}
                       </p>
                       <button type="button" onClick={() => flagAi(lead, !lead._ai.wrong)}
                         className="shrink-0 whitespace-nowrap text-[10px] font-semibold text-app-soft underline-offset-2 transition hover:text-orange-500 hover:underline">

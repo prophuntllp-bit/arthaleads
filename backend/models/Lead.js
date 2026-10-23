@@ -331,9 +331,28 @@ const leadSchema = new mongoose.Schema(
     // The AI's read of the last 14 days of chat and call summaries, on top of
     // the rule score (utils/leadScorer.js adds `adjust`, at most +-20, while
     // signalAt is within 14 days). Undefined until a lead is first scored.
+    // What the customer did in the WhatsApp button flow (ctwaFlowService), the
+    // conversation part of the lead score (utils/leadScorer.js): which
+    // questions they answered, the timeline they picked, and how they ended
+    // it (site_visit, handoff, register, declined...). 23 Oct 2026.
+    engagement: {
+      type: {
+        flow: { type: { budget: Boolean, purpose: Boolean, timeline: String }, default: undefined },
+        closing:      { type: String },
+        closingLabel: { type: String },
+        at:           { type: Date },
+      },
+      default: undefined,
+    },
     aiScore: {
       type: {
         level:      { type: String, enum: ["hot", "warm", "cold"] },
+        // Since 23 Oct 2026 (v 2): the customer's intent, the points it is
+        // worth in the score, and the customer's own quotes it rests on.
+        v:          { type: Number },
+        intent:     { type: String, enum: ["strong", "interested", "neutral", "not_interested", "vendor"] },
+        points:     { type: Number },
+        evidence:   { type: [String], default: undefined },
         adjust:     { type: Number, default: 0 },
         confidence: { type: Number, default: 0 },
         reason:     { type: String, default: "" },

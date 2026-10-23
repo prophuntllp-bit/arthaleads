@@ -402,6 +402,9 @@ module.exports = function createCtwaFlowService({
    * with that project's own point of contact, not whoever's turn it is.
    */
   async function terminalAdvisor(org, agent, conversation, botName, project, { reply = "", notify = true, reason = "asked to talk to an advisor" } = {}) {
+    // A question's "talk to advisor" option ends here too, not only the closing button.
+    const now = await Lead.findById(conversation.leadId).select("engagement.closing").lean().catch(() => null);
+    if (conversation.leadId && now?.engagement?.closing !== "site_visit") await noteEngagement(conversation.leadId, { "engagement.closing": "handoff" });
     const advisor = project?.advisorId;
     // The phone number is what actually lets the lead act right now instead
     // of waiting on a callback — WhatsApp auto-links a plain digit string
@@ -550,6 +553,10 @@ module.exports = function createCtwaFlowService({
       }
       default:
         mapped = null;
+    }
+
+    if (mapped && leadId && ["budget", "purpose", "timeline"].includes(question.mapsTo)) {
+      await noteEngagement(leadId, { [`engagement.flow.${question.mapsTo}`]: question.mapsTo === "timeline" ? String(option.label || "").slice(0, 60) : true });
     }
 
     if (!mapped && leadId) {
@@ -840,6 +847,7 @@ ${stepMsg.bodyText}`;
   // it — real fields the existing scorer already weights, not a second
   // scoring system — then handed to a human, same as the advisor path.
   async function completeSiteVisit(org, conversation, botName, opt, { reply = "", notify = true } = {}) {
+    await noteEngagement(conversation.leadId, { "engagement.closing": "site_visit" });
     if (conversation.leadId) {
       await Lead.updateOne(
         { _id: conversation.leadId },
@@ -921,8 +929,21 @@ ${stepMsg.bodyText}`;
 
   // The lead remembers which closing button was chosen: a tag, a status if the
   // button sets one, and a line in its activity.
+  // The customer's own actions in the flow, for the lead score.
+  async function noteEngagement(leadId, set) {
+    if (!leadId) return;
+    await Lead.updateOne({ _id: leadId }, { $set: { ...set, "engagement.at": new Date() } }).catch(() => {});
+  }
+  // "Not now" / "Later" / "No": an end button that turns the offer down.
+  const DECLINE_RE = /\b(not now|later|no|nahi|nako|not interested|maybe later|skip)\b/i;
+  function closingKind(button) {
+    if (button.action === "end") return DECLINE_RE.test(button.title || button.label || "") ? "declined" : "end";
+    return button.action;
+  }
+
   async function recordClosingChoice(leadId, button) {
     if (!leadId) return;
+    await noteEngagement(leadId, { "engagement.closing": closingKind(button), "engagement.closingLabel": String(button.title || "").slice(0, 40) });
     const OPTS = require("../constants/leadOptions");
     const update = { $push: { activities: { type: "note_added", description: `Chose "${button.title}" on WhatsApp` } } };
     if (button.tag) update.$addToSet = { tags: button.tag.slice(0, 40) };

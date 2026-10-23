@@ -2,7 +2,8 @@
 // model faked. Owner rules, 21 Oct 2026: only leads whose customer did
 // something in the last 14 days, only those 14 days are read; bulk-imported
 // leads only once the customer replies; project leads never; included in
-// Growth and up within a daily limit; the AI moves the rule score by at most 20.
+// Growth and up within a daily limit. Since 23 Oct 2026 the AI names the
+// customer's intent with quotes, worth -30 to +30 when it is 60% sure.
 process.env.AI_SCORE_QUIET_MS = String(10 * 60 * 1000);
 process.env.AI_SCORE_DAILY_LIMIT = "3";
 const { test, run, assert } = require("./helpers/harness");
@@ -15,7 +16,7 @@ let mongod, db, ai, scorer, Lead, prompts = [], answer = null, phoneSeq = 0;
 
 const fakeModel = async (messages) => {
   prompts.push(messages.map((m) => m.content).join("\n"));
-  return { text: JSON.stringify(answer || { level: "hot", confidence: 0.9, reason: "Asked for a Saturday site visit and said the loan is approved.", signals: ["visit_wanted", "loan_ready"], nextStep: "Confirm the Saturday visit" }), usage: { total_tokens: 900 }, model: "fake" };
+  return { text: JSON.stringify(answer || { intent: "strong", confidence: 1, evidence: ["Saturday works, my loan is approved"], reason: "Asked for a Saturday site visit and said the loan is approved.", signals: ["visit_wanted", "loan_ready"], nextStep: "Confirm the Saturday visit" }), usage: { total_tokens: 900 }, model: "fake" };
 };
 
 async function org(plan = "growth") {
@@ -52,8 +53,10 @@ test("a customer quiet for 10 minutes is read once, and the score moves up with 
   assert.equal(r.scored, 1);
   const l = await get(id);
   assert.equal(l.aiScore.level, "hot");
+  assert.equal(l.aiScore.intent, "strong");
+  assert.deepEqual(l.aiScore.evidence, ["Saturday works, my loan is approved"]);
   assert.match(l.aiScore.reason, /Saturday/);
-  assert.equal(scorer.scoreLead(l) - before, 20, "hot with high confidence adds 20");
+  assert.equal(scorer.scoreLead(l) - before, 30, "strong intent, fully sure, quoted: +30");
   assert.equal(scorer.nextBestAction(l, 80).action, "Confirm the Saturday visit");
   assert.ok(prompts[0].includes("Saturday works, my loan is approved"), "the AI read the chat");
   // Nothing new happened: the next run reads nothing.
@@ -99,7 +102,7 @@ test("only the last 14 days: older activity isn't read, and an old AI adjustment
 
   const l = await get(recent);
   const lapsed = { ...l, aiScore: { ...l.aiScore, signalAt: new Date(Date.now() - 15 * DAY) } };
-  assert.equal(scorer.aiAdjust(lapsed), 0, "15 days later the AI part is gone");
+  assert.equal(scorer.aiPoints(lapsed), 0, "15 days later the AI part is gone");
   assert.equal(scorer.aiSummary(lapsed), null);
 });
 
@@ -128,22 +131,45 @@ test("phone numbers and emails never reach the AI", async () => {
   assert.ok(prompts[0].includes("4500000"), "a budget is not mistaken for a phone number");
 });
 
-test("an unsure answer moves the score half as much; cold moves it down; nothing beyond 20", async () => {
+test("unsure (under 60%) or unquoted earns nothing; interested 80% sure earns +15", async () => {
   await fresh();
   const o = await org();
-  answer = { level: "hot", confidence: 0.3, reason: "Said maybe next month." };
+  answer = { intent: "strong", confidence: 0.5, evidence: ["maybe next month"], reason: "Said maybe next month." };
   const unsure = await lead(o, { lastCustomerSignalAt: new Date(Date.now() - 20 * MIN) });
   await chat(o, unsure, [["inbound", "maybe next month", 20 * MIN]]);
   await ai.runSweep();
-  assert.equal((await get(unsure)).aiScore.adjust, 10);
+  assert.equal((await get(unsure)).aiScore.points, 0, "50% sure: nothing");
 
-  answer = { level: "cold", confidence: 0.95, reason: "Says they are just browsing, budget well below the project." };
+  answer = { intent: "strong", confidence: 0.9, evidence: ["I want to book a flat today"], reason: "Wants to book today." };
+  const madeUp = await lead(o, { lastCustomerSignalAt: new Date(Date.now() - 20 * MIN) });
+  await chat(o, madeUp, [["inbound", "hello", 20 * MIN]]);
+  await ai.runSweep();
+  assert.equal((await get(madeUp)).aiScore.points, 0, "a quote the customer never wrote: nothing");
+
+  answer = { intent: "interested", confidence: 0.8, evidence: ["what is the carpet area"], reason: "Asked about the carpet area." };
+  const asks = await lead(o, { lastCustomerSignalAt: new Date(Date.now() - 20 * MIN) });
+  await chat(o, asks, [["inbound", "What is the carpet area?", 20 * MIN]]);
+  await ai.runSweep();
+  assert.equal((await get(asks)).aiScore.points, 15, "interested, 80% sure: +15");
+
+});
+
+test("not interested takes 30 off (never beyond 30); a vendor pitch is marked 'Not a buyer'", async () => {
+  await fresh();
+  const o = await org();
+  answer = { intent: "not_interested", confidence: 0.95, evidence: ["not interested"], reason: "Says they are not interested." };
   const cold = await lead(o, { lastCustomerSignalAt: new Date(Date.now() - 20 * MIN) });
-  await chat(o, cold, [["inbound", "just browsing", 20 * MIN]]);
+  await chat(o, cold, [["inbound", "Not interested, thanks", 20 * MIN]]);
   await ai.runSweep();
   const c = await get(cold);
-  assert.equal(c.aiScore.adjust, -20);
-  assert.equal(scorer.aiAdjust({ ...c, aiScore: { ...c.aiScore, adjust: -90 } }), -20, "clamped");
+  assert.equal(c.aiScore.points, -30);
+  assert.equal(scorer.aiPoints({ ...c, aiScore: { ...c.aiScore, points: -90 } }), -30, "clamped");
+
+  answer = { intent: "vendor", confidence: 0.9, evidence: ["we run Facebook ads for builders"], reason: "Selling ad services." };
+  const vendor = await lead(o, { lastCustomerSignalAt: new Date(Date.now() - 20 * MIN) });
+  await chat(o, vendor, [["inbound", "Hi, we run Facebook ads for builders", 20 * MIN]]);
+  await ai.runSweep();
+  assert.ok((await get(vendor)).tags.includes("Not a buyer"));
 });
 
 test("a garbled AI answer leaves the rule score alone and isn't retried until something new happens", async () => {
@@ -196,7 +222,7 @@ test("Artha sees the real score instead of 'not scored'", async () => {
   await fresh();
   const o = await org();
   const id = await lead(o, { lastCustomerSignalAt: new Date(Date.now() - 20 * MIN) });
-  await chat(o, id, [["inbound", "visit Saturday", 20 * MIN]]);
+  await chat(o, id, [["inbound", "Saturday works, my loan is approved", 20 * MIN]]);
   await ai.runSweep();
   const src = require("fs").readFileSync(require.resolve("../utils/copilotContext"), "utf8");
   assert.ok(!src.includes("lead.score ??"), "the old missing field is gone");
