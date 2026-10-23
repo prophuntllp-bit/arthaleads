@@ -72,7 +72,7 @@ test("messages further apart than the quiet time each get their own reply", asyn
 test("a single message is answered after the short wait, not dropped", async () => {
   const phone = nextPhone();
   const t0 = Date.now();
-  await say(phone, "Hello, I want details");
+  await say(phone, "Hello");
   const took = Date.now() - t0;
   assert.ok(repliesTo(phone).length >= 1, "answered");
   assert.ok(took >= 350, `waited for the customer to finish (${took} ms)`);

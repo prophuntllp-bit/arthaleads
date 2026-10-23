@@ -114,6 +114,20 @@ async function sendProviderMessage(org, to, body, template = null) {
   }
 }
 
+// Marks the customer's message read and shows "typing..." in their WhatsApp
+// until the reply arrives (Meta clears it on the reply, or after 25 seconds).
+// Without it a bot reply took 4 to 8 seconds of silence (owner, 23 Oct 2026).
+// Meta only; never waited on, never fails anything.
+function sendTypingIndicator(org, msgId) {
+  const { provider, apiKey, phoneNumberId } = org.whatsapp || {};
+  if (provider !== "meta" || !msgId || !apiKey || !phoneNumberId) return;
+  axios.post(
+    `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+    { messaging_product: "whatsapp", status: "read", message_id: msgId, typing_indicator: { type: "text" } },
+    { headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, timeout: 5000 }
+  ).catch(() => {});
+}
+
 // Sends one image or document. Meta only — the three BSPs (AiSensy/Wati/
 // Interakt) each have their own, mutually incompatible media APIs, and the
 // only caller today is the AI agent's photo/brochure permission, which is a
@@ -1156,6 +1170,8 @@ async function handleInbound(org, parsed) {
     waMediaId: mediaId || undefined,
     status: "delivered", timestamp: inboundTimestamp,
   });
+  if (conv.botEnabled && !isPlaceholderBody(msgText)) sendTypingIndicator(org, msgId);
+
   // The photo / voice note / file itself, copied into our storage so the team
   // can see it (22 Oct 2026: every customer photo was an empty bubble, and
   // Meta sends the id only once, so it can't be fetched later).
@@ -1164,24 +1180,30 @@ async function handleInbound(org, parsed) {
     inboundMedia = await require("../utils/waInboundMedia").fetchAndStore(org, { mediaId, mimeType, filename });
     if (inboundMedia) await WaMessage.updateOne({ _id: inboundDoc._id }, { $set: { mediaUrl: inboundMedia.url } });
   }
-  await WaConversation.findByIdAndUpdate(conv._id, {
-    lastMessageAt: new Date(), lastMessagePreview: msgText.slice(0, 80),
-    contactName: conv.contactName || name,
-    // Any reply from the customer ends the current silence, so follow-up
-    // nudges can start fresh next time they go quiet.
-    nudgeCount: 0,
-    $inc: { unreadCount: 1 },
-  });
+  // Independent writes, run side by side: each is a round trip to the
+  // database, and the reply waited for all of them in turn.
+  await Promise.all([
+    WaConversation.findByIdAndUpdate(conv._id, {
+      lastMessageAt: new Date(), lastMessagePreview: msgText.slice(0, 80),
+      contactName: conv.contactName || name,
+      // Any reply from the customer ends the current silence, so follow-up
+      // nudges can start fresh next time they go quiet.
+      nudgeCount: 0,
+      $inc: { unreadCount: 1 },
+    }),
+    ...(conv.leadId ? [
+      // The customer just wrote: the AI lead score reads this lead again once
+      // they have been quiet for 10 minutes (services/aiLeadScore.js).
+      require("../services/aiLeadScore").markSignal(conv.leadId, inboundTimestamp),
+      // Rule 2's clock: 15 minutes from the customer's latest message.
+      Lead.updateOne(
+        { _id: conv.leadId, "vistrowEmit.awaitingCallSince": { $exists: true }, "vistrowEmit.callRequestedAt": null },
+        { $set: { "vistrowEmit.quietDueAt": new Date(inboundTimestamp.getTime() + QUIET_CALL_MS) } }
+      ),
+    ] : []),
+  ]);
 
   if (conv.leadId) {
-    // The customer just wrote: the AI lead score reads this lead again once
-    // they have been quiet for 10 minutes (services/aiLeadScore.js).
-    await require("../services/aiLeadScore").markSignal(conv.leadId, inboundTimestamp);
-    // Rule 2's clock: 15 minutes from the customer's latest message.
-    await Lead.updateOne(
-      { _id: conv.leadId, "vistrowEmit.awaitingCallSince": { $exists: true }, "vistrowEmit.callRequestedAt": null },
-      { $set: { "vistrowEmit.quietDueAt": new Date(inboundTimestamp.getTime() + QUIET_CALL_MS) } }
-    );
     // Rule 1: the customer asks for a call or a person, in their own words or
     // on a template's quick-reply button. A button-flow tap is the flow's own
     // business: its "Talk to Advisor" hands off (handOffToHuman).
@@ -1261,7 +1283,11 @@ async function handleInbound(org, parsed) {
     // the second tap was silently dropped: a "Photos & Videos" tap right after
     // "Location Details" never sent the photos. The queue below already keeps
     // turns in order; inboundKey stops the same message being answered twice.
-    await respondAsBot(org, conv, { interactiveId, msgText, image, isNewConversation: isNewConversation || movedToAnotherAgent || testRun, testRun, inboundKey: msgId || `t${inboundTimestamp.getTime()}`, inboundAt: inboundTimestamp });
+    // An ad's opening message (an ad click, a test re-run, or a whole first
+    // sentence like an ad's pre-filled text) is answered at once; a short
+    // "Hi" still waits in case more is coming.
+    const quick = testRun || (isNewConversation && (!!clickRef?.adId || String(msgText || "").trim().split(/\s+/).length >= 4));
+    await respondAsBot(org, conv, { interactiveId, msgText, image, isNewConversation: isNewConversation || movedToAnotherAgent || testRun, testRun, quick, inboundKey: msgId || `t${inboundTimestamp.getTime()}`, inboundAt: inboundTimestamp });
   }
 }
 
@@ -1311,7 +1337,9 @@ const botQueues = new Map(); // conversationId -> { tail: Promise, pending: [{ i
 // after it, so "hi" + "price?" or a line typed just before a button tap get ONE
 // reply (21 Oct 2026: two messages 4 s apart got two separate answers, and the
 // second answer re-sent the photos). WA_BOT_QUIET_MS overrides (tests).
-const BOT_QUIET_MS = Number(process.env.WA_BOT_QUIET_MS ?? 5000);
+// 2.5 seconds since 23 Oct 2026 (was 5): long enough for "hi" + "price?" sent
+// together to get one reply, short enough not to feel slow.
+const BOT_QUIET_MS = Number(process.env.WA_BOT_QUIET_MS ?? 2500);
 // Inbound messages already answered, per conversation (the live webhook and
 // resumeBotIfOwed can both owe a reply to the same message). Keyed by the
 // message itself, never by time: "anything sent since it arrived" mistakes the
@@ -1336,7 +1364,9 @@ function respondAsBot(org, conv, args) {
       if (args.inboundKey && answeredInbound.get(id)?.has(args.inboundKey)) return;
       // Typed text waits for the customer to finish: until BOT_QUIET_MS after
       // it arrived. Anything that came in meanwhile is queued behind it.
-      if (!args.interactiveId && BOT_QUIET_MS > 0) {
+      // Not on an ad's opening message (args.quick): that is the ad's
+      // pre-filled text, sent whole, and the first question should be quick.
+      if (!args.interactiveId && !args.quick && BOT_QUIET_MS > 0) {
         const arrived = args.inboundAt ? new Date(args.inboundAt).getTime() : Date.now();
         const wait = Math.min(BOT_QUIET_MS, arrived + BOT_QUIET_MS - Date.now());
         if (wait > 0) await new Promise((r) => setTimeout(r, wait));
@@ -2700,10 +2730,10 @@ async function triggerBotReply(org, agent, conversation, inboundText, opts = {})
       // The bot spends real money on every reply. Hold the credit before the
       // send, not after — an unfunded org must go quiet rather than run up a
       // bill on our Meta credit line.
-      const q = await credits.quote(org._id, "service", 1);
+      const q = { freeCount: 0 };
       let held = 0;
       try {
-        held = await credits.reserve(org._id, { category: "service", count: 1 });
+        held = await credits.reserve(org._id, { category: "service", count: 1, out: q });
       } catch (err) {
         if (err instanceof credits.InsufficientCreditsError) {
           console.warn(`[WhatsApp Bot] org ${org._id} out of credits — auto-reply suppressed`);
