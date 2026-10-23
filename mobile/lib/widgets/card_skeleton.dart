@@ -20,6 +20,11 @@ ShimmerEffect appShimmer(BuildContext context) {
   );
 }
 
+/// Every coloured box (status and source badges, tinted tiles) is painted in
+/// the card's own colour while loading, so the placeholder reads as one calm
+/// surface instead of bright pills (23 Oct 2026, owner).
+Color? _neutralBoxes(BuildContext context) => Theme.of(context).cardTheme.color;
+
 class CardsSkeleton extends StatelessWidget {
   final int count;
   final IndexedWidgetBuilder itemBuilder;
@@ -34,6 +39,7 @@ class CardsSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Skeletonizer(
       effect: appShimmer(context),
+      containersColor: _neutralBoxes(context),
       child: ListView.separated(
         physics: const NeverScrollableScrollPhysics(),
         padding: padding,
@@ -51,7 +57,12 @@ class SectionSkeleton extends StatelessWidget {
   const SectionSkeleton({super.key, required this.loading, required this.child});
 
   @override
-  Widget build(BuildContext context) => Skeletonizer(enabled: loading, effect: appShimmer(context), child: child);
+  Widget build(BuildContext context) => Skeletonizer(
+    enabled: loading,
+    effect: appShimmer(context),
+    containersColor: _neutralBoxes(context),
+    child: child,
+  );
 }
 
 /// Sample content for placeholder cards: plausible lengths, so the bones
