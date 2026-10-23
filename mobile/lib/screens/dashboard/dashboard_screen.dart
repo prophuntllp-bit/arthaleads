@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -484,7 +485,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  const Icon(Icons.auto_awesome_rounded, size: 18, color: _arthaPurple),
+                  const Icon(Icons.auto_awesome_rounded, size: 18, color: AppColors.primary),
                   const SizedBox(width: 8),
                   Expanded(child: Text('Artha insights', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: t.text))),
                 ]),
@@ -504,7 +505,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             const Padding(
                               padding: EdgeInsets.only(top: 3),
-                              child: Icon(Icons.arrow_forward_rounded, size: 14, color: _arthaPurple),
+                              child: Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primary),
                             ),
                             const SizedBox(width: 8),
                             Expanded(child: Text(line, style: TextStyle(fontSize: 14, height: 1.4, color: t.text))),
@@ -532,7 +533,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       },
                       icon: const Icon(Icons.auto_awesome_rounded, size: 18),
                       label: const Text('Ask Artha'),
-                      style: FilledButton.styleFrom(backgroundColor: _arthaPurple, minimumSize: const Size(0, 46)),
+                      style: FilledButton.styleFrom(backgroundColor: AppColors.primary, minimumSize: const Size(0, 46)),
                     ),
                   ),
                 ]),
@@ -662,55 +663,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   /// One line: Artha's insights for this range ("View" opens them).
-  Widget _arthaBanner(BuildContext context) {
-    final t = AppTheme.of(context);
-    final tint = t.isDark ? const Color(0xFFC4B5FD) : _arthaPurple;
-    return Material(
-      color: _arthaPurple.withValues(alpha: t.isDark ? 0.14 : 0.07),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: _arthaPurple.withValues(alpha: 0.22)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: _openInsights,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
-          child: Row(children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)]),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Text('ARTHA AI', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: tint)),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                    decoration: BoxDecoration(color: _arthaPurple.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(6)),
-                    child: Text('LIVE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: tint)),
-                  ),
-                ]),
-                const SizedBox(height: 2),
-                Text('AI insights for smarter follow-ups',
-                    maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: t.text)),
-              ]),
-            ),
-            const SizedBox(width: 6),
-            Text('View', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: tint)),
-            Icon(Icons.chevron_right_rounded, size: 20, color: tint),
-          ]),
-        ),
-      ),
-    );
-  }
+  Widget _arthaBanner(BuildContext context) => _ArthaBanner(onTap: _openInsights);
 
   /// Today's priorities: the morning brief's counts as three tiles. The
   /// header opens the full brief (who to call first, needs attention) where
@@ -2031,7 +1984,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             onNavigate: (label) => widget.onNavigate?.call(label),
           ),
         ],
-        const SizedBox(height: 90),
+        const SizedBox(height: 20),
       ];
 
   /// Reports: the charts and the Team section that used to sit below the
@@ -2117,7 +2070,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         ],
         if ((a['recentActivity'] as List?)?.isNotEmpty ?? false) _teamActivityCard(context, a),
       ],
-      const SizedBox(height: 90),
+      const SizedBox(height: 20),
     ];
   }
 
@@ -2444,6 +2397,152 @@ class _KpiTile extends StatelessWidget {
               onTap: onTap,
               child: Semantics(button: true, child: body),
             ),
+    );
+  }
+}
+
+/// The Artha AI line on the home screen, in the brand orange (23 Oct 2026,
+/// owner: was purple). A soft light sweeps across the sparkle tile, the
+/// sparkle breathes and the LIVE dot pulses, so it reads as something alive
+/// without pulling the eye on every frame. Still when the phone asks for
+/// reduced motion.
+class _ArthaBanner extends StatefulWidget {
+  final VoidCallback onTap;
+  const _ArthaBanner({required this.onTap});
+
+  @override
+  State<_ArthaBanner> createState() => _ArthaBannerState();
+}
+
+class _ArthaBannerState extends State<_ArthaBanner> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 2800));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _c.stop();
+      _c.value = 0.35;
+    } else if (!_c.isAnimating) {
+      _c.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTheme.of(context);
+    const orange = AppColors.primary;
+    final tint = t.isDark ? const Color(0xFFFF9A52) : AppColors.primaryDeep;
+    return Material(
+      color: orange.withValues(alpha: t.isDark ? 0.13 : 0.07),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: orange.withValues(alpha: 0.25)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: widget.onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
+          child: Row(children: [
+            AnimatedBuilder(
+              animation: _c,
+              builder: (context, _) {
+                final v = _c.value;
+                // The sheen crosses the tile in the first half of each cycle.
+                final sweep = (v * 2).clamp(0.0, 1.0);
+                final breathe = 1 + 0.08 * math.sin(v * 2 * math.pi);
+                return Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFFFF9A3D), Color(0xFFFF6B00), Color(0xFFE05A00)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: orange.withValues(alpha: 0.22 + 0.18 * math.sin(v * math.pi)),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Stack(alignment: Alignment.center, children: [
+                      Positioned.fill(
+                        child: FractionalTranslation(
+                          translation: Offset(-1.2 + 2.4 * sweep, 0),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: [
+                                Colors.white.withValues(alpha: 0),
+                                Colors.white.withValues(alpha: 0.38),
+                                Colors.white.withValues(alpha: 0),
+                              ]),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Transform.scale(
+                        scale: breathe,
+                        child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
+                      ),
+                    ]),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Text('ARTHA AI', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: tint)),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(5, 1, 6, 1),
+                    decoration: BoxDecoration(color: orange.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(6)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      AnimatedBuilder(
+                        animation: _c,
+                        builder: (context, _) {
+                          final pulse = 0.5 + 0.5 * math.sin(_c.value * 4 * math.pi);
+                          return Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: orange.withValues(alpha: 0.45 + 0.55 * pulse),
+                              boxShadow: [BoxShadow(color: orange.withValues(alpha: 0.5 * pulse), blurRadius: 4 + 3 * pulse)],
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                      Text('LIVE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: tint)),
+                    ]),
+                  ),
+                ]),
+                const SizedBox(height: 2),
+                Text('AI insights for smarter follow-ups',
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: t.text)),
+              ]),
+            ),
+            const SizedBox(width: 6),
+            Text('View', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: tint)),
+            Icon(Icons.chevron_right_rounded, size: 20, color: tint),
+          ]),
+        ),
+      ),
     );
   }
 }
