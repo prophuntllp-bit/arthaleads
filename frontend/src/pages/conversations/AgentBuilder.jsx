@@ -42,6 +42,15 @@ const STATUSES = [
   { value: "draft",  label: "Draft — still being written" },
 ];
 
+// A number as WhatsApp sends it: a 10-digit Indian mobile gets its 91.
+// Matches backend utils/phone.js normalizeTestPhone.
+function normalizeTestPhone(raw) {
+  const digits = String(raw ?? "").replace(/\D/g, "");
+  if (/^[6-9]\d{9}$/.test(digits)) return `91${digits}`;
+  if (/^0[6-9]\d{9}$/.test(digits)) return `91${digits.slice(1)}`;
+  return digits;
+}
+
 const slugify = (v, i) => `${String(v || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "option"}_${i}`;
 
 // The one non-question value an option's `next` may point to — matches
@@ -417,6 +426,7 @@ export default function AgentBuilder() {
                 ...DEFAULT_CTWA_FLOW,
                 ...a.ctwaFlow,
                 qualifyingQuestions: resolveQualifyingQuestions(a.ctwaFlow),
+                testPhones: [...new Set((a.ctwaFlow.testPhones || []).map(normalizeTestPhone).filter(Boolean))],
                 closingButtons: resolveClosingButtons(a.ctwaFlow),
               }
             : DEFAULT_CTWA_FLOW,
@@ -496,7 +506,7 @@ export default function AgentBuilder() {
   });
 
   const addTestPhone = () => {
-    const v = testPhoneDraft.replace(/\D/g, "");
+    const v = normalizeTestPhone(testPhoneDraft);
     if (!v) return;
     if (form.ctwaFlow.testPhones.includes(v)) return setTestPhoneDraft("");
     setFlow({ testPhones: [...form.ctwaFlow.testPhones, v] });
@@ -835,6 +845,7 @@ export default function AgentBuilder() {
                 ))}
               </div>
             )}
+            {!isNew && form.adIds.length > 0 && <AdMessages agentId={id} adIds={form.adIds} />}
           </div>
 
           <div className="card p-5 space-y-3">
@@ -883,7 +894,7 @@ export default function AgentBuilder() {
                 so you can message the number yourself and watch it work without touching real leads.
               </p>
               <div className="flex items-center gap-2">
-                <input className="input flex-1 font-mono text-xs" placeholder="e.g. 919876543210"
+                <input className="input flex-1 font-mono text-xs" placeholder="e.g. 9876543210 (91 is added for you)"
                   value={testPhoneDraft} onChange={(e) => setTestPhoneDraft(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTestPhone(); } }} />
                 <button type="button" onClick={addTestPhone} disabled={!testPhoneDraft.trim()}
@@ -1923,6 +1934,92 @@ function OptionActionEditor({ rows, onChange, presets, otherQuestions = [] }) {
 
 
 // Where people drop off in this agent's button flow (last 30 days).
+// The pre-filled message of each of this agent's ads. Meta sometimes sends
+// an ad click with no ad details; the chat is then placed by this text
+// (backend utils/adPrefill.js). Learned from real clicks, counted once two
+// clicks opened with the same text, or added here by hand.
+function AdMessages({ agentId, adIds }) {
+  const [rows, setRows] = useState(null);
+  const [text, setText] = useState("");
+  const [adId, setAdId] = useState(adIds[0] || "");
+  const [busy, setBusy] = useState(false);
+  const savedAds = adIds.join(",");
+
+  useEffect(() => {
+    api.get(`/whatsapp/agents/${agentId}/ad-messages`)
+      .then(({ data }) => setRows(data.messages || []))
+      .catch(() => setRows([]));
+  }, [agentId, savedAds]);
+  useEffect(() => { if (!adIds.includes(adId)) setAdId(adIds[0] || ""); }, [savedAds]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const add = async () => {
+    if (!text.trim()) return;
+    setBusy(true);
+    try {
+      const { data } = await api.post(`/whatsapp/agents/${agentId}/ad-messages`, { adId, text });
+      setRows((r) => [data.message, ...(r || []).filter((x) => x.id !== data.message.id)]);
+      setText("");
+      toast.success("Saved. Chats that open with this message now reach this assistant.");
+    } catch (e) { toast.error(e.response?.data?.message || "Could not save that message"); }
+    finally { setBusy(false); }
+  };
+  const remove = async (row) => {
+    try {
+      await api.delete(`/whatsapp/agents/${agentId}/ad-messages/${row.id}`);
+      setRows((r) => r.filter((x) => x.id !== row.id));
+    } catch (e) { toast.error(e.response?.data?.message || "Could not remove it"); }
+  };
+
+  return (
+    <div className="pt-1 space-y-2">
+      <p className="text-xs font-semibold text-app">Ad messages</p>
+      <p className="text-xs text-app-soft">
+        Meta sometimes sends an ad click without the ad's details. When a chat opens with one of these
+        messages, it still reaches this assistant and its buttons start. They are learned from real clicks;
+        add one yourself if the ad is new (paste the ad's pre-filled message exactly).
+      </p>
+      {rows === null ? (
+        <p className="text-xs text-app-soft flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading...</p>
+      ) : rows.length === 0 ? (
+        <p className="text-xs text-app-soft rounded-xl px-3 py-2" style={{ background: "var(--app-surface-low)" }}>None yet. They appear after the first clicks on these ads.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {rows.map((r) => (
+            <div key={r.id} className="flex items-start gap-2 rounded-xl px-3 py-2" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-app break-words">{r.text}</p>
+                <p className="text-[11px] text-app-soft mt-0.5">
+                  <span className="font-mono">{r.adId}</span>
+                  {" · "}{r.manual ? "added by you" : `${r.count} click${r.count === 1 ? "" : "s"}`}
+                  {!r.active && " · used once two clicks open with it"}
+                </p>
+              </div>
+              <button type="button" onClick={() => remove(r)} title="Stop using this message" className="p-1 text-app-soft hover:text-red-500 transition">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <input className="input flex-1 min-w-0 text-xs" placeholder="e.g. Hi, I'd like details of the Green Valley plots."
+          value={text} onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+        {adIds.length > 1 && (
+          <div className="sm:w-56">
+            <CustomSelect value={adId} onChange={setAdId} options={adIds.map((a) => ({ value: a, label: a }))} style={{ ...SELECT_STYLE, fontSize: 12 }} />
+          </div>
+        )}
+        <button type="button" onClick={add} disabled={!text.trim() || busy}
+          className="btn-secondary rounded-full px-3.5 py-2 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40">
+          <Plus className="w-3.5 h-3.5" /> Add
+        </button>
+      </div>
+      <p className="text-[11px] text-app-soft">Save the assistant after adding a new ad ID, then add its message.</p>
+    </div>
+  );
+}
+
 function FlowFunnel({ agentId }) {
   const [data, setData] = useState(null);
   const [days, setDays] = useState(30);

@@ -22,4 +22,17 @@ function samePhone(raw) {
   return key ? { $regex: `${key}$` } : null;
 }
 
-module.exports = { phoneKey, samePhone };
+/**
+ * A number as WhatsApp sends it (country code, digits only), for lists the
+ * owner types in, such as an agent's test numbers: "70209 50304" and
+ * "07020950304" become "917020950304". A 10-digit Indian mobile gets its 91;
+ * anything else keeps its own digits.
+ */
+function normalizeTestPhone(raw) {
+  const digits = String(raw ?? "").replace(/\D/g, "");
+  if (/^[6-9]\d{9}$/.test(digits)) return `91${digits}`;
+  if (/^0[6-9]\d{9}$/.test(digits)) return `91${digits.slice(1)}`;
+  return digits;
+}
+
+module.exports = { phoneKey, samePhone, normalizeTestPhone };

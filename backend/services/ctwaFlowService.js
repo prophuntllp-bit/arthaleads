@@ -81,7 +81,10 @@ module.exports = function createCtwaFlowService({
   function shouldStartFlow(agent, conversation, { isNewConversation = true } = {}) {
     if (!agent?.ctwaFlow?.enabled || conversation.flowState?.step) return false;
     if (agent.ctwaFlow.testPhones?.length) {
-      return agent.ctwaFlow.testPhones.includes(conversation.contactPhone);
+      // Normalised both sides: a number saved as 10 digits before 23 Oct 2026
+      // never matched the 91-prefixed number WhatsApp sends.
+      const { normalizeTestPhone } = require("../utils/phone");
+      return agent.ctwaFlow.testPhones.map(normalizeTestPhone).includes(normalizeTestPhone(conversation.contactPhone));
     }
     if (!isNewConversation) return false;
     // Whether this agent should answer the thread at all is decided before we
