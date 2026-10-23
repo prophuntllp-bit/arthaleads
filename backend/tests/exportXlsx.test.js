@@ -53,7 +53,8 @@ test("Leads workbook: Summary first with the logo, a sheet per source, branded h
   assert.equal(fb.views[0].ySplit, 1);
   assert.ok(fb.autoFilter, "filters on the header row");
   const phoneCol = fb.getRow(1).values.indexOf("Phone");
-  assert.equal(fb.getRow(2).getCell(phoneCol).value, "+91 98765 43210");
+  // Whatever the web's phone format is today (sheetTheme.prettyPhone).
+  assert.equal(fb.getRow(2).getCell(phoneCol).value, require("../utils/exports/sheetTheme").prettyPhone("919876543210"));
 });
 
 test("one source is one 'Leads' sheet", async () => {
