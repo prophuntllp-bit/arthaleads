@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/auth_state.dart';
+import '../widgets/plan_only.dart';
 import '../core/push_service.dart';
 import '../core/theme.dart';
 import '../core/theme_state.dart';
@@ -478,7 +479,8 @@ class _ShellState extends State<Shell> {
     _NavItem(
       'Attendance',
       Icons.fingerprint_rounded,
-      () => const AttendanceScreen(),
+      // Growth on the server (24 Oct 2026): an upgrade note on lower plans.
+      () => const PlanOnly(min: 'growth', feature: 'Attendance', child: AttendanceScreen()),
     ),
     _NavItem(
       'Bookings',
@@ -507,7 +509,7 @@ class _ShellState extends State<Shell> {
     _NavItem(
       'Invoices',
       Icons.request_quote_rounded,
-      () => const InvoicesScreen(),
+      () => const PlanOnly(min: 'growth', feature: 'Invoices', child: InvoicesScreen()),
       adminOnly: true,
     ),
     _NavItem(
@@ -549,7 +551,7 @@ class _ShellState extends State<Shell> {
         : current.label == 'Reports'
         ? DashboardScreen(key: const ValueKey('reports'), reports: true, onNavigate: _navigateToLabel)
         : current.label == 'Bookings'
-        ? BookingsScreen(onNavigate: _navigateToLabel)
+        ? PlanOnly(min: 'growth', feature: 'Bookings', child: BookingsScreen(onNavigate: _navigateToLabel))
         : _screenCache.putIfAbsent(current.label, current.builder);
 
     return PopScope(

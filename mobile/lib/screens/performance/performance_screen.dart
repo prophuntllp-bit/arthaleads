@@ -49,6 +49,9 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
   @override
   void initState() {
     super.initState();
+    // Below Growth the screen is the upgrade note: asking would only bring
+    // back the server's refusal as a red message.
+    if (!planAllows(context.read<AuthState>(), 'growth')) return;
     _load();
     _loadCallAnalytics();
     DeepLink.focusAgentId.addListener(_maybeApplyFocus);

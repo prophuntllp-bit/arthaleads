@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/api_client.dart';
 import '../core/auth_state.dart';
+import '../core/plan.dart';
 import '../core/theme.dart';
 
 /// Green "Chat on WhatsApp" bottom sheet — pre-filled message (editable),
@@ -182,7 +183,8 @@ class _WhatsAppSendSheetState extends State<_WhatsAppSendSheet> {
                           color: t.textSoft,
                         ),
                       ),
-                      if (widget.leadId != null)
+                      // AI drafts are Growth on the server (24 Oct 2026).
+                      if (widget.leadId != null && planAllows(context.read<AuthState>(), 'growth'))
                         InkWell(
                           onTap: _drafting ? null : _aiDraft,
                           borderRadius: BorderRadius.circular(8),

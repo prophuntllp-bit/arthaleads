@@ -40,7 +40,7 @@ Future<void> _settle(WidgetTester tester) async {
   }
 }
 
-Future<_Server> _open(WidgetTester tester, {void Function(String)? onNavigate}) async {
+Future<_Server> _open(WidgetTester tester, {void Function(String)? onNavigate, String plan = 'growth'}) async {
   SharedPreferences.setMockInitialValues({});
   await ApiClient.instance.setToken('t');
   final server = _Server();
@@ -50,6 +50,7 @@ Future<_Server> _open(WidgetTester tester, {void Function(String)? onNavigate}) 
   addTearDown(tester.view.reset);
   final auth = AuthState()
     ..user = {'_id': 'u1', 'name': 'Riya Shah', 'email': 'riya@example.com', 'role': 'admin'}
+    ..org = {'plan': plan}
     ..restoring = false;
   await tester.pumpWidget(ChangeNotifierProvider<AuthState>.value(
     value: auth,
@@ -103,6 +104,16 @@ void main() {
     expect(find.textContaining('Ticket TKT-0042 raised'), findsOneWidget);
     expect(find.textContaining('riya@example.com'), findsOneWidget);
     expect(find.text('Raise a ticket'), findsNothing);
+  });
+
+  testWidgets('Starter gets a Growth note instead of the AI chat, with help still one tap away', (tester) async {
+    final went = <String>[];
+    await _open(tester, plan: 'starter', onNavigate: went.add);
+    expect(find.text('Artha AI is part of the Growth plan'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+    await tester.tap(find.text('Help & Support'));
+    await _settle(tester);
+    expect(went, ['Help & Support']);
   });
 
   test('every common question opens a real drawer screen', () {

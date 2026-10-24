@@ -1,4 +1,6 @@
-/// Plan feature gates — mirrors frontend/src/utils/plan.js.
+// Plan feature gates — mirrors frontend/src/utils/plan.js.
+import 'auth_state.dart';
+
 const _planLevels = {
   'starter': 1,
   'trial': 2,
@@ -14,6 +16,11 @@ bool canAccess(Map<String, dynamic>? org, String minPlan) {
   if (org == null) return false;
   return planLevel(org['plan'] as String?) >= planLevel(minPlan);
 }
+
+/// The person may use a feature of plan [minPlan]: super admins always (the
+/// server's planGate lets them through too). Use this, not canAccess, for UI.
+bool planAllows(AuthState auth, String minPlan) =>
+    auth.role == 'super_admin' || canAccess(auth.org, minPlan);
 
 const _planLabels = {
   'starter': 'Starter',

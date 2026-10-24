@@ -5,7 +5,11 @@ import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:provider/provider.dart';
+
 import '../../core/api_client.dart';
+import '../../core/auth_state.dart';
+import '../../core/plan.dart';
 import '../../core/theme.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/labeled_field.dart';
@@ -17,6 +21,9 @@ import '../../widgets/direction_badge.dart';
 /// PATCH /calls/:leadId/:activityId/notes, POST /calls/:leadId/followup,
 /// POST /calls/lead/:leadId/summary (aggregate pattern across 2+ calls).
 /// Mirrors the LeadCallModal / CallDetailPanel on the web app.
+/// AI call summaries are Enterprise on the server (24 Oct 2026).
+bool _aiCallsAllowed(BuildContext context) => planAllows(context.read<AuthState>(), 'enterprise');
+
 class CallHistoryScreen extends StatefulWidget {
   final String leadId;
   final String leadName;
@@ -199,6 +206,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
   }
 
   Widget _patternCard() {
+    if (_pattern == null && !_aiCallsAllowed(context)) return const SizedBox.shrink();
     if (_pattern == null) {
       return OutlinedButton.icon(
         onPressed: _patternLoading ? null : _generatePattern,
@@ -319,10 +327,13 @@ class _CallCardState extends State<_CallCard> {
         });
         if (mounted) setState(() => _playerReady = true);
       } catch (e) {
+        // Let go of the broken player so the next tap tries again.
+        await _player?.dispose();
+        _player = null;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Could not play recording: $e'),
+            const SnackBar(
+              content: Text('Could not play the recording. Check your connection and tap play again.'),
               backgroundColor: AppColors.danger,
             ),
           );
@@ -790,6 +801,7 @@ class _CallCardState extends State<_CallCard> {
                 ),
               ],
               const SizedBox(height: 6),
+              if (_aiCallsAllowed(context))
               TextButton.icon(
                 onPressed: _analysing ? null : _analyse,
                 icon: _analysing
@@ -801,7 +813,7 @@ class _CallCardState extends State<_CallCard> {
                     : const Icon(Icons.refresh, size: 14),
                 label: const Text('Regenerate', style: TextStyle(fontSize: 12)),
               ),
-            ] else if (recordingUrl != null) ...[
+            ] else if (recordingUrl != null && _aiCallsAllowed(context)) ...[
               OutlinedButton.icon(
                 onPressed: _analysing ? null : _analyse,
                 icon: _analysing

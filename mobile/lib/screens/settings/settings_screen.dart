@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
+import '../../core/plan.dart';
 import '../../core/theme.dart';
 import '../../core/update_service.dart';
 import '../../widgets/app_select.dart';
@@ -968,7 +969,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _autoAssign
+                    !_autoAssignAllowed
+                        ? 'Part of the Growth plan. On your plan, new leads stay unassigned until you assign them.'
+                        : _autoAssign
                         ? 'Enabled — leads auto-assign on creation'
                         : 'Disabled — assign manually',
                     style: TextStyle(
@@ -980,6 +983,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
+            if (!_autoAssignAllowed)
+              const SizedBox.shrink()
+            else
             _togglingAutoAssign
                 ? const SizedBox(
                     width: 24,
@@ -996,6 +1002,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ],
     );
   }
+
+  /// Round-robin is Growth on the server (24 Oct 2026).
+  bool get _autoAssignAllowed => planAllows(context.read<AuthState>(), 'growth');
 
   Widget _securityTab() {
     if (_loadingAccess) return const Center(child: AppSpinner(size: 32));

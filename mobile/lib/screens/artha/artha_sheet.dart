@@ -7,9 +7,11 @@ import '../../core/api_client.dart';
 import '../../core/artha_stream.dart';
 import '../../core/auth_state.dart';
 import '../../core/copilot_pages.dart';
+import '../../core/plan.dart';
 import '../../core/push_service.dart';
 import '../../core/theme.dart';
 import '../../widgets/report_message_button.dart';
+import '../help/help_screen.dart';
 import 'artha_help.dart';
 import 'change_card.dart';
 import 'voice_input.dart';
@@ -30,6 +32,11 @@ class ArthaFocus {
 /// names linked to their records, saved chats, starter buttons, ratings.
 Future<void> showArthaSheet(BuildContext context,
     {String? navLabel, ArthaFocus? focus, String? ask, void Function(String label)? onNavigate}) {
+  // Artha's AI is Growth: the server refuses /copilot and /help AI below it
+  // (24 Oct 2026), so lower plans get a short note instead of errors. Tours
+  // and support stay on every plan, as on the web.
+  final auth = context.read<AuthState>();
+  if (!planAllows(auth, 'growth')) return _showArthaUpgrade(context, auth, onNavigate);
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -37,6 +44,45 @@ Future<void> showArthaSheet(BuildContext context,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.40),
     builder: (_) => ArthaSheet(navLabel: navLabel, focus: focus, ask: ask, onNavigate: onNavigate),
+  );
+}
+
+Future<void> _showArthaUpgrade(BuildContext context, AuthState auth, void Function(String label)? onNavigate) {
+  return showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (ctx) {
+      final t = AppTheme.of(ctx);
+      void go(String label, Widget fallback) {
+        Navigator.of(ctx).pop();
+        if (onNavigate != null) {
+          onNavigate(label);
+        } else {
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => fallback));
+        }
+      }
+
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Artha AI is part of the Growth plan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: t.text)),
+            const SizedBox(height: 6),
+            Text(
+              'Ask about your leads, plan your day and make changes by chat on Growth. '
+              'You can still get help from our team any time.',
+              style: TextStyle(fontSize: 13, color: t.textSoft),
+            ),
+            const SizedBox(height: 16),
+            Wrap(spacing: 10, runSpacing: 8, children: [
+              if (auth.role == 'admin' && onNavigate != null)
+                FilledButton(onPressed: () => go('Plan & Billing', const SizedBox()), child: const Text('See plans')),
+              OutlinedButton(onPressed: () => go('Help & Support', const HelpScreen()), child: const Text('Help & Support')),
+            ]),
+          ]),
+        ),
+      );
+    },
   );
 }
 

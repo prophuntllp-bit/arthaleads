@@ -1860,10 +1860,13 @@ class _RecordingPlayerState extends State<_RecordingPlayer> {
         });
         if (mounted) setState(() => _playerReady = true);
       } catch (e) {
+        // Let go of the broken player so the next tap tries again.
+        await _player?.dispose();
+        _player = null;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Could not play recording: $e'),
+            const SnackBar(
+              content: Text('Could not play the recording. Check your connection and tap play again.'),
               backgroundColor: AppColors.danger,
             ),
           );

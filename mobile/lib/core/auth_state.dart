@@ -125,6 +125,7 @@ class AuthState extends ChangeNotifier {
       for (var attempt = 0; attempt < 3; attempt++) {
         try {
           final res = await _api.dio.get('/auth/me');
+          if (!_api.hasToken) break; // signed out while this was on its way
           user = (res.data['user'] as Map?)?.cast<String, dynamic>();
           org = (res.data['org'] as Map?)?.cast<String, dynamic>();
           _remember();
@@ -195,9 +196,13 @@ class AuthState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await PushService.instance.unregister(); // needs the auth token, so before clearToken
+    // Both calls need the auth token, so they go before clearToken; on a slow
+    // network the person is not kept waiting more than a few seconds.
     try {
-      await _api.dio.post('/auth/logout');
+      await Future.wait([
+        PushService.instance.unregister(),
+        _api.dio.post('/auth/logout'),
+      ]).timeout(const Duration(seconds: 4));
     } catch (_) {
       // proceed even if offline — token is cleared locally regardless
     }
@@ -205,6 +210,9 @@ class AuthState extends ChangeNotifier {
     await _forget();
     user = null;
     org = null;
+    // A blocked company's screen sits above the login screen; signing out
+    // must leave it (24 Oct 2026: "Back to login" stayed on it).
+    orgBlockReason = null;
     notifyListeners();
   }
 
@@ -213,6 +221,8 @@ class AuthState extends ChangeNotifier {
     final res = await _api.dio.get('/auth/me');
     user = (res.data['user'] as Map?)?.cast<String, dynamic>();
     org = (res.data['org'] as Map?)?.cast<String, dynamic>();
+    // /auth/me answered, so the company is not blocked (any more).
+    orgBlockReason = null;
     _remember();
     notifyListeners();
   }
