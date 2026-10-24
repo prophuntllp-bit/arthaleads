@@ -20,6 +20,11 @@ export default defineConfig({
   define: {
     __APP_BUILD__: JSON.stringify(BUILD_ID),
   },
+  build: {
+    // Never inline fonts as data: URLs: the CSP's font-src allows only 'self'
+    // and Google Fonts, so an inlined @fontsource subset would be blocked.
+    assetsInlineLimit: (file) => (/\.woff2?$/.test(file) ? false : undefined),
+  },
   server: {
     port: 3000,
   },
