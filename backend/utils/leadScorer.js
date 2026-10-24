@@ -31,7 +31,7 @@ const DAY = 86400000;
 // The chat's part, while the activity the AI read is under 14 days old. Only
 // reads from 24 Oct 2026 on (v 3) count: v1 scored activity, v2 still read
 // the ad's pre-filled message and button taps as the customer's intent.
-const AI_VERSION = 3;
+const AI_VERSION = 4;
 function aiPoints(lead, now = Date.now()) {
   const a = lead.aiScore;
   if (!a || (a.v || 0) < AI_VERSION || !a.signalAt) return 0;

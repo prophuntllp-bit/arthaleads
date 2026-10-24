@@ -63,6 +63,8 @@ test("'Reserve my seat': asks the name, saves it, tags, confirms, schedules the 
   assert.ok(lead.activities.some((a) => /Chose "Reserve my seat"/.test(a.description)));
   assert.equal(lead.engagement.flow.purpose, true, "the purpose answer is counted for the score");
   assert.equal(lead.engagement.closing, "register");
+  const taps = await mongoose.connection.collection("wamessages").find({ direction: "inbound", body: "Reserve my seat" }).toArray();
+  assert.ok(taps.length && taps.every((m) => m.fromButton === true), "a tap is marked as a tap on arrival");
   assert.match(last(phone), /^Thanks Rahul, your seat is reserved for SP Pallonji Webinar on \d+ \w+, \d+:\d\d (AM|PM)\./);
   const c = await convOf(phone);
   assert.ok(!c.flowState?.step, "flow ended");
