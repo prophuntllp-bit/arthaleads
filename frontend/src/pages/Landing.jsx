@@ -56,12 +56,13 @@ function Hero() {
             Facebook, Google and WhatsApp enquiries land in one place. A WhatsApp AI agent replies in seconds,
             qualifies the buyer and books the site visit, so your team starts the day with buyers ready to talk.
           </p>
-          <div className="mt-7 sm:mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-            <SiteButton href={CRM_SIGNUP_URL} external size="lg" className="w-full sm:w-auto">
-              Start 14-day free trial <ArrowRight className="w-4 h-4" />
+          {/* Phones: two compact buttons side by side instead of two full-width slabs. */}
+          <div className="mt-7 sm:mt-8 flex gap-2.5 sm:gap-3 justify-center lg:justify-start">
+            <SiteButton href={CRM_SIGNUP_URL} external className="!px-3.5 text-[14px] sm:!px-7 sm:min-h-[3.5rem] sm:text-base">
+              <span className="sm:hidden">Start free trial</span><span className="hidden sm:inline">Start 14-day free trial</span> <ArrowRight className="w-4 h-4" />
             </SiteButton>
-            <SiteButton href={waLink(WA_MESSAGES.demo)} external variant="secondary" size="lg" className="w-full sm:w-auto">
-              <WhatsAppLogo className="w-[18px] h-[18px]" /> Book a demo on WhatsApp
+            <SiteButton href={waLink(WA_MESSAGES.demo)} external variant="secondary" className="!px-3.5 text-[14px] sm:!px-7 sm:min-h-[3.5rem] sm:text-base">
+              <WhatsAppLogo className="w-[18px] h-[18px]" /> <span className="sm:hidden">Book a demo</span><span className="hidden sm:inline">Book a demo on WhatsApp</span>
             </SiteButton>
           </div>
           <ul className="mt-5 flex flex-wrap justify-center lg:justify-start gap-x-5 gap-y-2 text-[13px] sm:text-sm site-muted">
@@ -110,13 +111,13 @@ function WorksWith() {
               <p className="font-display text-lg font-bold site-ink">Every lead source, one list</p>
               <p className="mt-1.5 text-sm site-muted">99acres, MagicBricks and Housing.com leads come in by sheet import.</p>
             </div>
-            <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+            <ul className="flex flex-wrap justify-center gap-2 sm:grid sm:grid-cols-3 lg:grid-cols-4 sm:gap-2.5">
               {SOURCES.map(({ Logo, Icon, label, note }) => (
-                <li key={label} className="site-chip flex items-center gap-2.5 rounded-xl px-3.5 py-3 text-[13px] font-medium site-ink">
-                  <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)" }}>
+                <li key={label} className="site-chip flex items-center gap-2 sm:gap-2.5 rounded-full sm:rounded-xl pl-1.5 pr-3.5 py-1.5 sm:px-3.5 sm:py-3 text-[13px] font-medium site-ink">
+                  <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full sm:rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)" }}>
                     {Logo ? <Logo className="w-[18px] h-[18px]" /> : <Icon className="w-[18px] h-[18px]" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />}
                   </span>
-                  <span className="leading-tight">{label}{note && <span className="block text-[11px] font-normal site-muted">{note}</span>}</span>
+                  <span className="leading-tight">{label}{note && <span className="sm:block text-[11px] font-normal site-muted"><span className="sm:hidden"> · </span>{note}</span>}</span>
                 </li>
               ))}
             </ul>
@@ -278,7 +279,7 @@ function HowItWorks() {
               </Reveal>
             ))}
           </ol>
-          <div className="mt-8 flex flex-col sm:flex-row gap-3">
+          <div className="mt-8 flex flex-wrap gap-2.5 sm:gap-3">
             <SiteButton to="/product-tour" variant="secondary"><PlayCircle className="w-[18px] h-[18px]" /> Watch the 2-minute film</SiteButton>
             <SiteButton to="/download-app" variant="secondary"><Download className="w-[18px] h-[18px]" /> Get the Android app</SiteButton>
           </div>
@@ -520,7 +521,7 @@ function FinalCta() {
     <Section tone="white">
       <Container>
         <Reveal>
-          <div className="site-cta-panel relative overflow-hidden rounded-[32px] p-6 sm:p-10 lg:p-12 grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-center">
+          <div className="site-cta-panel relative overflow-hidden rounded-[28px] sm:rounded-[32px] p-5 sm:p-10 lg:p-12 grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-center">
             <div aria-hidden="true" className="site-grid-bg" />
             <div className="relative">
               <p className="site-eyebrow mb-4">Start today</p>
@@ -528,9 +529,9 @@ function FinalCta() {
                 Stop losing buyers <span className="site-dim">to whoever replies first.</span>
               </h2>
               <p className="mt-5 text-base sm:text-lg leading-relaxed max-w-lg">Start your 14-day free trial, or message us on WhatsApp and see the AI agent answer you.</p>
-              <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                <SiteButton href={CRM_SIGNUP_URL} external size="lg" className="w-full sm:w-auto">Start free trial <ArrowRight className="w-4 h-4" /></SiteButton>
-                <SiteButton href={waLink(WA_MESSAGES.demo)} external variant="secondary" size="lg" className="w-full sm:w-auto">
+              <div className="mt-8 flex gap-2 sm:gap-3">
+                <SiteButton href={CRM_SIGNUP_URL} external className="!px-3.5 text-[14px] sm:!px-7 sm:min-h-[3.5rem] sm:text-base">Start free trial <ArrowRight className="w-4 h-4" /></SiteButton>
+                <SiteButton href={waLink(WA_MESSAGES.demo)} external variant="secondary" className="!px-3.5 text-[14px] sm:!px-7 sm:min-h-[3.5rem] sm:text-base">
                   <WhatsAppLogo className="w-[18px] h-[18px]" /> Book a demo
                 </SiteButton>
               </div>

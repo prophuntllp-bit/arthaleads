@@ -11,7 +11,6 @@ import WhatsAppLogo from "./WhatsAppLogo";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { CRM_LOGIN_URL, CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import { ScrollProgress } from "./motion/Motion";
-import MobileCtaBar from "./MobileCtaBar";
 
 // The chat widget is not needed for first paint; load it once the page is idle.
 const MarketingChatBot = lazy(() => import("./MarketingChatBot"));
@@ -195,10 +194,21 @@ function NavInner({ onScrollTo }) {
   const location = useLocation();
   const isHome   = location.pathname === "/";
 
+  // Mobile menu: close on navigation, and stop the page behind from scrolling while it is open.
+  useEffect(() => { setMobileOpen(false); }, [location.pathname, location.hash]);
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.classList.add("menu-open");   // hides the chat launcher (styles.css)
+    return () => { document.body.style.overflow = prev; document.documentElement.classList.remove("menu-open"); };
+  }, [mobileOpen]);
+
   const textMuted  = isDark ? "rgba(255,255,255,0.70)" : "#4b5563";
   const textActive = isDark ? "#ffffff" : "#111827";
 
-  const scrolledBg     = isDark ? "rgba(10,11,16,0.94)" : "rgba(255,255,255,0.94)";
+  // Solid, not blurred: backdrop-filter on a fixed bar made Android Chrome paint blank tiles on scroll.
+  const scrolledBg     = isDark ? "rgba(10,11,16,0.97)" : "rgba(255,255,255,0.97)";
   // No bottom border: a 1px line read as a bright stripe on dark pages. A soft shadow separates the bar instead.
   const scrolledShadow = isDark ? "0 12px 32px -18px rgba(0,0,0,0.9)" : "0 10px 28px -18px rgba(15,18,34,0.28)";
   const mobileBg       = isDark ? "rgba(13,13,26,0.98)" : "rgba(255,255,255,0.98)";
@@ -249,8 +259,8 @@ function NavInner({ onScrollTo }) {
   }
 
   const navStyle = scrolled
-    ? { background: scrolledBg, boxShadow: scrolledShadow, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }
-    : { background: "transparent" };
+    ? { background: scrolledBg, boxShadow: scrolledShadow }
+    : { background: mobileOpen ? mobileBg : "transparent" };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 transition-all duration-300" style={navStyle}>
@@ -389,7 +399,7 @@ function NavInner({ onScrollTo }) {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="xl:hidden backdrop-blur-xl" style={{ background: mobileBg, borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb"}` }}>
+        <div className="xl:hidden overflow-y-auto overscroll-contain" style={{ maxHeight: "calc(100dvh - 4rem)", background: mobileBg, borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb"}` }}>
           <div className="px-4 py-4 space-y-1">
 
             {/* Primary links */}
@@ -476,7 +486,6 @@ export default function PublicNav({ onScrollTo }) {
       <ScrollProgress />
       <NavInner onScrollTo={onScrollTo} />
       <IdleChatBot />
-      <MobileCtaBar />
     </>
   );
 }

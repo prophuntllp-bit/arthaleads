@@ -944,3 +944,15 @@ html[data-public-theme="dark"] .site-cta-panel {
   .site-glow { transition: none; }
   .site-glow:hover { transform: none; }
 }
+
+/* The app shell pads every <main> by the header height; the marketing theme
+   lets each hero set its own top spacing instead of stacking the two. */
+.site main { padding-top: 0 !important; }
+/* Phones: the decorative grid masks and hover glows cost GPU memory and made
+   Android Chrome paint blank tiles while scrolling back up, so drop them. */
+@media (max-width: 767px) {
+  .site-grid-bg { display: none; }
+  .site-glow::before, .site-glow::after { display: none; }
+}
+/* The chat launcher would cover the mobile menu's links while it is open. */
+.menu-open .mkt-chat-launcher { display: none; }

@@ -24,8 +24,8 @@ export function FloatCard({ className, children, style }) {
 export function HeroVisual() {
   return (
     <div className="relative mx-auto w-full max-w-[520px] px-3 sm:px-6 lg:px-0">
-      <div aria-hidden="true" className="absolute -inset-6 sm:-inset-10 rounded-[40px] blur-3xl opacity-70"
-        style={{ background: "radial-gradient(60% 60% at 60% 40%, rgba(255,107,0,0.22), transparent 70%)" }} />
+      <div aria-hidden="true" className="absolute -inset-4 sm:-inset-10 pointer-events-none"
+        style={{ background: "radial-gradient(50% 50% at 60% 40%, rgba(255,107,0,0.16), transparent 75%)" }} />
       <div className="relative overflow-hidden rounded-[28px] border" style={{ borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
         <SiteImage name="hero" width={1024} height={1280} priority sizes="(min-width: 1024px) 520px, 92vw"
           alt="A real estate sales manager smiling at her phone in a modern sales lounge"
