@@ -312,6 +312,10 @@ app.use(generalLimiter);
 app.use(require("./middlewares/noOperators").noOperators);
 
 // ── Logging ───────────────────────────────────────────────────────────────────
+// Secrets that arrive in a query string (connect tickets, OAuth codes, webhook
+// keys) are blanked in the request log.
+morgan.token("url", (req) =>
+  (req.originalUrl || req.url || "").replace(/([?&](?:token|access_token|code|key|secret|ticket)=)[^&]*/gi, "$1[redacted]"));
 if (process.env.NODE_ENV !== "test") {
   app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 }
