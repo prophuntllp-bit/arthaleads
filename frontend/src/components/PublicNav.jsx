@@ -198,8 +198,9 @@ function NavInner({ onScrollTo }) {
   const textMuted  = isDark ? "rgba(255,255,255,0.70)" : "#4b5563";
   const textActive = isDark ? "#ffffff" : "#111827";
 
-  const scrolledBg     = isDark ? "rgba(10,11,16,0.88)" : "rgba(255,255,255,0.9)";
-  const scrolledBorder = isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(15,18,34,0.07)";
+  const scrolledBg     = isDark ? "rgba(10,11,16,0.94)" : "rgba(255,255,255,0.94)";
+  // No bottom border: a 1px line read as a bright stripe on dark pages. A soft shadow separates the bar instead.
+  const scrolledShadow = isDark ? "0 12px 32px -18px rgba(0,0,0,0.9)" : "0 10px 28px -18px rgba(15,18,34,0.28)";
   const mobileBg       = isDark ? "rgba(13,13,26,0.98)" : "rgba(255,255,255,0.98)";
   const catLabel       = isDark ? "rgba(255,255,255,0.30)" : "#6b7280";
 
@@ -248,7 +249,7 @@ function NavInner({ onScrollTo }) {
   }
 
   const navStyle = scrolled
-    ? { background: scrolledBg, borderBottom: scrolledBorder, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }
+    ? { background: scrolledBg, boxShadow: scrolledShadow, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }
     : { background: "transparent" };
 
   return (

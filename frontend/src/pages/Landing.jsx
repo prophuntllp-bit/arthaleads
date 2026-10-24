@@ -144,14 +144,14 @@ function AiBand() {
         <SectionHeader eyebrow="AI that works the night shift" title={<>Your best salesperson<br className="hidden sm:block" /> <span className="site-dim">never sleeps.</span></>}
           lede="Most enquiries arrive after office hours. Arthaleads answers every one of them, qualifies the buyer and tells your team exactly who to call in the morning. On the Growth plan and above."
           action={<Link to="/ai-crm" className="site-link text-[15px]">See everything the AI does <ArrowRight className="w-4 h-4" /></Link>} />
-        <div className="grid lg:grid-cols-[minmax(0,360px)_1fr] gap-10 lg:gap-14 items-center">
+        <div className="grid xl:grid-cols-[minmax(0,340px)_1fr] gap-10 xl:gap-14 items-center">
           <Reveal className="mx-auto w-full max-w-[360px]">
             <HeroChat />
           </Reveal>
           <div className="grid gap-6 min-w-0">
             <div className="grid sm:grid-cols-2 gap-5">
-              <Reveal delay={80}><ScoreCard /></Reveal>
-              <Reveal delay={160}><CopilotCard /></Reveal>
+              <Reveal delay={80} className="h-full"><ScoreCard /></Reveal>
+              <Reveal delay={160} className="h-full"><CopilotCard /></Reveal>
             </div>
             <ul className="grid sm:grid-cols-3 gap-5">
               {AI_POINTS.map(({ Icon, title, body }, i) => (
@@ -226,15 +226,15 @@ function BuiltFor() {
       <Container>
         <SectionHeader eyebrow="Who it is for" title={<>Built for how property<br className="hidden sm:block" /> <span className="site-dim">is sold in India.</span></>}
           lede="Builders, brokers and channel partners sell differently. Arthaleads fits each of them." />
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {PERSONAS.map(({ img, title, body, to, link, alt }, i) => (
-            <Reveal key={title} delay={i * 100}>
-              <Card glow as={Link} to={to} className="group h-full overflow-hidden flex flex-col">
-                <div className="overflow-hidden">
+            <Reveal key={title} delay={i * 100} className={i === 2 ? "min-w-0 sm:col-span-2 lg:col-span-1" : "min-w-0"}>
+              <Card glow as={Link} to={to} className={`group h-full overflow-hidden flex flex-col ${i === 2 ? "sm:flex-row lg:flex-col" : ""}`}>
+                <div className={`overflow-hidden ${i === 2 ? "sm:w-1/2 lg:w-auto shrink-0" : ""}`}>
                   <SiteImage name={img} width={1536} height={1024} sizes="(min-width: 768px) 400px, 92vw" alt={alt}
-                    className="block w-full h-auto aspect-[3/2] object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+                    className="block w-full h-full aspect-[3/2] object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
                 </div>
-                <div className="p-6 flex flex-col flex-1">
+                <div className="p-6 flex flex-col flex-1 justify-center lg:justify-start">
                   <h3 className="font-display text-lg font-bold site-ink mb-2">{title}</h3>
                   <p className="text-[15px] leading-relaxed flex-1">{body}</p>
                   <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold" style={{ color: "var(--site-brand-ink)" }}>
@@ -299,7 +299,7 @@ function Pricing() {
         <SectionHeader eyebrow="Pricing" title={<>Simple prices. <span className="site-dim">Published.</span></>}
           lede="Per user per month, plus 18% GST. Start with a 14-day free trial, no credit card needed."
           action={<Link to="/pricing" className="site-link text-[15px]">Compare every feature by plan <ArrowRight className="w-4 h-4" /></Link>} />
-        <div className="grid md:grid-cols-3 gap-6 items-stretch">
+        <div className="grid lg:grid-cols-3 gap-6 items-stretch max-w-xl mx-auto lg:max-w-none">
           {PLANS.map((plan, i) => {
             const price = PLAN_PRICING[plan.id];
             const popular = !!plan.popular;
@@ -524,8 +524,8 @@ function FinalCta() {
             <div aria-hidden="true" className="site-grid-bg" />
             <div className="relative">
               <p className="site-eyebrow mb-4">Start today</p>
-              <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[30px] sm:text-[38px] lg:text-[44px]">
-                Stop losing buyers to<br className="hidden sm:block" /> <span className="site-dim">whoever replies first.</span>
+              <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[30px] sm:text-[38px] lg:text-[40px] xl:text-[44px]" style={{ textWrap: "balance" }}>
+                Stop losing buyers <span className="site-dim">to whoever replies first.</span>
               </h2>
               <p className="mt-5 text-base sm:text-lg leading-relaxed max-w-lg">Start your 14-day free trial, or message us on WhatsApp and see the AI agent answer you.</p>
               <div className="mt-8 flex flex-col sm:flex-row gap-3">

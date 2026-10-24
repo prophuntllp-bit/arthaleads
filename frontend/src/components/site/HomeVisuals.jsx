@@ -5,7 +5,7 @@
 // prices are illustrations. Everything reads theme tokens, so it works in
 // light, dark and inside dark bands.
 import { CalendarCheck2, Sparkles, Flame, Phone, CheckCheck, ArrowUpRight, FileText, MapPin, Users } from "lucide-react";
-import { SiteImage } from "./Site";
+import { SiteImage, Card } from "./Site";
 import { WhatsAppLogo, FacebookLogo, GoogleLogo } from "./BrandLogos";
 
 const cx = (...c) => c.filter(Boolean).join(" ");
@@ -32,7 +32,7 @@ export function HeroVisual() {
           className="block w-full h-auto aspect-[4/5] object-cover" />
       </div>
 
-      <FloatCard className="left-0 top-6 sm:-left-2 lg:-left-12 w-[230px] sm:w-[250px]">
+      <FloatCard className="left-0 top-6 sm:-left-2 lg:-left-6 xl:-left-12 w-[230px] sm:w-[250px]">
         <div className="flex items-center gap-2.5">
           <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(37,211,102,0.14)" }}>
             <WhatsAppLogo className="w-4 h-4" />
@@ -45,7 +45,7 @@ export function HeroVisual() {
         <p className="mt-2.5 text-[13px] leading-snug site-ink">Is the 2 BHK at Aurum Heights still available?</p>
       </FloatCard>
 
-      <FloatCard className="hidden sm:block right-0 lg:-right-10 top-[42%] w-[240px]">
+      <FloatCard className="hidden sm:block right-0 lg:-right-3 xl:-right-10 top-[42%] w-[240px]">
         <p className="flex items-center gap-1.5 text-[11px] font-semibold" style={{ color: "var(--site-brand-ink)" }}>
           <Sparkles className="w-3.5 h-3.5" /> AI agent replied in seconds
         </p>
@@ -54,7 +54,7 @@ export function HeroVisual() {
         </p>
       </FloatCard>
 
-      <FloatCard className="left-2 bottom-6 sm:left-4 lg:-left-8 flex items-center gap-3 !py-3">
+      <FloatCard className="left-2 bottom-6 sm:left-4 lg:-left-4 xl:-left-8 flex items-center gap-3 !py-3">
         <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(22,163,74,0.12)" }}>
           <CalendarCheck2 className="w-[18px] h-[18px]" style={{ color: "#16a34a" }} />
         </span>
@@ -64,7 +64,7 @@ export function HeroVisual() {
         </div>
       </FloatCard>
 
-      <FloatCard className="hidden sm:flex right-4 top-6 lg:-right-6 items-center gap-2 !py-2.5 !px-3">
+      <FloatCard className="hidden sm:flex right-4 top-6 lg:right-2 xl:-right-6 items-center gap-2 !py-2.5 !px-3">
         <Flame className="w-4 h-4" style={{ color: "#ff6b00" }} />
         <span className="text-[12px] font-semibold site-ink">Lead score 87 · Hot</span>
       </FloatCard>
@@ -76,7 +76,7 @@ export function HeroVisual() {
 export function ScoreCard() {
   const r = 26, c = 2 * Math.PI * r, pct = 0.87;
   return (
-    <div className="site-card site-card--raised p-5">
+    <Card glow className="h-full p-5 flex flex-col">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold site-ink truncate">Raj Patil</p>
@@ -101,10 +101,10 @@ export function ScoreCard() {
         <Sparkles className="inline w-3.5 h-3.5 mr-1 -mt-0.5" style={{ color: "var(--site-brand-ink)" }} />
         Asked for a Saturday site visit and confirmed his budget on WhatsApp.
       </p>
-      <p className="mt-3 flex items-center gap-1.5 text-xs font-medium site-muted">
+      <p className="mt-auto pt-4 flex items-center gap-1.5 text-xs font-medium site-muted">
         <Phone className="w-3.5 h-3.5" /> Next step: call before 11 AM Saturday
       </p>
-    </div>
+    </Card>
   );
 }
 
@@ -116,7 +116,7 @@ export function CopilotCard() {
     ["Vikram Rao", "74", "Follow-up overdue"],
   ];
   return (
-    <div className="site-card site-card--raised p-5">
+    <Card glow className="h-full p-5 flex flex-col">
       <div className="flex justify-end">
         <p className="max-w-[85%] rounded-2xl rounded-br-md px-3.5 py-2 text-[13px] text-white" style={{ background: "var(--brand-btn)" }}>
           Who should I call first today?
@@ -128,7 +128,7 @@ export function CopilotCard() {
           <p className="text-[13px] site-ink"><span className="font-semibold">Artha:</span> Start with these three.</p>
           <ul className="mt-2 space-y-1.5">
             {leads.map(([n, s, why]) => (
-              <li key={n} className="site-chip flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px]" style={{ border: "1px solid var(--site-line)" }}>
+              <li key={n} className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px]" style={{ background: "var(--site-chip)", border: "1px solid var(--site-line)" }}>
                 <span className="font-semibold site-ink truncate">{n}</span>
                 <span className="site-muted truncate flex-1">{why}</span>
                 <span className="font-semibold shrink-0" style={{ color: "var(--site-brand-ink)" }}>{s}</span>
@@ -141,7 +141,7 @@ export function CopilotCard() {
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
