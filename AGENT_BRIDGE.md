@@ -103,6 +103,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-24 IST: Home on staging (6024f6b5, 1ca61209): pricing section removed from home; new components/site/FilmSection.jsx (poster, loads on tap, EN/HI, chapter chips, no VideoObject) after Features; How it works = 3 visual step cards. Not live yet.
 - [claude] 2026-10-24 IST: React Bits on staging (fd563b8f): components/site/reactbits/{Grainient,Threads,CardNav} (license notice kept, CardNav uses lucide), components/site/LiveBackground.jsx (tablet/desktop + WebGL2 only, static fallback on phones), PublicNav phone/tablet menu = CardNav (desktop bar unchanged, .public-nav rule in styles.css), Pricing table no longer widens phones. Not live yet.
 - [claude] 2026-10-24 IST: Mobile pass on staging (2af51205): MobileCtaBar no longer rendered (PublicNav), mobile menu scrollable + body lock + closes on route + hides chat launcher (.menu-open), no backdrop-filter on the bar, .site main padding-top 0, phone-only removal of grid masks/glows (blank-tile repaint on Android). Not live yet.
 - [claude] 2026-10-24 IST: Home page device pass on staging (e16c5bb2): PublicNav scrolled bar uses a shadow, no border; ScoreCard/CopilotCard are glow Cards at equal height; tablet/1024 layout fixes in pages/Landing.jsx. Checked 360-1920px light+dark. Not live yet.
