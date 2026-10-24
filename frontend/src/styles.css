@@ -991,3 +991,10 @@ html[data-public-theme="dark"] .site-cta-panel {
 @media (min-width: 1024px) and (max-height: 700px), (min-width: 1024px) and (max-width: 1279px) and (max-height: 820px) {
   .hero-facts { display: none !important; }
 }
+
+/* AI band phone (HeroChat): sized from the screen height on desktop so the
+   whole band fits one screen; fixed comfortable size on phones and tablets. */
+.ai-band { --hc-h: 460px; --hc-w: 280px; }
+@media (min-width: 1024px) {
+  .ai-band { --hc-h: clamp(400px, calc(100svh - 380px), 520px); --hc-w: max(282px, calc(var(--hc-h) * 0.58)); }
+}

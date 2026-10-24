@@ -139,14 +139,14 @@ function WorksWith() {
 
 // ── 3. AI that works the night shift (dark band) ──────────────────────────────
 const AI_POINTS = [
-  { Icon: Bot, title: "WhatsApp AI agent", body: "Replies 24/7 in English, Hinglish, Hindi or Marathi, asks the budget and timeline, sends the brochure and offers a site visit." },
-  { Icon: MessageCircle, title: "AI lead scoring", body: "Reads each buyer's chat and moves the score up or down with a one-line reason, so Hot Today shows who to call first." },
-  { Icon: Sparkles, title: "Artha, your AI copilot", body: "Ask about your pipeline in plain words or by voice, on the web or the Android app, and apply its follow-ups in one tap." },
+  { Icon: Bot, title: "WhatsApp AI agent", body: "Replies 24/7 in four languages and books the site visit." },
+  { Icon: MessageCircle, title: "AI lead scoring", body: "Scores each buyer from the chat, with a one-line reason." },
+  { Icon: Sparkles, title: "Artha, your AI copilot", body: "Ask about your pipeline by text or voice, apply in one tap." },
 ];
 
 function AiBand() {
   return (
-    <Section tone="dark" className="overflow-hidden">
+    <Section tone="dark" className="ai-band overflow-hidden !py-14 lg:!py-[clamp(3rem,7vh,4rem)]">
       <div aria-hidden="true" className="absolute inset-0 pointer-events-none"
         style={{ background: "radial-gradient(45% 50% at 20% 35%, rgba(255,107,0,0.2), transparent 70%), radial-gradient(40% 45% at 90% 85%, rgba(255,140,60,0.1), transparent 70%)" }} />
       {/* Orange threads drift behind the cards; faded out at the top so the heading stays clean. */}
@@ -154,27 +154,30 @@ function AiBand() {
         thickness={0.55} speed={0.45} angle={12} brightness={1.2} opacity={0.55}
         style={{ WebkitMaskImage: "linear-gradient(180deg, transparent 0%, #000 38%, #000 85%, transparent 100%)", maskImage: "linear-gradient(180deg, transparent 0%, #000 38%, #000 85%, transparent 100%)" }} />
       <Container className="relative">
-        <SectionHeader eyebrow="AI that works the night shift" title={<>Your best salesperson<br className="hidden sm:block" /> <span className="site-dim">never sleeps.</span></>}
-          lede="Most enquiries arrive after office hours. Arthaleads answers every one of them, qualifies the buyer and tells your team exactly who to call in the morning. On the Growth plan and above."
-          action={<Link to="/ai-crm" className="site-link text-[15px]">See everything the AI does <ArrowRight className="w-4 h-4" /></Link>} />
-        <div className="grid xl:grid-cols-[minmax(0,340px)_1fr] gap-10 xl:gap-14 items-center">
-          <Reveal className="mx-auto w-full max-w-[360px]">
+        <SectionHeader eyebrow="AI that works the night shift" title={<>Your best salesperson <span className="site-dim">never sleeps.</span></>}
+          lede="Most enquiries arrive after office hours. Arthaleads answers every one and tells your team who to call first. On Growth and above."
+          action={<Link to="/ai-crm" className="site-link text-[15px]">See everything the AI does <ArrowRight className="w-4 h-4" /></Link>}
+          className="!mb-8 lg:!mb-10" />
+        <div className="grid lg:grid-cols-[auto_1fr] gap-8 lg:gap-10 xl:gap-14 items-center">
+          <Reveal className="mx-auto w-full" style={{ maxWidth: "var(--hc-w)" }}>
             <HeroChat />
           </Reveal>
-          <div className="grid gap-6 min-w-0">
-            <div className="grid sm:grid-cols-2 gap-5">
+          <div className="grid gap-4 xl:gap-5 min-w-0">
+            <div className="grid sm:grid-cols-2 gap-4 xl:gap-5">
               <Reveal delay={80} className="h-full"><ScoreCard /></Reveal>
               <Reveal delay={160} className="h-full"><CopilotCard /></Reveal>
             </div>
-            <ul className="grid sm:grid-cols-3 gap-5">
+            <ul className="grid sm:grid-cols-3 gap-4 xl:gap-5">
               {AI_POINTS.map(({ Icon, title, body }, i) => (
                 <Reveal as="li" key={title} delay={i * 90}>
-                  <Card glow className="h-full p-5">
-                    <span className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: "rgba(255,107,0,0.14)", boxShadow: "inset 0 0 0 1px rgba(255,138,61,0.25)" }}>
-                      <Icon className="w-5 h-5" style={{ color: "#ff8a3d" }} aria-hidden="true" />
+                  <Card glow className="h-full p-4 flex gap-3">
+                    <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,107,0,0.14)", boxShadow: "inset 0 0 0 1px rgba(255,138,61,0.25)" }}>
+                      <Icon className="w-[18px] h-[18px]" style={{ color: "#ff8a3d" }} aria-hidden="true" />
                     </span>
-                    <h3 className="font-display text-base font-bold site-ink mb-1.5">{title}</h3>
-                    <p className="text-sm leading-relaxed">{body}</p>
+                    <span className="min-w-0">
+                      <h3 className="font-display text-[15px] font-bold site-ink leading-tight mb-1">{title}</h3>
+                      <p className="text-[13px] leading-snug">{body}</p>
+                    </span>
                   </Card>
                 </Reveal>
               ))}

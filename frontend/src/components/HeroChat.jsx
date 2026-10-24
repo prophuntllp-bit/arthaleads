@@ -88,7 +88,7 @@ export default function HeroChat() {
   const lastAi = msgs.map((m) => m.who).lastIndexOf("ai");
 
   return (
-    <div ref={rootRef} className="relative mx-auto w-full max-w-[318px]">
+    <div ref={rootRef} className="relative mx-auto w-full" style={{ maxWidth: "var(--hc-w, 318px)" }}>
       <style>{`
         @keyframes hc-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
         .hc-in { animation: hc-in 320ms cubic-bezier(.2,.7,.2,1) both; }
@@ -112,7 +112,7 @@ export default function HeroChat() {
         {/* Black bezel */}
         <div className="rounded-[2.95rem] p-[9px] bg-black">
           {/* Screen */}
-          <div className="relative overflow-hidden rounded-[2.4rem] flex flex-col bg-[#efeae2]" style={{ height: 600 }}>
+          <div className="relative overflow-hidden rounded-[2.4rem] flex flex-col bg-[#efeae2]" style={{ height: "var(--hc-h, 600px)" }}>
             {/* Status bar + Dynamic Island */}
             <div className="relative flex items-center justify-between px-7 pt-[14px] pb-[6px] text-[#0b0b0c] text-[14px] font-semibold bg-[#f6f6f6]">
               <span className="tracking-tight">1:06</span>
