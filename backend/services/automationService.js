@@ -751,19 +751,31 @@ const automationService = {
     return { customers, accessToken, refreshToken };
   },
 
-  async storeOAuthResult(sessionId, data) {
+  async storeOAuthResult(sessionId, data, userId = "") {
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
     await OAuthSession.findOneAndUpdate(
       { sessionId },
-      { sessionId, data, expiresAt },
+      { sessionId, data, expiresAt, userId: userId ? String(userId) : "" },
       { upsert: true }
     );
   },
 
-  async getOAuthResult(sessionId) {
-    const entry = await OAuthSession.findOneAndDelete({ sessionId });
+  // Only the person who started the connect gets the result (it holds the
+  // Facebook/Google tokens): the session id travels through a custom-scheme
+  // link another app could catch. Results stored without a person (an error
+  // before the state was read) carry no tokens.
+  async getOAuthResult(sessionId, userId) {
+    const entry = await OAuthSession.findOne({ sessionId });
     if (!entry || entry.expiresAt < new Date()) return null;
-    return entry.data; // one-time use (deleted above)
+    if (entry.userId && entry.userId !== String(userId)) return null;
+    await OAuthSession.deleteOne({ _id: entry._id }); // one-time use
+    return entry.data;
+  },
+
+  // A 60-second ticket the phone app puts in the connect link instead of its
+  // login token, so a token never sits in a URL (server logs, browser history).
+  createPopupTicket(userId) {
+    return jwt.sign({ id: String(userId), type: "popup_ticket" }, process.env.JWT_SECRET, { expiresIn: "60s" });
   },
 };
 

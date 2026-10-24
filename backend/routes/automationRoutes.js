@@ -7,6 +7,7 @@ const { createAutomationSchema, updateAutomationSchema } = require("../validatio
 const Automation = require("../models/Automation");
 const { refreshFacebookTokens } = require("../utils/scheduler");
 
+const automationService = require("../services/automationService");
 const router = express.Router();
 
 // Public OAuth endpoints (Facebook initiates/redirects here - no auth cookie possible)
@@ -29,6 +30,12 @@ router.post("/facebook/delete", (req, res) => {
 });
 
 router.use(protect, authorize("admin", "manager"));
+
+// The phone app's connect link carries this 60-second ticket instead of the
+// person's login token (24 Oct 2026: tokens in URLs reached the request logs).
+router.post("/popup-ticket", (req, res) => {
+  res.json({ ticket: automationService.createPopupTicket(req.user._id) });
+});
 
 // Protected: only authenticated admin/manager can read the OAuth result
 router.get("/facebook/result",                  automationController.getFacebookResult);

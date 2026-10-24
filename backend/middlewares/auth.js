@@ -81,6 +81,8 @@ const protect = async (req, res, next) => {
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // A connect-link ticket only opens the Facebook/Google connect page.
+    if (decoded.type === "popup_ticket") return next(new AppError("Not authenticated. Please log in.", 401));
 
     // Check if user still exists and is active
     // The photo is not needed to authorise a request and used to be a

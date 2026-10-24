@@ -1,4 +1,5 @@
 ﻿// services/authService.js
+const { orgForRole } = require("../utils/publicOrg");
 const crypto = require("crypto");
 const { istRangeStart, istRangeEnd } = require("../utils/datetime");
 const jwt = require("jsonwebtoken");
@@ -376,7 +377,10 @@ const authService = {
     const org = user.orgId
       ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch enablex.webrtc.enabled").lean()
       : null;
-    return { user: { ...user.toJSON(), hasPassword: Boolean(user.password) }, org };
+    // Agents get the slim company record, as from GET /org/me (24 Oct 2026:
+    // /auth/me still sent them bank, PAN, GST and CIN, and the phone app
+    // keeps this response on the device).
+    return { user: { ...user.toJSON(), hasPassword: Boolean(user.password) }, org: org && orgForRole(org, user.role) };
   },
 
   async getAllAgents(orgId) {

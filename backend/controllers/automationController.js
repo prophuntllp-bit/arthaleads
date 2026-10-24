@@ -487,7 +487,6 @@ const automationController = {
     // result and the window just closes with no feedback (see FbCallback.jsx).
     let frontendOrigin = automationService.getFrontendOrigin();
     try {
-      console.log(`[facebookCallback] query params: ${JSON.stringify(req.query)}`);
       const { code, state, error, error_description } = req.query;
 
       // Preserve the native callback target even when the provider returns an
@@ -519,7 +518,7 @@ const automationController = {
       if (pages.length === 0) console.warn("[facebookCallback] WARNING: No pages returned - user may not have approved pages_show_list or has no admin pages");
 
       const sessionId = require("crypto").randomBytes(16).toString("hex");
-      await automationService.storeOAuthResult(sessionId, { type: "success", pages, freshToken });
+      await automationService.storeOAuthResult(sessionId, { type: "success", pages, freshToken }, statePayload.userId);
       return res.redirect(mobile
         ? `arthaleads://facebook-callback?session=${sessionId}`
         : `${frontendOrigin}/fb-callback?session=${sessionId}`);
@@ -535,7 +534,7 @@ const automationController = {
   async getFacebookResult(req, res) {
     const { session } = req.query;
     if (!session) return res.status(400).json({ error: "Missing session" });
-    const result = await automationService.getOAuthResult(session);
+    const result = await automationService.getOAuthResult(session, req.user._id);
     if (!result) return res.status(404).json({ error: "Session not found or expired" });
     return res.json(result);
   },
@@ -608,7 +607,7 @@ const automationController = {
       }
 
       const sessionId = crypto.randomBytes(16).toString("hex");
-      await automationService.storeOAuthResult(sessionId, { type: "success", customers, accessToken, refreshToken });
+      await automationService.storeOAuthResult(sessionId, { type: "success", customers, accessToken, refreshToken }, statePayload.userId);
       return res.redirect(mobile
         ? `arthaleads://google-callback?session=${sessionId}`
         : `${frontendOrigin}/google-callback?session=${sessionId}`);
@@ -624,7 +623,7 @@ const automationController = {
   async getGoogleOAuthResult(req, res) {
     const { session } = req.query;
     if (!session) return res.status(400).json({ error: "Missing session" });
-    const result = await automationService.getOAuthResult(session);
+    const result = await automationService.getOAuthResult(session, req.user._id);
     if (!result) return res.status(404).json({ error: "Session not found or expired" });
     return res.json(result);
   },
