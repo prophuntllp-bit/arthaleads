@@ -956,3 +956,9 @@ html[data-public-theme="dark"] .site-cta-panel {
 }
 /* The chat launcher would cover the mobile menu's links while it is open. */
 .menu-open .mkt-chat-launcher { display: none; }
+/* Phones and tablets use the floating Card Nav, which has its own surface:
+   the full-width bar background only applies on desktop. */
+@media (max-width: 1279px) {
+  .public-nav { background: transparent !important; box-shadow: none !important; pointer-events: none; }
+  .public-nav .card-nav { pointer-events: auto; }
+}

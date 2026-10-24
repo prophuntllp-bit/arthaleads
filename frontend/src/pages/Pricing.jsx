@@ -384,7 +384,7 @@ export default function Pricing() {
           <p className="text-sm text-center mb-6" style={{ color: body }}>
             Prices are per user per month, with a five-user minimum and 18% GST on top. New accounts start with a 14-day free trial of Growth.
           </p>
-          <div className="overflow-x-auto rounded-2xl" style={{ border: `1px solid ${cardBdr}` }}>
+          <div className="overflow-x-auto max-w-full rounded-2xl" style={{ border: `1px solid ${cardBdr}`, width: "100%", maxWidth: "calc(100vw - 2rem)" }}>
             <table className="w-full min-w-[560px] text-sm border-collapse">
               <caption className="sr-only">Arthaleads Starter, Growth and Enterprise plans compared</caption>
               <thead>

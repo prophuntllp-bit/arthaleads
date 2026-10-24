@@ -28,9 +28,17 @@ import { useSEO } from "../utils/useSEO";
 import { CRM_SIGNUP_URL, waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { PLAN_PRICING, formatINR } from "../utils/plan";
 import { PLANS } from "../data/plans";
+import LiveBackground from "../components/site/LiveBackground";
+import { usePublicTheme } from "../context/PublicThemeContext";
 
 const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 const scrollToId = (id) => document.getElementById(id)?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+
+// ── Live backgrounds (React Bits, desktop and tablet only; see LiveBackground) ──
+// Grainient in our orange. The first colour is the page background so the
+// gradient melts into the section; lightMode turns the same ramp into pale tints.
+const GRAIN_COLORS = ["#0a0b10", "#2a0f0a", "#9a3412", "#f97316", "#fed7aa"];
+const GRAIN_COLORS_PANEL = ["#17110d", "#3a1a0c", "#9a3412", "#f97316", "#fed7aa"];
 
 // ── 1. Hero ────────────────────────────────────────────────────────────────────
 const HERO_FACTS = [
@@ -40,11 +48,15 @@ const HERO_FACTS = [
 ];
 
 function Hero() {
+  const { isDark } = usePublicTheme();
   return (
     <Section id="hero" tone="white" className="!pt-[5.5rem] sm:!pt-32 lg:!pt-40 overflow-x-clip">
+      {/* Grain sits on the photo side and fades out before the headline, so text keeps full contrast. */}
+      <LiveBackground kind="grainient" colors={GRAIN_COLORS} lightMode={!isDark} angle={120} flow={0.7} speed={0.6}
+        silk={0.3} grainAmount={isDark ? 0.07 : 0.05} clickSwirl={false} stir={0.6}
+        fallback="radial-gradient(60% 55% at 85% 25%, rgba(255,107,0,0.13), transparent 70%), radial-gradient(45% 40% at 0% 100%, rgba(255,170,0,0.08), transparent 70%)"
+        style={{ WebkitMaskImage: "linear-gradient(100deg, transparent 18%, #000 62%)", maskImage: "linear-gradient(100deg, transparent 18%, #000 62%)", opacity: isDark ? 0.85 : 0.75 }} />
       <div aria-hidden="true" className="site-grid-bg" />
-      <div aria-hidden="true" className="absolute inset-0 pointer-events-none"
-        style={{ background: "radial-gradient(60% 55% at 85% 25%, rgba(255,107,0,0.13), transparent 70%), radial-gradient(45% 40% at 0% 100%, rgba(255,170,0,0.08), transparent 70%)" }} />
       <Container className="relative grid lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-16 items-center">
         <div className="text-center lg:text-left">
           <h1 className="font-display site-ink font-extrabold tracking-[-0.03em]">
@@ -138,9 +150,12 @@ const AI_POINTS = [
 function AiBand() {
   return (
     <Section tone="dark" className="overflow-hidden">
-      <div aria-hidden="true" className="site-grid-bg" />
       <div aria-hidden="true" className="absolute inset-0 pointer-events-none"
         style={{ background: "radial-gradient(45% 50% at 20% 35%, rgba(255,107,0,0.2), transparent 70%), radial-gradient(40% 45% at 90% 85%, rgba(255,140,60,0.1), transparent 70%)" }} />
+      {/* Orange threads drift behind the cards; faded out at the top so the heading stays clean. */}
+      <LiveBackground kind="threads" color="#ff6b00" accentColor="#ffb27a" amplitude={1.3} distance={0.32} lineCount={70}
+        thickness={0.55} speed={0.45} angle={12} brightness={1.2} opacity={0.55}
+        style={{ WebkitMaskImage: "linear-gradient(180deg, transparent 0%, #000 38%, #000 85%, transparent 100%)", maskImage: "linear-gradient(180deg, transparent 0%, #000 38%, #000 85%, transparent 100%)" }} />
       <Container className="relative">
         <SectionHeader eyebrow="AI that works the night shift" title={<>Your best salesperson<br className="hidden sm:block" /> <span className="site-dim">never sleeps.</span></>}
           lede="Most enquiries arrive after office hours. Arthaleads answers every one of them, qualifies the buyer and tells your team exactly who to call in the morning. On the Growth plan and above."
@@ -517,12 +532,15 @@ function Faq() {
 
 // ── 10. Final CTA (dark band with photo) ──────────────────────────────────────
 function FinalCta() {
+  const { isDark } = usePublicTheme();
   return (
     <Section tone="white">
       <Container>
         <Reveal>
           <div className="site-cta-panel relative overflow-hidden rounded-[28px] sm:rounded-[32px] p-5 sm:p-10 lg:p-12 grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-center">
-            <div aria-hidden="true" className="site-grid-bg" />
+            <LiveBackground kind="grainient" colors={GRAIN_COLORS_PANEL} lightMode={!isDark} angle={40} flow={0.6} speed={0.5}
+              silk={0.25} grainAmount={0.06} clickSwirl={false} stir={0.5}
+              style={{ WebkitMaskImage: "radial-gradient(90% 120% at 100% 100%, #000 20%, transparent 75%)", maskImage: "radial-gradient(90% 120% at 100% 100%, #000 20%, transparent 75%)", opacity: isDark ? 0.9 : 0.7 }} />
             <div className="relative">
               <p className="site-eyebrow mb-4">Start today</p>
               <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[30px] sm:text-[38px] lg:text-[40px] xl:text-[44px]" style={{ textWrap: "balance" }}>
