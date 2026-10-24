@@ -39,10 +39,23 @@ export function Container({ className, children, narrow = false }) {
   return <div className={cx("site-container", narrow && "!max-w-[880px]", className)}>{children}</div>;
 }
 
-export function SectionHeader({ eyebrow, title, lede, align = "center", as: H = "h2", className, children }) {
+/**
+ * Eyebrow + H2 + lede. Pass `action` (a link) to lay the header out as a row
+ * with the action on the right, which keeps "see more" links out of a
+ * separate block under the content.
+ */
+export function SectionHeader({ eyebrow, title, lede, align = "center", as: H = "h2", action, className, children }) {
+  if (action) {
+    return (
+      <div className={cx("mb-10 lg:mb-14 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 lg:gap-10", className)}>
+        <SectionHeader eyebrow={eyebrow} title={title} lede={lede} align="left" as={H} className="!mb-0">{children}</SectionHeader>
+        <Reveal className="shrink-0 lg:pb-1.5">{action}</Reveal>
+      </div>
+    );
+  }
   const centered = align === "center";
   return (
-    <Reveal className={cx("mb-12 lg:mb-16", centered ? "mx-auto text-center max-w-3xl" : "max-w-2xl", className)}>
+    <Reveal className={cx("mb-10 lg:mb-14", centered ? "mx-auto text-center max-w-3xl" : "max-w-2xl", className)}>
       {eyebrow && <p className="site-eyebrow mb-4">{eyebrow}</p>}
       <H className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[30px] sm:text-[38px] lg:text-[44px]"
         style={{ textWrap: "balance" }}>

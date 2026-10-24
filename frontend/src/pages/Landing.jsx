@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, Check, Globe, QrCode, FileSpreadsheet, Store, ShieldCheck, Download, Lock, MapPin,
-  MessageCircle, Bot, Sparkles, PlayCircle, Plus, Minus, ChevronRight,
+  MessageCircle, Bot, Sparkles, PlayCircle, Plus, Minus, CircleCheck,
 } from "lucide-react";
 import { SitePage, Section, Container, SectionHeader, Card, SiteButton, SiteImage } from "../components/site/Site";
 import { WhatsAppLogo, FacebookLogo, GoogleLogo } from "../components/site/BrandLogos";
@@ -33,11 +33,18 @@ const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion:
 const scrollToId = (id) => document.getElementById(id)?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
 
 // ── 1. Hero ────────────────────────────────────────────────────────────────────
+const HERO_FACTS = [
+  ["24/7", "AI replies to buyers on WhatsApp"],
+  ["4", "languages: English, Hinglish, Hindi, Marathi"],
+  [formatINR(PLAN_PRICING.starter.monthly), "per user per month, plus GST"],
+];
+
 function Hero() {
   return (
     <Section id="hero" tone="white" className="!pt-[5.5rem] sm:!pt-32 lg:!pt-40 overflow-x-clip">
+      <div aria-hidden="true" className="site-grid-bg" />
       <div aria-hidden="true" className="absolute inset-0 pointer-events-none"
-        style={{ background: "radial-gradient(70% 55% at 85% 20%, rgba(255,107,0,0.10), transparent 70%), radial-gradient(50% 40% at 0% 100%, rgba(255,170,0,0.07), transparent 70%)" }} />
+        style={{ background: "radial-gradient(60% 55% at 85% 25%, rgba(255,107,0,0.13), transparent 70%), radial-gradient(45% 40% at 0% 100%, rgba(255,170,0,0.08), transparent 70%)" }} />
       <Container className="relative grid lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-16 items-center">
         <div className="text-center lg:text-left">
           <h1 className="font-display site-ink font-extrabold tracking-[-0.03em]">
@@ -57,7 +64,21 @@ function Hero() {
               <WhatsAppLogo className="w-[18px] h-[18px]" /> Book a demo on WhatsApp
             </SiteButton>
           </div>
-          <p className="mt-4 sm:mt-5 text-[13px] sm:text-sm site-muted">No credit card needed · From {formatINR(PLAN_PRICING.starter.monthly)} per user per month · Made in Pune</p>
+          <ul className="mt-5 flex flex-wrap justify-center lg:justify-start gap-x-5 gap-y-2 text-[13px] sm:text-sm site-muted">
+            {["14-day free trial", "No credit card", "Made in Pune"].map((t) => (
+              <li key={t} className="inline-flex items-center gap-1.5"><CircleCheck className="w-4 h-4" style={{ color: "#16a34a" }} aria-hidden="true" />{t}</li>
+            ))}
+          </ul>
+          {/* Product facts, not social proof: what the product does and costs. */}
+          <dl className="hidden sm:grid mt-9 grid-cols-3 gap-3 max-w-xl mx-auto lg:mx-0">
+            {HERO_FACTS.map(([v, l]) => (
+              <div key={l} className="site-card px-4 py-3.5 text-left">
+                <dt className="sr-only">{l}</dt>
+                <dd className="font-display text-2xl font-extrabold site-ink leading-none">{v}</dd>
+                <dd className="mt-1.5 text-[12.5px] leading-snug site-muted">{l}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
         <Reveal delay={150} y={28}>
           <HeroVisual />
@@ -69,30 +90,38 @@ function Hero() {
 
 // ── 2. Works with ──────────────────────────────────────────────────────────────
 const SOURCES = [
-  { Logo: FacebookLogo, label: "Facebook & Instagram lead ads" },
-  { Logo: GoogleLogo, label: "Google lead forms", note: "Enterprise" },
+  { Logo: FacebookLogo, label: "Facebook & Instagram ads" },
+  { Logo: GoogleLogo, label: "Google lead forms", note: "On Enterprise" },
   { Logo: WhatsAppLogo, label: "WhatsApp Business" },
-  { Icon: Globe, label: "Website & WordPress forms" },
+  { Icon: Globe, label: "Website forms" },
   { Icon: QrCode, label: "Site QR codes" },
-  { Icon: FileSpreadsheet, label: "Excel & CSV import" },
+  { Icon: FileSpreadsheet, label: "Excel & CSV" },
   { Icon: Store, label: "Walk-ins" },
+  { Icon: MessageCircle, label: "Click-to-WhatsApp ads", note: "On Enterprise" },
 ];
 
 function WorksWith() {
   return (
-    <Section tone="tint" className="!py-12 sm:!py-14" aria-label="Lead sources Arthaleads works with">
+    <Section tone="tint" className="!py-12 sm:!py-16" aria-label="Lead sources Arthaleads works with">
       <Container>
-        <p className="text-center text-sm font-semibold site-ink mb-6">Every lead source in one list</p>
-        <ul className="flex flex-wrap justify-center gap-2.5 sm:gap-3">
-          {SOURCES.map(({ Logo, Icon, label, note }) => (
-            <li key={label} className="site-card flex items-center gap-2.5 px-4 py-2.5 !rounded-full text-sm font-medium site-ink">
-              {Logo ? <Logo className="w-[18px] h-[18px]" /> : <Icon className="w-[18px] h-[18px]" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />}
-              {label}
-              {note && <span className="text-xs site-muted">({note})</span>}
-            </li>
-          ))}
-        </ul>
-        <p className="mt-5 text-center text-sm site-muted">Leads from 99acres, MagicBricks and Housing.com come in by sheet import.</p>
+        <Reveal>
+          <div className="site-card p-6 sm:p-8 grid lg:grid-cols-[240px_1fr] gap-6 lg:gap-10 items-center">
+            <div className="text-center lg:text-left">
+              <p className="font-display text-lg font-bold site-ink">Every lead source, one list</p>
+              <p className="mt-1.5 text-sm site-muted">99acres, MagicBricks and Housing.com leads come in by sheet import.</p>
+            </div>
+            <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+              {SOURCES.map(({ Logo, Icon, label, note }) => (
+                <li key={label} className="site-chip flex items-center gap-2.5 rounded-xl px-3.5 py-3 text-[13px] font-medium site-ink">
+                  <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)" }}>
+                    {Logo ? <Logo className="w-[18px] h-[18px]" /> : <Icon className="w-[18px] h-[18px]" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />}
+                  </span>
+                  <span className="leading-tight">{label}{note && <span className="block text-[11px] font-normal site-muted">{note}</span>}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Reveal>
       </Container>
     </Section>
   );
@@ -108,10 +137,11 @@ const AI_POINTS = [
 function AiBand() {
   return (
     <Section tone="dark" className="overflow-hidden">
+      <div aria-hidden="true" className="site-grid-bg" />
       <div aria-hidden="true" className="absolute inset-0 pointer-events-none"
-        style={{ background: "radial-gradient(45% 50% at 20% 30%, rgba(255,107,0,0.16), transparent 70%), radial-gradient(40% 45% at 90% 80%, rgba(255,140,60,0.08), transparent 70%)" }} />
+        style={{ background: "radial-gradient(45% 50% at 20% 35%, rgba(255,107,0,0.2), transparent 70%), radial-gradient(40% 45% at 90% 85%, rgba(255,140,60,0.1), transparent 70%)" }} />
       <Container className="relative">
-        <SectionHeader eyebrow="AI that works the night shift" title="Your best salesperson never sleeps"
+        <SectionHeader eyebrow="AI that works the night shift" title={<>Your best salesperson <span className="site-dim">never sleeps.</span></>}
           lede="Most enquiries arrive after office hours. Arthaleads answers every one of them, qualifies the buyer and tells your team exactly who to call in the morning." />
         <div className="grid lg:grid-cols-[minmax(0,360px)_1fr] gap-10 lg:gap-14 items-center">
           <Reveal className="mx-auto w-full max-w-[360px]">
@@ -162,23 +192,21 @@ function Features() {
   return (
     <Section id="features" tone="white">
       <Container>
-        <SectionHeader eyebrow="One workspace" title="From first message to booking, in one place"
-          lede="Everything a property sales team uses every day, built for how builders, brokers and channel partners in India actually sell." />
+        <SectionHeader eyebrow="One workspace" title={<>From first message to booking. <span className="site-dim">In one place.</span></>}
+          lede="Everything a property sales team uses every day, built for how builders, brokers and channel partners in India actually sell."
+          action={<Link to="/features" className="site-link text-[15px]">See every feature <ArrowRight className="w-4 h-4" /></Link>} />
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {FEATURE_CARDS.map(({ title, body, Viz, wide }, i) => (
-            <Reveal key={title} delay={(i % 3) * 90} className={wide ? "lg:col-span-2" : ""}>
-              <Card hover className="h-full p-6 flex flex-col">
-                <div className="rounded-2xl p-4 mb-6" style={{ background: "var(--site-bg)", border: "1px solid var(--site-line)" }}>
-                  <Viz />
+            <Reveal key={title} delay={(i % 3) * 90} className={wide ? "min-w-0 lg:col-span-2" : "min-w-0"}>
+              <Card hover className="h-full p-3 flex flex-col">
+                <Viz />
+                <div className="px-3 pt-5 pb-3">
+                  <h3 className="font-display text-lg font-bold site-ink mb-1.5">{title}</h3>
+                  <p className="text-[15px] leading-relaxed">{body}</p>
                 </div>
-                <h3 className="font-display text-lg font-bold site-ink mb-2">{title}</h3>
-                <p className="text-[15px] leading-relaxed">{body}</p>
               </Card>
             </Reveal>
           ))}
-        </div>
-        <div className="mt-10 text-center">
-          <SiteButton to="/features" variant="secondary">See every feature <ChevronRight className="w-4 h-4" /></SiteButton>
         </div>
       </Container>
     </Section>
@@ -199,7 +227,7 @@ function BuiltFor() {
   return (
     <Section tone="tint">
       <Container>
-        <SectionHeader eyebrow="Who it is for" title="Built for the way property is sold in India" />
+        <SectionHeader eyebrow="Who it is for" title={<>Built for the way property <span className="site-dim">is sold in India.</span></>} />
         <div className="grid md:grid-cols-3 gap-6">
           {PERSONAS.map(({ img, title, body, to, link, alt }, i) => (
             <Reveal key={title} delay={i * 100}>
@@ -236,17 +264,19 @@ function HowItWorks() {
     <Section tone="white">
       <Container className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
         <div>
-          <SectionHeader align="left" eyebrow="How it works" title="Live in a day, not a quarter" className="!mb-10" />
-          <ol className="space-y-4">
+          <SectionHeader align="left" eyebrow="How it works" title={<>Live in a day, <span className="site-dim">not a quarter.</span></>} className="!mb-10" />
+          <ol className="relative">
+            {/* The line that joins the three steps. */}
+            <span aria-hidden="true" className="absolute left-5 top-6 bottom-6 w-px" style={{ background: "linear-gradient(var(--site-brand), var(--site-line-strong))" }} />
             {STEPS.map(({ title, body }, i) => (
-              <Reveal as="li" key={title} delay={i * 90}>
-                <Card className="p-5 flex gap-4">
-                  <span className="font-display w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-base font-extrabold text-white" style={{ background: "var(--brand-btn)" }}>{i + 1}</span>
-                  <div>
-                    <h3 className="font-display text-base font-bold site-ink mb-1">{title}</h3>
-                    <p className="text-[15px] leading-relaxed">{body}</p>
-                  </div>
-                </Card>
+              <Reveal as="li" key={title} delay={i * 90} className="relative flex gap-5 pb-8 last:pb-0">
+                <span className="font-display relative z-[1] w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-base font-extrabold text-white"
+                  style={{ background: "var(--brand-btn)", boxShadow: "0 0 0 6px var(--site-bg)" }}>{i + 1}</span>
+                <div className="pt-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] site-muted mb-1">Step {i + 1}</p>
+                  <h3 className="font-display text-lg font-bold site-ink mb-1.5">{title}</h3>
+                  <p className="text-[15px] leading-relaxed">{body}</p>
+                </div>
               </Reveal>
             ))}
           </ol>
@@ -269,7 +299,7 @@ function Pricing() {
   return (
     <Section id="pricing" tone="tint">
       <Container>
-        <SectionHeader eyebrow="Pricing" title="Simple, published prices"
+        <SectionHeader eyebrow="Pricing" title={<>Simple prices. <span className="site-dim">Published.</span></>}
           lede="Per user per month, plus 18% GST. Start with a 14-day free trial, no credit card needed." />
         <div className="grid md:grid-cols-3 gap-6 items-stretch">
           {PLANS.map((plan, i) => {
@@ -335,7 +365,7 @@ function Trust() {
   return (
     <Section tone="white">
       <Container>
-        <SectionHeader eyebrow="Why teams trust it" title="Serious about your leads and your data" />
+        <SectionHeader eyebrow="Why teams trust it" title={<>Serious about your leads <span className="site-dim">and your data.</span></>} />
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {TRUST.map(({ Icon, brand, title, body, to, link }, i) => (
             <Reveal key={title} delay={i * 80}>
@@ -419,22 +449,34 @@ function Faq() {
 // ── 10. Final CTA (dark band with photo) ──────────────────────────────────────
 function FinalCta() {
   return (
-    <Section tone="dark" className="overflow-hidden">
-      <div aria-hidden="true" className="absolute inset-0">
-        <SiteImage name="keys" width={1600} height={900} sizes="100vw" alt="" className="w-full h-full object-cover opacity-40" />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(13,14,21,0.96) 0%, rgba(13,14,21,0.86) 45%, rgba(13,14,21,0.55) 100%)" }} />
-      </div>
-      <Container className="relative">
-        <Reveal className="max-w-2xl">
-          <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[32px] sm:text-[42px] lg:text-[48px]" style={{ textWrap: "balance" }}>
-            Stop losing buyers to whoever replies first
-          </h2>
-          <p className="mt-5 text-lg leading-relaxed">Start your 14-day free trial today, or message us on WhatsApp and see the AI agent answer you.</p>
-          <div className="mt-8 flex flex-col sm:flex-row gap-3">
-            <SiteButton href={CRM_SIGNUP_URL} external size="lg" className="w-full sm:w-auto">Start free trial <ArrowRight className="w-4 h-4" /></SiteButton>
-            <SiteButton href={waLink(WA_MESSAGES.demo)} external variant="secondary" size="lg" className="w-full sm:w-auto">
-              <WhatsAppLogo className="w-[18px] h-[18px]" /> Book a demo
-            </SiteButton>
+    <Section tone="white">
+      <Container>
+        <Reveal>
+          <div className="relative overflow-hidden rounded-[32px] text-white"
+            style={{ background: "linear-gradient(120deg, #c2410c 0%, #e35a05 45%, #ff7a1a 100%)", boxShadow: "0 40px 80px -36px rgba(194,65,12,0.6)" }}>
+            <div aria-hidden="true" className="absolute inset-0 opacity-[0.18]"
+              style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)", backgroundSize: "48px 48px", WebkitMaskImage: "linear-gradient(90deg, #000, transparent 60%)", maskImage: "linear-gradient(90deg, #000, transparent 60%)" }} />
+            <div className="relative grid lg:grid-cols-[1.1fr_1fr] items-stretch">
+              <div className="p-8 sm:p-12 lg:p-14">
+                <h2 className="font-display font-extrabold tracking-[-0.02em] leading-[1.08] text-[30px] sm:text-[40px] lg:text-[46px]" style={{ textWrap: "balance" }}>
+                  Stop losing buyers to whoever replies first.
+                </h2>
+                <p className="mt-5 text-lg leading-relaxed text-white/85 max-w-lg">Start your 14-day free trial today, or message us on WhatsApp and see the AI agent answer you.</p>
+                <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                  <SiteButton href={CRM_SIGNUP_URL} external variant="light" size="lg" className="w-full sm:w-auto">Start free trial <ArrowRight className="w-4 h-4" /></SiteButton>
+                  <SiteButton href={waLink(WA_MESSAGES.demo)} external variant="ghost-light" size="lg" className="w-full sm:w-auto">
+                    <WhatsAppLogo className="w-[18px] h-[18px]" color="#fff" /> Book a demo
+                  </SiteButton>
+                </div>
+                <p className="mt-5 text-sm text-white/75">No credit card needed · 14-day free trial</p>
+              </div>
+              <div className="relative min-h-[240px] lg:min-h-0">
+                <SiteImage name="keys" width={1600} height={900} sizes="(min-width: 1024px) 560px, 100vw" alt="A sales executive handing house keys to a young couple"
+                  className="absolute inset-0 w-full h-full object-cover" />
+                <div aria-hidden="true" className="absolute inset-0 hidden lg:block" style={{ background: "linear-gradient(90deg, #e35a05 0%, rgba(227,90,5,0) 35%)" }} />
+                <div aria-hidden="true" className="absolute inset-0 lg:hidden" style={{ background: "linear-gradient(180deg, #e8600a 0%, rgba(232,96,10,0) 40%)" }} />
+              </div>
+            </div>
           </div>
         </Reveal>
       </Container>
