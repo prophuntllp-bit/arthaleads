@@ -15,12 +15,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, Globe, QrCode, FileSpreadsheet, Store, ShieldCheck, Download, Lock, MapPin,
-  MessageCircle, Bot, Sparkles, PlayCircle, Plus, Minus, CircleCheck, BadgeCheck, ArrowUpRight, Repeat2,
+  MessageCircle, Bot, Sparkles, Phone, Plus, Minus, CircleCheck, BadgeCheck, ArrowUpRight, Repeat2,
 } from "lucide-react";
 import { SitePage, Section, Container, SectionHeader, Card, SiteButton, SiteImage } from "../components/site/Site";
 import { WhatsAppLogo, FacebookLogo, GoogleLogo } from "../components/site/BrandLogos";
 import {
-  FloatCard, HeroVisual, ScoreCard, CopilotCard, CaptureViz, PipelineViz, ProjectViz, VisitViz, TeamViz, BookingViz, FieldVisual,
+  FloatCard, HeroVisual, ScoreCard, CopilotCard, CaptureViz, PipelineViz, ProjectViz, VisitViz, TeamViz, BookingViz,
 } from "../components/site/HomeVisuals";
 import HeroChat from "../components/HeroChat";
 import { Reveal } from "../components/motion/Motion";
@@ -28,6 +28,7 @@ import { useSEO } from "../utils/useSEO";
 import { CRM_SIGNUP_URL, waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { PLAN_PRICING, formatINR } from "../utils/plan";
 import LiveBackground from "../components/site/LiveBackground";
+import FilmSection from "../components/site/FilmSection";
 import { usePublicTheme } from "../context/PublicThemeContext";
 
 const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -237,7 +238,7 @@ const PERSONAS = [
 
 function BuiltFor() {
   return (
-    <Section tone="tint">
+    <Section tone="white">
       <Container>
         <SectionHeader eyebrow="Who it is for" title={<>Built for how property<br className="hidden sm:block" /> <span className="site-dim">is sold in India.</span></>}
           lede="Builders, brokers and channel partners sell differently. Arthaleads fits each of them." />
@@ -266,39 +267,98 @@ function BuiltFor() {
 }
 
 // ── 6. How it works ────────────────────────────────────────────────────────────
+// Three step cards, each with a small picture of that step, joined by a line.
+function StepConnect() {
+  const srcs = [[FacebookLogo, "Facebook ads"], [GoogleLogo, "Google forms"], [WhatsAppLogo, "WhatsApp"], [Globe, "Website"], [FileSpreadsheet, "Excel"]];
+  return (
+    <div className="site-stage h-[200px] p-4 flex items-center gap-3">
+      <ul className="flex-1 min-w-0 space-y-1.5">
+        {srcs.map(([I, l], i) => (
+          <li key={l} className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px] font-medium site-ink" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)" }}>
+            {i < 3 ? <I className="w-3.5 h-3.5 shrink-0" /> : <I className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />}
+            <span className="truncate">{l}</span>
+          </li>
+        ))}
+      </ul>
+      <svg width="34" height="120" viewBox="0 0 34 120" fill="none" aria-hidden="true" className="shrink-0">
+        {[12, 36, 60, 84, 108].map((y) => <path key={y} d={`M0 ${y} C 18 ${y}, 16 60, 34 60`} stroke="var(--site-brand)" strokeOpacity="0.45" strokeWidth="1.5" strokeDasharray="3 3" />)}
+      </svg>
+      <img src="/logo.png" alt="Arthaleads" width="56" height="56" loading="lazy" className="w-14 h-14 rounded-2xl shrink-0" style={{ boxShadow: "0 12px 28px -10px rgba(204,75,0,0.6)" }} />
+    </div>
+  );
+}
+
+function StepReply() {
+  return (
+    <div className="site-stage h-[200px] p-4 flex flex-col justify-center gap-2">
+      <p className="self-start max-w-[85%] rounded-xl rounded-tl-sm px-3 py-2 text-[12px] leading-snug site-ink" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)" }}>
+        Is the 3 BHK in Baner ready to move?
+      </p>
+      <div className="self-end max-w-[88%]">
+        <p className="flex items-center gap-1 justify-end text-[10px] font-semibold mb-1" style={{ color: "var(--site-brand-ink)" }}><Sparkles className="w-3 h-3" aria-hidden="true" /> AI agent · 4 sec</p>
+        <p className="rounded-xl rounded-tr-sm px-3 py-2 text-[12px] leading-snug text-[#111b21]" style={{ background: "#d9fdd3" }}>
+          Yes, possession in March. Would you like to see it this Sunday?
+        </p>
+      </div>
+      <p className="self-center flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold" style={{ background: "rgba(22,163,74,0.12)", color: "#16a34a" }}>
+        <CircleCheck className="w-3.5 h-3.5" aria-hidden="true" /> Visit booked · Sun 11 AM
+      </p>
+    </div>
+  );
+}
+
+function StepClose() {
+  return (
+    <div className="relative h-[200px] overflow-hidden rounded-2xl" style={{ border: "1px solid var(--site-line)" }}>
+      <SiteImage name="field" width={1536} height={1024} sizes="(min-width: 1024px) 380px, 92vw"
+        alt="A sales executive in a hard hat checking her phone outside a residential construction site"
+        className="absolute inset-0 w-full h-full object-cover object-[50%_35%]" />
+      <FloatCard className="left-3 right-3 bottom-3 flex items-center gap-3 !py-2.5">
+        <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "rgba(255,107,0,0.12)" }}>
+          <Phone className="w-4 h-4" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-[12.5px] font-semibold site-ink leading-tight">Call Neha Joshi · score 81</span>
+          <span className="block text-[11px] site-muted leading-tight truncate">Follow-up due 4:00 PM · 3 BHK Baner</span>
+        </span>
+      </FloatCard>
+    </div>
+  );
+}
+
 const STEPS = [
-  { title: "Connect your lead sources", body: "Link Facebook lead ads and your WhatsApp Business number, add your website form, and import existing leads from Excel." },
-  { title: "Let the AI take the first reply", body: "Tell the AI agent about your projects. It answers buyers, asks the right questions and books visits, day and night." },
-  { title: "Your team closes", body: "Agents get every lead with the chat and a score, call from the Android app, and move deals to booking." },
+  { title: "Connect your lead sources", body: "Link Facebook lead ads and your WhatsApp Business number, add your website form, and import existing leads from Excel.", Viz: StepConnect },
+  { title: "Let the AI take the first reply", body: "Tell the AI agent about your projects. It answers buyers, asks the right questions and books visits, day and night.", Viz: StepReply },
+  { title: "Your team closes", body: "Agents get every lead with the chat and a score, call from the Android app, and move deals to booking.", Viz: StepClose },
 ];
 
 function HowItWorks() {
   return (
-    <Section tone="white">
-      <Container className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-        <div>
-          <SectionHeader eyebrow="How it works" title={<>Live in a day,<br className="hidden sm:block" /> <span className="site-dim">not a quarter.</span></>} className="!mb-10" />
-          <ol className="relative">
-            {/* The line that joins the three steps. */}
-            <span aria-hidden="true" className="absolute left-5 top-6 bottom-6 w-px" style={{ background: "linear-gradient(var(--site-brand), var(--site-line-strong))" }} />
-            {STEPS.map(({ title, body }, i) => (
-              <Reveal as="li" key={title} delay={i * 90} className="relative flex gap-5 pb-8 last:pb-0">
-                <span className="font-display relative z-[1] w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-base font-extrabold text-white"
-                  style={{ background: "var(--brand-btn)", boxShadow: "0 0 0 6px var(--site-bg)" }}>{i + 1}</span>
-                <div className="pt-1.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] site-muted mb-1">Step {i + 1}</p>
+    <Section tone="tint">
+      <Container>
+        <SectionHeader eyebrow="How it works" title={<>Live in a day,<br className="hidden sm:block" /> <span className="site-dim">not a quarter.</span></>}
+          lede="No setup project and no consultants. Most teams connect their lead sources and see the AI reply on the same day."
+          action={<Link to="/download-app" className="site-link text-[15px]"><Download className="w-4 h-4" /> Get the Android app</Link>} />
+        <ol className="relative grid md:grid-cols-3 gap-5">
+          {/* The line joining the three numbers (desktop). */}
+          <span aria-hidden="true" className="hidden md:block absolute top-[27px] left-[16%] right-[16%] h-px" style={{ background: "linear-gradient(90deg, var(--site-brand), var(--site-line-strong))" }} />
+          {STEPS.map(({ title, body, Viz }, i) => (
+            <Reveal as="li" key={title} delay={i * 100} className="relative min-w-0">
+              <div className="flex justify-center mb-5">
+                <span className="font-display relative z-[1] w-14 h-14 rounded-full flex items-center justify-center text-xl font-extrabold text-white"
+                  style={{ background: "var(--brand-btn)", boxShadow: "0 0 0 8px var(--site-tint), 0 14px 30px -12px rgba(204,75,0,0.7)" }}>{i + 1}</span>
+              </div>
+              <Card glow className="h-full p-3 flex flex-col">
+                <Viz />
+                <div className="px-3 pt-5 pb-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] site-muted mb-1.5">Step {i + 1}</p>
                   <h3 className="font-display text-lg font-bold site-ink mb-1.5">{title}</h3>
                   <p className="text-[15px] leading-relaxed">{body}</p>
                 </div>
-              </Reveal>
-            ))}
-          </ol>
-          <div className="mt-8 flex flex-wrap gap-2.5 sm:gap-3">
-            <SiteButton to="/product-tour" variant="secondary"><PlayCircle className="w-[18px] h-[18px]" /> Watch the 2-minute film</SiteButton>
-            <SiteButton to="/download-app" variant="secondary"><Download className="w-[18px] h-[18px]" /> Get the Android app</SiteButton>
-          </div>
-        </div>
-        <Reveal delay={120}><FieldVisual /></Reveal>
+              </Card>
+            </Reveal>
+          ))}
+        </ol>
       </Container>
     </Section>
   );
@@ -330,7 +390,7 @@ function TrustIcon({ Icon, green }) {
 
 function Trust() {
   return (
-    <Section tone="tint">
+    <Section tone="white">
       <Container>
         <SectionHeader eyebrow="Why teams trust it" title={<>Serious about your leads<br className="hidden sm:block" /> <span className="site-dim">and your data.</span></>}
           action={<Link to="/security" className="site-link text-[15px]">How we protect data <ArrowRight className="w-4 h-4" /></Link>} />
@@ -443,7 +503,7 @@ const HOME_JSONLD = JSON.stringify({
 function Faq() {
   const [open, setOpen] = useState(0);
   return (
-    <Section id="faq" tone="white">
+    <Section id="faq" tone="tint">
       <Container className="grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16">
         <div className="lg:sticky lg:top-28 self-start">
           <SectionHeader align="left" eyebrow="FAQ" title="Questions people ask first" className="!mb-6"
@@ -481,7 +541,7 @@ function Faq() {
 function FinalCta() {
   const { isDark } = usePublicTheme();
   return (
-    <Section tone="tint">
+    <Section tone="white">
       <Container>
         <Reveal>
           <div className="site-cta-panel relative overflow-hidden rounded-[28px] sm:rounded-[32px] p-5 sm:p-10 lg:p-12 grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-center">
@@ -551,6 +611,7 @@ export default function Landing() {
       <WorksWith />
       <AiBand />
       <Features />
+      <FilmSection />
       <BuiltFor />
       <HowItWorks />
       <Trust />
