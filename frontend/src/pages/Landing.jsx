@@ -154,20 +154,23 @@ function AiBand() {
         thickness={0.55} speed={0.45} angle={12} brightness={1.2} opacity={0.55}
         style={{ WebkitMaskImage: "linear-gradient(180deg, transparent 0%, #000 38%, #000 85%, transparent 100%)", maskImage: "linear-gradient(180deg, transparent 0%, #000 38%, #000 85%, transparent 100%)" }} />
       <Container className="relative">
-        <SectionHeader eyebrow="AI that works the night shift" title={<>Your best salesperson <span className="site-dim">never sleeps.</span></>}
-          lede="Most enquiries arrive after office hours. Arthaleads answers every one and tells your team who to call first. On Growth and above."
-          action={<Link to="/ai-crm" className="site-link text-[15px]">See everything the AI does <ArrowRight className="w-4 h-4" /></Link>}
-          className="!mb-8 lg:!mb-10" />
-        <div className="grid lg:grid-cols-[auto_1fr] gap-8 lg:gap-10 xl:gap-14 items-center">
-          <Reveal className="mx-auto w-full" style={{ maxWidth: "var(--hc-w)" }}>
+        {/* Desktop: heading, text and cards on the left, the phone alone on the right.
+            Phones: heading, then the phone, then the cards (DOM order). */}
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_auto] lg:grid-rows-[auto_1fr] gap-x-10 xl:gap-x-16 gap-y-8">
+          <SectionHeader eyebrow="AI that works the night shift" title={<>Your best salesperson <span className="site-dim">never sleeps.</span></>}
+            lede="Most enquiries arrive after office hours. Arthaleads answers every one and tells your team who to call first. On Growth and above."
+            className="!mb-0 lg:col-start-1 lg:row-start-1">
+            <Link to="/ai-crm" className="site-link text-[15px] mt-4">See everything the AI does <ArrowRight className="w-4 h-4" /></Link>
+          </SectionHeader>
+          <Reveal className="mx-auto w-full lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-center" style={{ maxWidth: "var(--hc-w)" }}>
             <HeroChat />
           </Reveal>
-          <div className="grid gap-4 xl:gap-5 min-w-0">
-            <div className="grid sm:grid-cols-2 gap-4 xl:gap-5">
+          <div className="grid gap-4 min-w-0 lg:col-start-1 lg:row-start-2 lg:self-end">
+            <div className="grid sm:grid-cols-2 gap-4">
               <Reveal delay={80} className="h-full"><ScoreCard /></Reveal>
               <Reveal delay={160} className="h-full"><CopilotCard /></Reveal>
             </div>
-            <ul className="grid sm:grid-cols-3 gap-4 xl:gap-5">
+            <ul className="grid sm:grid-cols-3 gap-4">
               {AI_POINTS.map(({ Icon, title, body }, i) => (
                 <Reveal as="li" key={title} delay={i * 90}>
                   <Card glow className="h-full p-4 flex gap-3">
