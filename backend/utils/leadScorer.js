@@ -29,17 +29,19 @@ const AI_WINDOW_MS = 14 * 86400000;
 const DAY = 86400000;
 
 // The chat's part, while the activity the AI read is under 14 days old. Only
-// reads from 23 Oct 2026 on (v 2) count: earlier ones scored activity.
+// reads from 24 Oct 2026 on (v 3) count: v1 scored activity, v2 still read
+// the ad's pre-filled message and button taps as the customer's intent.
+const AI_VERSION = 3;
 function aiPoints(lead, now = Date.now()) {
   const a = lead.aiScore;
-  if (!a || a.v !== 2 || !a.signalAt) return 0;
+  if (!a || (a.v || 0) < AI_VERSION || !a.signalAt) return 0;
   if (now - new Date(a.signalAt).getTime() > AI_WINDOW_MS) return 0;
   return Math.max(-30, Math.min(30, Number(a.points) || 0));
 }
 const aiAdjust = aiPoints; // older name, kept for callers
 function aiFresh(lead, now = Date.now()) {
   const a = lead.aiScore;
-  return !!(a && a.v === 2 && a.reason && a.signalAt && now - new Date(a.signalAt).getTime() <= AI_WINDOW_MS);
+  return !!(a && (a.v || 0) >= AI_VERSION && a.reason && a.signalAt && now - new Date(a.signalAt).getTime() <= AI_WINDOW_MS);
 }
 
 function timelinePoints(label) {
