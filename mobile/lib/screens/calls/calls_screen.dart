@@ -121,6 +121,8 @@ class _CallsScreenState extends State<CallsScreen> {
         }
       });
     } catch (e) {
+      // The failed page is asked for again on the next scroll, not skipped.
+      if (!reset && _page > 1) _page -= 1;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

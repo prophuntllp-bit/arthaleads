@@ -830,11 +830,15 @@ class _AutomationScreenState extends State<AutomationScreen> {
   }
 
   Future<Map<String, dynamic>> _runOAuth(String provider) async {
-    final token = _api.token;
-    if (token == null) throw Exception('Your session has expired');
+    if (_api.token == null) throw Exception('Your session has expired');
+    // A 60-second ticket goes in the link, never the login token: URLs end up
+    // in server logs and the browser's history (24 Oct 2026).
+    final ticketRes = await _api.dio.post('/automations/popup-ticket');
+    final ticket = '${ticketRes.data['ticket'] ?? ''}';
+    if (ticket.isEmpty) throw Exception('Could not start the connection');
     final callback = await FlutterWebAuth2.authenticate(
       url:
-          '$_serverBase/api/automations/$provider/connect?mobile=1&token=${Uri.encodeQueryComponent(token)}',
+          '$_serverBase/api/automations/$provider/connect?mobile=1&token=${Uri.encodeQueryComponent(ticket)}',
       callbackUrlScheme: 'arthaleads',
     );
     final session = Uri.parse(callback).queryParameters['session'];
@@ -1928,8 +1932,11 @@ class _AutomationScreenState extends State<AutomationScreen> {
               const SizedBox(height: 8),
             ],
           ],
-          const SizedBox(height: 14),
-          const LeadRoutingSection(),
+          // Routing rules are Growth on the server (24 Oct 2026).
+          if (planAllows(context.read<AuthState>(), 'growth')) ...[
+            const SizedBox(height: 14),
+            const LeadRoutingSection(),
+          ],
         ],
       ),
     );

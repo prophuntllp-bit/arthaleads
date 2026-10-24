@@ -30,6 +30,8 @@ class PushService {
   /// listens for changes and jumps to the matching tab, then clears it.
   final ValueNotifier<String?> pendingRoute = ValueNotifier(null);
 
+  bool _listening = false;
+
   /// The whole data block of a tapped notification that names a record
   /// (`conversationId` and/or `leadId`, e.g. "AI assistant could not reply").
   /// Shell opens that chat or lead instead of just switching tabs.
@@ -90,6 +92,11 @@ class PushService {
     }
 
     await _registerToken(await messaging.getToken());
+    // init() runs again after signing out and back in: register the token for
+    // the new session, but add the listeners only once (they doubled, so a
+    // tapped notification opened its chat twice).
+    if (_listening) return;
+    _listening = true;
     messaging.onTokenRefresh.listen(_registerToken);
 
     // Foreground: Android doesn't auto-display FCM notifications while the

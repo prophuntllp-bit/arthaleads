@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
+import '../../core/plan.dart';
 import '../../core/constants.dart';
 import '../../core/deep_link.dart';
 import '../../core/theme.dart';
@@ -94,7 +95,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _waConnected = false;
   Map<String, dynamic>? _attendance;
   bool _requireSelfie = true;
-  bool _refreshing = false;
+  /// The newest load; answers from an older one (a range changed meanwhile)
+  /// are dropped.
+  int _loadSeq = 0;
   bool _analyticsError = false;
   bool _clocking = false;
   dynamic _dateRange = 'last30days';
@@ -211,18 +214,31 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _load({bool background = false}) async {
-    if (_refreshing) return;
+    // A newer load replaces an older one instead of being skipped (24 Oct
+    // 2026: a range picked during a load kept the old numbers).
+    final seq = ++_loadSeq;
     if (_lastLoadedAt != null) _briefRefresh.value++;
-    _refreshing = true;
     // Stale leads, project stats, team attendance and automations are
     // admin/manager only on the server; an agent would just collect 403s.
     final staff = context.read<AuthState>().isAdmin;
+    // Hot Today (AI scoring) and attendance are Growth on the server
+    // (24 Oct 2026); Starter does not ask for them.
+    final growth = _growth;
+    Future<dynamic> growthGet(String path, [Map<String, dynamic>? params]) =>
+        growth ? _tryGet(path, params) : Future.value(null);
     Future<dynamic> staffGet(String path) => staff ? _tryGet(path) : Future.value(null);
     List<Map<String, dynamic>> list(dynamic v) => ((v as List?) ?? []).cast<Map<String, dynamic>>();
     // Each request fills its own part of the screen the moment it answers.
     Future<void> piece(Future<dynamic> request, void Function(dynamic res) apply) =>
         request.then((res) {
-          if (mounted) setState(() => apply(res));
+          if (!mounted || seq != _loadSeq) return;
+          setState(() {
+            try {
+              apply(res);
+            } catch (_) {
+              // An odd answer (a wifi login page, say) must not stop refreshes.
+            }
+          });
         });
     await Future.wait([
       piece(_tryGet('/leads/analytics', dateRangeParams(_dateRange)), (res) {
@@ -235,7 +251,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         _analyticsError = analytics == null;
         _pending.remove('analytics');
       }),
-      piece(_tryGet('/leads/hot', {'limit': 5}), (res) {
+      piece(growthGet('/leads/hot', {'limit': 5}), (res) {
         _hot = list(res?.data['data']);
         _pending.remove('hot');
       }),
@@ -251,19 +267,27 @@ class _DashboardScreenState extends State<DashboardScreen>
       }),
       piece(staffGet('/leads/stale'), (res) => _stale = list(res?.data['data'])),
       piece(staffGet('/projects/stats'), (res) => _projects = list(res?.data['data'])),
-      piece(staffGet('/attendance/team-today'), (res) => _team = list(res?.data['data'])),
+      piece(growth ? staffGet('/attendance/team-today') : Future.value(null), (res) => _team = list(res?.data['data'])),
       piece(staffGet('/automations'), (res) => _automations = list(res?.data['automations'])),
-      piece(_tryGet('/attendance/status'), (res) {
+      piece(growthGet('/attendance/status'), (res) {
         _attendance = (res?.data['data'] as Map?)?.cast<String, dynamic>();
         _requireSelfie = res?.data['requireSelfie'] as bool? ?? _requireSelfie;
         _pending.remove('attendance');
       }),
       piece(_tryGet('/whatsapp/status'), (res) => _waConnected = res?.data['connected'] == true),
     ]);
-    if (!mounted) return;
+    if (!mounted || seq != _loadSeq) return;
     setState(() {
+      // Anything still waiting got an answer it could not read: show the
+      // error state rather than shimmering for ever.
+      if (_pending.contains('analytics')) {
+        _analytics = null;
+        _analyticsError = true;
+      }
+      if (_pending.contains('hot')) _hot = [];
+      if (_pending.contains('due')) _due = [];
+      _pending.clear();
       _goalOverride = null;
-      _refreshing = false;
       _lastLoadedAt = DateTime.now();
     });
     _saveCache();
@@ -639,6 +663,9 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   bool get _agent => context.read<AuthState>().role == 'agent';
 
+  /// Growth and up: Artha, Hot Today, attendance and the advanced reports.
+  bool get _growth => planAllows(context.read<AuthState>(), 'growth');
+
   Widget _homeHeader(BuildContext context, AuthState auth, Map<String, dynamic>? analytics) {
     final t = AppTheme.of(context);
     final bySource = (analytics?['bySource'] as Map?) ?? {};
@@ -732,6 +759,28 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// One line: Artha's insights for this range ("View" opens them).
   Widget _arthaBanner(BuildContext context) => _ArthaBanner(onTap: _openInsights);
 
+  /// Starter: the server leaves out conversion, response-time and agent
+  /// numbers (advanced: false), so say what Growth adds, as the web does.
+  Widget _growthReportsCard(BuildContext context) {
+    final t = AppTheme.of(context);
+    return SoftSurface(
+      radius: 18,
+      padding: const EdgeInsets.all(14),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Conversion reports, response times and agent performance',
+            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: t.text)),
+        const SizedBox(height: 4),
+        Text("Part of the Growth plan: which sources turn into site visits and deals, how fast each lead was answered, and each agent's numbers.",
+            style: TextStyle(fontSize: 12, color: t.textSoft)),
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton(onPressed: () => widget.onNavigate?.call('Plan & Billing'), child: const Text('See plans')),
+        ),
+      ]),
+    );
+  }
+
   /// Today's priorities: the morning brief's counts as three tiles. The
   /// header opens the full brief (who to call first, needs attention) where
   /// the company has it, else Follow-ups.
@@ -801,7 +850,11 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
         const SizedBox(height: 8),
         Row(children: [
-          tile(Icons.local_fire_department_rounded, AppColors.primary, _hot.length, 'Hot leads', 'Need attention', _openHotSheet),
+          if (_growth)
+            tile(Icons.local_fire_department_rounded, AppColors.primary, _hot.length, 'Hot leads', 'Need attention', _openHotSheet)
+          else
+            tile(Icons.fiber_new_rounded, AppColors.primary, ((a?['byStatus'] as Map?)?['New'] as num?)?.toInt() ?? 0, 'New leads',
+                'Not contacted', () => _openLeadsFiltered(status: 'New')),
           const SizedBox(width: 8),
           tile(Icons.alarm_rounded, AppColors.danger, overdue, 'Overdue', 'Follow-ups', () => widget.onNavigate?.call('Follow-ups')),
           const SizedBox(width: 8),
@@ -1149,9 +1202,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// its actions; the header opens the whole list.
   Widget _hotAndUpcoming(BuildContext context, Map<String, dynamic>? a) {
     final upcoming = _upcoming(a);
+    final growth = _growth;
     return IntrinsicHeight(
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Expanded(
+        if (growth) Expanded(
           child: _miniList(
             context,
             icon: Icons.local_fire_department_rounded,
@@ -1171,7 +1225,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ),
         ),
-        const SizedBox(width: 10),
+        if (growth) const SizedBox(width: 10),
         Expanded(
           child: _miniList(
             context,
@@ -2002,8 +2056,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Widget> _homeBody(BuildContext context, AuthState auth, Map<String, dynamic>? a, String? role) => [
         SectionSkeleton(loading: _pending.contains('analytics'), child: _homeHeader(context, auth, a)),
         const SizedBox(height: 12),
-        _arthaBanner(context),
-        const SizedBox(height: 12),
+        if (_growth) ...[
+          _arthaBanner(context),
+          const SizedBox(height: 12),
+        ],
         SectionSkeleton(loading: _pending.any({'analytics', 'hot', 'due'}.contains), child: _prioritiesCard(context, a)),
         if (role == 'agent' && a != null && ((a['allTimeTotal'] as num?)?.toInt() ?? 0) == 0) ...[
           const SizedBox(height: 12),
@@ -2029,8 +2085,10 @@ class _DashboardScreenState extends State<DashboardScreen>
             ]),
           ),
         ],
-        const SizedBox(height: 12),
-        SectionSkeleton(loading: _pending.contains('attendance'), child: _attendanceRow(context)),
+        if (_growth) ...[
+          const SizedBox(height: 12),
+          SectionSkeleton(loading: _pending.contains('attendance'), child: _attendanceRow(context)),
+        ],
         if (_analyticsError) ..._errorBanner(),
         if (a != null) ...[
           const SizedBox(height: 12),
@@ -2116,11 +2174,14 @@ class _DashboardScreenState extends State<DashboardScreen>
           onSelect: (source) => _openLeadsFiltered(source: source),
         ),
         const SizedBox(height: 12),
-        DashSourcePerformance(
-          rows: ((a['sourcePerformance'] as List?) ?? []).cast<Map<String, dynamic>>(),
-          scope: _scope,
-          onSelect: (source) => _openLeadsFiltered(source: source),
-        ),
+        if (a['advanced'] == false)
+          _growthReportsCard(context)
+        else
+          DashSourcePerformance(
+            rows: ((a['sourcePerformance'] as List?) ?? []).cast<Map<String, dynamic>>(),
+            scope: _scope,
+            onSelect: (source) => _openLeadsFiltered(source: source),
+          ),
         const SizedBox(height: 16),
 
         // ── Team: goal (admins), leaderboard and live feed (every role) ──

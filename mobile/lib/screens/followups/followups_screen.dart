@@ -140,6 +140,8 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
         _counts[_section] = _total;
       });
     } catch (e) {
+      // The failed page is asked for again on the next scroll, not skipped.
+      if (!reset && _page > 1) _page -= 1;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(ApiClient.errorMessage(e, 'Failed to load follow-ups')), backgroundColor: AppColors.danger),

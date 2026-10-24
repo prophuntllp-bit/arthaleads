@@ -60,11 +60,13 @@ class _AttendanceCaptureSheetState extends State<AttendanceCaptureSheet>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final controller = _controller;
-    if (controller == null || !controller.value.isInitialized) return;
     if (state == AppLifecycleState.inactive) {
+      if (controller == null || !controller.value.isInitialized) return;
       controller.dispose();
       _controller = null;
-    } else if (state == AppLifecycleState.resumed && _photo == null) {
+    } else if (state == AppLifecycleState.resumed && _photo == null && _controller == null && _camera != null) {
+      // Back from the location prompt or another app: the camera was let go
+      // above, so start it again (24 Oct 2026: it stayed "unavailable").
       _initializeCamera(_camera);
     }
   }

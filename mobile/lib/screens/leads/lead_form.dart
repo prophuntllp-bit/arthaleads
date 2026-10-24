@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
+import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/app_select.dart';
@@ -392,7 +394,9 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
                 ),
               ),
             ],
-            if (!_isProjectLead && widget.agents.isNotEmpty)
+            // Agents can't hand a lead to someone else (the server refuses it
+            // since 24 Oct 2026), so only admins and managers get the picker.
+            if (!_isProjectLead && widget.agents.isNotEmpty && context.read<AuthState>().isAdmin)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: AppSelect<String>(

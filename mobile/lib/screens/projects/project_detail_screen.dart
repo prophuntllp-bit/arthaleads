@@ -8,6 +8,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/plan.dart';
 import '../../core/file_output.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
@@ -446,7 +447,12 @@ class _LeadsTabState extends State<_LeadsTab> {
     super.dispose();
   }
 
+  /// The newest load: an answer to an older search or filter is dropped
+  /// (24 Oct 2026: it was added to the new list).
+  int _loadSeq = 0;
+
   Future<void> _load({bool reset = false}) async {
+    final seq = reset ? ++_loadSeq : _loadSeq;
     if (reset) {
       _page = 1;
       _leads.clear();
@@ -469,6 +475,7 @@ class _LeadsTabState extends State<_LeadsTab> {
             'followUpTo': _dateTo!.toIso8601String(),
         },
       );
+      if (!mounted || seq != _loadSeq) return;
       setState(() {
         _leads.addAll(
           (res.data['leads'] as List? ?? []).cast<Map<String, dynamic>>(),
@@ -477,6 +484,9 @@ class _LeadsTabState extends State<_LeadsTab> {
         _pages = res.data['pages'] as int? ?? 1;
       });
     } catch (e) {
+      if (seq != _loadSeq) return;
+      // The failed page is asked for again on the next scroll, not skipped.
+      if (!reset && _page > 1) _page -= 1;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -994,6 +1004,8 @@ class _LeadsTabState extends State<_LeadsTab> {
                     tooltip: 'Import CSV',
                     onPressed: _importCsv,
                   ),
+                // Bulk export is Growth on the server (24 Oct 2026).
+                if (planAllows(context.watch<AuthState>(), 'growth'))
                 _exporting
                     ? const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 12),

@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/plan.dart';
 import '../../core/file_output.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
@@ -222,6 +223,8 @@ class LeadsScreenState extends State<LeadsScreen> {
         }
       });
     } catch (e) {
+      // The failed page is asked for again on the next scroll, not skipped.
+      if (!reset && _page > 1) _page -= 1;
       if (mounted && seq == _loadSeq) {
         _snack(ApiClient.errorMessage(e, 'Failed to load leads'), error: true);
       }
@@ -700,6 +703,8 @@ class LeadsScreenState extends State<LeadsScreen> {
             value: 'import',
             child: ListTile(leading: Icon(Icons.upload_file_rounded), title: Text('Import CSV or Excel'), dense: true),
           ),
+        // Bulk export is Growth on the server (24 Oct 2026), as on the web.
+        if (planAllows(auth, 'growth')) ...[
         PopupMenuItem(
           value: 'csv',
           enabled: _leads.isNotEmpty,
@@ -718,6 +723,7 @@ class LeadsScreenState extends State<LeadsScreen> {
             dense: true,
           ),
         ),
+        ],
         if (auth.isAdmin)
           const PopupMenuItem(
             value: 'qr',

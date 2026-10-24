@@ -16,6 +16,9 @@ class FileOutput {
   static const _channel = MethodChannel('arthaleads/downloads');
 
   static Future<void> saveAndOpen(BuildContext context, Uint8List bytes, String name, String mime) async {
+    // The name can come from the server or a customer's name: never a path.
+    name = name.replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1F]'), '_').replaceAll('..', '_').trim();
+    if (name.isEmpty) name = 'export';
     final messenger = ScaffoldMessenger.maybeOf(context);
     String where = 'Downloads/ArthaLeads';
     bool opened = false;

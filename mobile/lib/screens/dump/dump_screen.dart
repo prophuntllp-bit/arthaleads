@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/plan.dart';
 import '../../core/file_output.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
@@ -542,7 +543,7 @@ class _DumpScreenState extends State<DumpScreen> {
                   padding: EdgeInsets.symmetric(horizontal: 12),
                   child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
                 )
-              else
+              else if (planAllows(context.read<AuthState>(), 'growth')) // bulk export is Growth
                 PopupMenuButton<String>(
                   tooltip: _selected.isNotEmpty ? 'Export ${_selected.length} selected' : 'Export',
                   enabled: filtered.isNotEmpty,

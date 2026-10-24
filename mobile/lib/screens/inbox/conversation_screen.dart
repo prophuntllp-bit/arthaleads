@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
+import '../../core/plan.dart';
 import '../../core/theme.dart';
 import '../../widgets/day_divider.dart';
 import '../../widgets/motion.dart';
@@ -55,6 +56,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   bool _windowKnown = false;
   Map<String, dynamic>? _credits;
   bool _isMeta = false;
+  bool _polling = false;
 
   @override
   void initState() {
@@ -65,10 +67,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
     _loadConv();
     _loadChannel();
     _load();
-    _poll = Timer.periodic(
-      const Duration(seconds: 3),
-      (_) => _load(silent: true),
-    );
+    // One poll at a time, and none while the app is in the background
+    // (24 Oct 2026: on a slow network they piled up).
+    _poll = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (_polling || WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
+      _polling = true;
+      _load(silent: true).whenComplete(() => _polling = false);
+    });
   }
 
   @override
@@ -138,6 +143,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   Future<void> _openTemplateSheet() async {
+    // Templates are Growth on the server (24 Oct 2026).
+    if (!planAllows(context.read<AuthState>(), 'growth')) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('WhatsApp templates are part of the Growth plan. Customers can still message you, and you can reply within 24 hours.'),
+      ));
+      return;
+    }
     final msg = await showTemplateSendSheet(
       context,
       conversationId: widget.conversationId,
