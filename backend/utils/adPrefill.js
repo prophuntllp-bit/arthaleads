@@ -90,4 +90,16 @@ async function matchAgent(orgId, text, { strict = false } = {}) {
   return { agent: agents[0], adId: mine.adId, sample: mine.sample };
 }
 
-module.exports = { normalize, learn, addManual, matchAgent, similarity, MIN_CLICKS };
+/**
+ * True when the text is (close to) one of the company's ad pre-filled
+ * messages, whichever agent the ad belongs to: words the ad wrote, not the
+ * customer (the AI lead score must not read them as intent).
+ */
+async function isAdText(orgId, text, rows = null) {
+  const norm = normalize(text);
+  if (!orgId || norm.split(" ").length < MIN_WORDS) return false;
+  const list = rows || await AdPrefill.find({ orgId, hidden: { $ne: true }, $or: [{ manual: true }, { count: { $gte: MIN_CLICKS } }] }).select("norm").lean();
+  return list.some((r) => similarity(norm, r.norm) >= NEAR);
+}
+
+module.exports = { normalize, learn, addManual, matchAgent, isAdText, similarity, MIN_CLICKS };

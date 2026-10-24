@@ -41,7 +41,10 @@ const MAX_MESSAGES = 40;
 const INTENT_POINTS = { strong: [20, 30], interested: [10, 20], neutral: [0, 0], not_interested: [-30, -30], vendor: [0, 0] };
 const INTENT_LEVEL = { strong: "hot", interested: "warm", neutral: "cold", not_interested: "cold", vendor: "cold" };
 const MIN_CONFIDENCE = 0.6;
-const VERSION = 2;
+// 3 (24 Oct 2026): the ad's pre-filled message and button taps are labelled
+// and never count as the customer's own words (v2 gave +28 for "Please share
+// price and floor plan details", which the ad wrote).
+const VERSION = 3;
 const SIGNALS = ["visit_wanted", "visit_booked", "budget_confirmed", "loan_ready", "timeline_soon", "decision_maker",
   "asked_price", "asked_documents", "comparing_options", "price_objection", "just_browsing", "not_interested", "wrong_budget", "no_reply_to_questions"];
 const CLOSED = ["Closed Won", "Closed Lost"];
@@ -84,14 +87,28 @@ async function evidence(lead, now = Date.now()) {
   const convs = await WaConversation.find({ orgId: lead.orgId, leadId: lead._id }).select("_id").lean();
   const msgs = convs.length ? await WaMessage.find({
     conversationId: { $in: convs.map((c) => c._id) }, timestamp: { $gte: since },
-  }).sort({ timestamp: -1 }).limit(MAX_MESSAGES).select("direction sender body transcript mediaType timestamp").lean() : [];
+  }).sort({ timestamp: -1 }).limit(MAX_MESSAGES).select("direction sender body transcript mediaType timestamp interactiveOptions").lean() : [];
   msgs.reverse();
+  // Not the customer's own words: a tap on a button the bot had just offered
+  // (the button flow scores those itself), and the ad's pre-filled message.
+  const adPrefill = require("../utils/adPrefill");
+  const AdPrefill = require("../models/AdPrefill");
+  const adRows = await AdPrefill.find({ orgId: lead.orgId, hidden: { $ne: true }, $or: [{ manual: true }, { count: { $gte: adPrefill.MIN_CLICKS } }] }).select("norm").lean();
+  let offered = [];
+  for (const m of msgs) {
+    if (m.direction !== "inbound") { offered = (m.interactiveOptions || []).map((o) => String(o.title || "").trim().toLowerCase()); continue; }
+    if (!m.transcript && offered.includes(String(m.body || "").trim().toLowerCase())) m._kind = "tap";
+    else if (!m.transcript && await adPrefill.isAdText(lead.orgId, m.body, adRows)) m._kind = "ad";
+  }
   const said = (m) => m.transcript ? `(voice note) ${scrub(m.transcript)}` : m.body ? scrub(m.body) : `(${m.mediaType})`;
+  const who = (m) => m.direction === "inbound"
+    ? (m._kind === "tap" ? "Customer (tapped a button)" : m._kind === "ad" ? "Customer (the ad's pre-written message)" : "Customer")
+    : m.sender === "bot" ? "Assistant" : "Sales team";
   const chat = msgs
     .filter((m) => m.body || m.transcript || m.mediaType !== "text")
-    .map((m) => `${m.direction === "inbound" ? "Customer" : m.sender === "bot" ? "Assistant" : "Sales team"}: ${said(m)}`);
+    .map((m) => `${who(m)}: ${said(m)}`);
   // The customer's own words, to check the AI's quotes against.
-  const customerText = msgs.filter((m) => m.direction === "inbound").map((m) => m.transcript || m.body || "").join("\n");
+  const customerText = msgs.filter((m) => m.direction === "inbound" && !m._kind).map((m) => m.transcript || m.body || "").join("\n");
 
   const calls = (lead.activities || [])
     .filter((a) => a.type === "called" && a.createdAt && new Date(a.createdAt) >= since && (a.meta?.summary || a.meta?.intent))
@@ -120,14 +137,14 @@ async function evidence(lead, now = Date.now()) {
 function promptFor(ev) {
   return [
     { role: "system", content:
-`You read the last ${WINDOW_DAYS} days of a real estate lead's WhatsApp chat and calls (India; English, Hindi, Marathi or Hinglish) and judge what the CUSTOMER's own messages show. Messages from the Assistant or Sales team, and the ad's pre-filled first message, are not the customer's intent.
+`You read the last ${WINDOW_DAYS} days of a real estate lead's WhatsApp chat and calls (India; English, Hindi, Marathi or Hinglish) and judge what the CUSTOMER's own messages show. Messages from the Assistant or Sales team are not the customer's intent. Lines marked "(the ad's pre-written message)" were written by the ad, not the customer: they show nothing. Lines marked "(tapped a button)" are answers to the bot's buttons, already counted elsewhere: never use them as evidence or as a reason. Judge only what the customer typed or said themselves; if that is nothing of substance, answer neutral.
 Answer only with JSON: {"intent":"strong"|"interested"|"neutral"|"not_interested"|"vendor","confidence":0 to 1,"evidence":["..."],"reason":"...","signals":[...],"nextStep":"..."}
 - strong: the customer asks for a site visit, price, payment plan, availability, documents or booking, or says they want to buy soon.
 - interested: the customer asks real questions about the project (location, size, amenities, possession) or answers the questions with intent.
 - neutral: only greetings, "ok", "thanks", emojis, an unclear voice note, or nothing of substance. Activity alone is NOT interest.
 - not_interested: says they are not interested, bought elsewhere, wrong number, or the budget is far off.
 - vendor: selling their own services (marketing, ads, leads, software), not buying.
-- evidence: up to 3 short quotes copied exactly from the Customer's messages that show this. Empty for neutral.
+- evidence: up to 3 short quotes copied exactly from lines marked just "Customer:" (their own words). Empty for neutral.
 - reason: one short sentence for a sales agent, in plain English. No dashes as punctuation.
 - signals: only from ${JSON.stringify(SIGNALS)}.
 - nextStep: what the agent should do next, at most 8 words.

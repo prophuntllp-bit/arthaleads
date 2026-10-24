@@ -172,6 +172,25 @@ test("not interested takes 30 off (never beyond 30); a vendor pitch is marked 'N
   assert.ok((await get(vendor)).tags.includes("Not a buyer"));
 });
 
+test("the ad's pre-filled message and button taps are labelled and never count as the customer's own words", async () => {
+  await fresh();
+  const o = await org();
+  await db.collection("adprefills").deleteMany({});
+  await db.collection("adprefills").insertOne({ orgId: o, adId: "ad1", norm: "hi im interested in everglades ii please share price and floor plan details", sample: "x", count: 50 });
+  const id = await lead(o, { lastCustomerSignalAt: new Date(Date.now() - 20 * MIN) });
+  const convId = oid();
+  await db.collection("waconversations").insertOne({ _id: convId, orgId: o, leadId: id, contactPhone: "919811177701", status: "open", lastMessageAt: new Date() });
+  const msg = (direction, body, ago, extra = {}) => db.collection("wamessages").insertOne({ _id: oid(), orgId: o, conversationId: convId, direction, sender: direction === "inbound" ? "customer" : "bot", body, mediaType: "text", status: "sent", timestamp: new Date(Date.now() - ago), ...extra });
+  await msg("inbound", "Hi, I’m interested in Everglades II. Please share price and floor plan details.", 40 * MIN);
+  await msg("outbound", "What is your budget?", 39 * MIN, { interactiveOptions: [{ id: "b1", title: "₹45L – ₹50L" }, { id: "b2", title: "₹50L+" }] });
+  await msg("inbound", "₹45L – ₹50L", 38 * MIN);
+  answer = { intent: "strong", confidence: 0.9, evidence: ["Please share price and floor plan details", "₹45L – ₹50L"], reason: "Asked for the price and gave a budget." };
+  await ai.runSweep();
+  assert.match(prompts[0], /Customer \(the ad's pre-written message\): Hi, I’m interested in Everglades II/);
+  assert.match(prompts[0], /Customer \(tapped a button\): ₹45L – ₹50L/);
+  assert.equal((await get(id)).aiScore.points, 0, "quoting the ad or a tap earns nothing");
+});
+
 test("a garbled AI answer leaves the rule score alone and isn't retried until something new happens", async () => {
   await fresh();
   const o = await org();
