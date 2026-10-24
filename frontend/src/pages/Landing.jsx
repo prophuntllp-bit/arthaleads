@@ -14,7 +14,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowRight, Check, Globe, QrCode, FileSpreadsheet, Store, ShieldCheck, Download, Lock, MapPin,
+  ArrowRight, Globe, QrCode, FileSpreadsheet, Store, ShieldCheck, Download, Lock, MapPin,
   MessageCircle, Bot, Sparkles, PlayCircle, Plus, Minus, CircleCheck, BadgeCheck, ArrowUpRight, Repeat2,
 } from "lucide-react";
 import { SitePage, Section, Container, SectionHeader, Card, SiteButton, SiteImage } from "../components/site/Site";
@@ -27,7 +27,6 @@ import { Reveal } from "../components/motion/Motion";
 import { useSEO } from "../utils/useSEO";
 import { CRM_SIGNUP_URL, waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { PLAN_PRICING, formatINR } from "../utils/plan";
-import { PLANS } from "../data/plans";
 import LiveBackground from "../components/site/LiveBackground";
 import { usePublicTheme } from "../context/PublicThemeContext";
 
@@ -305,64 +304,12 @@ function HowItWorks() {
   );
 }
 
-// ── 7. Pricing ─────────────────────────────────────────────────────────────────
-const planBullets = (plan) => plan.groups.flatMap((g) => g.items).slice(0, 5);
-
-function Pricing() {
-  return (
-    <Section id="pricing" tone="tint">
-      <Container>
-        <SectionHeader eyebrow="Pricing" title={<>Simple prices. <span className="site-dim">Published.</span></>}
-          lede="Per user per month, plus 18% GST. Start with a 14-day free trial, no credit card needed."
-          action={<Link to="/pricing" className="site-link text-[15px]">Compare every feature by plan <ArrowRight className="w-4 h-4" /></Link>} />
-        <div className="grid lg:grid-cols-3 gap-6 items-stretch max-w-xl mx-auto lg:max-w-none">
-          {PLANS.map((plan, i) => {
-            const price = PLAN_PRICING[plan.id];
-            const popular = !!plan.popular;
-            return (
-              <Reveal key={plan.id} delay={i * 90}>
-                <Card glow raised={popular} className="relative h-full p-7 flex flex-col"
-                  style={popular ? { borderColor: "var(--site-brand)", boxShadow: "0 0 0 1px var(--site-brand), var(--site-shadow)" } : undefined}>
-                  {popular && (
-                    <span className="absolute -top-3 left-7 rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ background: "var(--brand-btn)" }}>Most popular</span>
-                  )}
-                  <h3 className="font-display text-xl font-bold site-ink">{plan.name}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed md:min-h-[2.75rem]">{plan.tagline}</p>
-                  <p className="mt-5 flex items-baseline gap-1.5">
-                    {price.custom
-                      ? <span className="font-display text-[34px] leading-none font-extrabold site-ink">Custom</span>
-                      : <><span className="font-display text-[40px] leading-none font-extrabold site-ink">{formatINR(price.monthly)}</span><span className="text-sm site-muted">/ user / month</span></>}
-                  </p>
-                  <p className="mt-2 text-xs site-muted">{plan.userLimit}</p>
-                  <ul className="mt-6 space-y-2.5 flex-1">
-                    {planBullets(plan).map((item) => (
-                      <li key={item} className="flex gap-2.5 text-[14px] leading-snug">
-                        <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#16a34a" }} aria-hidden="true" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-7">
-                    {plan.ctaAction === "signup"
-                      ? <SiteButton href={CRM_SIGNUP_URL} external variant={popular ? "primary" : "secondary"} className="w-full">Start free trial</SiteButton>
-                      : <SiteButton href={waLink(WA_MESSAGES.sales)} external variant="secondary" className="w-full">Talk to sales</SiteButton>}
-                  </div>
-                </Card>
-              </Reveal>
-            );
-          })}
-        </div>
-      </Container>
-    </Section>
-  );
-}
-
 // ── 8. Trust (no testimonials: facts only) ────────────────────────────────────
 // A bento grid: one featured card (the official WhatsApp API, our strongest
 // trust point) and four smaller cards, each with a small illustration.
 function TrustRow({ left, right, tone }) {
   return (
-    <li className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-[12.5px]" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)" }}>
+    <li className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-[12.5px]" style={{ background: "var(--site-chip)", border: "1px solid var(--site-line)" }}>
       <span className="site-ink font-medium truncate">{left}</span>
       <span className="text-[11px] font-semibold rounded-md px-2 py-0.5 shrink-0" style={tone}>{right}</span>
     </li>
@@ -383,7 +330,7 @@ function TrustIcon({ Icon, green }) {
 
 function Trust() {
   return (
-    <Section tone="white">
+    <Section tone="tint">
       <Container>
         <SectionHeader eyebrow="Why teams trust it" title={<>Serious about your leads<br className="hidden sm:block" /> <span className="site-dim">and your data.</span></>}
           action={<Link to="/security" className="site-link text-[15px]">How we protect data <ArrowRight className="w-4 h-4" /></Link>} />
@@ -455,7 +402,7 @@ function Trust() {
                 {[["Sell.Do", "/compare/sell-do-alternative"], ["Leadrat", "/compare/leadrat-alternative"], ["Kylas", "/compare/kylas-alternative"]].map(([n, to]) => (
                   <li key={n}>
                     <Link to={to} className="flex items-center justify-between rounded-xl px-3 py-2 text-[13px] font-medium site-ink transition-colors hover:border-[var(--site-brand)]"
-                      style={{ background: "var(--site-card)", border: "1px solid var(--site-line)" }}>
+                      style={{ background: "var(--site-chip)", border: "1px solid var(--site-line)" }}>
                       Arthaleads vs {n} <ArrowUpRight className="w-4 h-4 site-muted" aria-hidden="true" />
                     </Link>
                   </li>
@@ -496,7 +443,7 @@ const HOME_JSONLD = JSON.stringify({
 function Faq() {
   const [open, setOpen] = useState(0);
   return (
-    <Section id="faq" tone="tint">
+    <Section id="faq" tone="white">
       <Container className="grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16">
         <div className="lg:sticky lg:top-28 self-start">
           <SectionHeader align="left" eyebrow="FAQ" title="Questions people ask first" className="!mb-6"
@@ -534,7 +481,7 @@ function Faq() {
 function FinalCta() {
   const { isDark } = usePublicTheme();
   return (
-    <Section tone="white">
+    <Section tone="tint">
       <Container>
         <Reveal>
           <div className="site-cta-panel relative overflow-hidden rounded-[28px] sm:rounded-[32px] p-5 sm:p-10 lg:p-12 grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-center">
@@ -606,7 +553,6 @@ export default function Landing() {
       <Features />
       <BuiltFor />
       <HowItWorks />
-      <Pricing />
       <Trust />
       <Faq />
       <FinalCta />
