@@ -44,7 +44,10 @@ const MIN_CONFIDENCE = 0.6;
 // 3 (24 Oct 2026): the ad's pre-filled message and button taps are labelled
 // and never count as the customer's own words (v2 gave +28 for "Please share
 // price and floor plan details", which the ad wrote).
-const VERSION = 3;
+// 4 (24 Oct 2026): a tap is recognised however far back its buttons were
+// offered (v3 only looked at the message just before, and "Within 30 Days" /
+// "📍 Location Details" taps still counted as the customer's words).
+const VERSION = 4;
 const SIGNALS = ["visit_wanted", "visit_booked", "budget_confirmed", "loan_ready", "timeline_soon", "decision_maker",
   "asked_price", "asked_documents", "comparing_options", "price_objection", "just_browsing", "not_interested", "wrong_budget", "no_reply_to_questions"];
 const CLOSED = ["Closed Won", "Closed Lost"];
@@ -84,21 +87,32 @@ function eligible(lead, now = Date.now()) {
 // What the AI reads: the lead's fields and the last 14 days only.
 async function evidence(lead, now = Date.now()) {
   const since = new Date(now - WINDOW_DAYS * DAY);
-  const convs = await WaConversation.find({ orgId: lead.orgId, leadId: lead._id }).select("_id").lean();
+  const convs = await WaConversation.find({ orgId: lead.orgId, leadId: lead._id }).select("_id agentId").lean();
   const msgs = convs.length ? await WaMessage.find({
     conversationId: { $in: convs.map((c) => c._id) }, timestamp: { $gte: since },
-  }).sort({ timestamp: -1 }).limit(MAX_MESSAGES).select("direction sender body transcript mediaType timestamp interactiveOptions").lean() : [];
+  }).sort({ timestamp: -1 }).limit(MAX_MESSAGES).select("direction sender body transcript mediaType timestamp interactiveOptions fromButton").lean() : [];
   msgs.reverse();
   // Not the customer's own words: a tap on a button the bot had just offered
   // (the button flow scores those itself), and the ad's pre-filled message.
   const adPrefill = require("../utils/adPrefill");
   const AdPrefill = require("../models/AdPrefill");
   const adRows = await AdPrefill.find({ orgId: lead.orgId, hidden: { $ne: true }, $or: [{ manual: true }, { count: { $gte: adPrefill.MIN_CLICKS } }] }).select("norm").lean();
-  let offered = [];
+  // Every button the bot offered in these chats, and every button of the
+  // agents' flows: a reply that is exactly one of them was a tap (older
+  // messages, from before taps were marked on arrival).
+  const key = (t) => String(t || "").trim().toLowerCase();
+  const buttons = new Set();
+  const WaAgent = require("../models/WaAgent");
+  const agentIds = convs.map((c) => c.agentId).filter(Boolean);
+  for (const a of agentIds.length ? await WaAgent.find({ _id: { $in: agentIds } }).select("ctwaFlow.qualifyingQuestions ctwaFlow.closingButtons").lean() : []) {
+    for (const q of a.ctwaFlow?.qualifyingQuestions || []) for (const o of q.options || []) buttons.add(key(o.label));
+    for (const b of a.ctwaFlow?.closingButtons || []) buttons.add(key(b.label));
+  }
   for (const m of msgs) {
-    if (m.direction !== "inbound") { offered = (m.interactiveOptions || []).map((o) => String(o.title || "").trim().toLowerCase()); continue; }
-    if (!m.transcript && offered.includes(String(m.body || "").trim().toLowerCase())) m._kind = "tap";
-    else if (!m.transcript && await adPrefill.isAdText(lead.orgId, m.body, adRows)) m._kind = "ad";
+    if (m.direction !== "inbound") { for (const o of m.interactiveOptions || []) buttons.add(key(o.title)); continue; }
+    if (m.transcript) continue;
+    if (m.fromButton || buttons.has(key(m.body))) m._kind = "tap";
+    else if (await adPrefill.isAdText(lead.orgId, m.body, adRows)) m._kind = "ad";
   }
   const said = (m) => m.transcript ? `(voice note) ${scrub(m.transcript)}` : m.body ? scrub(m.body) : `(${m.mediaType})`;
   const who = (m) => m.direction === "inbound"

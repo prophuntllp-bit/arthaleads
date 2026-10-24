@@ -1186,6 +1186,7 @@ async function handleInbound(org, parsed) {
   const inboundDoc = await WaMessage.create({
     orgId: org._id, conversationId: conv._id, waMsgId: msgId || undefined,
     direction: "inbound", sender: "customer", senderName: name,
+    ...(interactiveId ? { fromButton: true } : {}),
     body: msgText, mediaType: MEDIA_TYPES.has(msgType) ? msgType : "text",
     waMediaId: mediaId || undefined,
     status: "delivered", timestamp: inboundTimestamp,

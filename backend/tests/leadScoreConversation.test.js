@@ -10,7 +10,7 @@ const base = (extra = {}) => ({
   status: "New", priority: "Medium", source: "WhatsApp", createdAt: new Date(NOW - 10 * MIN),
   activities: [{}, {}, {}, {}, {}, {}], notes: [{}], lastCustomerSignalAt: new Date(NOW - 5 * MIN), ...extra,
 });
-const ai = (intent, points, extra = {}) => ({ aiScore: { v: 3, intent, points, reason: "r", signalAt: new Date(NOW - 5 * MIN), ...extra } });
+const ai = (intent, points, extra = {}) => ({ aiScore: { v: 4, intent, points, reason: "r", signalAt: new Date(NOW - 5 * MIN), ...extra } });
 
 test("a lead that only says 'hi' (new, WhatsApp, just wrote) scores 0", () => {
   assert.equal(scoreLead(base()), 0);

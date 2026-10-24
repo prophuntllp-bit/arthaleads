@@ -12,6 +12,9 @@ const waMessageSchema = new mongoose.Schema({
   mediaUrl:        { type: String, default: "" },
   // A voice note as text (utils/transcribe.js, 23 Oct 2026).
   transcript:      { type: String, default: undefined },
+  // The customer tapped a button or list item (WhatsApp's interactive reply),
+  // rather than typing: the body is the button's title (24 Oct 2026).
+  fromButton:      { type: Boolean, default: undefined },
   // Meta's id for a file the customer sent (fetched into mediaUrl on arrival).
   waMediaId:       { type: String },
   status:          { type: String, enum: ["sent", "delivered", "read", "failed"], default: "sent" },

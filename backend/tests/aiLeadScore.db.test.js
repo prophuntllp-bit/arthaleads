@@ -184,10 +184,15 @@ test("the ad's pre-filled message and button taps are labelled and never count a
   await msg("inbound", "Hi, I’m interested in Everglades II. Please share price and floor plan details.", 40 * MIN);
   await msg("outbound", "What is your budget?", 39 * MIN, { interactiveOptions: [{ id: "b1", title: "₹45L – ₹50L" }, { id: "b2", title: "₹50L+" }] });
   await msg("inbound", "₹45L – ₹50L", 38 * MIN);
-  answer = { intent: "strong", confidence: 0.9, evidence: ["Please share price and floor plan details", "₹45L – ₹50L"], reason: "Asked for the price and gave a budget." };
+  // A tap whose buttons were offered earlier, with another message in between.
+  await msg("outbound", "When are you looking to buy?", 37 * MIN, { interactiveOptions: [{ id: "t0", title: "Within 30 Days" }] });
+  await msg("outbound", "Here is the brochure.", 36 * MIN);
+  await msg("inbound", "Within 30 Days", 35 * MIN);
+  answer = { intent: "strong", confidence: 0.9, evidence: ["Please share price and floor plan details", "₹45L – ₹50L", "Within 30 Days"], reason: "Asked for the price and gave a budget." };
   await ai.runSweep();
   assert.match(prompts[0], /Customer \(the ad's pre-written message\): Hi, I’m interested in Everglades II/);
   assert.match(prompts[0], /Customer \(tapped a button\): ₹45L – ₹50L/);
+  assert.match(prompts[0], /Customer \(tapped a button\): Within 30 Days/, "a tap two messages after its buttons");
   assert.equal((await get(id)).aiScore.points, 0, "quoting the ad or a tap earns nothing");
 });
 
