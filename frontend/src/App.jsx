@@ -867,8 +867,8 @@ export default function App() {
             <Route path="/calls"          element={<Calls />} />
             <Route path="/tasks"         element={<Tasks />} />
             <Route path="/attendance"    element={<Attendance />} />
-            <Route path="/bookings"      element={<RoleGate roles={["admin", "manager"]}><Bookings /></RoleGate>} />
-            <Route path="/invoices"      element={<RoleGate roles={["admin", "manager"]}><Invoices /></RoleGate>} />
+            <Route path="/bookings"      element={<RoleGate roles={["admin", "manager"]}><PlanOnly min="growth" feature="Bookings"><Bookings /></PlanOnly></RoleGate>} />
+            <Route path="/invoices"      element={<RoleGate roles={["admin", "manager"]}><PlanOnly min="growth" feature="Invoices"><Invoices /></PlanOnly></RoleGate>} />
             <Route path="/developers"    element={<RoleGate roles={["admin", "manager"]}><Developers /></RoleGate>} />
             <Route path="/plans"         element={<Plans />} />
 

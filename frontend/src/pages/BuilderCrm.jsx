@@ -9,9 +9,10 @@
 // backend planGate, re-checked 23 Oct 2026). Portal leads (99acres, MagicBricks,
 // Housing.com) are a sheet import, never "automatic". There is no channel
 // partner portal: do not claim one. Google lead forms (Google Ads) are claimed
-// as Enterprise only, per owner 23 Oct 2026. Auto-assignment (to the agent with the fewest open
-// leads) and duplicate flagging work on every plan; routing rules, Hot Today,
-// AI lead scoring, attendance and source/team reports are Growth.
+// as Enterprise only, per owner 23 Oct 2026. Duplicate flagging works on
+// every plan; auto-assignment (round-robin, per pricing and the API since
+// 24 Oct 2026), routing rules, Hot Today, AI lead scoring, attendance and
+// source/team reports are Growth.
 import { Building2, QrCode, Facebook, FileSpreadsheet, Shuffle, MapPin, Camera, BarChart3 } from "lucide-react";
 import SolutionPage, { solutionJsonLd } from "../components/SolutionPage";
 import { useSEO } from "../utils/useSEO";
@@ -25,7 +26,7 @@ const FAQS = [
   ["Do leads from 99acres, MagicBricks and Housing.com come in automatically?",
    "No. Portal leads come in by import: download them from the portal as a sheet and import the CSV or Excel file into the project. Facebook and Instagram lead ads, WhatsApp chats, your website forms and the project's QR code do come in automatically, and Google lead forms do too on Enterprise."],
   ["How do new leads reach my telecallers?",
-   "Every new lead gets an owner the moment it arrives, shared out to the agent with the fewest open leads, and that person's phone gets a push alert. On Growth you can add routing rules, for example by campaign, and Hot Today ranks who to call first using AI lead scoring. Overdue follow-ups turn red, and agents can call and log outcomes from the Android app."],
+   "On Growth, every new lead gets an owner the moment it arrives, shared out to the agent with the fewest open leads, and that person's phone gets a push alert. You can add routing rules, for example by campaign, and Hot Today ranks who to call first using AI lead scoring. On Starter, an admin assigns each new lead. Overdue follow-ups turn red, and agents can call and log outcomes from the Android app."],
   ["Can the WhatsApp AI answer questions about my project?",
    "Yes. On Growth the WhatsApp AI agent answers buyers about your project and its location day and night, sends the brochure, photos and floor plans, asks about budget and timeline, offers a site visit and saves the answers on the lead. Your team can take over any chat."],
   ["How much does a builder CRM cost?",
@@ -75,7 +76,7 @@ export default function BuilderCrm() {
           { icon: QrCode, title: "QR codes for the site office", body: "Every project gets a QR code for hoardings, brochures and expo stalls. A visitor scans it, fills a short form and becomes a lead, tagged by source.", plan: "Starter" },
           { icon: Facebook, title: "Facebook lead ads, automatic", body: "Leads from Facebook and Instagram lead forms arrive in seconds with the campaign attached. No downloading sheets from Ads Manager. Google Ads lead forms are on Enterprise.", plan: "Starter" },
           { icon: FileSpreadsheet, title: "Portal leads by import", body: "Bring in leads from 99acres, MagicBricks and Housing.com by importing the CSV or Excel export. Duplicate phone numbers are skipped.", plan: "Starter" },
-          { icon: Shuffle, title: "Routing to telecallers", body: "Every new lead gets an owner the moment it arrives, shared out evenly across the team, so no lead waits and none is called twice. Growth adds routing rules by campaign.", plan: "Starter" },
+          { icon: Shuffle, title: "Routing to telecallers", body: "Every new lead gets an owner the moment it arrives, shared out evenly across the team, so no lead waits and none is called twice. Add routing rules by campaign on top.", plan: "Growth" },
           { icon: MapPin, title: "Site visit tracking", body: "Site Visit is a stage in the pipeline, so visits are counted per project and per agent instead of being remembered at the weekly meeting.", plan: "Starter" },
           { icon: Camera, title: "Selfie attendance", body: "Site and field staff clock in from their phone with a selfie and location. Admins see who is in today and export attendance reports.", plan: "Growth" },
           { icon: BarChart3, title: "Project-wise reports", body: "Conversion by project, leads by source, team performance and stale-lead alerts, so the sales head sees every project on one screen.", plan: "Growth" },

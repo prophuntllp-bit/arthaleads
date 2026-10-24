@@ -105,7 +105,8 @@ router.patch("/:id", async (req, res) => {
 // DELETE /api/routing-rules/:id
 router.delete("/:id", async (req, res) => {
   try {
-    await RoutingRule.findOneAndDelete({ _id: req.params.id, orgId: req.orgId });
+    const gone = await RoutingRule.findOneAndDelete({ _id: req.params.id, orgId: req.orgId });
+    if (!gone) return res.status(404).json({ success: false, message: "Routing rule not found" });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

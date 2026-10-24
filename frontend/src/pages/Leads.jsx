@@ -18,6 +18,7 @@ import QrModal from "../components/QrModal";
 import { useLeads } from "../hooks/useLeads";
 import { useColumnResize, RTh } from "../hooks/useColumnResize";
 import api from "../services/api";
+import { canAccess } from "../utils/plan";
 import fetchLeadToOpen from "../utils/fetchLeadToOpen";
 import toast from "react-hot-toast";
 import { fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS, DATE_RANGE_OPTIONS } from "../utils/constants";
@@ -287,7 +288,7 @@ function pagePath(url) {
 
 export default function Leads() {
   useEffect(() => { document.title = "Lead Management - Arthaleads CRM"; }, []);
-  const { user } = useAuth();
+  const { user, org } = useAuth();
   const isAdmin = user?.role && user.role !== "agent";
   const location = useLocation();
   const navigate = useNavigate();
@@ -1175,8 +1176,8 @@ export default function Leads() {
               <Upload className="h-3.5 w-3.5 shrink-0" />
               <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
             </label>
-            {/* Export — compact icon button */}
-            <div ref={exportMenuRef} data-tour="export-btn">
+            {/* Export — compact icon button. Bulk export is Growth (pricing, API). */}
+            {(user?.role === "super_admin" || canAccess(org, "growth")) && <div ref={exportMenuRef} data-tour="export-btn">
               <button
                 ref={exportBtnRef}
                 className="inline-flex items-center justify-center h-8 w-8 rounded-full transition-colors hover:opacity-80"
@@ -1190,7 +1191,7 @@ export default function Leads() {
               >
                 <Download className="h-3.5 w-3.5 shrink-0" />
               </button>
-            </div>
+            </div>}
             {/* QR Code */}
             <button
               className="inline-flex items-center justify-center h-8 w-8 rounded-full transition-colors hover:opacity-80"

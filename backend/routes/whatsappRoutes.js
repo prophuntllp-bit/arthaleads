@@ -1,4 +1,5 @@
 const express = require("express");
+const { shouldAutoAssign } = require("../utils/autoAssign");
 const axios   = require("axios");
 const mongoose = require("mongoose");
 const router  = express.Router();
@@ -469,7 +470,7 @@ async function autoCaptureWhatsAppLead(org, phone, name, campaignRef) {
   let assignee = null;
   if (ruleMatch?.assignTo) {
     assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
-  } else if (org.autoAssign !== false) {
+  } else if (shouldAutoAssign(org)) {
     try { assignee = await getNextAssignee(org._id); } catch { /* no active agents */ }
   }
   const project = routedProject(ruleMatch);
@@ -773,6 +774,8 @@ function startVistrowWhatsAppSweep({ intervalMs = 15 * 1000 } = {}) {
 // a conversation that already has someone on it.
 async function autoAssignConversation(org, conversation) {
   if (!org.whatsapp?.autoAssignConversations || conversation.assignedTo) return;
+  // Round-robin is a Growth feature (pricing), chats included.
+  if (levelOf(org.plan) < levelOf("growth")) return;
   try {
     const assignee = await getNextAssignee(org._id);
     await WaConversation.findByIdAndUpdate(conversation._id, {

@@ -6,6 +6,7 @@ import { Eye, EyeOff, KeyRound, ShieldCheck, UserRound, Shuffle,
          Building2, FileText, AlertCircle, CheckCircle2, Upload, X, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
+import { canAccess } from "../utils/plan";
 import DeleteAccountSection from "../components/DeleteAccountSection";
 import CustomSelect from "../components/CustomSelect";
 
@@ -750,12 +751,18 @@ export default function Settings() {
                     Automatically assign new leads to agents in round-robin rotation (fewest leads first).
                     Disable to assign all leads manually.
                   </p>
-                  <p className="text-xs mt-2 font-medium" style={{ color: autoAssign ? "var(--app-primary)" : "var(--app-text-soft)" }}>
-                    {autoAssign ? "✅ Enabled — leads auto-assign on creation" : "⏸ Disabled — leads are unassigned until set manually"}
-                  </p>
+                  {canAccess(org, "growth") ? (
+                    <p className="text-xs mt-2 font-medium" style={{ color: autoAssign ? "var(--app-primary)" : "var(--app-text-soft)" }}>
+                      {autoAssign ? "✅ Enabled — leads auto-assign on creation" : "⏸ Disabled — leads are unassigned until set manually"}
+                    </p>
+                  ) : (
+                    <p className="text-xs mt-2 font-medium text-app-soft">
+                      Part of the Growth plan. On your plan, new leads stay unassigned until you assign them.
+                    </p>
+                  )}
                 </div>
               </div>
-              <button
+              {canAccess(org, "growth") && <button
                 onClick={handleAutoAssignToggle}
                 disabled={togglingAA}
                 className="shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50"
@@ -763,7 +770,7 @@ export default function Settings() {
               >
                 <span className="inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-200"
                   style={{ transform: autoAssign ? "translateX(22px)" : "translateX(4px)" }} />
-              </button>
+              </button>}
             </div>
           </section>
 

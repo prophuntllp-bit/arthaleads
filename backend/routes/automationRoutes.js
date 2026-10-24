@@ -61,7 +61,7 @@ router.delete("/facebook/:id/form-labels/:formId", automationController.removeFo
 
 // Custom and Vistrow Voice connections are Enterprise. The platform is read from
 // the request on create and from the stored connection on update.
-const ENTERPRISE_PLATFORMS = ["Custom", "Vistrow Voice"];
+const ENTERPRISE_PLATFORMS = ["Custom", "Vistrow Voice", "Google"];
 const enterpriseOnlyPlatform = (platformOf) => async (req, res, next) => {
   try {
     const platform = await platformOf(req);

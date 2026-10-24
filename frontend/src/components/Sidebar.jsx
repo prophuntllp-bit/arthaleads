@@ -44,8 +44,8 @@ const navItems = [
     label: "Bookings & Invoices", icon: Receipt, hint: "Bookings, invoices and developer partners",
     roles: ["admin", "manager", "super_admin"],
     children: [
-      { to: "/bookings",   label: "Bookings",   icon: BookMarked, hint: "Units your clients have booked" },
-      { to: "/invoices",   label: "Invoices",   icon: FileCheck , hint: "Invoices raised for completed bookings" },
+      { to: "/bookings",   label: "Bookings",   icon: BookMarked, minPlan: "growth", hint: "Units your clients have booked" },
+      { to: "/invoices",   label: "Invoices",   icon: FileCheck , minPlan: "growth", hint: "Invoices raised for completed bookings" },
       { to: "/developers", label: "Developers", icon: Building2 , hint: "Developer partners and the projects you sell for them" },
     ],
   },
@@ -608,7 +608,9 @@ export default function Sidebar() {
               return <div key={`divider-${idx}`} className="mx-3 my-2 h-px" style={{ background: "var(--app-border)" }} />;
             }
             if (item.children) {
-              const filteredChildren = item.children.filter(c => !c.roles || c.roles.includes(user?.role));
+              // Children on a higher plan are left out (the API refuses them anyway).
+              const filteredChildren = item.children.filter(c => (!c.roles || c.roles.includes(user?.role))
+                && (!c.minPlan || canAccess(org, c.minPlan) || user?.role === "super_admin"));
               const isGroupActive = filteredChildren.some(
                 c => location.pathname === new URL(c.to, window.location.origin).pathname ||
                      location.pathname.startsWith(new URL(c.to, window.location.origin).pathname + "/")
@@ -1086,7 +1088,8 @@ export default function Sidebar() {
 
   // Pages offered in the command menu, with their one-line hints.
   const cmdPages = filtered.filter((n) => !n.divider).flatMap((n) => n.children
-    ? n.children.filter((c) => (!c.roles || c.roles.includes(user?.role)) && !c.to.includes("?"))
+    ? n.children.filter((c) => (!c.roles || c.roles.includes(user?.role)) && !c.to.includes("?")
+        && (!c.minPlan || canAccess(org, c.minPlan) || user?.role === "super_admin"))
         .map((c) => ({ to: c.to, label: c.label, icon: c.icon, hint: c.hint, parent: n.label }))
     : [{ to: n.to, label: n.label, icon: n.icon, hint: n.hint }]);
 

@@ -683,7 +683,8 @@ router.get("/lead/:leadId", async (req, res, next) => {
 });
 
 // POST /api/calls/lead/:leadId/summary — aggregate AI analysis of all calls for a lead
-router.post("/lead/:leadId/summary", async (req, res, next) => {
+// AI call intelligence is Enterprise (see the transcript gate further down).
+router.post("/lead/:leadId/summary", require("../middlewares/planGate").planGate("enterprise"), async (req, res, next) => {
   try {
     if (!process.env.OPENAI_API_KEY) {
       return res.status(503).json({ success: false, message: "OpenAI not configured." });
@@ -1163,7 +1164,7 @@ router.patch("/:leadId/:activityId/notes", async (req, res, next) => {
 });
 
 // POST /api/calls/:leadId/:activityId/summarize — on-demand AI analysis
-router.post("/:leadId/:activityId/summarize", async (req, res, next) => {
+router.post("/:leadId/:activityId/summarize", require("../middlewares/planGate").planGate("enterprise"), async (req, res, next) => {
   try {
     const { doc: lead, Model } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId, { user: req.user });
     if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });

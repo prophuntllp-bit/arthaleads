@@ -1,4 +1,5 @@
 const Organization = require("../models/Organization");
+const { shouldAutoAssign } = require("../utils/autoAssign");
 const Project = require("../models/Project");
 const Lead = require("../models/Lead");
 const { getNextAssignee } = require("../utils/assignLead");
@@ -79,7 +80,7 @@ async function submitLead(req, res, next) {
     const budget = Number.isFinite(budgetNum) && budgetNum > 0 ? Math.min(budgetNum, 1e11) : 0;
     const propertyType = OPTS.PROPERTY_TYPE.includes(body.propertyType) ? body.propertyType : undefined;
 
-    const r = await resolveToken(req.params.token, "name isActive autoAssign");
+    const r = await resolveToken(req.params.token, "name isActive autoAssign plan");
     if (r.status) return res.status(r.status).json({ success: false, message: r.message });
     const { org, project } = r;
     const forWhat = project ? ` for ${project.name}` : "";
@@ -111,7 +112,7 @@ async function submitLead(req, res, next) {
 
     let assignedTo = null;
     let assignedToName = "";
-    if (org.autoAssign !== false) {
+    if (shouldAutoAssign(org)) {
       try {
         const assignee = await getNextAssignee(org._id);
         assignedTo = assignee._id;

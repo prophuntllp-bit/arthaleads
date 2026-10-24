@@ -34,4 +34,28 @@ function publicOrg(org) {
   return o;
 }
 
-module.exports = { publicOrg, SECRET_PATHS };
+// What an agent gets: no bank, tax or company registration details (those
+// are for invoices and billing, which agents can't use), no record of who
+// signed the company up from where, no approval/deletion bookkeeping, no
+// referral code, and not the WhatsApp assistant's instructions.
+// 24 Oct 2026 sweep: every agent could read the bank account and PAN.
+const ADMIN_ONLY_PATHS = [
+  ["gstNo"], ["pan"], ["cin"], ["bankAccountName"], ["bankAccountNo"], ["bankIfsc"], ["bankName"], ["bankBranch"],
+  ["signupIp"], ["signupUserAgent"], ["approvedBy"], ["rejectedReason"],
+  ["deletionScheduledAt"], ["deletionRequestedBy"], ["deletionRequestedAt"], ["referralCode"],
+  ["whatsapp", "botSystemPrompt"], ["whatsapp", "botGroundRules"], ["whatsapp", "botBusinessContext"],
+];
+
+/** publicOrg(), slimmer for an agent. */
+function orgForRole(org, role) {
+  const o = publicOrg(org);
+  if (!o || role !== "agent") return o;
+  for (const path of ADMIN_ONLY_PATHS) {
+    let parent = o;
+    for (let i = 0; i < path.length - 1 && parent; i++) parent = parent[path[i]];
+    if (parent) delete parent[path[path.length - 1]];
+  }
+  return o;
+}
+
+module.exports = { publicOrg, orgForRole, SECRET_PATHS, ADMIN_ONLY_PATHS };

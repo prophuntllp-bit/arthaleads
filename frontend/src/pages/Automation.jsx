@@ -2091,11 +2091,19 @@ export default function Automation() {
       />
 
       {/* Campaign Routing Rules */}
-      <div className="grid grid-cols-1 items-start gap-4 min-[1500px]:grid-cols-2">
-        <LeadRoutingSection />
-        {/* Meta Conversions API */}
-        <MetaConversionsSection />
-      </div>
+      {/* Routing rules and the Meta Conversions API are Growth (pricing, API). */}
+      {(authUser?.role === "super_admin" || canAccess(org, "growth")) ? (
+        <div className="grid grid-cols-1 items-start gap-4 min-[1500px]:grid-cols-2">
+          <LeadRoutingSection />
+          {/* Meta Conversions API */}
+          <MetaConversionsSection />
+        </div>
+      ) : (
+        <section className="card p-5">
+          <p className="text-sm font-bold text-app">Campaign routing rules and Meta Conversions API</p>
+          <p className="text-xs text-app-soft mt-1">Part of the Growth plan: send each campaign's leads to the right person or project automatically, and report results back to Meta.</p>
+        </section>
+      )}
 
     </div>
   );

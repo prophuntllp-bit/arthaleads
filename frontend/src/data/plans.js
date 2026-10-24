@@ -61,6 +61,10 @@ export const PLANS = [
         "Auto round-robin lead assignment",
         "Bulk lead export",
         "Campaign routing rules",
+        "AI lead scoring & Hot Today",
+        "Artha AI assistant",
+        "Bookings & invoices",
+        "Meta Conversions API",
       ] },
       { label: "Team", items: [
         "Attendance tracking",

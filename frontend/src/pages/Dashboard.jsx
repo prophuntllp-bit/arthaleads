@@ -38,6 +38,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { PhoneActions } from "../components/UI";
 import api from "../services/api";
+import { canAccess } from "../utils/plan";
 import { fmtDate } from "../utils/constants";
 import DateRangePicker from "../components/DateRangePicker";
 import OnboardingChecklist from "../components/OnboardingChecklist";
@@ -476,7 +477,8 @@ function describeRange(range) {
 
 export default function Dashboard() {
   useEffect(() => { document.title = "Dashboard - Arthaleads CRM"; }, []);
-  const { user } = useAuth();
+  const { user, org } = useAuth();
+  const hasGrowth = user?.role === "super_admin" || canAccess(org, "growth");
   useEffect(() => { prefetchBrief(user?._id || user?.id || "").catch(() => {}); }, []); // eslint-disable-line react-hooks/exhaustive-deps -- in parallel with the other cards
   const [greeting, setGreeting] = useState(getGreeting());
 
@@ -536,9 +538,11 @@ export default function Dashboard() {
         .catch(() => setPrefetchedFollowups([]));
     }
     else setPrefetchedFollowups([]);
-    api.get("/leads/hot", { params: { limit: 4 } })
+    // Hot Today (AI lead scoring) is Growth: Starter doesn't ask for it.
+    if (hasGrowth) api.get("/leads/hot", { params: { limit: 4 } })
       .then((r) => setPrefetchedHot(r.data.data || []))
       .catch(() => setPrefetchedHot([]));
+    else setPrefetchedHot([]);
   }, [dateRange, refreshKey]);
 
   useEffect(() => {
@@ -693,7 +697,7 @@ export default function Dashboard() {
             Mobile (<640px): stacked 1 col. Tablet/desktop: side by side. */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
           <FollowUpDuePanel user={user} navigate={navigate} prefetchedLeads={prefetchedFollowups} />
-          <HotLeadsWidget navigate={navigate} limit={4} prefetchedLeads={prefetchedHot} />
+          {hasGrowth && <HotLeadsWidget navigate={navigate} limit={4} prefetchedLeads={prefetchedHot} />}
         </div>
         <UpcomingSchedule items={data?.upcomingItems || []} navigate={navigate} />
       </div>
@@ -740,8 +744,18 @@ export default function Dashboard() {
               onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetSource: source } })} />
           </div>
         </div>
-        <SourcePerformance rows={data?.sourcePerformance || []} scope={describeRange(dateRange)}
-          onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetSource: source } })} />
+        {data?.advanced === false ? (
+          <section className="card p-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-app">Conversion reports, response times and agent performance</p>
+              <p className="text-xs text-app-soft mt-0.5">Part of the Growth plan: which sources turn into site visits and deals, how fast each lead was answered, and each agent's numbers.</p>
+            </div>
+            <button type="button" onClick={() => navigate("/plans")} className="btn-primary rounded-full px-4 py-2 text-xs font-semibold">See plans</button>
+          </section>
+        ) : (
+          <SourcePerformance rows={data?.sourcePerformance || []} scope={describeRange(dateRange)}
+            onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetSource: source } })} />
+        )}
       </div>
 
       {/* ── Zone 6: Team ─────────────────────────────────────────────── */}
