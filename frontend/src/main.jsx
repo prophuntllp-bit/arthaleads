@@ -75,6 +75,11 @@ import "@fontsource/manrope/600.css";
 import "@fontsource/manrope/700.css";
 import "@fontsource/manrope/800.css";
 import "./styles.css";
+// React Bits styles load with the main stylesheet, not with the lazy page
+// chunks: otherwise the prerendered menu shows unstyled until the JS arrives.
+import "./components/site/reactbits/CardNav.css";
+import "./components/site/reactbits/Grainient.css";
+import "./components/site/reactbits/Threads.css";
 import { isAppHost, isMarketingHost } from "./utils/hosts";
 
 // Google sign-in is only used on /login and /signup, which live on

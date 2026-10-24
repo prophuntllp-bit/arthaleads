@@ -3,7 +3,7 @@
 // the component itself is not redistributed or sold. Local changes are
 // marked "Arthaleads:".
 import { useEffect, useRef } from 'react';
-import './Grainient.css';
+// Arthaleads: Grainient.css is imported in main.jsx.
 
 const MAX_COLORS = 8;
 const MAX_STIRS = 24;

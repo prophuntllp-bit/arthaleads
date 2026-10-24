@@ -5,7 +5,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 // Arthaleads: lucide instead of Hugeicons (already a dependency).
 import { ArrowUpRight } from 'lucide-react';
-import './CardNav.css';
+// Arthaleads: CardNav.css is imported once in main.jsx (must be in the first stylesheet).
 
 const THEMES = {
   dark: {

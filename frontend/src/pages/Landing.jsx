@@ -103,37 +103,34 @@ function Hero() {
 
 // ── 2. Works with ──────────────────────────────────────────────────────────────
 const SOURCES = [
-  { Logo: FacebookLogo, label: "Facebook & Instagram ads" },
-  { Logo: GoogleLogo, label: "Google lead forms", note: "On Enterprise" },
-  { Logo: WhatsAppLogo, label: "WhatsApp Business" },
+  { Logo: FacebookLogo, label: "Facebook & Instagram" },
+  { Logo: GoogleLogo, label: "Google forms", note: "Enterprise" },
+  { Logo: WhatsAppLogo, label: "WhatsApp" },
   { Icon: Globe, label: "Website forms" },
-  { Icon: QrCode, label: "Site QR codes" },
+  { Icon: QrCode, label: "QR codes" },
   { Icon: FileSpreadsheet, label: "Excel & CSV" },
   { Icon: Store, label: "Walk-ins" },
-  { Icon: MessageCircle, label: "Click-to-WhatsApp ads", note: "On Enterprise" },
+  { Icon: MessageCircle, label: "Click-to-WhatsApp", note: "Enterprise" },
 ];
 
 function WorksWith() {
   return (
-    <Section tone="tint" className="!py-12 sm:!py-16" aria-label="Lead sources Arthaleads works with">
-      <Container>
-        <Reveal>
-          <div className="site-card p-6 sm:p-8 grid lg:grid-cols-[240px_1fr] gap-6 lg:gap-10 items-center">
-            <div className="text-center lg:text-left">
-              <p className="font-display text-lg font-bold site-ink">Every lead source, one list</p>
-              <p className="mt-1.5 text-sm site-muted">99acres, MagicBricks and Housing.com leads come in by sheet import.</p>
-            </div>
-            <ul className="flex flex-wrap justify-center gap-2 sm:grid sm:grid-cols-3 lg:grid-cols-4 sm:gap-2.5">
-              {SOURCES.map(({ Logo, Icon, label, note }) => (
-                <li key={label} className="site-chip flex items-center gap-2 sm:gap-2.5 rounded-full sm:rounded-xl pl-1.5 pr-3.5 py-1.5 sm:px-3.5 sm:py-3 text-[13px] font-medium site-ink">
-                  <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full sm:rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)" }}>
-                    {Logo ? <Logo className="w-[18px] h-[18px]" /> : <Icon className="w-[18px] h-[18px]" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />}
-                  </span>
-                  <span className="leading-tight">{label}{note && <span className="sm:block text-[11px] font-normal site-muted"><span className="sm:hidden"> · </span>{note}</span>}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+    <Section tone="tint" className="!py-8 sm:!py-10" aria-label="Lead sources Arthaleads works with">
+      <Container className="!max-w-[1400px]">
+        <Reveal className="flex flex-col items-center gap-4">
+          <p className="text-center text-[13px] site-muted">
+            <span className="font-display text-[15px] font-bold site-ink">Every lead source, one list.</span>{" "}
+            <span className="hidden sm:inline">Portal leads (99acres, MagicBricks, Housing.com) come in by sheet import.</span>
+          </p>
+          <ul className="flex flex-wrap justify-center gap-2 lg:gap-1.5 xl:gap-2">
+            {SOURCES.map(({ Logo, Icon, label, note }) => (
+              <li key={label} className="flex items-center gap-1.5 rounded-full pl-2.5 pr-3 py-1.5 text-[12.5px] xl:text-[13px] font-medium site-ink"
+                style={{ background: "var(--site-card)", border: "1px solid var(--site-line)", boxShadow: "var(--site-shadow-sm)" }}>
+                {Logo ? <Logo className="w-4 h-4 shrink-0" /> : <Icon className="w-4 h-4 shrink-0" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />}
+                <span className="whitespace-nowrap">{label}{note && <span className="text-[11px] font-normal site-muted"> · {note}</span>}</span>
+              </li>
+            ))}
+          </ul>
         </Reveal>
       </Container>
     </Section>

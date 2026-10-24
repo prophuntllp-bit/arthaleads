@@ -4,7 +4,7 @@
 // marked "Arthaleads:".
 import { useEffect, useRef } from 'react';
 
-import './Threads.css';
+// Arthaleads: Threads.css is imported in main.jsx.
 
 const LINE_VERTEX = `#version 300 es
 precision highp float;

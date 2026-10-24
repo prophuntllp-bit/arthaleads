@@ -381,3 +381,14 @@
   justify-self: end;
 }
 .card-nav[data-narrow] .card-nav__end { grid-column: 2; padding-right: 2px; }
+
+/* Arthaleads: the narrow layout from the first paint. Card Nav measures its
+   width in JS (data-narrow below 560px); on phones the prerendered HTML would
+   otherwise show the wide bar (menu left, CTA in the bar) and then jump. */
+@media (max-width: 583px) {
+  .card-nav:not([data-narrow]) .card-nav__bar { grid-template-columns: auto 1fr auto; }
+  .card-nav:not([data-narrow]) .card-nav__logo { grid-column: 1; grid-row: 1; justify-self: start; padding-left: 14px; }
+  .card-nav:not([data-narrow]) .card-nav__menu { grid-column: 3; grid-row: 1; justify-self: end; }
+  .card-nav:not([data-narrow]) .card-nav__end { grid-column: 2; padding-right: 2px; }
+  .card-nav:not([data-narrow]) .card-nav__end .card-nav__cta { display: none; }
+}
