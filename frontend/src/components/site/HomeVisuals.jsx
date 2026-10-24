@@ -23,7 +23,7 @@ export function FloatCard({ className, children, style }) {
 // ── Hero: photo + the 1 AM enquiry, the AI reply and the booked visit ─────────
 export function HeroVisual() {
   return (
-    <div className="relative mx-auto w-full max-w-[520px] lg:max-w-[440px] xl:max-w-[460px] px-3 sm:px-6 lg:px-0">
+    <div className="hero-visual relative mx-auto w-full max-w-[520px] lg:max-w-[440px] xl:max-w-[460px] px-3 sm:px-6 lg:px-0">
       <div aria-hidden="true" className="absolute -inset-4 sm:-inset-10 pointer-events-none"
         style={{ background: "radial-gradient(50% 50% at 60% 40%, rgba(255,107,0,0.16), transparent 75%)" }} />
       <div className="relative overflow-hidden rounded-[28px] border" style={{ borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>

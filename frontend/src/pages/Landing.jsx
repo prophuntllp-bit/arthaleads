@@ -50,7 +50,7 @@ const HERO_FACTS = [
 function Hero() {
   const { isDark } = usePublicTheme();
   return (
-    <Section id="hero" tone="white" className="!pt-[5.5rem] sm:!pt-28 lg:!pt-[clamp(7rem,14vh,8.5rem)] !pb-14 lg:!pb-[clamp(3.5rem,8vh,5rem)] overflow-x-clip">
+    <Section id="hero" tone="white" className="site-hero !pt-[5.5rem] sm:!pt-28 lg:!pt-[6.5rem] !pb-14 lg:!pb-10 overflow-x-clip">
       {/* Grain sits on the photo side and fades out before the headline, so text keeps full contrast. */}
       <LiveBackground kind="grainient" colors={GRAIN_COLORS} lightMode={!isDark} angle={120} flow={0.7} speed={0.6}
         silk={0.3} grainAmount={isDark ? 0.07 : 0.05} clickSwirl={false} stir={0.6}
@@ -61,20 +61,20 @@ function Hero() {
         <div className="text-center lg:text-left">
           <h1 className="font-display site-ink font-extrabold tracking-[-0.03em]">
             <span className="site-eyebrow block mb-4 sm:mb-5">Real estate CRM software for India</span>
-            <span className="block text-[35px] leading-[1.06] sm:text-[48px] lg:text-[52px] xl:text-[58px]">Every enquiry answered.</span>
-            <span className="block text-[35px] leading-[1.1] sm:text-[48px] lg:text-[52px] xl:text-[58px]"><span className="site-gradient-text">Even at 1 AM.</span></span>
+            <span className="block text-[35px] leading-[1.06] sm:text-[48px] lg:text-[52px] xl:text-[58px] min-[1700px]:text-[64px]">Every enquiry answered.</span>
+            <span className="block text-[35px] leading-[1.1] sm:text-[48px] lg:text-[52px] xl:text-[58px] min-[1700px]:text-[64px]"><span className="site-gradient-text">Even at 1 AM.</span></span>
           </h1>
-          <p className="mt-5 text-base sm:text-[17px] leading-relaxed max-w-[35rem] mx-auto lg:mx-0" style={{ textWrap: "pretty" }}>
+          <p className="mt-5 text-base sm:text-[17px] min-[1700px]:text-lg leading-relaxed max-w-[35rem] mx-auto lg:mx-0" style={{ textWrap: "pretty" }}>
             Facebook, Google and WhatsApp enquiries land in one place. A WhatsApp AI agent replies in seconds,
             qualifies the buyer and books the site visit, so your team starts the day with buyers ready to talk.
           </p>
           {/* Phones: two compact buttons side by side instead of two full-width slabs. */}
-          <div className="mt-7 flex gap-2.5 sm:gap-3 justify-center lg:justify-start">
+          <div className="mt-7 flex flex-wrap gap-2.5 sm:gap-3 justify-center lg:justify-start">
             <SiteButton href={CRM_SIGNUP_URL} external className="!px-3.5 text-[14px] sm:!px-7 sm:min-h-[3.5rem] sm:text-base">
               <span className="sm:hidden">Start free trial</span><span className="hidden sm:inline">Start 14-day free trial</span> <ArrowRight className="w-4 h-4" />
             </SiteButton>
             <SiteButton href={waLink(WA_MESSAGES.demo)} external variant="secondary" className="!px-3.5 text-[14px] sm:!px-7 sm:min-h-[3.5rem] sm:text-base">
-              <WhatsAppLogo className="w-[18px] h-[18px]" /> <span className="sm:hidden">Book a demo</span><span className="hidden sm:inline">Book a demo on WhatsApp</span>
+              <WhatsAppLogo className="w-[18px] h-[18px]" /> <span className="xl:hidden">Book a demo</span><span className="hidden xl:inline">Book a demo on WhatsApp</span>
             </SiteButton>
           </div>
           <ul className="mt-4 flex flex-wrap justify-center lg:justify-start gap-x-5 gap-y-2 text-[13px] sm:text-sm site-muted">
@@ -83,7 +83,7 @@ function Hero() {
             ))}
           </ul>
           {/* Product facts, not social proof: what the product does and costs. */}
-          <dl className="hidden sm:grid mt-7 grid-cols-3 gap-3 max-w-xl mx-auto lg:mx-0">
+          <dl className="hero-facts hidden sm:grid mt-7 grid-cols-3 gap-3 max-w-xl mx-auto lg:mx-0">
             {HERO_FACTS.map(([v, l]) => (
               <div key={l} className="site-card px-4 py-3 text-left" style={{ background: "var(--site-card)", boxShadow: "var(--site-shadow)" }}>
                 <dt className="sr-only">{l}</dt>

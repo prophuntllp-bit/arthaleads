@@ -129,15 +129,19 @@ export default function MarketingChatBot() {
       {/* Floating button with pulse ring — exact match to the in-app HelpBot launcher */}
       {!open && (
         <div className="mkt-chat-launcher fixed z-[997] transition-[bottom,opacity] duration-300" style={{ right: 20, bottom: `calc(20px + var(--mcta-h, 0px) + env(safe-area-inset-bottom, 0px))` }}>
-          <span className="absolute inset-0 rounded-full animate-ping pointer-events-none" style={{ background: "rgba(255,107,0,0.35)" }} />
+          {/* "Ask Artha" pill: a label says what the face is for. */}
           <button
             type="button"
             onClick={() => setOpen(true)}
-            aria-label="Open chat assistant"
-            className="relative rounded-full shadow-lg transition hover:scale-105 cursor-pointer overflow-hidden"
-            style={{ width: 56, height: 56, background: t.bg }}
+            aria-label="Ask Artha, the Arthaleads assistant"
+            className="relative flex items-center gap-2.5 rounded-full pl-4 pr-1.5 py-1.5 cursor-pointer transition hover:-translate-y-0.5"
+            style={{ background: t.bg, border: `1px solid ${t.border}`, boxShadow: "0 14px 34px -12px rgba(0,0,0,0.35), 0 0 0 4px rgba(255,107,0,0.10)" }}
           >
-            <img src="/ai-avatar2.png" alt="Chat assistant" className="w-full h-full object-cover" />
+            <span className="text-[14px] font-bold leading-[1.05] text-left" style={{ color: t.text }}>Ask<br />Artha</span>
+            <span className="relative block w-11 h-11 shrink-0">
+              <img src="/ai-avatar2.png" alt="" className="w-11 h-11 rounded-full object-cover" style={{ boxShadow: "0 0 0 2px #ff6b00" }} />
+              <span className="absolute top-0 right-0 w-3 h-3 rounded-full bg-green-500" style={{ border: `2px solid ${t.bg}` }} />
+            </span>
           </button>
         </div>
       )}
