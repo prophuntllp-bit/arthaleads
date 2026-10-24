@@ -20,7 +20,7 @@ const fresh = () => ({
 });
 const world = { doc: fresh(), calls: [], reply: null };
 
-stubModule("../middlewares/auth", { protect: (req, _res, next) => { req.user = { _id: "u1", orgId: ORG, name: "Owner" }; next(); }, authorize: () => (_q, _s, next) => next() });
+stubModule("../middlewares/auth", { protect: (req, _res, next) => { req.user = { _id: "u1", orgId: ORG, name: "Owner" }; req.org = { _id: ORG, plan: "enterprise" }; next(); }, authorize: () => (_q, _s, next) => next() });
 stubModule("../models/OutboundIntegration", { findOne: () => ({ select: async () => world.doc }) });
 stubModule("../models/OutboundDelivery", { aggregate: async () => [], countDocuments: async () => 0, find: () => ({ select: () => ({ limit: () => ({ lean: async () => [] }) }), sort: () => ({ limit: () => ({ lean: async () => [] }) }) }) });
 stubModule("../models/Project", { find: () => ({ select: () => ({ lean: async () => [{ _id: KHOPOLI, name: "SP Khopoli" }] }) }) });

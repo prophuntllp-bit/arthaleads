@@ -1,5 +1,6 @@
 // services/leadService.js
 const Lead = require("../models/Lead");
+const { shouldAutoAssign } = require("../utils/autoAssign");
 
 const ProjectLead = require("../models/ProjectLead");
 const { projectCopiesFor, moveLeadIntoProject, mirrorLeadEdit } = require("../utils/projectCopies");
@@ -319,6 +320,11 @@ const leadService = {
   // ── Create ─────────────────────────────────────────────────────────────────
   async create(data, user) {
     let assignedToName = "";
+    // Agents can't hand a new lead to a colleague (24 Oct 2026 sweep: the
+    // assign endpoints refused them, but create/edit with assignedTo did not).
+    if (user.role === "agent" && data.assignedTo && String(data.assignedTo) !== String(user._id)) {
+      throw new AppError("Only an admin or manager can assign leads to someone else.", 403);
+    }
 
     if (data.assignedTo) {
       // Explicit assignment - validate the agent belongs to this org
@@ -328,8 +334,8 @@ const leadService = {
     } else {
       // No agent specified - auto-assign via round-robin if org has it enabled
       try {
-        const org = await Organization.findById(user.orgId).select("autoAssign").lean();
-        if (org?.autoAssign !== false) {
+        const org = await Organization.findById(user.orgId).select("autoAssign plan").lean();
+        if (shouldAutoAssign(org)) {
           const assignee = await getNextAssignee(user.orgId);
           data = { ...data, assignedTo: assignee._id };
           assignedToName = assignee.name;
@@ -647,6 +653,12 @@ const leadService = {
       }
     }
 
+    // Agents can't reassign: an unchanged value (a form sending it back) is fine.
+    if (user.role === "agent" && "assignedTo" in updates
+        && String(updates.assignedTo || "") !== String(lead.assignedTo || "")) {
+      throw new AppError("Only an admin or manager can assign leads to someone else.", 403);
+    }
+
     // Handle assignment change
     if ("assignedTo" in updates) {
       if (updates.assignedTo) {
@@ -948,14 +960,14 @@ const leadService = {
     if (!newLeads.length) return { inserted: [], duplicates };
 
     // Check if org has auto-assign enabled
-    const org = await Organization.findById(user.orgId).select("autoAssign").lean();
-    const shouldAutoAssign = org?.autoAssign !== false;
+    const org = await Organization.findById(user.orgId).select("autoAssign plan").lean();
+    const autoAssignOn = shouldAutoAssign(org);
 
     // Phase 1: validate explicit assignees + pre-fetch auto-assignee if needed
     const assigneeCache = {};
     let autoAssignee = null;
 
-    if (shouldAutoAssign) {
+    if (autoAssignOn) {
       try { autoAssignee = await getNextAssignee(user.orgId); } catch { /* no agents */ }
     }
 

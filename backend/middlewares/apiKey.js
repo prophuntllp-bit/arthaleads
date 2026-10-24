@@ -18,6 +18,11 @@ module.exports = async function apiKeyAuth(req, res, next) {
 
   // 1. Per-org key lookup (preferred path — eliminates cross-tenant spoofing)
   const org = await Organization.findOne({ voiceApiKey: key, isActive: true }).lean();
+  // API access is Enterprise: a key made on another plan (or kept after a
+  // downgrade) stops working.
+  if (org && require("./planGate").levelOf(org.plan) < 3) {
+    return res.status(403).json({ success: false, message: "API access is part of the Enterprise plan." });
+  }
   if (org) {
     req.org   = org;
     req.orgId = org._id;

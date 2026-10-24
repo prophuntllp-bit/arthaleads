@@ -1,5 +1,6 @@
 // routes/authRoutes.js
 const express = require("express");
+const { planGate } = require("../middlewares/planGate");
 const router = express.Router();
 const authController = require("../controllers/authController");
 const { protect, authorize } = require("../middlewares/auth");
@@ -53,8 +54,10 @@ router.post("/me/checklist-dismissed", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 router.get("/agents",         authController.getAgents);
-router.get("/performance",    authorize("admin", "manager"), authController.getPerformance);
-router.get("/performance/leads", authorize("admin", "manager"), authController.getPerformanceLeads);
+// Team performance dashboard: Growth and up (pricing). The 24 Oct 2026 sweep
+// found it answering Starter; only the menu hid it.
+router.get("/performance",    planGate("growth"), authorize("admin", "manager"), authController.getPerformance);
+router.get("/performance/leads", planGate("growth"), authorize("admin", "manager"), authController.getPerformanceLeads);
 
 // Team list is viewable by admin + manager; managers see it read-only
 // (create/edit/toggle/delete stay admin-only — same split the UI already

@@ -5,6 +5,7 @@ import api from "../services/api";
 import { streamArtha } from "../services/arthaStream";
 import ReportMessageButton from "./ReportMessageButton";
 import { useAuth } from "../context/AuthContext";
+import { canAccess } from "../utils/plan";
 import { useCopilot } from "../context/CopilotContext";
 import { QUICK_ANSWERS, TOURS } from "../data/helpData";
 import GuidedTour from "./GuidedTour";
@@ -176,7 +177,10 @@ export default function HelpBot() {
   const [ticketFiles, setTicketFiles] = useState([]); // [{name, size, url(base64)}]
   const fileInputRef = useRef(null);
 
-  const { user } = useAuth();
+  const { user, org } = useAuth();
+  // Artha's AI answers are a Growth feature (the API refuses Starter). Tours,
+  // quick answers and support tickets stay on every plan.
+  const aiAllowed = user?.role === "super_admin" || canAccess(org, "growth");
   const { focusedLead } = useCopilot();
   const navigate = useNavigate();
   const location = useLocation();
@@ -290,6 +294,13 @@ export default function HelpBot() {
     if (!q || loading) return;
     if (!overrideText) setInput("");
     setShowHistory(false);
+
+    if (!aiAllowed) {
+      setMessages((m) => [...(m.length === 0 ? [greetingMsg] : []), ...m,
+        { role: "user", text: q },
+        { role: "bot", text: "Artha's AI answers are part of the Growth plan. You can still take a guided tour, or raise a ticket and our team will help.", suggestTicket: true, goto: "/plans" }]);
+      return;
+    }
 
     const botId = `b${Date.now()}`;
     setMessages((m) => [...(m.length === 0 ? [greetingMsg] : []), ...m,

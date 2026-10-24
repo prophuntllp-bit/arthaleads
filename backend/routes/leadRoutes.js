@@ -17,7 +17,10 @@ const AiUsage = require("../models/AiUsage");
 router.use(protect);
 
 // "Advanced analytics & conversion reports" is sold as a Growth feature.
-router.get("/analytics", planGate("growth"), leadController.getAnalytics);
+// The dashboard's numbers. Every plan gets the basics (Starter's home page was
+// built on this and showed errors); the advanced reports are Growth and are
+// left out for Starter in the controller.
+router.get("/analytics", leadController.getAnalytics);
 
 // GET /api/leads/hot — top scored leads for the "Hot Today" dashboard widget
 // AI lead scoring is a Growth feature. Both the web and mobile dashboards
@@ -122,7 +125,8 @@ router.get("/campaign-options", leadController.getCampaignOptions);
 // with "unlimited lead imports".
 router.get("/export", planGate("growth"), leadController.exportLeads);
 // The phone app's other exports (Dump Leads, project lists) styled like the web's Excel.
-router.post("/export-sheet", leadController.exportSheet);
+// Bulk export is Growth (pricing), like /export.
+router.post("/export-sheet", planGate("growth"), leadController.exportSheet);
 router.post("/import", authorize("admin", "manager"), validate(importLeadsSchema), leadController.bulkImport);
 router.post("/bulk-assign", authorize("admin", "manager"), leadController.bulkAssign);
 router.patch("/bulk-status", authorize("admin", "manager"), leadController.bulkUpdateStatus);

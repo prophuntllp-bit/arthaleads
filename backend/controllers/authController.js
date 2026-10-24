@@ -498,7 +498,10 @@ const authController = {
       const masked = local.length <= 2 ? `${local[0]}***@${domain}` : `${local[0]}${local[1]}***@${domain}`;
       res.json({ success: true, maskedEmail: masked });
     } catch (err) {
-      next(new AppError(err.message || "Failed to send OTP", 500));
+      // Never the email provider's own wording ("API key is invalid") to a visitor.
+      if (err instanceof AppError) return next(err);
+      console.error("[signup] send-otp failed:", err.message);
+      next(new AppError("We couldn't send the verification email right now. Please try again in a minute.", 500));
     }
   },
 

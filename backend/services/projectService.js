@@ -384,6 +384,12 @@ const projectService = {
       lead[f] = ENUM_FIELDS.includes(f) && data[f] === "" ? undefined : data[f];
     });
 
+    // Agents can't reassign project leads either (an unchanged value is fine).
+    if (user.role === "agent" && "assignedTo" in data
+        && String(data.assignedTo || "") !== String(lead.assignedTo || "")) {
+      throw new AppError("Only an admin or manager can assign leads to someone else.", 403);
+    }
+
     if ("assignedTo" in data) {
       if (data.assignedTo) {
         const assignee = await User.findOne({ _id: data.assignedTo, orgId: user.orgId, isActive: true }).select("name").lean();

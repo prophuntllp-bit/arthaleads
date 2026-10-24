@@ -50,6 +50,8 @@ const COMPARE_ROWS = [
   ["Bulk lead export", false, true, true],
   ["Attendance and team performance dashboard", false, true, true],
   ["Conversion and booking analytics", false, true, true],
+  ["AI lead scoring, Hot Today and the Artha AI assistant", false, true, true],
+  ["Bookings, invoices and Meta Conversions API", false, true, true],
   ["Google Ads leads", false, false, true],
   ["Webhooks and API access", false, false, true],
   ["Vistrow Voice AI calling", false, false, true],

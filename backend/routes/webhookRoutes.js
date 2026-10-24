@@ -1,5 +1,6 @@
 ﻿const express = require("express");
 const crypto  = require("crypto");
+const { shouldAutoAssign } = require("../utils/autoAssign");
 const mongoose = require("mongoose");
 const rateLimit = require("express-rate-limit");
 const { noOperators } = require("../middlewares/noOperators");
@@ -626,8 +627,8 @@ router.post("/", express.json({ verify: verifyFbSignature }), noOperators, async
           assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
           logger.info(`Facebook webhook: rule "${ruleMatch.label}" matched - assigning "${name}" to ${assignee.name}`);
         } else {
-          const fbOrg = await Organization.findById(orgId).select("autoAssign").lean();
-          if (fbOrg?.autoAssign !== false) {
+          const fbOrg = await Organization.findById(orgId).select("autoAssign plan").lean();
+          if (shouldAutoAssign(fbOrg)) {
             try {
               assignee = await getNextAssignee(orgId);
               logger.info(`Facebook webhook: no rule matched - round-robin assigning "${name}" to ${assignee.name}`);
@@ -851,12 +852,12 @@ router.post("/website", express.json(), noOperators, websiteLeadLimiter, async (
     // Round-robin only runs when nothing matches, same as the Facebook path.
     const ruleMatch = await matchWebsiteRoutingRule(orgId, { domain: sourceDomain, pageUrl: page_url || "" });
 
-    const org = await Organization.findById(orgId).select("autoAssign").lean();
+    const org = await Organization.findById(orgId).select("autoAssign plan").lean();
     let assignee = null;
     if (ruleMatch?.assignTo) {
       assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
       logger.info(`[website webhook] rule "${ruleMatch.label}" matched - assigning "${name}" to ${assignee.name}`);
-    } else if (org?.autoAssign !== false) {
+    } else if (shouldAutoAssign(org)) {
       try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
     }
 
@@ -1166,7 +1167,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
     const callIdNum = call_id !== undefined && call_id !== null && call_id !== "" ? Number(call_id) : NaN;
     const hasCallId = Number.isFinite(callIdNum);
 
-    const org = await Organization.findById(orgId).select("autoAssign").lean();
+    const org = await Organization.findById(orgId).select("autoAssign plan").lean();
     // The connection name the admin gave (e.g. "Shapoorji Pallonji Treetopia")
     // is the primary source label; source_name from the payload is a fallback.
     const sourceLabel = automation.name || source_name || automation.leadSourceLabel || "Custom";
@@ -1422,7 +1423,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
 
       // 3) Brand-new lead + brand-new call.
       let assignee = null;
-      if (org?.autoAssign !== false) {
+      if (shouldAutoAssign(org)) {
         try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
       }
       const { noteText, reqText } = buildVoiceNote(voiceCall);
@@ -1531,7 +1532,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
     }
 
     let assignee = null;
-    if (org?.autoAssign !== false) {
+    if (shouldAutoAssign(org)) {
       try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
     }
 
@@ -1705,7 +1706,7 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
       }
     }
 
-    const org = await Organization.findById(orgId).select("autoAssign").lean();
+    const org = await Organization.findById(orgId).select("autoAssign plan").lean();
     const ruleMatch = !isTestLead
       ? await matchRoutingRule(orgId, "google", { campaign_id: campaign_id ? String(campaign_id) : "" })
       : null;
@@ -1713,7 +1714,7 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
     let assignee = null;
     if (ruleMatch?.assignTo) {
       assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
-    } else if (!isTestLead && org?.autoAssign !== false) {
+    } else if (!isTestLead && shouldAutoAssign(org)) {
       try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
     }
 

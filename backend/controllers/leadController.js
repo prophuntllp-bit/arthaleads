@@ -258,6 +258,15 @@ const leadController = {
   async getAnalytics(req, res, next) {
     try {
       const data = await leadService.getAnalytics(req.user, req.query);
+      // "Advanced analytics & conversion reports", "Booking rate & call-back
+      // metrics" and "Individual agent response tracking" are Growth (pricing).
+      const { levelOf } = require("../middlewares/planGate");
+      if (req.user.role !== "super_admin" && levelOf(req.org?.plan) < levelOf("growth")) {
+        Object.assign(data, {
+          advanced: false, conversionRate: null, sourcePerformance: [], byAgent: [],
+          speedToLead: null, avgResponseMs: null, periodAvgResponseMs: null,
+        });
+      } else data.advanced = true;
       res.json({ success: true, data });
     } catch (err) {
       next(err);

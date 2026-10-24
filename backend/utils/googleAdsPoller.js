@@ -15,6 +15,7 @@
 // Facebook token-refresh cron) and needs no such caveat.
 
 const Automation = require("../models/Automation");
+const { shouldAutoAssign } = require("./autoAssign");
 const Lead = require("../models/Lead");
 const Organization = require("../models/Organization");
 const logger = require("../config/logger");
@@ -160,7 +161,7 @@ async function pollOneGoogleAdsConnection(automation) {
     let assignee = null;
     if (ruleMatch?.assignTo) {
       assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
-    } else if (!isTestLead && org?.autoAssign !== false) {
+    } else if (!isTestLead && shouldAutoAssign(org)) {
       try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
     }
 

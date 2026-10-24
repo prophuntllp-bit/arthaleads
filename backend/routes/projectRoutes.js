@@ -311,7 +311,7 @@ router.post("/:id/leads/:leadId/transfer", projectController.transferLead);
 router.delete("/:id/leads/:leadId", projectController.deleteLead);
 
 // POST /api/projects/:id/leads/:leadId/draft-message — AI WhatsApp draft for project leads
-router.post("/:id/leads/:leadId/draft-message", async (req, res, next) => {
+router.post("/:id/leads/:leadId/draft-message", require("../middlewares/planGate").planGate("growth"), async (req, res, next) => {
   try {
     const { draftWhatsAppMessage } = require("../utils/openai");
     const AiUsage = require("../models/AiUsage");

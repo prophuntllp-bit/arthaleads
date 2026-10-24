@@ -21,7 +21,8 @@ const { mongoStore, toConfig } = require("../services/vistrowOutbound/store.mong
 const { notQueuedText } = require("../services/vistrowOutbound/callReasons");
 
 const router = express.Router();
-router.use(protect, authorize("admin"));
+// Vistrow Voice AI calling is Enterprise (pricing), like vistrowLinkRoutes.
+router.use(protect, require("../middlewares/planGate").planGate("enterprise"), authorize("admin"));
 
 const testLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { success: false, message: "Too many test requests - wait a minute." } });
 

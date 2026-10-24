@@ -69,10 +69,19 @@ function stopWorker() {
   if (timer) { clearInterval(timer); timer = null; }
 }
 
+// Vistrow Voice calling is Enterprise (pricing): nothing is queued for a
+// company on a lower plan, even if it was switched on before a downgrade
+// (24 Oct 2026 sweep: the setup routes had no plan gate at all).
+async function enterpriseOrg(orgId) {
+  if (!orgId) return false;
+  const org = await require("../../models/Organization").findById(orgId).select("plan").lean();
+  return require("../../middlewares/planGate").levelOf(org?.plan) >= 3;
+}
+
 module.exports = {
   service,
-  enqueueLeadCreated: (lead, ctx) => service.enqueueLeadCreated(lead, ctx),
-  enqueueLeadsCreated: (leads, ctx) => service.enqueueLeadsCreated(leads, ctx),
+  enqueueLeadCreated: async (lead, ctx) => (await enterpriseOrg(lead?.orgId)) ? service.enqueueLeadCreated(lead, ctx) : { queued: false, reason: "plan" },
+  enqueueLeadsCreated: async (leads, ctx) => (await enterpriseOrg(leads?.[0]?.orgId)) ? service.enqueueLeadsCreated(leads, ctx) : [],
   startWorker,
   stopWorker,
 };
