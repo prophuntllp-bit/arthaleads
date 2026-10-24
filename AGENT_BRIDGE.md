@@ -103,6 +103,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-24 IST: staging: home AI band layout = text + cards left, HeroChat alone right at natural size (.ai-band vars). Not live yet.
 - [claude] 2026-10-24 IST: staging c63b6026: home AI band compacted to ~1 screen (HeroChat reads --hc-w/--hc-h; .ai-band in styles.css sizes the phone from screen height). Not live yet.
 - [claude] 2026-10-24 IST: staging 95fad61f: React Bits CSS imported in main.jsx (lazy-chunk CSS left the prerendered phone menu unstyled on first paint); CardNav.css narrow layout via media query from first paint; lead-sources strip compacted. Not live yet.
 - [claude] 2026-10-24 IST: staging 8df75cbd: .site-hero = 100svh centred (styles.css, .hero-visual width from vh, .hero-facts hidden on short screens); .site-dim is now the brand gradient (owner: no grey heading halves); MarketingChatBot launcher = 'Ask Artha' pill. Not live yet.
