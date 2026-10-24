@@ -198,8 +198,8 @@ function NavInner({ onScrollTo }) {
   const textMuted  = isDark ? "rgba(255,255,255,0.70)" : "#4b5563";
   const textActive = isDark ? "#ffffff" : "#111827";
 
-  const scrolledBg     = isDark ? "rgba(13,13,26,0.97)" : "rgba(255,255,255,0.97)";
-  const scrolledBorder = isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #e5e7eb";
+  const scrolledBg     = isDark ? "rgba(10,11,16,0.88)" : "rgba(255,255,255,0.9)";
+  const scrolledBorder = isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(15,18,34,0.07)";
   const mobileBg       = isDark ? "rgba(13,13,26,0.98)" : "rgba(255,255,255,0.98)";
   const catLabel       = isDark ? "rgba(255,255,255,0.30)" : "#6b7280";
 

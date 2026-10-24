@@ -5,7 +5,7 @@
 //   <SitePage>       page wrapper: theme colours, nav and footer
 //   <Section tone>   "white" | "tint" | "dark"; one padding rhythm for all
 //   <Container>      1240px max width with responsive gutters
-//   <SectionHeader>  eyebrow (plain text, never a pill) + H2 + lede
+//   <SectionHeader>  eyebrow (plain text, never a pill) + H2 + lede; left-aligned by default
 //   <Card>           contrasts with its section automatically (see styles.css)
 //   <SiteButton>     primary / secondary / whatsapp, link or external link
 //   <SiteImage>      responsive WebP with width/height (no layout shift)
@@ -44,7 +44,7 @@ export function Container({ className, children, narrow = false }) {
  * with the action on the right, which keeps "see more" links out of a
  * separate block under the content.
  */
-export function SectionHeader({ eyebrow, title, lede, align = "center", as: H = "h2", action, className, children }) {
+export function SectionHeader({ eyebrow, title, lede, align = "left", as: H = "h2", action, className, children }) {
   if (action) {
     return (
       <div className={cx("mb-10 lg:mb-14 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 lg:gap-10", className)}>
@@ -71,9 +71,18 @@ export function SectionHeader({ eyebrow, title, lede, align = "center", as: H = 
   );
 }
 
-export function Card({ as: Tag = "div", raised = false, hover = false, className, children, ...rest }) {
+// Feeds the cursor position to .site-glow so its light follows the pointer.
+function trackGlow(e) {
+  const r = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--mx", `${e.clientX - r.left}px`);
+  e.currentTarget.style.setProperty("--my", `${e.clientY - r.top}px`);
+}
+
+/** `glow` = bento card whose border and fill light up around the cursor and lift on hover. */
+export function Card({ as: Tag = "div", raised = false, hover = false, glow = false, className, children, ...rest }) {
   return (
-    <Tag className={cx("site-card", raised && "site-card--raised", hover && "site-card--hover", className)} {...rest}>
+    <Tag className={cx("site-card", raised && "site-card--raised", hover && !glow && "site-card--hover", glow && "site-glow", className)}
+      onPointerMove={glow ? trackGlow : undefined} {...rest}>
       {children}
     </Tag>
   );

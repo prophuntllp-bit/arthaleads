@@ -15,12 +15,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, Check, Globe, QrCode, FileSpreadsheet, Store, ShieldCheck, Download, Lock, MapPin,
-  MessageCircle, Bot, Sparkles, PlayCircle, Plus, Minus, CircleCheck,
+  MessageCircle, Bot, Sparkles, PlayCircle, Plus, Minus, CircleCheck, BadgeCheck, ArrowUpRight, Repeat2,
 } from "lucide-react";
 import { SitePage, Section, Container, SectionHeader, Card, SiteButton, SiteImage } from "../components/site/Site";
 import { WhatsAppLogo, FacebookLogo, GoogleLogo } from "../components/site/BrandLogos";
 import {
-  HeroVisual, ScoreCard, CopilotCard, CaptureViz, PipelineViz, ProjectViz, VisitViz, TeamViz, BookingViz, FieldVisual,
+  FloatCard, HeroVisual, ScoreCard, CopilotCard, CaptureViz, PipelineViz, ProjectViz, VisitViz, TeamViz, BookingViz, FieldVisual,
 } from "../components/site/HomeVisuals";
 import HeroChat from "../components/HeroChat";
 import { Reveal } from "../components/motion/Motion";
@@ -72,7 +72,7 @@ function Hero() {
           {/* Product facts, not social proof: what the product does and costs. */}
           <dl className="hidden sm:grid mt-9 grid-cols-3 gap-3 max-w-xl mx-auto lg:mx-0">
             {HERO_FACTS.map(([v, l]) => (
-              <div key={l} className="site-card px-4 py-3.5 text-left">
+              <div key={l} className="site-card px-4 py-3.5 text-left" style={{ background: "var(--site-card)", boxShadow: "var(--site-shadow)" }}>
                 <dt className="sr-only">{l}</dt>
                 <dd className="font-display text-2xl font-extrabold site-ink leading-none">{v}</dd>
                 <dd className="mt-1.5 text-[12.5px] leading-snug site-muted">{l}</dd>
@@ -141,8 +141,9 @@ function AiBand() {
       <div aria-hidden="true" className="absolute inset-0 pointer-events-none"
         style={{ background: "radial-gradient(45% 50% at 20% 35%, rgba(255,107,0,0.2), transparent 70%), radial-gradient(40% 45% at 90% 85%, rgba(255,140,60,0.1), transparent 70%)" }} />
       <Container className="relative">
-        <SectionHeader eyebrow="AI that works the night shift" title={<>Your best salesperson <span className="site-dim">never sleeps.</span></>}
-          lede="Most enquiries arrive after office hours. Arthaleads answers every one of them, qualifies the buyer and tells your team exactly who to call in the morning." />
+        <SectionHeader eyebrow="AI that works the night shift" title={<>Your best salesperson<br className="hidden sm:block" /> <span className="site-dim">never sleeps.</span></>}
+          lede="Most enquiries arrive after office hours. Arthaleads answers every one of them, qualifies the buyer and tells your team exactly who to call in the morning. On the Growth plan and above."
+          action={<Link to="/ai-crm" className="site-link text-[15px]">See everything the AI does <ArrowRight className="w-4 h-4" /></Link>} />
         <div className="grid lg:grid-cols-[minmax(0,360px)_1fr] gap-10 lg:gap-14 items-center">
           <Reveal className="mx-auto w-full max-w-[360px]">
             <HeroChat />
@@ -155,8 +156,8 @@ function AiBand() {
             <ul className="grid sm:grid-cols-3 gap-5">
               {AI_POINTS.map(({ Icon, title, body }, i) => (
                 <Reveal as="li" key={title} delay={i * 90}>
-                  <Card className="h-full p-5">
-                    <span className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: "rgba(255,107,0,0.14)" }}>
+                  <Card glow className="h-full p-5">
+                    <span className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: "rgba(255,107,0,0.14)", boxShadow: "inset 0 0 0 1px rgba(255,138,61,0.25)" }}>
                       <Icon className="w-5 h-5" style={{ color: "#ff8a3d" }} aria-hidden="true" />
                     </span>
                     <h3 className="font-display text-base font-bold site-ink mb-1.5">{title}</h3>
@@ -165,10 +166,6 @@ function AiBand() {
                 </Reveal>
               ))}
             </ul>
-            <p className="text-sm site-muted">
-              On the Growth plan and above.{" "}
-              <Link to="/ai-crm" className="font-semibold underline underline-offset-4" style={{ color: "#ff8a3d" }}>See everything the AI does</Link>
-            </p>
           </div>
         </div>
       </Container>
@@ -192,13 +189,13 @@ function Features() {
   return (
     <Section id="features" tone="white">
       <Container>
-        <SectionHeader eyebrow="One workspace" title={<>From first message to booking. <span className="site-dim">In one place.</span></>}
+        <SectionHeader eyebrow="One workspace" title={<>From first message to booking.<br className="hidden sm:block" /> <span className="site-dim">In one place.</span></>}
           lede="Everything a property sales team uses every day, built for how builders, brokers and channel partners in India actually sell."
           action={<Link to="/features" className="site-link text-[15px]">See every feature <ArrowRight className="w-4 h-4" /></Link>} />
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {FEATURE_CARDS.map(({ title, body, Viz, wide }, i) => (
             <Reveal key={title} delay={(i % 3) * 90} className={wide ? "min-w-0 lg:col-span-2" : "min-w-0"}>
-              <Card hover className="h-full p-3 flex flex-col">
+              <Card glow className="h-full p-3 flex flex-col">
                 <Viz />
                 <div className="px-3 pt-5 pb-3">
                   <h3 className="font-display text-lg font-bold site-ink mb-1.5">{title}</h3>
@@ -227,11 +224,12 @@ function BuiltFor() {
   return (
     <Section tone="tint">
       <Container>
-        <SectionHeader eyebrow="Who it is for" title={<>Built for the way property <span className="site-dim">is sold in India.</span></>} />
+        <SectionHeader eyebrow="Who it is for" title={<>Built for how property<br className="hidden sm:block" /> <span className="site-dim">is sold in India.</span></>}
+          lede="Builders, brokers and channel partners sell differently. Arthaleads fits each of them." />
         <div className="grid md:grid-cols-3 gap-6">
           {PERSONAS.map(({ img, title, body, to, link, alt }, i) => (
             <Reveal key={title} delay={i * 100}>
-              <Card hover as={Link} to={to} className="group h-full overflow-hidden flex flex-col">
+              <Card glow as={Link} to={to} className="group h-full overflow-hidden flex flex-col">
                 <div className="overflow-hidden">
                   <SiteImage name={img} width={1536} height={1024} sizes="(min-width: 768px) 400px, 92vw" alt={alt}
                     className="block w-full h-auto aspect-[3/2] object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
@@ -264,7 +262,7 @@ function HowItWorks() {
     <Section tone="white">
       <Container className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
         <div>
-          <SectionHeader align="left" eyebrow="How it works" title={<>Live in a day, <span className="site-dim">not a quarter.</span></>} className="!mb-10" />
+          <SectionHeader eyebrow="How it works" title={<>Live in a day,<br className="hidden sm:block" /> <span className="site-dim">not a quarter.</span></>} className="!mb-10" />
           <ol className="relative">
             {/* The line that joins the three steps. */}
             <span aria-hidden="true" className="absolute left-5 top-6 bottom-6 w-px" style={{ background: "linear-gradient(var(--site-brand), var(--site-line-strong))" }} />
@@ -293,21 +291,21 @@ function HowItWorks() {
 
 // ── 7. Pricing ─────────────────────────────────────────────────────────────────
 const planBullets = (plan) => plan.groups.flatMap((g) => g.items).slice(0, 5);
-const compareLink = "font-semibold underline underline-offset-4";
 
 function Pricing() {
   return (
     <Section id="pricing" tone="tint">
       <Container>
         <SectionHeader eyebrow="Pricing" title={<>Simple prices. <span className="site-dim">Published.</span></>}
-          lede="Per user per month, plus 18% GST. Start with a 14-day free trial, no credit card needed." />
+          lede="Per user per month, plus 18% GST. Start with a 14-day free trial, no credit card needed."
+          action={<Link to="/pricing" className="site-link text-[15px]">Compare every feature by plan <ArrowRight className="w-4 h-4" /></Link>} />
         <div className="grid md:grid-cols-3 gap-6 items-stretch">
           {PLANS.map((plan, i) => {
             const price = PLAN_PRICING[plan.id];
             const popular = !!plan.popular;
             return (
               <Reveal key={plan.id} delay={i * 90}>
-                <Card raised={popular} className="relative h-full p-7 flex flex-col"
+                <Card glow raised={popular} className="relative h-full p-7 flex flex-col"
                   style={popular ? { borderColor: "var(--site-brand)", boxShadow: "0 0 0 1px var(--site-brand), var(--site-shadow)" } : undefined}>
                   {popular && (
                     <span className="absolute -top-3 left-7 rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ background: "var(--brand-btn)" }}>Most popular</span>
@@ -338,47 +336,117 @@ function Pricing() {
             );
           })}
         </div>
-        <p className="mt-8 text-center text-sm leading-relaxed">
-          <Link to="/pricing" className={compareLink} style={{ color: "var(--site-brand-ink)" }}>Compare every feature by plan</Link>
-          <span className="site-muted"> · Switching from </span>
-          <Link to="/compare/sell-do-alternative" className={compareLink} style={{ color: "var(--site-brand-ink)" }}>Sell.Do</Link>
-          <span className="site-muted">, </span>
-          <Link to="/compare/leadrat-alternative" className={compareLink} style={{ color: "var(--site-brand-ink)" }}>Leadrat</Link>
-          <span className="site-muted"> or </span>
-          <Link to="/compare/kylas-alternative" className={compareLink} style={{ color: "var(--site-brand-ink)" }}>Kylas</Link>
-          <span className="site-muted">?</span>
-        </p>
       </Container>
     </Section>
   );
 }
 
 // ── 8. Trust (no testimonials: facts only) ────────────────────────────────────
-const TRUST = [
-  { Icon: WhatsAppLogo, brand: true, title: "Official WhatsApp Business Platform", body: "Your own verified business number on Meta's official API, not a grey-market tool that can get banned." },
-  { Icon: Lock, title: "Your data stays yours", body: "Each company's data is kept apart, agents see only their leads, and you can export or delete your account any time.", to: "/security", link: "How we protect data" },
-  { Icon: ShieldCheck, title: "Roles and permissions", body: "Admin, manager and agent roles decide who sees what, on the web and in the Android app." },
-  { Icon: MapPin, title: "Made in Pune", body: "Built by Vistrow Technologies for Indian sales teams, with support on WhatsApp in your working hours.", to: "/about-us", link: "About us" },
-];
+// A bento grid: one featured card (the official WhatsApp API, our strongest
+// trust point) and four smaller cards, each with a small illustration.
+function TrustRow({ left, right, tone }) {
+  return (
+    <li className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-[12.5px]" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)" }}>
+      <span className="site-ink font-medium truncate">{left}</span>
+      <span className="text-[11px] font-semibold rounded-md px-2 py-0.5 shrink-0" style={tone}>{right}</span>
+    </li>
+  );
+}
+const T_GREEN = { background: "rgba(22,163,74,0.14)", color: "#16a34a" };
+const T_ORANGE = { background: "rgba(255,107,0,0.13)", color: "var(--site-brand-ink)" };
+const T_PLAIN = { background: "var(--site-chip)", color: "var(--site-text)" };
+
+function TrustIcon({ Icon, green }) {
+  return (
+    <span className="w-11 h-11 rounded-xl flex items-center justify-center mb-5"
+      style={green ? { background: "rgba(37,211,102,0.14)", boxShadow: "inset 0 0 0 1px rgba(37,211,102,0.3)" } : { background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
+      {green ? <Icon className="w-5 h-5" /> : <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />}
+    </span>
+  );
+}
 
 function Trust() {
   return (
     <Section tone="white">
       <Container>
-        <SectionHeader eyebrow="Why teams trust it" title={<>Serious about your leads <span className="site-dim">and your data.</span></>} />
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {TRUST.map(({ Icon, brand, title, body, to, link }, i) => (
-            <Reveal key={title} delay={i * 80}>
-              <Card className="h-full p-6 flex flex-col">
-                <span className="w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={{ background: brand ? "rgba(37,211,102,0.12)" : "rgba(255,107,0,0.10)" }}>
-                  {brand ? <Icon className="w-5 h-5" /> : <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />}
-                </span>
-                <h3 className="font-display text-base font-bold site-ink mb-2">{title}</h3>
-                <p className="text-[15px] leading-relaxed flex-1">{body}</p>
-                {to && <Link to={to} className="mt-4 text-sm font-semibold inline-flex items-center gap-1" style={{ color: "var(--site-brand-ink)" }}>{link} <ArrowRight className="w-4 h-4" /></Link>}
-              </Card>
-            </Reveal>
-          ))}
+        <SectionHeader eyebrow="Why teams trust it" title={<>Serious about your leads<br className="hidden sm:block" /> <span className="site-dim">and your data.</span></>}
+          action={<Link to="/security" className="site-link text-[15px]">How we protect data <ArrowRight className="w-4 h-4" /></Link>} />
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <Reveal className="min-w-0 md:col-span-2">
+            <Card glow className="site-section--dark site-feature-glow h-full p-7 sm:p-9 grid sm:grid-cols-[1fr_280px] gap-8 items-center">
+              <div>
+                <TrustIcon Icon={WhatsAppLogo} green />
+                <h3 className="font-display text-xl sm:text-2xl font-bold site-ink mb-3">Official WhatsApp Business Platform</h3>
+                <p className="text-[15px] leading-relaxed max-w-md">Your own verified business number on Meta's official API, not a grey-market tool that can get your number banned. Templates, campaigns and the AI agent run on it.</p>
+              </div>
+              <div className="rounded-2xl p-4" style={{ background: "var(--site-stage)", border: "1px solid var(--site-line)" }}>
+                <div className="flex items-center gap-3 mb-3.5">
+                  <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(37,211,102,0.16)" }}><WhatsAppLogo className="w-5 h-5" /></span>
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-semibold site-ink flex items-center gap-1">Your Company <BadgeCheck className="w-4 h-4" style={{ color: "#25D366" }} aria-hidden="true" /></p>
+                    <p className="text-[11.5px] site-muted">Official business account</p>
+                  </div>
+                </div>
+                <ul className="space-y-1.5">
+                  <TrustRow left="Business number" right="Verified" tone={T_GREEN} />
+                  <TrustRow left="Templates" right="Approved by Meta" tone={T_GREEN} />
+                  <TrustRow left="AI agent" right="Replying 24/7" tone={T_ORANGE} />
+                </ul>
+              </div>
+            </Card>
+          </Reveal>
+          <Reveal className="min-w-0" delay={80}>
+            <Card glow className="h-full p-7 flex flex-col">
+              <TrustIcon Icon={Lock} />
+              <h3 className="font-display text-lg font-bold site-ink mb-2">Your data stays yours</h3>
+              <p className="text-[15px] leading-relaxed mb-5">Each company's data is kept apart, and you can export everything or delete your account any time.</p>
+              <ul className="mt-auto space-y-1.5">
+                <TrustRow left="All leads as Excel" right="Export" tone={T_ORANGE} />
+                <TrustRow left="Delete account" right="Self-serve" tone={T_PLAIN} />
+              </ul>
+            </Card>
+          </Reveal>
+          <Reveal className="min-w-0">
+            <Card glow className="h-full p-7 flex flex-col">
+              <TrustIcon Icon={ShieldCheck} />
+              <h3 className="font-display text-lg font-bold site-ink mb-2">Roles and permissions</h3>
+              <p className="text-[15px] leading-relaxed mb-5">Decide who sees what, on the web and in the Android app.</p>
+              <ul className="mt-auto space-y-1.5">
+                <TrustRow left="Admin" right="Everything" tone={T_ORANGE} />
+                <TrustRow left="Manager" right="Their team" tone={T_PLAIN} />
+                <TrustRow left="Agent" right="Own leads" tone={T_PLAIN} />
+              </ul>
+            </Card>
+          </Reveal>
+          <Reveal className="min-w-0" delay={80}>
+            <Card glow className="h-full p-7 flex flex-col">
+              <TrustIcon Icon={MapPin} />
+              <h3 className="font-display text-lg font-bold site-ink mb-2">Made in Pune</h3>
+              <p className="text-[15px] leading-relaxed mb-5">Built by Vistrow Technologies for Indian sales teams, with real people answering on WhatsApp.</p>
+              <ul className="mt-auto space-y-1.5">
+                <TrustRow left="Built in" right="Pune, India" tone={T_ORANGE} />
+                <TrustRow left="Support" right="WhatsApp and phone" tone={T_PLAIN} />
+              </ul>
+              <Link to="/about-us" className="site-link text-sm mt-4">About us <ArrowRight className="w-4 h-4" /></Link>
+            </Card>
+          </Reveal>
+          <Reveal className="min-w-0" delay={160}>
+            <Card glow className="h-full p-7 flex flex-col">
+              <TrustIcon Icon={Repeat2} />
+              <h3 className="font-display text-lg font-bold site-ink mb-2">Switching from another CRM?</h3>
+              <p className="text-[15px] leading-relaxed mb-5">See how Arthaleads compares, feature by feature, and bring your leads over from Excel.</p>
+              <ul className="mt-auto space-y-1.5">
+                {[["Sell.Do", "/compare/sell-do-alternative"], ["Leadrat", "/compare/leadrat-alternative"], ["Kylas", "/compare/kylas-alternative"]].map(([n, to]) => (
+                  <li key={n}>
+                    <Link to={to} className="flex items-center justify-between rounded-xl px-3 py-2 text-[13px] font-medium site-ink transition-colors hover:border-[var(--site-brand)]"
+                      style={{ background: "var(--site-card)", border: "1px solid var(--site-line)" }}>
+                      Arthaleads vs {n} <ArrowUpRight className="w-4 h-4 site-muted" aria-hidden="true" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </Reveal>
         </div>
       </Container>
     </Section>
@@ -452,30 +520,40 @@ function FinalCta() {
     <Section tone="white">
       <Container>
         <Reveal>
-          <div className="relative overflow-hidden rounded-[32px] text-white"
-            style={{ background: "linear-gradient(120deg, #c2410c 0%, #e35a05 45%, #ff7a1a 100%)", boxShadow: "0 40px 80px -36px rgba(194,65,12,0.6)" }}>
-            <div aria-hidden="true" className="absolute inset-0 opacity-[0.18]"
-              style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)", backgroundSize: "48px 48px", WebkitMaskImage: "linear-gradient(90deg, #000, transparent 60%)", maskImage: "linear-gradient(90deg, #000, transparent 60%)" }} />
-            <div className="relative grid lg:grid-cols-[1.1fr_1fr] items-stretch">
-              <div className="p-8 sm:p-12 lg:p-14">
-                <h2 className="font-display font-extrabold tracking-[-0.02em] leading-[1.08] text-[30px] sm:text-[40px] lg:text-[46px]" style={{ textWrap: "balance" }}>
-                  Stop losing buyers to whoever replies first.
-                </h2>
-                <p className="mt-5 text-lg leading-relaxed text-white/85 max-w-lg">Start your 14-day free trial today, or message us on WhatsApp and see the AI agent answer you.</p>
-                <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                  <SiteButton href={CRM_SIGNUP_URL} external variant="light" size="lg" className="w-full sm:w-auto">Start free trial <ArrowRight className="w-4 h-4" /></SiteButton>
-                  <SiteButton href={waLink(WA_MESSAGES.demo)} external variant="ghost-light" size="lg" className="w-full sm:w-auto">
-                    <WhatsAppLogo className="w-[18px] h-[18px]" color="#fff" /> Book a demo
-                  </SiteButton>
+          <div className="site-cta-panel relative overflow-hidden rounded-[32px] p-6 sm:p-10 lg:p-12 grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-center">
+            <div aria-hidden="true" className="site-grid-bg" />
+            <div className="relative">
+              <p className="site-eyebrow mb-4">Start today</p>
+              <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[30px] sm:text-[38px] lg:text-[44px]">
+                Stop losing buyers to<br className="hidden sm:block" /> <span className="site-dim">whoever replies first.</span>
+              </h2>
+              <p className="mt-5 text-base sm:text-lg leading-relaxed max-w-lg">Start your 14-day free trial, or message us on WhatsApp and see the AI agent answer you.</p>
+              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                <SiteButton href={CRM_SIGNUP_URL} external size="lg" className="w-full sm:w-auto">Start free trial <ArrowRight className="w-4 h-4" /></SiteButton>
+                <SiteButton href={waLink(WA_MESSAGES.demo)} external variant="secondary" size="lg" className="w-full sm:w-auto">
+                  <WhatsAppLogo className="w-[18px] h-[18px]" /> Book a demo
+                </SiteButton>
+              </div>
+              <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm site-muted">
+                {["14-day free trial", "No credit card", "Made in Pune"].map((t) => (
+                  <li key={t} className="inline-flex items-center gap-1.5"><CircleCheck className="w-4 h-4" style={{ color: "#16a34a" }} aria-hidden="true" />{t}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="relative">
+              <div className="overflow-hidden rounded-[24px] border" style={{ borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
+                <SiteImage name="keys" width={1600} height={900} sizes="(min-width: 1024px) 520px, 92vw" alt="A sales executive handing house keys to a young couple"
+                  className="block w-full h-auto aspect-[16/10] object-cover" />
+              </div>
+              <FloatCard className="left-3 bottom-3 sm:-left-5 sm:bottom-6 flex items-center gap-3 !py-3">
+                <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(22,163,74,0.12)" }}>
+                  <BadgeCheck className="w-[18px] h-[18px]" style={{ color: "#16a34a" }} aria-hidden="true" />
+                </span>
+                <div>
+                  <p className="text-[13px] font-semibold site-ink leading-tight">Booking confirmed</p>
+                  <p className="text-[11px] site-muted leading-tight">Flat 1204 · Aurum Heights</p>
                 </div>
-                <p className="mt-5 text-sm text-white/75">No credit card needed · 14-day free trial</p>
-              </div>
-              <div className="relative min-h-[240px] lg:min-h-0">
-                <SiteImage name="keys" width={1600} height={900} sizes="(min-width: 1024px) 560px, 100vw" alt="A sales executive handing house keys to a young couple"
-                  className="absolute inset-0 w-full h-full object-cover" />
-                <div aria-hidden="true" className="absolute inset-0 hidden lg:block" style={{ background: "linear-gradient(90deg, #e35a05 0%, rgba(227,90,5,0) 35%)" }} />
-                <div aria-hidden="true" className="absolute inset-0 lg:hidden" style={{ background: "linear-gradient(180deg, #e8600a 0%, rgba(232,96,10,0) 40%)" }} />
-              </div>
+              </FloatCard>
             </div>
           </div>
         </Reveal>
