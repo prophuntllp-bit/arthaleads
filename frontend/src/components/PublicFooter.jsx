@@ -70,7 +70,7 @@ export default function PublicFooter() {
 
           {/* Product */}
           <div>
-            <h2 style={{ color: heading }} className="font-semibold text-sm mb-4">Product</h2>
+            <p style={{ color: heading }} className="font-semibold text-sm mb-4">Product</p>
             <div className="space-y-2.5">
               {[
                 ["Features",           "/features"],
@@ -90,7 +90,7 @@ export default function PublicFooter() {
 
           {/* Compare */}
           <div>
-            <h2 style={{ color: heading }} className="font-semibold text-sm mb-4">Compare</h2>
+            <p style={{ color: heading }} className="font-semibold text-sm mb-4">Compare</p>
             <div className="space-y-2.5">
               {[
                 ["All comparisons",        "/compare"],
@@ -105,7 +105,7 @@ export default function PublicFooter() {
 
           {/* Company */}
           <div>
-            <h2 style={{ color: heading }} className="font-semibold text-sm mb-4">Company</h2>
+            <p style={{ color: heading }} className="font-semibold text-sm mb-4">Company</p>
             <div className="space-y-2.5">
               {[
                 ["About Us",      "/about-us"],
@@ -123,7 +123,7 @@ export default function PublicFooter() {
 
           {/* Legal */}
           <div>
-            <h2 style={{ color: heading }} className="font-semibold text-sm mb-4">Legal</h2>
+            <p style={{ color: heading }} className="font-semibold text-sm mb-4">Legal</p>
             <div className="space-y-2.5">
               {[
                 ["Privacy Policy",   "/privacy"],

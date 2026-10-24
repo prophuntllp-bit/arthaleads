@@ -752,3 +752,103 @@ html[data-public-theme="dark"] { --brand-text: #ff6b00; }
    orange #cc4b00 (4.6:1) and green #0f7f72 (4.9:1). Icons, accents, numbers
    and gradient headings keep #ff6b00. */
 :root { --brand-btn: #cc4b00; --brand-btn-hover: #b34200; --wa-btn: #0f7f72; --wa-btn-hover: #0b6b60; }
+
+/* ══ Shared marketing theme (24 Oct 2026) ══════════════════════════════════
+   Used by components/site/* and every marketing page built on them. One
+   padding rhythm, one container, and cards that always contrast with the
+   section they sit on: soft-tinted cards on white sections, white cards on
+   tinted sections, lighter cards on dark bands, each with a border and a
+   shadow so nothing bleeds into the background. Headings use Manrope
+   (.font-display), body text stays Inter. */
+:root {
+  --site-bg: #ffffff;
+  --site-tint: #f6f2ed;
+  --site-ink: #0f1222;
+  --site-text: #474d5c;
+  --site-muted: #6b7180;
+  --site-line: rgba(15, 18, 34, 0.09);
+  --site-line-strong: rgba(15, 18, 34, 0.16);
+  --site-card: #ffffff;
+  --site-card-soft: #f8f5f1;
+  --site-dark: #0d0e15;
+  --site-dark-card: #191b26;
+  --site-brand: #ff6b00;
+  --site-brand-ink: #c2410c;
+  --site-shadow-sm: 0 1px 2px rgba(15, 18, 34, 0.05), 0 4px 12px -4px rgba(15, 18, 34, 0.08);
+  --site-shadow: 0 1px 2px rgba(15, 18, 34, 0.05), 0 16px 36px -14px rgba(15, 18, 34, 0.18);
+  --site-shadow-lg: 0 2px 6px rgba(15, 18, 34, 0.05), 0 36px 80px -28px rgba(15, 18, 34, 0.35);
+  --site-radius: 20px;
+  --site-radius-lg: 28px;
+}
+html[data-public-theme="dark"] {
+  --site-bg: #0b0c12;
+  --site-tint: #12141d;
+  --site-ink: #f4f5f8;
+  --site-text: rgba(244, 245, 248, 0.74);
+  --site-muted: rgba(244, 245, 248, 0.56);
+  --site-line: rgba(255, 255, 255, 0.09);
+  --site-line-strong: rgba(255, 255, 255, 0.18);
+  --site-card: #1a1c27;
+  --site-card-soft: #161823;
+  --site-brand-ink: #ff8a3d;
+  --site-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --site-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.75);
+  --site-shadow-lg: 0 40px 90px -30px rgba(0, 0, 0, 0.85);
+}
+
+.site { color: var(--site-text); background: var(--site-bg); }
+.site-container { width: 100%; max-width: 1240px; margin-inline: auto; padding-inline: 1rem; }
+@media (min-width: 640px) { .site-container { padding-inline: 1.5rem; } }
+@media (min-width: 1024px) { .site-container { padding-inline: 2rem; } }
+
+.site-section { position: relative; padding-block: clamp(4rem, 8vw, 7rem); color: var(--site-text); }
+.site-section--white { background: var(--site-bg); --card-bg: var(--site-card-soft); }
+.site-section--tint  { background: var(--site-tint); --card-bg: var(--site-card); }
+/* Dark bands stay dark in both themes and carry their own token set. */
+.site-section--dark {
+  background: var(--site-dark);
+  --card-bg: var(--site-dark-card);
+  --site-ink: #ffffff;
+  --site-text: rgba(255, 255, 255, 0.74);
+  --site-muted: rgba(255, 255, 255, 0.56);
+  --site-line: rgba(255, 255, 255, 0.10);
+  --site-line-strong: rgba(255, 255, 255, 0.20);
+  --site-brand-ink: #ff8a3d;
+  --site-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --site-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.8);
+  color: var(--site-text);
+}
+
+.site-card {
+  background: var(--card-bg, var(--site-card));
+  border: 1px solid var(--site-line);
+  border-radius: var(--site-radius);
+  box-shadow: var(--site-shadow-sm);
+}
+.site-card--raised { box-shadow: var(--site-shadow); }
+.site-card--hover { transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease; }
+.site-card--hover:hover { transform: translateY(-3px); box-shadow: var(--site-shadow); border-color: var(--site-line-strong); }
+
+.site-eyebrow { font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--site-brand-ink); }
+.site-ink { color: var(--site-ink); }
+.site-muted { color: var(--site-muted); }
+
+.site-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  min-height: 3rem; padding: 0 1.5rem; border-radius: 0.875rem;
+  font-weight: 600; font-size: 0.9375rem; line-height: 1; white-space: nowrap;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.site-btn:focus-visible { outline: 2px solid var(--site-brand); outline-offset: 3px; }
+.site-btn--primary { background: var(--brand-btn); color: #fff; box-shadow: 0 10px 24px -10px rgba(204, 75, 0, 0.6); }
+.site-btn--primary:hover { background: var(--brand-btn-hover); transform: translateY(-1px); }
+.site-btn--secondary { background: var(--site-card); color: var(--site-ink); border: 1px solid var(--site-line-strong); }
+.site-btn--secondary:hover { border-color: var(--site-brand); transform: translateY(-1px); }
+.site-section--dark .site-btn--secondary { background: rgba(255, 255, 255, 0.06); color: #fff; }
+.site-btn--whatsapp { background: var(--wa-btn); color: #fff; }
+.site-btn--whatsapp:hover { background: var(--wa-btn-hover); transform: translateY(-1px); }
+.site-btn--lg { min-height: 3.5rem; padding: 0 1.75rem; font-size: 1rem; border-radius: 1rem; }
+@media (prefers-reduced-motion: reduce) {
+  .site-card--hover, .site-btn { transition: none; }
+  .site-card--hover:hover, .site-btn:hover { transform: none; }
+}

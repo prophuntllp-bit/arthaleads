@@ -69,6 +69,11 @@ import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
 import "@fontsource/inter/600.css";
 import "@fontsource/inter/700.css";
+// Manrope: display face for marketing headings only (owner, 24 Oct 2026).
+// Applied through the .font-display class; Inter stays the body font.
+import "@fontsource/manrope/600.css";
+import "@fontsource/manrope/700.css";
+import "@fontsource/manrope/800.css";
 import "./styles.css";
 import { isAppHost, isMarketingHost } from "./utils/hosts";
 
