@@ -149,14 +149,15 @@ function InsightCard({ text, index, startDelay }) {
 // Generates a session-cached AI insight summary from live analytics data
 // Only visible to admin and manager roles
 function SmartInsightsWidget({ data }) {
-  const { user } = useAuth();
+  const { user, org } = useAuth();
   const [insights, setInsights] = useState(null);
   const [error, setError]       = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [cardDelays, setCardDelays] = useState([]);
   const [open, setOpen] = useState(false);
 
-  const allowed = user?.role === "admin" || user?.role === "manager" || user?.role === "super_admin";
+  // AI insights are Growth (Artha); Starter's dashboard doesn't show the strip.
+  const allowed = user?.role === "super_admin" || ((user?.role === "admin" || user?.role === "manager") && canAccess(org, "growth"));
   if (!allowed) return null;
 
   const generate = async (force = false) => {
