@@ -103,6 +103,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-24 IST: staging 95fad61f: React Bits CSS imported in main.jsx (lazy-chunk CSS left the prerendered phone menu unstyled on first paint); CardNav.css narrow layout via media query from first paint; lead-sources strip compacted. Not live yet.
 - [claude] 2026-10-24 IST: staging 8df75cbd: .site-hero = 100svh centred (styles.css, .hero-visual width from vh, .hero-facts hidden on short screens); .site-dim is now the brand gradient (owner: no grey heading halves); MarketingChatBot launcher = 'Ask Artha' pill. Not live yet.
 - [claude] 2026-10-24 IST: Home hero compacted on staging (128a9b17): vh-based top padding, 58px headline, 6:7 photo; .site-gradient-text (#ff6b00 to #ffaa00) added to styles.css for headline accents. Not live yet.
 - [claude] 2026-10-24 IST: Home on staging (6024f6b5, 1ca61209): pricing section removed from home; new components/site/FilmSection.jsx (poster, loads on tap, EN/HI, chapter chips, no VideoObject) after Features; How it works = 3 visual step cards. Not live yet.
