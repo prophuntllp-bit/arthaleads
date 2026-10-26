@@ -177,7 +177,7 @@ export default function HelpBot() {
   const [ticketFiles, setTicketFiles] = useState([]); // [{name, size, url(base64)}]
   const fileInputRef = useRef(null);
 
-  const { user, org } = useAuth();
+  const { user, org, updateUserState } = useAuth();
   // Artha's AI answers are a Growth feature (the API refuses Starter). Tours,
   // quick answers and support tickets stay on every plan.
   const aiAllowed = user?.role === "super_admin" || canAccess(org, "growth");
@@ -234,18 +234,24 @@ export default function HelpBot() {
       .catch(() => setStarters([]));
   }, [open, location.pathname]);
 
-  // First-login tour offer
+  // First-login tour offer. Skip, the X or taking the tour hides it for good:
+  // remembered on the account (user.tourOfferDismissedAt), so it does not come
+  // back on another browser or device, and in this browser too.
   const welcomeKey = user?._id ? `al_tour_offered_${user._id}` : null;
+  const tourOfferDone = Boolean(user?.tourOfferDismissedAt);
   useEffect(() => {
-    if (!welcomeKey) return;
-    if (localStorage.getItem(welcomeKey)) return;
+    if (!welcomeKey || tourOfferDone) return;
+    try { if (localStorage.getItem(welcomeKey)) return; } catch { /* storage blocked */ }
     const t = setTimeout(() => setShowWelcome(true), 1500);
     return () => clearTimeout(t);
-  }, [welcomeKey]);
+  }, [welcomeKey, tourOfferDone]);
 
   const dismissWelcome = () => {
-    if (welcomeKey) localStorage.setItem(welcomeKey, "1");
+    try { if (welcomeKey) localStorage.setItem(welcomeKey, "1"); } catch { /* storage blocked */ }
     setShowWelcome(false);
+    api.post("/auth/me/tour-offer-dismissed")
+      .then(() => user && updateUserState?.({ ...user, tourOfferDismissedAt: new Date().toISOString() }))
+      .catch(() => {});
   };
   const acceptWelcome = () => { dismissWelcome(); startTour("dashboard"); };
 
@@ -634,7 +640,7 @@ export default function HelpBot() {
             </button>
             <button type="button" onClick={dismissWelcome}
               className="btn-secondary rounded-lg px-3 py-1.5 text-xs cursor-pointer">
-              Maybe later
+              Skip
             </button>
           </div>
         </div>
