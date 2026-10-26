@@ -4,8 +4,9 @@
 // (scripts/seo-pages.mjs reads useSEO from the page file) and passes it here.
 //
 // Props: hero { lines: [string, string], lede, eyebrow, photo, photoAlt,
-// cards: [{ Icon, title, sub, iconColor?, iconBg? }] } (AI photo + coded cards;
-// owner rule: no real CRM screenshots), answer { q, paras } (first paragraph =
+// cards: [{ Icon, title, sub, iconColor?, iconBg? }], visual? } (AI photo + coded
+// cards, or a coded `visual` node instead; owner rule: no real CRM
+// screenshots), answer { q, paras } (first paragraph =
 // the 40-60 word definition that snippets and AI answers quote), steps
 // { title, intro, items: [{ title, body }] }, features { title, intro, items:
 // [{ icon, title, body, plan }] } (plan "all" = every plan), compare { title,
@@ -30,7 +31,7 @@ export default function SolutionPage({ hero, answer, steps, features, compare, f
         eyebrow={hero.eyebrow}
         title={<>{hero.lines[0]}{" "}<span className="site-dim">{hero.lines[1]}</span></>}
         lede={hero.lede}
-        visual={<PhotoVisual name={hero.photo} alt={hero.photoAlt} cards={hero.cards} />}
+        visual={hero.visual || <PhotoVisual name={hero.photo} alt={hero.photoAlt} cards={hero.cards} />}
       />
 
       {/* Short answer first: what search snippets and AI answers quote */}

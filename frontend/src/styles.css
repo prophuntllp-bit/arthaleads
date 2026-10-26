@@ -1085,3 +1085,6 @@ html[data-public-theme="dark"] .hero-glass {
   border-top: 1px solid var(--site-line); border-bottom: 1px solid var(--site-line);
 }
 @media (min-width: 1280px) { .features-steps { top: 80px; } }
+/* Anything else that sticks under the marketing nav (e.g. the /compare table header). */
+.site-sticky-top { top: 76px; }
+@media (min-width: 1280px) { .site-sticky-top { top: 80px; } }

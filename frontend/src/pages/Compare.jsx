@@ -1,10 +1,12 @@
+// pages/Compare.jsx - /compare, the buyer's guide and feature comparison, on
+// the shared marketing theme (components/site/*).
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { waLink, CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
+import { waLink } from "../utils/crmLinks";
 import { Check, X, Search, ArrowRight } from "lucide-react";
-import PublicNav from "../components/PublicNav";
-import PublicFooter from "../components/PublicFooter";
-import { usePublicTheme } from "../context/PublicThemeContext";
+import { SitePage, Section, Container, SectionHeader, Card } from "../components/site/Site";
+import { PageHero, FaqSection, ClosingCta } from "../components/site/Blocks";
+import { Reveal } from "../components/motion/Motion";
 import { useSEO } from "../utils/useSEO";
 import { PLAN_PRICING } from "../utils/plan";
 
@@ -131,16 +133,19 @@ const GUIDE_JSONLD = JSON.stringify({
   "mainEntity": GUIDE_FAQS.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
 }).replace(/</g, "\\u003c");
 
+const PARTIAL = "#d97706";
+const brandInk = { color: "var(--site-brand-ink)" };
+const COLS = "minmax(0,1.6fr) repeat(4, minmax(0,1fr))";
+
 function Cell({ val }) {
-  if (val === "y") return <span><Check aria-hidden="true" className="w-4 h-4 mx-auto" style={{ color: "#22c55e" }} /><span className="sr-only">Yes</span></span>;
-  if (val === "e") return <span className="text-xs font-medium" style={{ color: "#15803d" }}>Enterprise</span>;
-  if (val === "p") return <span className="text-xs font-medium" style={{ color: "#b45309" }}>Partial</span>;
-  if (val === "u") return <span className="text-sm" style={{ color: "#6b7280" }} title="Not stated on their website"><span aria-hidden="true">–</span><span className="sr-only">Not stated</span></span>;
+  if (val === "y") return <span><Check aria-hidden="true" className="w-4 h-4 mx-auto" style={{ color: "#16a34a" }} /><span className="sr-only">Yes</span></span>;
+  if (val === "e") return <span className="text-xs font-semibold" style={{ color: "#16a34a" }}>Enterprise</span>;
+  if (val === "p") return <span className="text-xs font-semibold" style={{ color: PARTIAL }}>Partial</span>;
+  if (val === "u") return <span className="text-sm site-muted" title="Not stated on their website"><span aria-hidden="true">–</span><span className="sr-only">Not stated</span></span>;
   return <span><X aria-hidden="true" className="w-4 h-4 mx-auto" style={{ color: "#ef4444" }} /><span className="sr-only">No</span></span>;
 }
 
 export default function Compare() {
-  const { isDark } = usePublicTheme();
   const [query, setQuery] = useState("");
 
   useSEO({
@@ -148,14 +153,6 @@ export default function Compare() {
     description: "Compare Arthaleads, Sell.Do, Leadrat and Kylas on features, pricing and free trials, with a buyer's guide to choosing a real estate CRM in India.",
     canonical:   "https://www.arthaleads.com/compare",
   });
-
-  const bg         = isDark ? "#0d0d1a" : "#ffffff";
-  const altBg      = isDark ? "#080810" : "#f9fafb";
-  const textColor  = isDark ? "#ffffff" : "#111827";
-  const softText   = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const cardBg     = isDark ? "rgba(255,255,255,0.02)" : "#ffffff";
-  const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-  const headBg     = isDark ? "rgba(255,255,255,0.03)" : "#f9fafb";
 
   const filtered = useMemo(() => {
     if (!query.trim()) return CATEGORIES;
@@ -166,122 +163,94 @@ export default function Compare() {
   }, [query]);
 
   return (
-    <div className="min-h-screen" style={{ background: bg, color: textColor, fontFamily: "Inter, sans-serif" }}>
+    <SitePage>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: GUIDE_JSONLD }} />
-      <PublicNav />
 
-      {/* Hero */}
-      <section className="relative pt-32 pb-10 overflow-hidden">
-        <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl font-black mb-5" style={{ color: textColor, textWrap: "balance" }}>
-            Choosing the best real estate CRM{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">in India</span>
-          </h1>
-          <p className="text-lg max-w-xl mx-auto" style={{ color: softText }}>
-            An honest buyer's guide: who each CRM suits, what it costs, and a feature-by-feature comparison of
-            Arthaleads, Sell.Do, Leadrat and Kylas, sourced from their own websites.
-          </p>
-        </div>
-      </section>
+      <PageHero
+        eyebrow="Buyer's guide"
+        title={<>Choosing the best real estate CRM <span className="site-dim">in India</span></>}
+        lede="An honest buyer's guide: who each CRM suits, what it costs, and a feature-by-feature comparison of Arthaleads, Sell.Do, Leadrat and Kylas, sourced from their own websites."
+        actions={null}
+      />
 
       {/* Quick answer: who each one suits */}
-      <section className="pb-12">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl sm:text-3xl font-black mb-2 text-center" style={{ color: textColor }}>The short answer: it depends on your team</h2>
-          <p className="text-base max-w-2xl mx-auto text-center mb-8" style={{ color: softText }}>
-            No CRM is best for everyone. This is who each one fits, based on how it is priced and sold.
-          </p>
+      <Section tone="tint">
+        <Container>
+          <SectionHeader eyebrow="The short answer" title="It depends on your team"
+            lede="No CRM is best for everyone. This is who each one fits, based on how it is priced and sold." />
           <div className="grid sm:grid-cols-2 gap-4">
-            {WHO_FITS.map((w) => (
-              <div key={w.name} className="rounded-2xl border p-5" style={{ background: cardBg, borderColor: cardBorder }}>
-                <h3 className="font-bold text-base mb-1.5" style={{ color: textColor }}>{w.name}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: softText }}>{w.fit}</p>
-                {w.to && (
-                  <Link to={w.to} className="inline-flex items-center gap-1.5 mt-2.5 text-sm font-semibold underline underline-offset-2" style={{ color: isDark ? "#fb923c" : "#c2410c" }}>
-                    Arthaleads vs {w.name} <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                )}
-              </div>
+            {WHO_FITS.map((w, i) => (
+              <Reveal key={w.name} delay={(i % 2) * 90} className="min-w-0 flex">
+                <Card glow className="w-full p-6 flex flex-col" style={i === 0 ? { borderColor: "rgba(255,107,0,0.45)" } : undefined}>
+                  <h3 className="font-display text-lg font-bold site-ink mb-2" style={i === 0 ? brandInk : undefined}>{w.name}</h3>
+                  <p className="text-[15px] leading-relaxed flex-1">{w.fit}</p>
+                  {w.to && <Link to={w.to} className="site-link mt-4 text-sm">Arthaleads vs {w.name} <ArrowRight className="w-4 h-4" /></Link>}
+                </Card>
+              </Reveal>
             ))}
           </div>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
-      {/* Search */}
-      <section className="pb-6">
-        <div className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: softText }} />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+      {/* Feature comparison */}
+      <Section tone="white">
+        <Container narrow>
+          <SectionHeader eyebrow="Feature by feature" title="Arthaleads, Leadrat, Sell.Do and Kylas" />
+          <div className="relative mb-6">
+            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 site-muted" aria-hidden="true" />
+            <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search a feature"
               placeholder="Search a feature (e.g. WhatsApp, API, analytics)…"
-              className="w-full pl-11 pr-4 py-3 rounded-xl text-sm outline-none"
-              style={{ background: cardBg, border: `1px solid ${cardBorder}`, color: textColor }}
-            />
+              className="w-full pl-11 pr-4 py-3 rounded-2xl text-sm outline-none transition focus:ring-2 focus:ring-[color:var(--site-brand)]"
+              style={{ background: "var(--site-card)", border: "1px solid var(--site-line-strong)", color: "var(--site-ink)" }} />
           </div>
-        </div>
-      </section>
 
-      {/* Comparison table */}
-      <section className="pb-16">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Below sm the five columns would crush into ~340px: scroll sideways instead. */}
-          <div className="overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="rounded-2xl overflow-hidden min-w-[560px] sm:min-w-0" style={{ border: `1px solid ${cardBorder}` }}>
-            {/* Sticky header row */}
-            <div className="grid sticky top-16 z-10" style={{ gridTemplateColumns: "minmax(0,1.6fr) repeat(4, minmax(0,1fr))", background: headBg, borderBottom: `1px solid ${cardBorder}` }}>
-              <div className="px-4 py-3 text-xs font-bold uppercase tracking-wide flex items-center" style={{ color: softText }}>Feature</div>
-              {COMPETITORS.map((c, i) => (
-                <div key={c} className="px-2 py-3 text-center text-xs font-bold flex items-center justify-center" style={{ color: i === 0 ? "#ff6b00" : softText, background: i === 0 ? "rgba(255,107,0,0.06)" : "transparent" }}>
-                  {c}
-                </div>
-              ))}
-            </div>
-
-            {filtered.length === 0 && (
-              <div className="px-4 py-10 text-center text-sm" style={{ color: softText, background: cardBg }}>
-                No features match "{query}". Try another search.
-              </div>
-            )}
-
-            {filtered.map((cat) => (
-              <div key={cat.name}>
-                <div className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest" style={{ color: "var(--brand-text)", background: isDark ? "rgba(255,107,0,0.04)" : "#fff7f0", borderBottom: `1px solid ${cardBorder}` }}>
-                  {cat.name}
-                </div>
-                {cat.rows.map(([label, vals], ri) => (
-                  <div
-                    key={label}
-                    className="grid items-center"
-                    style={{
-                      gridTemplateColumns: "minmax(0,1.6fr) repeat(4, minmax(0,1fr))",
-                      background: ri % 2 === 0 ? cardBg : (isDark ? "rgba(255,255,255,0.01)" : "#fcfcfc"),
-                      borderBottom: `1px solid ${cardBorder}`,
-                    }}
-                  >
-                    <div className="px-4 py-3 text-sm" style={{ color: textColor }}>{label}</div>
-                    {vals.map((v, i) => (
-                      <div key={i} className="px-2 py-3 text-center" style={{ background: i === 0 ? "rgba(255,107,0,0.04)" : "transparent" }}>
-                        <Cell val={v} />
-                      </div>
-                    ))}
-                  </div>
+          <div className="relative overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0">
+            <Card raised className="min-w-[560px] sm:min-w-0">
+              <div className="grid sm:sticky site-sticky-top z-10 rounded-t-[20px]"
+                style={{ gridTemplateColumns: COLS, background: "var(--site-card)", borderBottom: "1px solid var(--site-line)" }}>
+                <div className="px-5 py-4 text-xs font-bold uppercase tracking-[0.12em] site-muted flex items-center">Feature</div>
+                {COMPETITORS.map((c, i) => (
+                  <div key={c} className={`px-2 py-4 text-center text-[13px] font-display font-bold flex items-center justify-center ${i ? "site-ink" : ""}`}
+                    style={i === 0 ? { ...brandInk, background: "rgba(255,107,0,0.07)" } : undefined}>{c}</div>
                 ))}
               </div>
-            ))}
-          </div>
+
+              {filtered.length === 0 && (
+                <p className="px-5 py-10 text-center text-sm site-muted">No features match "{query}". Try another search.</p>
+              )}
+
+              {filtered.map((cat, ci) => (
+                <div key={cat.name}>
+                  <div className="px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em]" style={{ ...brandInk, background: "rgba(255,107,0,0.05)", borderBottom: "1px solid var(--site-line)" }}>
+                    {cat.name}
+                  </div>
+                  {cat.rows.map(([label, vals], ri) => {
+                    const last = ci === filtered.length - 1 && ri === cat.rows.length - 1;
+                    return (
+                      <div key={label} className="grid items-center" style={{ gridTemplateColumns: COLS, borderBottom: last ? undefined : "1px solid var(--site-line)" }}>
+                        <div className="px-5 py-3.5 text-sm site-ink">{label}</div>
+                        {vals.map((v, i) => (
+                          <div key={i} className="px-2 py-3.5 text-center self-stretch flex items-center justify-center" style={i === 0 ? { background: "rgba(255,107,0,0.04)" } : undefined}>
+                            <Cell val={v} />
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </Card>
           </div>
 
           {/* Legend */}
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-5 text-xs" style={{ color: softText }}>
-            <span className="flex items-center gap-1.5"><Check className="w-4 h-4" style={{ color: "#22c55e" }} /> Full support</span>
-            <span className="flex items-center gap-1.5"><span style={{ color: "#b45309", fontWeight: 600 }}>Partial</span> Limited</span>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-6 text-xs site-muted">
+            <span className="flex items-center gap-1.5"><Check className="w-4 h-4" style={{ color: "#16a34a" }} /> Full support</span>
+            <span className="flex items-center gap-1.5"><span className="font-semibold" style={{ color: PARTIAL }}>Partial</span> Limited</span>
             <span className="flex items-center gap-1.5"><X className="w-4 h-4" style={{ color: "#ef4444" }} /> Not offered, per their website</span>
-            <span className="flex items-center gap-1.5"><span className="text-sm" style={{ color: "#6b7280" }}>–</span> Not stated on their website</span>
+            <span className="flex items-center gap-1.5"><span className="text-sm">–</span> Not stated on their website</span>
           </div>
-          <p className="text-center text-xs mt-4 max-w-2xl mx-auto leading-relaxed" style={{ color: softText }}>
+          <p className="text-center text-xs mt-4 max-w-2xl mx-auto leading-relaxed site-muted">
             Each competitor is marked from its own website and help pages as checked on {CHECKED}:{" "}
             {SOURCES.map(([n, u], i) => (
               <span key={n}>
@@ -290,122 +259,90 @@ export default function Compare() {
             ))}
             Products change, and some features sit on higher plans or add-ons. Spotted something out of date?{" "}
             <a href={waLink("Hi Arthaleads, something on your CRM comparison page looks out of date: ")} target="_blank" rel="noopener noreferrer"
-              className="font-semibold hover:underline" style={{ color: isDark ? "#fb923c" : "#c2410c" }}>Let us know</a> and we will correct it.
+              className="font-semibold hover:underline" style={brandInk}>Let us know</a> and we will correct it.
             {" "}Leadrat, Sell.Do and Kylas are trademarks of their owners; Arthaleads is not affiliated with them.
           </p>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
       {/* One page per competitor, in depth */}
-      <section className="pb-16">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl sm:text-3xl font-black mb-6 text-center" style={{ color: textColor }}>Detailed comparisons</h2>
-          <div className="grid sm:grid-cols-3 gap-5">
+      <Section tone="tint">
+        <Container>
+          <SectionHeader eyebrow="In depth" title="Detailed comparisons" />
+          <div className="grid sm:grid-cols-3 gap-4">
             {[
               ["Sell.Do", "/compare/sell-do-alternative", "Sell.Do does not publish prices. How it quotes, what each includes, and which suits your team."],
               ["Leadrat", "/compare/leadrat-alternative", "Leadrat's per-user prices from 10 users, billing, refunds, and which suits your team."],
               ["Kylas", "/compare/kylas-alternative", "Kylas's flat fee against per-user pricing, its free plan, and which suits your team."],
-            ].map(([name, to, body]) => (
-              <Link key={to} to={to}
-                className="group flex flex-col rounded-2xl border p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-orange-300"
-                style={{ background: cardBg, borderColor: cardBorder }}>
-                <h3 className="font-bold text-lg mb-2 group-hover:text-[color:var(--brand-text)] transition-colors" style={{ color: textColor }}>Arthaleads vs {name}</h3>
-                <p className="text-sm leading-relaxed mb-3 flex-1" style={{ color: softText }}>{body}</p>
-                <span className="inline-flex items-center gap-1.5 text-sm font-semibold transition-all group-hover:gap-2.5" style={{ color: isDark ? "#fb923c" : "#c2410c" }}>
-                  Read the comparison <ArrowRight className="w-3.5 h-3.5" />
-                </span>
-              </Link>
+            ].map(([name, to, body], i) => (
+              <Reveal key={to} delay={i * 90} className="min-w-0 flex">
+                <Card as={Link} to={to} glow className="group w-full p-6 flex flex-col transition-transform duration-300 hover:-translate-y-1">
+                  <h3 className="font-display text-lg font-bold site-ink mb-2">Arthaleads vs {name}</h3>
+                  <p className="text-[15px] leading-relaxed mb-4 flex-1">{body}</p>
+                  <span className="site-link text-sm">Read the comparison <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" /></span>
+                </Card>
+              </Reveal>
             ))}
           </div>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
       {/* How to choose */}
-      <section className="py-16 border-t" style={{ borderColor: isDark ? "rgba(255,255,255,0.06)" : "#f1f1f1" }}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl sm:text-3xl font-black mb-3 text-center" style={{ color: textColor }}>How to choose a real estate CRM</h2>
-          <p className="text-base max-w-2xl mx-auto text-center mb-10" style={{ color: softText }}>
-            A feature table only tells part of the story. These six questions decide whether a CRM actually helps your
-            team close more bookings, whichever product you pick.
-          </p>
-          <div className="grid sm:grid-cols-2 gap-5">
+      <Section tone="white">
+        <Container>
+          <SectionHeader eyebrow="How to choose" title="Six questions that decide it"
+            lede="A feature table only tells part of the story. These six questions decide whether a CRM actually helps your team close more bookings, whichever product you pick." />
+          <ol className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {CHOOSING.map((c, i) => (
-              <div key={c.title} className="rounded-2xl border p-6" style={{ background: cardBg, borderColor: isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb" }}>
-                <h3 className="font-bold text-lg mb-2" style={{ color: textColor }}>{i + 1}. {c.title}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: softText }}>{c.body}</p>
-                {c.link && (
-                  <Link to={c.link.to} className="inline-flex items-center gap-1.5 mt-3 text-sm font-semibold underline underline-offset-2" style={{ color: isDark ? "#fb923c" : "#c2410c" }}>
-                    {c.link.label} <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                )}
-              </div>
+              <Reveal as="li" key={c.title} delay={(i % 3) * 80} className="min-w-0 flex">
+                <Card glow className="w-full p-6 flex flex-col">
+                  <span className="font-display w-10 h-10 rounded-full flex items-center justify-center text-base font-extrabold text-white mb-5"
+                    style={{ background: "var(--brand-btn)", boxShadow: "0 12px 26px -12px rgba(204,75,0,0.7)" }}>{i + 1}</span>
+                  <h3 className="font-display text-lg font-bold site-ink mb-2">{c.title}</h3>
+                  <p className="text-[15px] leading-relaxed flex-1">{c.body}</p>
+                  {c.link && <Link to={c.link.to} className="site-link mt-4 text-sm">{c.link.label} <ArrowRight className="w-4 h-4" /></Link>}
+                </Card>
+              </Reveal>
             ))}
-          </div>
-        </div>
-      </section>
+          </ol>
+        </Container>
+      </Section>
 
       {/* What it costs */}
-      <section className="pb-16">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl sm:text-3xl font-black mb-2 text-center" style={{ color: textColor }}>What does a real estate CRM cost in India?</h2>
-          <p className="text-base max-w-2xl mx-auto text-center mb-6" style={{ color: softText }}>
-            List prices as published on each company's website on {CHECKED}. Some prices exclude GST, and billing may be monthly or yearly.
-          </p>
-          <div className="overflow-x-auto rounded-2xl" style={{ border: `1px solid ${cardBorder}` }}>
+      <Section tone="tint">
+        <Container narrow>
+          <SectionHeader eyebrow="Pricing" title="What does a real estate CRM cost in India?"
+            lede={`List prices as published on each company's website on ${CHECKED}. Some prices exclude GST, and billing may be monthly or yearly.`} />
+          <Card raised className="relative overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm border-collapse">
               <caption className="sr-only">Real estate CRM prices in India compared</caption>
               <thead>
-                <tr style={{ background: headBg }}>
+                <tr style={{ borderBottom: "1px solid var(--site-line)" }}>
                   {["CRM", "How it is priced", "Published price", "Try before you buy"].map((h) => (
-                    <th key={h} scope="col" className="text-left font-semibold px-4 py-3" style={{ color: softText }}>{h}</th>
+                    <th key={h} scope="col" className="text-left font-semibold px-5 py-4 site-muted">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {COST_ROWS.map(([name, model, price, trial], i) => (
-                  <tr key={name} style={{ borderTop: `1px solid ${cardBorder}`, background: i === 0 ? (isDark ? "rgba(255,107,0,0.05)" : "#fff7f0") : cardBg }}>
-                    <th scope="row" className="text-left font-bold px-4 py-3" style={{ color: textColor }}>{name}</th>
-                    <td className="px-4 py-3" style={{ color: textColor }}>{model}</td>
-                    <td className="px-4 py-3" style={{ color: textColor }}>{price}</td>
-                    <td className="px-4 py-3" style={{ color: textColor }}>{trial}</td>
+                  <tr key={name} className="align-top" style={{ borderBottom: i < COST_ROWS.length - 1 ? "1px solid var(--site-line)" : undefined, background: i === 0 ? "rgba(255,107,0,0.05)" : undefined }}>
+                    <th scope="row" className="text-left font-display font-bold px-5 py-4" style={i === 0 ? brandInk : { color: "var(--site-ink)" }}>{name}</th>
+                    <td className="px-5 py-4 leading-relaxed">{model}</td>
+                    <td className="px-5 py-4 leading-relaxed site-ink">{price}</td>
+                    <td className="px-5 py-4 leading-relaxed">{trial}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
-      </section>
+          </Card>
+        </Container>
+      </Section>
 
       {/* Buyer FAQs (same text as GUIDE_JSONLD) */}
-      <section className="pb-16">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl sm:text-3xl font-black mb-6 text-center" style={{ color: textColor }}>Questions buyers ask</h2>
-          <div className="space-y-4">
-            {GUIDE_FAQS.map(([q, a]) => (
-              <div key={q} className="rounded-2xl border p-5" style={{ background: cardBg, borderColor: cardBorder }}>
-                <h3 className="font-bold text-base mb-2" style={{ color: textColor }}>{q}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: softText }}>{a}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <FaqSection title="Questions buyers ask" items={GUIDE_FAQS} tone="white" />
 
-      {/* CTA */}
-      <section className="py-16" style={{ background: altBg }}>
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl font-bold mb-3" style={{ color: textColor }}>See the difference yourself</h2>
-          <p className="text-base mb-6" style={{ color: softText }}>
-            Start free — no credit card needed. Set up your pipeline in minutes.
-          </p>
-          <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} className="inline-flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25">
-            Get Started Free
-            <ArrowRight className="w-4 h-4" />
-          </a>
-        </div>
-      </section>
-
-      <PublicFooter />
-    </div>
+      <ClosingCta title="See the difference" dim="on your own leads."
+        body="Book a 30-minute demo and compare for yourself with your real leads, or start the 14-day free trial. No credit card needed." tone="tint" />
+    </SitePage>
   );
 }
