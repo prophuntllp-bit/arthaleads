@@ -80,6 +80,7 @@ import "./styles.css";
 import "./components/site/reactbits/CardNav.css";
 import "./components/site/reactbits/Grainient.css";
 import "./components/site/reactbits/Threads.css";
+import "./components/site/reactbits/GhostFibers.css";
 import { isAppHost, isMarketingHost } from "./utils/hosts";
 
 // Google sign-in is only used on /login and /signup, which live on

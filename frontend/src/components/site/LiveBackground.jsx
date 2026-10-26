@@ -13,6 +13,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 const SHADERS = {
   grainient: lazy(() => import("./reactbits/Grainient")),
   threads: lazy(() => import("./reactbits/Threads")),
+  ghostfibers: lazy(() => import("./reactbits/GhostFibers")),
 };
 
 function canAnimate() {

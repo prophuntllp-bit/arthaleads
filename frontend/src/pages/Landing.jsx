@@ -52,10 +52,20 @@ function Hero() {
   return (
     <Section id="hero" tone="white" className="site-hero !pt-[5.5rem] sm:!pt-28 lg:!pt-[6.5rem] !pb-14 lg:!pb-10 overflow-x-clip">
       {/* Grain sits on the photo side and fades out before the headline, so text keeps full contrast. */}
-      <LiveBackground kind="grainient" colors={GRAIN_COLORS} lightMode={!isDark} angle={120} flow={0.7} speed={0.6}
-        silk={0.3} grainAmount={isDark ? 0.07 : 0.05} clickSwirl={false} stir={0.6}
-        fallback="radial-gradient(60% 55% at 85% 25%, rgba(255,107,0,0.13), transparent 70%), radial-gradient(45% 40% at 0% 100%, rgba(255,170,0,0.08), transparent 70%)"
-        style={{ WebkitMaskImage: "linear-gradient(100deg, transparent 18%, #000 62%)", maskImage: "linear-gradient(100deg, transparent 18%, #000 62%)", opacity: isDark ? 0.85 : 0.75 }} />
+      {/* Dark mode: Ghost Fibers (ember, in our orange and amber). Light mode: the soft Grainient glow,
+          because glowing fibres wash out on white. Both sit on the photo side and fade before the headline. */}
+      {isDark ? (
+        <LiveBackground key="fibers" kind="ghostfibers" glowColor="#ff6a1a" lineColor="#ffd9a8" secondaryColor="#ffaa00"
+          fiberStyle="dashes" flow={0.9} speed={0.6} sparkle={1} particles={0.8} twist={0.9} rotation={8}
+          mouseInteraction={false} pulseOnClick={false} vignette={0} grain={0.04} brightness={1.05}
+          fallback="radial-gradient(60% 55% at 85% 25%, rgba(255,107,0,0.16), transparent 70%), radial-gradient(45% 40% at 0% 100%, rgba(255,170,0,0.08), transparent 70%)"
+          style={{ WebkitMaskImage: "linear-gradient(100deg, transparent 22%, #000 60%)", maskImage: "linear-gradient(100deg, transparent 22%, #000 60%)" }} />
+      ) : (
+        <LiveBackground key="grain" kind="grainient" colors={GRAIN_COLORS} lightMode angle={120} flow={0.7} speed={0.6}
+          silk={0.3} grainAmount={0.05} clickSwirl={false} stir={0.6}
+          fallback="radial-gradient(60% 55% at 85% 25%, rgba(255,107,0,0.13), transparent 70%), radial-gradient(45% 40% at 0% 100%, rgba(255,170,0,0.08), transparent 70%)"
+          style={{ WebkitMaskImage: "linear-gradient(100deg, transparent 18%, #000 62%)", maskImage: "linear-gradient(100deg, transparent 18%, #000 62%)", opacity: 0.75 }} />
+      )}
       <div aria-hidden="true" className="site-grid-bg" />
       <Container className="relative grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-center">
         <div className="text-center lg:text-left">
