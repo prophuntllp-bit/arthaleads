@@ -57,7 +57,8 @@ export default function MetaConversionsSection() {
     }).catch(() => {});
   }, []);
   useEffect(() => { if (allowed) load(); }, [allowed, load]);
-  const close = useCallback(() => setOpen(null), []);
+  // Closing without saving drops unsaved edits, so they can't be saved by accident later.
+  const close = useCallback(() => { setOpen(null); setTestNote(null); load(); }, [load]);
 
   if (user?.role === "admin" && !canAccess(org, "growth")) {
     return (
