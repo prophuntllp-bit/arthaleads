@@ -348,10 +348,12 @@ function HowItWorks() {
 // ── 8. Trust (no testimonials: facts only) ────────────────────────────────────
 // A bento grid: one featured card (the official WhatsApp API, our strongest
 // trust point) and four smaller cards, each with a small illustration.
-function TrustRow({ left, right, tone }) {
+function TrustRow({ left, right, tone, live = false }) {
   return (
-    <li className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-[12.5px]" style={{ background: "var(--site-chip)", border: "1px solid var(--site-line)" }}>
-      <span className="site-ink font-medium truncate">{left}</span>
+    <li className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-[12.5px] ${live ? "ai-live-row" : ""}`} style={{ background: "var(--site-chip)", border: "1px solid var(--site-line)" }}>
+      <span className="site-ink font-medium truncate flex items-center gap-1.5">
+        {live && <Sparkles className="w-3.5 h-3.5" style={{ color: "#ff8a3d" }} aria-hidden="true" />}{left}
+      </span>
       <span className="text-[11px] font-semibold rounded-md px-2 py-0.5 shrink-0" style={tone}>{right}</span>
     </li>
   );
@@ -394,7 +396,7 @@ function Trust() {
                 <ul className="space-y-1.5">
                   <TrustRow left="Business number" right="Verified" tone={T_GREEN} />
                   <TrustRow left="Templates" right="Approved by Meta" tone={T_GREEN} />
-                  <TrustRow left="AI agent" right="Live 24/7" tone={T_GREEN} />
+                  <TrustRow left="AI agent" right="Live 24/7" tone={T_GREEN} live />
                 </ul>
               </div>
             </Card>

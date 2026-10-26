@@ -961,7 +961,7 @@ html[data-public-theme="dark"] .site-cta-panel {
   .site-glow::before, .site-glow::after { display: none; }
 }
 /* The chat launcher would cover the mobile menu's links while it is open. */
-.menu-open .mkt-chat-launcher { display: none; }
+.menu-open .mkt-chat-launcher, .menu-open .wa-widget { display: none; }
 /* Phones and tablets use the floating Card Nav, which has its own surface:
    the full-width bar background only applies on desktop. */
 @media (max-width: 1279px) {
@@ -999,7 +999,7 @@ html[data-public-theme="dark"] .site-cta-panel {
   /* Natural iPhone proportions (318 x 600 screen); shrinks a little on short screens. */
   .ai-band { --hc-h: clamp(520px, calc(100svh - 200px), 600px); --hc-w: calc(var(--hc-h) * 0.53); }
 }
-@media (max-width: 1023px) { .hide-chat-mobile .mkt-chat-launcher { display: none; } }
+@media (max-width: 1023px) { .hide-chat-mobile .mkt-chat-launcher, .hide-chat-mobile .wa-widget { display: none; } }
 
 /* ── Hero: warm glass stage (26 Oct 2026) ─────────────────────────────────
    Three layers, no libraries: warm light blobs behind the photo side, a
@@ -1045,3 +1045,22 @@ html[data-public-theme="dark"] .hero-glass {
   .hero-glass { inset: -14px -8px; border-radius: 34px; backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
 @media (prefers-reduced-motion: reduce) { .hero-warm::before, .hero-warm::after { animation: none; } }
+
+/* Trust card: the AI agent row gets a slowly travelling orange/green gradient
+   border and a soft pulse so it stands out from the static rows. */
+.ai-live-row { position: relative; isolation: isolate; border-color: transparent !important; }
+.ai-live-row::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; z-index: -1;
+  background: linear-gradient(90deg, #ff6b00, #ffaa00, #25d366, #ff6b00); background-size: 300% 100%;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+  animation: ai-border 4s linear infinite;
+}
+.ai-live-row::after {
+  content: ""; position: absolute; inset: -6px; border-radius: 16px; z-index: -2; pointer-events: none;
+  background: radial-gradient(60% 120% at 50% 50%, rgba(255,122,26,0.35), transparent 70%);
+  animation: ai-pulse 2.6s ease-in-out infinite;
+}
+@keyframes ai-border { to { background-position: 300% 0; } }
+@keyframes ai-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.9; } }
+@media (prefers-reduced-motion: reduce) { .ai-live-row::before, .ai-live-row::after { animation: none; } }
