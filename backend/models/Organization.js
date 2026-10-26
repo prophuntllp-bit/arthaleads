@@ -150,6 +150,13 @@ const orgSchema = new mongoose.Schema(
       // QualifiedLead when a WhatsApp ad lead asks for a site visit or an
       // advisor, or registers, in the button flow (services/metaConversions.js).
       whatsappQualified: { type: Boolean, default: true },
+      // Stage -> event for click-to-WhatsApp leads, Meta's WhatsApp names only.
+      whatsappEvents: [{
+        _id: false,
+        stage:     { type: String },
+        eventName: { type: String, trim: true, maxlength: 40 },
+        enabled:   { type: Boolean, default: true },
+      }],
       events: [{
         _id: false,
         stage:     { type: String },

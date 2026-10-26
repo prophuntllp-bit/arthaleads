@@ -87,6 +87,20 @@ test("chat QualifiedLead, then Site Visit: reported once; Closed Won is Purchase
   assert.equal(ev.status, "sent");
 });
 
+test("WhatsApp leads use the WhatsApp stage list; lead forms keep theirs", async () => {
+  await mongoose.connection.collection("organizations").updateOne({ _id: ORG }, { $set: { "metaCapi.whatsappEvents": [
+    { stage: "New", eventName: "LeadSubmitted", enabled: true },
+    { stage: "Negotiation", eventName: "InitiateCheckout", enabled: true },
+  ] } });
+  const w = await ctwa(), f = await form();
+  await capi.track(w, "Negotiation");
+  await capi.track(f, "Negotiation");
+  await capi.track(w, "Site Visit");
+  await mongoose.connection.collection("organizations").updateOne({ _id: ORG }, { $unset: { "metaCapi.whatsappEvents": "" } });
+  assert.deepEqual(await names(w._id), ["InitiateCheckout"], "Site Visit is not in this company's WhatsApp list");
+  assert.deepEqual(await names(f._id), [], "Negotiation is off for lead forms");
+});
+
 test("chat QualifiedLead is only for WhatsApp ad leads, and can be switched off", async () => {
   const f = await form();
   await capi.trackChatQualified(f);

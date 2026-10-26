@@ -44,9 +44,19 @@ function normPhone(p) {
 }
 
 // Click-to-WhatsApp leads go through Meta's Conversions API for Business
-// Messaging, which accepts only these names (Meta docs, checked 26 Oct 2026).
-// Until then WhatsApp leads were sent the lead-form names ("Lead", "Schedule"),
-// which that API does not take; it was never switched on, so nothing was lost.
+// Messaging, which accepts only these names (Meta docs, checked 26 Oct 2026),
+// so they have their own stage list (metaCapi.whatsappEvents). Until then
+// WhatsApp leads were sent the lead-form names ("Lead", "Schedule"), which that
+// API does not take; it was never switched on, so nothing was lost.
+const DEFAULT_WHATSAPP_EVENTS = [
+  { stage: "New",         eventName: "LeadSubmitted", enabled: true },
+  { stage: "Contacted",   eventName: "QualifiedLead", enabled: false },
+  { stage: "Site Visit",  eventName: "QualifiedLead", enabled: true },
+  { stage: "Negotiation", eventName: "QualifiedLead", enabled: false },
+  { stage: "Closed Won",  eventName: "Purchase",      enabled: true },
+];
+const WHATSAPP_EVENT_NAMES = ["Purchase", "LeadSubmitted", "InitiateCheckout", "AddToCart", "ViewContent", "OrderCreated", "OrderShipped",
+  "OrderDelivered", "OrderCanceled", "OrderReturned", "CartAbandoned", "QualifiedLead", "RatingProvided", "ReviewProvided"];
 const WHATSAPP_EVENTS = new Set(["Purchase", "LeadSubmitted", "InitiateCheckout", "AddToCart", "ViewContent", "OrderCreated", "OrderShipped",
   "OrderDelivered", "OrderCanceled", "OrderReturned", "CartAbandoned", "QualifiedLead", "RatingProvided", "ReviewProvided"]);
 const WHATSAPP_EQUIVALENT = { Lead: "LeadSubmitted", Schedule: "QualifiedLead", SubmitApplication: "LeadSubmitted", CompleteRegistration: "QualifiedLead", Contact: "QualifiedLead" };
@@ -66,7 +76,12 @@ const CHAT_QUALIFIED_EVENT = "QualifiedLead";
 const QUALIFYING_CLOSINGS = ["site_visit", "handoff", "register"];
 const chatQualifiedOn = (org) => org?.metaCapi?.whatsappQualified !== false;
 
-function eventsFor(org) {
+/** The stage list for one kind of lead: lead forms (default) or WhatsApp ads. */
+function eventsFor(org, channel = "lead_ads") {
+  if (channel === "whatsapp_ctwa") {
+    const saved = org?.metaCapi?.whatsappEvents;
+    return saved && saved.length ? saved : DEFAULT_WHATSAPP_EVENTS;
+  }
   const saved = org?.metaCapi?.events;
   return saved && saved.length ? saved : DEFAULT_EVENTS;
 }
@@ -149,7 +164,7 @@ async function track(leadOrId, status, at = new Date()) {
   try {
     const ctx = await contextFor(leadOrId);
     if (!ctx) return;
-    const rule = eventsFor(ctx.org).find((e) => e.stage === status && e.enabled);
+    const rule = eventsFor(ctx.org, ctx.channel).find((e) => e.stage === status && e.enabled);
     if (!rule) return;
     await queueAndSend(ctx, status, rule.eventName, at);
   } catch (err) {
@@ -210,7 +225,7 @@ async function sweep() {
     ] }).limit(100).lean();
     for (const doc of retry) if (await sendDoc(org, doc)) sent++;
 
-    const stages = eventsFor(org).filter((e) => e.enabled).map((e) => e.stage);
+    const stages = [...new Set([...eventsFor(org), ...eventsFor(org, "whatsapp_ctwa")].filter((e) => e.enabled).map((e) => e.stage))];
     if (!stages.length) continue;
     const since = new Date(Date.now() - 3 * 3600000);
     const leads = await Lead.find({ orgId: org._id, status: { $in: stages }, updatedAt: { $gte: since }, $or: [{ metaLeadId: { $nin: ["", null] } }, { "campaignRef.ctwaClid": { $nin: ["", null] } }] })
@@ -250,4 +265,4 @@ async function sendTest(org) {
   return { received: out.events_received ?? 0, usedTestCode: true };
 }
 
-module.exports = { DEFAULT_EVENTS, eventsFor, eventNameFor, isReady, channelOf, track, trackChatQualified, QUALIFYING_CLOSINGS, CHAT_QUALIFIED_STAGE, sweep, sendTest, encryptField, decryptField };
+module.exports = { DEFAULT_EVENTS, DEFAULT_WHATSAPP_EVENTS, WHATSAPP_EVENT_NAMES, eventsFor, eventNameFor, isReady, channelOf, track, trackChatQualified, QUALIFYING_CLOSINGS, CHAT_QUALIFIED_STAGE, sweep, sendTest, encryptField, decryptField };

@@ -7,6 +7,8 @@ import toast from "react-hot-toast";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { canAccess } from "../utils/plan";
+import CustomSelect from "./CustomSelect";
+import { WhatsAppLogo, FacebookLogo } from "./site/BrandLogos";
 
 const CHANNEL = { lead_ads: "Lead form", whatsapp_ctwa: "WhatsApp ad" };
 const STATUS_TONE = {
@@ -22,7 +24,9 @@ export default function MetaConversionsSection() {
   const [d, setD] = useState(null);
   const [form, setForm] = useState({ datasetId: "", accessToken: "", testEventCode: "" });
   const [events, setEvents] = useState([]);
+  const [waEvents, setWaEvents] = useState([]);
   const [chatQualified, setChatQualified] = useState(true);
+  const [tab, setTab] = useState("lead_ads");
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testNote, setTestNote] = useState(null);
@@ -33,6 +37,7 @@ export default function MetaConversionsSection() {
       setD(r.data);
       setForm((f) => ({ ...f, datasetId: r.data.datasetId, testEventCode: r.data.testEventCode, accessToken: "" }));
       setEvents(r.data.events);
+      setWaEvents(r.data.whatsappEvents || []);
       setChatQualified(r.data.whatsappQualified !== false);
     }).catch(() => {});
   }, []);
@@ -54,7 +59,7 @@ export default function MetaConversionsSection() {
   const save = async (extra = {}) => {
     setSaving(true);
     try {
-      await api.put("/meta-conversions", { ...form, events, whatsappQualified: chatQualified, ...extra });
+      await api.put("/meta-conversions", { ...form, events, whatsappEvents: waEvents, whatsappQualified: chatQualified, ...extra });
       toast.success("Saved.");
       load();
       return true;
@@ -75,9 +80,10 @@ export default function MetaConversionsSection() {
     } finally { setTesting(false); }
   };
 
-  const setEvent = (stage, patch) => setEvents((list) => {
+  const setEvent = (channel, stage, patch) => (channel === "lead_ads" ? setEvents : setWaEvents)((list) => {
     const has = list.some((e) => e.stage === stage);
-    return has ? list.map((e) => (e.stage === stage ? { ...e, ...patch } : e)) : [...list, { stage, eventName: "", enabled: true, ...patch }];
+    const blank = channel === "lead_ads" ? "" : "QualifiedLead";
+    return has ? list.map((e) => (e.stage === stage ? { ...e, ...patch } : e)) : [...list, { stage, eventName: blank, enabled: true, ...patch }];
   });
   const stats = d.stats || {};
   const configured = d.tokenSet && form.datasetId;
@@ -128,34 +134,60 @@ export default function MetaConversionsSection() {
 
       <div>
         <p className="text-xs font-semibold text-app-soft mb-2">What to tell Meta</p>
-        <p className="text-xs text-app-soft mb-2">Meta needs the first event (a lead arriving) plus at least two later stages before it starts learning from them.</p>
+        <div role="tablist" aria-label="Kind of Meta ad" className="inline-flex flex-wrap gap-1 rounded-xl p-1 mb-3"
+          style={{ border: "1px solid var(--app-border-strong)", background: "var(--app-surface-low)" }}>
+          {[{ key: "lead_ads", label: "Instant Lead Forms", Logo: FacebookLogo }, { key: "whatsapp_ctwa", label: "Click to WhatsApp Ads", Logo: WhatsAppLogo }].map(({ key, label, Logo }) => {
+            const on = tab === key;
+            return (
+              <button key={key} type="button" role="tab" aria-selected={on} onClick={() => setTab(key)}
+                className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors"
+                style={on
+                  ? { color: "var(--app-text)", background: "var(--app-surface-solid)", boxShadow: "0 0 0 1px rgba(var(--app-primary-rgb),0.45), 0 1px 2px rgba(16,24,40,0.06)" }
+                  : { color: "var(--app-text-soft)" }}>
+                <Logo className="w-4 h-4" /> {label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-app-soft mb-2">
+          {tab === "lead_ads"
+            ? "For leads from Facebook and Instagram lead forms. Meta needs the first event (a lead arriving) plus at least two later stages before it starts learning from them."
+            : "For leads who messaged you from a Click to WhatsApp ad. Meta accepts only its own event names for these, so pick one from each list."}
+        </p>
         <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--app-border)" }}>
           {d.stages.filter((s) => s !== "Closed Lost").map((stage, i) => {
-            const e = events.find((x) => x.stage === stage) || { stage, eventName: "", enabled: false };
+            const list = tab === "lead_ads" ? events : waEvents;
+            const e = list.find((x) => x.stage === stage) || { stage, eventName: "", enabled: false };
             return (
               <div key={stage} className="flex flex-wrap items-center gap-3 px-4 py-3" style={i ? { borderTop: "1px solid var(--app-border)" } : undefined}>
                 <label className="flex items-center gap-2.5 w-44 cursor-pointer">
-                  <input type="checkbox" checked={!!e.enabled} onChange={(ev) => setEvent(stage, { enabled: ev.target.checked })} />
+                  <input type="checkbox" checked={!!e.enabled} onChange={(ev) => setEvent(tab, stage, { enabled: ev.target.checked })} />
                   <span className="text-sm text-app">{stage === "New" ? <>Lead <b>arrives</b></> : <>Lead reaches <b>{stage}</b></>}</span>
                 </label>
                 <span className="text-xs text-app-soft">send event</span>
-                <input className="input w-48" style={{ padding: "8px 12px", borderRadius: "0.75rem" }} value={e.eventName} disabled={!e.enabled}
-                  onChange={(ev) => setEvent(stage, { eventName: ev.target.value })} />
+                {tab === "lead_ads" ? (
+                  <input className="input w-48" style={{ padding: "8px 12px", borderRadius: "0.75rem" }} value={e.eventName} disabled={!e.enabled}
+                    onChange={(ev) => setEvent(tab, stage, { eventName: ev.target.value })} />
+                ) : (
+                  <div className="w-48" style={e.enabled ? undefined : { opacity: 0.5, pointerEvents: "none" }}>
+                    <CustomSelect value={e.eventName} options={d.whatsappEventNames} onChange={(v) => setEvent(tab, stage, { eventName: v })}
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "0.75rem", fontSize: 14 }} />
+                  </div>
+                )}
               </div>
             );
           })}
-          <div className="flex flex-wrap items-center gap-3 px-4 py-3" style={{ borderTop: "1px solid var(--app-border)" }}>
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <input type="checkbox" checked={chatQualified} onChange={(ev) => setChatQualified(ev.target.checked)} />
-              <span className="text-sm text-app">WhatsApp ad lead asks for a <b>site visit</b> or an <b>advisor</b>, or <b>registers</b>, in the chat</span>
-            </label>
-            <span className="text-xs text-app-soft">send event <b className="text-app">QualifiedLead</b></span>
-          </div>
+          {tab === "whatsapp_ctwa" && (
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3" style={{ borderTop: "1px solid var(--app-border)" }}>
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input type="checkbox" checked={chatQualified} onChange={(ev) => setChatQualified(ev.target.checked)} />
+                <span className="text-sm text-app">Lead asks for a <b>site visit</b> or an <b>advisor</b>, or <b>registers</b>, in the chat</span>
+              </label>
+              <span className="text-xs text-app-soft">send event <b className="text-app">QualifiedLead</b></span>
+            </div>
+          )}
         </div>
-        <p className="text-xs text-app-soft mt-2">
-          For WhatsApp ad leads Meta accepts only its own event names, so Lead is sent as LeadSubmitted and Schedule as QualifiedLead.
-          A stage with no WhatsApp name (like Contacted) is sent for lead-form leads only. Each event goes once per lead.
-        </p>
+        <p className="text-xs text-app-soft mt-2">Each event goes once per lead, so a lead counted as QualifiedLead in the chat is not counted again at Site Visit.</p>
         <p className="text-xs text-app-soft mt-2">
           {d.matchableLeads.toLocaleString("en-IN")} of your leads came from a Meta lead form or WhatsApp ad and can be matched.
           Website, manual and other leads are never sent.
