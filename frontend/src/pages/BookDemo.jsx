@@ -151,7 +151,6 @@ export default function BookDemo() {
   return (
     <SitePage>
       <Section tone="white" className="!pt-28 lg:!pt-32">
-        <div aria-hidden="true" className="site-grid-bg" />
         <div aria-hidden="true" className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(50% 45% at 85% 20%, rgba(255,107,0,0.10), transparent 70%)" }} />
         {/* Desktop: heading + what the demo covers on the left, the form on the right.
