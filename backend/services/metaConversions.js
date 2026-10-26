@@ -43,6 +43,29 @@ function normPhone(p) {
   return d.length >= 11 && d.length <= 15 ? d : "";
 }
 
+// Click-to-WhatsApp leads go through Meta's Conversions API for Business
+// Messaging, which accepts only these names (Meta docs, checked 26 Oct 2026).
+// Until then WhatsApp leads were sent the lead-form names ("Lead", "Schedule"),
+// which that API does not take; it was never switched on, so nothing was lost.
+const WHATSAPP_EVENTS = new Set(["Purchase", "LeadSubmitted", "InitiateCheckout", "AddToCart", "ViewContent", "OrderCreated", "OrderShipped",
+  "OrderDelivered", "OrderCanceled", "OrderReturned", "CartAbandoned", "QualifiedLead", "RatingProvided", "ReviewProvided"]);
+const WHATSAPP_EQUIVALENT = { Lead: "LeadSubmitted", Schedule: "QualifiedLead", SubmitApplication: "LeadSubmitted", CompleteRegistration: "QualifiedLead", Contact: "QualifiedLead" };
+
+/** The name to send for this channel, or null when a WhatsApp lead has no accepted equivalent. */
+function eventNameFor(channel, eventName) {
+  if (channel !== "whatsapp_ctwa") return eventName;
+  if (WHATSAPP_EVENTS.has(eventName)) return eventName;
+  return WHATSAPP_EQUIVALENT[eventName] || null;
+}
+
+// The customer asked for a site visit or an advisor, or registered, in the
+// WhatsApp button flow. Far more of these happen than site visits, so Meta
+// can learn which ads bring serious buyers. WhatsApp ad leads only.
+const CHAT_QUALIFIED_STAGE = "Qualified on WhatsApp";
+const CHAT_QUALIFIED_EVENT = "QualifiedLead";
+const QUALIFYING_CLOSINGS = ["site_visit", "handoff", "register"];
+const chatQualifiedOn = (org) => org?.metaCapi?.whatsappQualified !== false;
+
 function eventsFor(org) {
   const saved = org?.metaCapi?.events;
   return saved && saved.length ? saved : DEFAULT_EVENTS;
@@ -124,27 +147,51 @@ async function sendDoc(org, doc) {
  */
 async function track(leadOrId, status, at = new Date()) {
   try {
-    const lead = leadOrId?.orgId ? leadOrId : await Lead.findById(leadOrId).select("orgId phone email metaLeadId campaignRef createdAt").lean();
-    if (!lead) return;
-    // Meta discards an event dated before its lead was generated.
-    if (lead.createdAt && new Date(at) < new Date(lead.createdAt)) at = lead.createdAt;
-    const channel = channelOf(lead);
-    if (!channel) return;
-    const org = await Organization.findById(lead.orgId).select("plan metaCapi whatsapp.wabaId").lean();
-    if (!isReady(org)) return;
-    const rule = eventsFor(org).find((e) => e.stage === status && e.enabled);
+    const ctx = await contextFor(leadOrId);
+    if (!ctx) return;
+    const rule = eventsFor(ctx.org).find((e) => e.stage === status && e.enabled);
     if (!rule) return;
-    let doc;
-    try {
-      doc = await MetaEvent.create({ orgId: lead.orgId, leadId: lead._id, stage: status, eventName: rule.eventName, eventTime: at, channel });
-    } catch (err) {
-      if (err.code === 11000) return;     // already queued or sent
-      throw err;
-    }
-    await sendDoc(org, doc.toObject());
+    await queueAndSend(ctx, status, rule.eventName, at);
   } catch (err) {
     logger.warn(`[meta-capi] track failed: ${err.message}`);
   }
+}
+
+/** The customer qualified themselves in the WhatsApp flow (see CHAT_QUALIFIED_STAGE). Never throws. */
+async function trackChatQualified(leadOrId, at = new Date()) {
+  try {
+    const ctx = await contextFor(leadOrId);
+    if (!ctx || ctx.channel !== "whatsapp_ctwa" || !chatQualifiedOn(ctx.org)) return;
+    await queueAndSend(ctx, CHAT_QUALIFIED_STAGE, CHAT_QUALIFIED_EVENT, at);
+  } catch (err) {
+    logger.warn(`[meta-capi] chat qualified failed: ${err.message}`);
+  }
+}
+
+async function contextFor(leadOrId) {
+  const lead = leadOrId?.orgId ? leadOrId : await Lead.findById(leadOrId).select("orgId phone email metaLeadId campaignRef createdAt").lean();
+  if (!lead) return null;
+  const channel = channelOf(lead);
+  if (!channel) return null;
+  const org = await Organization.findById(lead.orgId).select("plan metaCapi whatsapp.wabaId").lean();
+  return isReady(org) ? { lead, org, channel } : null;
+}
+
+async function queueAndSend({ lead, org, channel }, stage, configuredName, at) {
+  const eventName = eventNameFor(channel, configuredName);
+  if (!eventName) return;
+  // Meta discards an event dated before its lead was generated.
+  if (lead.createdAt && new Date(at) < new Date(lead.createdAt)) at = lead.createdAt;
+  let doc;
+  try {
+    // Unique per lead and event name: a chat QualifiedLead and a later Site
+    // Visit (also QualifiedLead for WhatsApp leads) are reported once.
+    doc = await MetaEvent.create({ orgId: lead.orgId, leadId: lead._id, stage, eventName, eventTime: at, channel });
+  } catch (err) {
+    if (err.code === 11000) return;     // already queued or sent
+    throw err;
+  }
+  await sendDoc(org, doc.toObject());
 }
 
 /**
@@ -177,6 +224,13 @@ async function sweep() {
         .select("orgId phone email metaLeadId campaignRef createdAt").limit(300).lean();
       for (const l of arrived) await track(l, "New", l.createdAt);
     }
+
+    // Chat qualifications whose send was missed (the process stopped, say).
+    if (chatQualifiedOn(org)) {
+      const qualified = await Lead.find({ orgId: org._id, "engagement.closing": { $in: QUALIFYING_CLOSINGS }, "engagement.at": { $gte: since }, "campaignRef.ctwaClid": { $nin: ["", null] } })
+        .select("orgId phone email metaLeadId campaignRef createdAt engagement.at").limit(300).lean();
+      for (const l of qualified) await trackChatQualified(l, l.engagement.at);
+    }
   }
   return sent;
 }
@@ -196,4 +250,4 @@ async function sendTest(org) {
   return { received: out.events_received ?? 0, usedTestCode: true };
 }
 
-module.exports = { DEFAULT_EVENTS, eventsFor, isReady, channelOf, track, sweep, sendTest, encryptField, decryptField };
+module.exports = { DEFAULT_EVENTS, eventsFor, eventNameFor, isReady, channelOf, track, trackChatQualified, QUALIFYING_CLOSINGS, CHAT_QUALIFIED_STAGE, sweep, sendTest, encryptField, decryptField };

@@ -147,6 +147,9 @@ const orgSchema = new mongoose.Schema(
       datasetId:      { type: String, trim: true, default: "" },
       accessToken:    { type: String, default: "" },        // stored encrypted
       testEventCode:  { type: String, trim: true, default: "" },
+      // QualifiedLead when a WhatsApp ad lead asks for a site visit or an
+      // advisor, or registers, in the button flow (services/metaConversions.js).
+      whatsappQualified: { type: Boolean, default: true },
       events: [{
         _id: false,
         stage:     { type: String },

@@ -35,6 +35,7 @@ router.get("/", async (req, res) => {
       tokenLast4: last4(c.accessToken),
       testEventCode: c.testEventCode || "",
       events: capi.eventsFor(org),
+      whatsappQualified: c.whatsappQualified !== false,
       stages: OPTS.STATUS,
       lastSentAt: c.lastSentAt || null,
       lastError: c.lastError || "",
@@ -53,7 +54,7 @@ router.get("/", async (req, res) => {
 
 router.put("/", async (req, res) => {
   try {
-    const { enabled, datasetId, accessToken, testEventCode, events } = req.body || {};
+    const { enabled, datasetId, accessToken, testEventCode, events, whatsappQualified } = req.body || {};
     const set = {};
     if (datasetId !== undefined) {
       const id = String(datasetId).trim();
@@ -78,6 +79,7 @@ router.put("/", async (req, res) => {
       }
       set["metaCapi.events"] = clean;
     }
+    if (whatsappQualified !== undefined) set["metaCapi.whatsappQualified"] = !!whatsappQualified;
     if (enabled !== undefined) set["metaCapi.enabled"] = !!enabled;
 
     if (set["metaCapi.enabled"]) {
