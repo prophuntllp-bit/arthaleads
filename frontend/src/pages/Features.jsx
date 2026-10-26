@@ -1,185 +1,109 @@
-// pages/Features.jsx - the full product feature catalogue.
+// pages/Features.jsx - the full product feature catalogue, on the shared
+// marketing theme (components/site/*).
 //
 // Organised by the job a sales team is doing, in order. A sticky progress bar
-// follows you down the page; each workflow shows the real screen it happens on
-// (a short clip that plays when scrolled to) beside its heading, with the
-// individual features as cards underneath.
-import { SITE_MEDIA } from "../data/siteMedia";
+// follows you down the page; each workflow shows a coded illustration of that
+// job (the same ones as the home page; owner rule: no real CRM screenshots)
+// beside its heading, with the individual features as cards underneath.
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Check } from "lucide-react";
-import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
+import { ArrowRight, Check, Sparkles, Phone } from "lucide-react";
 import { FEATURES, FEATURE_GROUPS } from "../data/features";
-import PublicNav from "../components/PublicNav";
-import PublicFooter from "../components/PublicFooter";
-import { usePublicTheme } from "../context/PublicThemeContext";
+import { SitePage, Section, Container, Card } from "../components/site/Site";
+import { PageHero, PhotoVisual, ClosingCta } from "../components/site/Blocks";
+import { ScoreCard, CopilotCard, CaptureViz, PipelineViz, ProjectViz, TeamViz, BookingViz, VisitViz } from "../components/site/HomeVisuals";
+import { WhatsAppLogo } from "../components/site/BrandLogos";
+import { Reveal } from "../components/motion/Motion";
 import { useSEO } from "../utils/useSEO";
 
-// The screen that best shows each workflow. "control" has none: it is about trust, not a screen.
-const SCREEN = {
-  capture:    { id: "lead",        path: "leads",         alt: "Arthaleads lead record with source, budget, configuration and follow-up" },
-  prioritise: { id: "dashboard",   path: "dashboard",     alt: "Arthaleads dashboard with new leads, follow-ups due and hot leads" },
-  talk:       { id: "inbox",       path: "conversations", alt: "Arthaleads shared WhatsApp inbox with the AI agent replying to a buyer" },
-  projects:   { id: "project",     path: "projects",      alt: "Arthaleads project page with its leads, brochure and team" },
-  close:      { id: "booking",     path: "bookings",      alt: "Arthaleads booking with brokerage, GST and invoice" },
-  team:       { id: "performance", path: "performance",   alt: "Arthaleads team performance board with calls, site visits and closings" },
-};
-
-const prefersReducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-
-/** True once the element has been on screen (stays true). */
-function useReveal(margin = "0px 0px -12% 0px") {
-  const ref = useRef(null);
-  const [shown, setShown] = useState(false);
-  useEffect(() => {
-    if (prefersReducedMotion() || !("IntersectionObserver" in window)) { setShown(true); return; }
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setShown(true); io.disconnect(); } }, { rootMargin: margin, threshold: 0.08 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [margin]);
-  return [ref, shown];
-}
-
-/** The product screen in a browser frame; plays its clip only while on screen. */
-function Screen({ spec, isDark }) {
-  const wrapRef = useRef(null);
-  const videoRef = useRef(null);
-  const [near, setNear] = useState(false);   // close enough to start downloading
-  const [live, setLive] = useState(false);   // mostly on screen: play
-  const frameBg = isDark ? "#16161f" : "#f6f3ef";
-  const frameBd = isDark ? "rgba(255,255,255,0.08)" : "#e9e3db";
-  const urlBg   = isDark ? "rgba(255,255,255,0.06)" : "#ffffff";
-  const urlText = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el || !("IntersectionObserver" in window)) return;
-    const reduce = prefersReducedMotion();
-    const save = navigator.connection?.saveData;
-    const a = new IntersectionObserver(([e]) => { if (e.isIntersecting && !reduce && !save) setNear(true); }, { rootMargin: "400px 0px" });
-    const b = new IntersectionObserver(([e]) => setLive(e.isIntersecting), { threshold: 0.4 });
-    a.observe(el); b.observe(el);
-    return () => { a.disconnect(); b.disconnect(); };
-  }, []);
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (live) v.play().catch(() => {}); else v.pause();
-  }, [live, near]);
-
+/** Coded visuals on a glass panel, stacked. */
+function VizPanel({ children }) {
   return (
-    <div ref={wrapRef} className="rounded-[20px] sm:rounded-[24px] overflow-hidden"
-      style={{
-        background: frameBg, border: `1px solid ${frameBd}`,
-        boxShadow: isDark ? "0 40px 80px -28px rgba(0,0,0,0.7)" : "0 1px 2px rgba(17,24,39,0.04), 0 36px 70px -30px rgba(120,60,10,0.32)",
-      }}>
-      <div className="flex items-center gap-3 px-4 h-9" style={{ borderBottom: `1px solid ${frameBd}` }}>
-        <span className="flex gap-1.5" aria-hidden="true">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" /><span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" /><span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
-        </span>
-        <span className="flex-1 flex justify-center min-w-0">
-          <span className="text-[11px] px-3 py-0.5 rounded-md truncate max-w-[75%]" style={{ background: urlBg, color: urlText }}>app.arthaleads.com/{spec.path}</span>
-        </span>
-        <span className="w-[46px]" aria-hidden="true" />
-      </div>
-      <div className="relative" style={{ aspectRatio: "16 / 9" }}>
-        <img src={`/tour/${spec.id}.webp`} alt={spec.alt} loading="lazy" decoding="async" width="1600" height="900"
-          className="absolute inset-0 w-full h-full object-cover object-top" />
-        {near && (
-          <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover object-top" poster={`/tour/${spec.id}.webp`}
-            muted loop playsInline preload="auto" aria-hidden="true">
-            <source src={`${SITE_MEDIA}/tour/${spec.id}.mp4`} type="video/mp4" />
-            <source src={`${SITE_MEDIA}/tour/${spec.id}.webm`} type="video/webm" />
-          </video>
-        )}
-      </div>
+    <div className="relative mx-auto w-full max-w-[560px] px-3 sm:px-6 lg:px-0">
+      <div aria-hidden="true" className="hero-glass" />
+      <div className="relative grid gap-3">{children}</div>
     </div>
   );
 }
 
-function FeatureCard({ f, i, t }) {
-  const [ref, shown] = useReveal();
-  const Icon = f.icon;
-  return (
-    <article ref={ref}
-      className="group relative h-full rounded-[22px] border p-6 transition-all duration-500 hover:-translate-y-1 hover:shadow-xl"
-      style={{
-        background: t.card, borderColor: t.cardBorder,
-        opacity: shown ? 1 : 0, transform: shown ? undefined : "translateY(18px)",
-        transitionDelay: shown ? `${(i % 3) * 70}ms` : "0ms",
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${f.color}66`; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = t.cardBorder; }}>
-      <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3" style={{ background: `${f.color}18` }}>
-        <Icon className="w-5 h-5" style={{ color: f.color }} />
-      </div>
-      <h3 className="font-bold text-[17px] mb-2 leading-snug" style={{ color: t.heading }}>{f.title}</h3>
-      <p className="text-[15px] leading-relaxed" style={{ color: t.body }}>{f.desc}</p>
-    </article>
-  );
-}
+// The illustration for each workflow. "control" has none: it is about trust, not a screen.
+const VISUAL = {
+  capture:    () => <VizPanel><CaptureViz /></VizPanel>,
+  prioritise: () => <VizPanel><div className="grid sm:grid-cols-2 gap-3"><ScoreCard /><CopilotCard /></div></VizPanel>,
+  talk:       () => (
+    <PhotoVisual name="broker" priority={false} alt="A property broker replying to a buyer on WhatsApp from the office"
+      cards={[
+        { Icon: WhatsAppLogo, iconColor: "#25D366", iconBg: "rgba(37,211,102,0.12)", title: "AI agent replied in 4 sec", sub: "Shared team inbox" },
+        { Icon: Sparkles, title: "Follow-up drafted", sub: "Ready to send" },
+        { Icon: Phone, iconColor: "#16a34a", iconBg: "rgba(22,163,74,0.12)", title: "Call logged · 4 min 12 sec", sub: "Recording on the lead" },
+      ]} />
+  ),
+  projects:   () => <VizPanel><ProjectViz /><PipelineViz /></VizPanel>,
+  close:      () => <VizPanel><BookingViz /><VisitViz /></VizPanel>,
+  team:       () => <VizPanel><TeamViz /></VizPanel>,
+};
 
-function Workflow({ group, index, isDark, t }) {
+function Workflow({ group, index }) {
   const items = FEATURES.filter((f) => f.group === group.id);
-  const spec = SCREEN[group.id];
+  const Visual = VISUAL[group.id];
   const flip = index % 2 === 1;
-  const [textRef, textShown] = useReveal();
-  const [shotRef, shotShown] = useReveal();
-  const reveal = (shown, from) => ({ opacity: shown ? 1 : 0, transform: shown ? "none" : from, transition: "opacity 700ms ease, transform 700ms cubic-bezier(.2,.7,.2,1)" });
   // A six-column grid so every row is full: 4 cards = 2 + 2, 5 = 2 + 3, 6 = 3 + 3, 3 = 3.
   const spanFor = (i, n) => (n === 5 ? (i < 2 ? "lg:col-span-3" : "lg:col-span-2") : n === 4 ? "lg:col-span-3" : "lg:col-span-2");
 
   return (
-    <section id={`group-${group.id}`} aria-labelledby={`group-${group.id}-title`} className="scroll-mt-40 py-14 lg:py-20 overflow-x-clip"
-      style={{ borderTop: index === 0 ? "none" : `1px solid ${t.rule}` }}>
-      <div className={`grid ${spec ? "lg:grid-cols-2 items-center" : "max-w-3xl mx-auto text-center"} gap-8 lg:gap-16 mb-10 lg:mb-14`}>
-        <div ref={textRef} style={reveal(textShown, flip ? "translateX(24px)" : "translateX(-24px)")} className={flip ? "lg:order-2" : ""}>
-          <div className={`flex items-center gap-3 mb-4 ${spec ? "" : "justify-center"}`}>
-            <span className="w-9 h-9 rounded-full bg-[color:var(--brand-btn)] text-white text-sm font-bold flex items-center justify-center tabular-nums">{index + 1}</span>
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--brand-text)]">{group.label}</span>
-          </div>
-          <h2 id={`group-${group.id}-title`} className="text-3xl sm:text-4xl lg:text-[2.6rem] font-black leading-[1.1] tracking-tight mb-4" style={{ color: t.heading, textWrap: "balance" }}>
-            {group.title}
-          </h2>
-          <p className={`text-base sm:text-lg leading-relaxed ${spec ? "mb-6 max-w-xl" : "max-w-xl mx-auto"}`} style={{ color: t.body }}>{group.blurb}</p>
-          {spec && (
-            <ul className="space-y-2.5">
-              {items.slice(0, 3).map((f) => (
-                <li key={f.title} className="flex items-start gap-3 text-[15px]" style={{ color: t.heading }}>
-                  <span className="mt-0.5 w-5 h-5 rounded-full bg-[#ff6b00]/12 flex items-center justify-center shrink-0"><Check className="w-3 h-3 text-[#ff6b00]" strokeWidth={3} /></span>
-                  <span className="font-medium">{f.title}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {group.more && (
-            <Link to={group.more.to} className="inline-flex items-center gap-2 mt-6 font-semibold text-[15px] underline underline-offset-4"
-              style={{ color: isDark ? "#fb923c" : "#c2410c" }}>
-              {group.more.label} <ArrowRight className="w-4 h-4" />
-            </Link>
+    <Section as="section" id={`group-${group.id}`} tone={index % 2 ? "tint" : "white"} aria-labelledby={`group-${group.id}-title`} className="!scroll-mt-36 overflow-x-clip">
+      <Container>
+        <div className={`grid ${Visual ? "lg:grid-cols-2 items-center" : "max-w-3xl"} gap-10 lg:gap-16 mb-10 lg:mb-14`}>
+          <Reveal className={`min-w-0 ${flip ? "lg:order-2" : ""}`}>
+            <p className="flex items-center gap-3 mb-4">
+              <span className="font-display w-9 h-9 rounded-full text-white text-sm font-extrabold flex items-center justify-center tabular-nums"
+                style={{ background: "var(--brand-btn)", boxShadow: "0 12px 26px -12px rgba(204,75,0,0.7)" }}>{index + 1}</span>
+              <span className="site-eyebrow">{group.label}</span>
+            </p>
+            <h2 id={`group-${group.id}-title`} className="font-display site-ink text-[30px] sm:text-[38px] lg:text-[42px] font-extrabold leading-[1.1] tracking-[-0.02em] mb-4" style={{ textWrap: "balance" }}>
+              {group.title}
+            </h2>
+            <p className="text-base sm:text-lg leading-relaxed max-w-xl">{group.blurb}</p>
+            {Visual && (
+              <ul className="mt-6 space-y-2.5">
+                {items.slice(0, 3).map((f) => (
+                  <li key={f.title} className="flex items-start gap-3 text-[15px] site-ink font-medium">
+                    <Check className="w-4 h-4 mt-1 shrink-0" style={{ color: "#16a34a" }} strokeWidth={3} aria-hidden="true" />{f.title}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {group.more && (
+              <Link to={group.more.to} className="site-link mt-6">{group.more.label} <ArrowRight className="w-4 h-4" /></Link>
+            )}
+          </Reveal>
+          {Visual && (
+            <Reveal delay={120} className={`min-w-0 ${flip ? "lg:order-1" : ""}`}><Visual /></Reveal>
           )}
         </div>
-        {spec && (
-          <div ref={shotRef} style={reveal(shotShown, flip ? "translateX(-24px) scale(0.98)" : "translateX(24px) scale(0.98)")} className={flip ? "lg:order-1" : ""}>
-            <Screen spec={spec} isDark={isDark} />
-          </div>
-        )}
-      </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-5">
-        {items.map((f, i) => (
-          <div key={f.title} className={spanFor(i, items.length)}><FeatureCard f={f} i={i} t={t} /></div>
-        ))}
-      </div>
-    </section>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-4">
+          {items.map((f, i) => {
+            const Icon = f.icon;
+            return (
+              <Reveal key={f.title} delay={(i % 3) * 70} className={`min-w-0 flex ${spanFor(i, items.length)}`}>
+                <Card as="article" glow className="w-full p-6">
+                  <span className="w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
+                    <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
+                  </span>
+                  <h3 className="font-display font-bold text-[17px] site-ink mb-2 leading-snug">{f.title}</h3>
+                  <p className="text-[15px] leading-relaxed">{f.desc}</p>
+                </Card>
+              </Reveal>
+            );
+          })}
+        </div>
+      </Container>
+    </Section>
   );
 }
 
 export default function Features() {
-  const { isDark } = usePublicTheme();
   const [active, setActive] = useState(FEATURE_GROUPS[0].id);
   const navRef = useRef(null);
 
@@ -189,25 +113,25 @@ export default function Features() {
     canonical: "https://www.arthaleads.com/features",
   });
 
-  const t = {
-    bg:        isDark ? "#0d0d1a" : "#ffffff",
-    heading:   isDark ? "#ffffff" : "#111827",
-    body:      isDark ? "rgba(255,255,255,0.60)" : "#5b6170",
-    rule:      isDark ? "rgba(255,255,255,0.08)" : "#ece8e3",
-    card:      isDark ? "rgba(255,255,255,0.035)" : "#ffffff",
-    cardBorder:isDark ? "rgba(255,255,255,0.09)" : "#ebe5dd",
-    bar:       isDark ? "rgba(13,13,26,0.86)" : "rgba(255,255,255,0.88)",
-  };
-
-  // Which workflow is on screen drives the progress bar.
+  // Which workflow is on screen drives the progress bar: the last one whose top
+  // has passed 40% of the screen. Looked up by id on every check, because
+  // hydration can swap the prerendered nodes an observer would have held.
   useEffect(() => {
-    if (!("IntersectionObserver" in window)) return;
-    const io = new IntersectionObserver((entries) => {
-      const vis = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-      if (vis[0]) setActive(vis[0].target.id.replace("group-", ""));
-    }, { rootMargin: "-30% 0px -60% 0px" });
-    FEATURE_GROUPS.forEach((g) => { const el = document.getElementById(`group-${g.id}`); if (el) io.observe(el); });
-    return () => io.disconnect();
+    let raf = 0;
+    const check = () => {
+      raf = 0;
+      const line = window.innerHeight * 0.4;
+      let id = FEATURE_GROUPS[0].id;
+      for (const g of FEATURE_GROUPS) {
+        const el = document.getElementById(`group-${g.id}`);
+        if (el && el.getBoundingClientRect().top <= line) id = g.id;
+      }
+      setActive(id);
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(check); };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    check();
+    return () => { window.removeEventListener("scroll", onScroll); if (raf) cancelAnimationFrame(raf); };
   }, []);
 
   // Keep the active step in view where the bar scrolls sideways (phones).
@@ -222,36 +146,16 @@ export default function Features() {
   const activeIndex = FEATURE_GROUPS.findIndex((g) => g.id === active);
 
   return (
-    <div style={{ background: t.bg, minHeight: "100vh" }}>
-      <PublicNav />
+    <SitePage>
+      <PageHero
+        eyebrow={`${FEATURES.length} features, one workspace`}
+        title={<>From the first enquiry to the <span className="site-dim">paid invoice</span></>}
+        lede="Real estate CRM software built for Indian sales teams, from small channel partner offices to large builder and developer sales floors. Here is everything Arthaleads does, in the order your team uses it."
+      />
 
-      {/* ── Hero ── */}
-      <header className="relative overflow-hidden pt-28 pb-12 lg:pt-36 lg:pb-16" style={{ background: isDark ? "#0d0d1a" : "linear-gradient(180deg,#fff7f0 0%,#ffffff 100%)" }}>
-        <div className="absolute -top-28 right-[-8%] w-[560px] h-[560px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(255,107,0,0.14), transparent 65%)" }} />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--brand-text)]">{FEATURES.length} features, one workspace</span>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.07] tracking-tight mt-4 mb-5 max-w-4xl mx-auto" style={{ color: t.heading, textWrap: "balance" }}>
-            From the first enquiry to the{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">paid invoice</span>
-          </h1>
-          <p className="text-lg leading-relaxed max-w-2xl mx-auto mb-8" style={{ color: t.body }}>
-            Real estate CRM software built for Indian sales teams, from small channel partner offices to large builder and developer sales floors.
-            Here is everything Arthaleads does, in the order your team uses it.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-              className="inline-flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-7 py-3.5 rounded-2xl shadow-xl shadow-orange-500/30 hover:-translate-y-0.5 transition-all">
-              Start Free Trial <ArrowRight className="w-4 h-4" />
-            </a>
-            <Link to="/pricing" className="inline-flex items-center px-7 py-3.5 rounded-2xl border font-medium transition-colors hover:border-[#ff6b00]"
-              style={{ color: t.heading, borderColor: t.cardBorder }}>See pricing</Link>
-          </div>
-        </div>
-      </header>
-
-      {/* ── Sticky workflow progress ── */}
-      <div className="sticky top-16 lg:top-20 z-30 backdrop-blur-xl" style={{ background: t.bar, borderTop: `1px solid ${t.rule}`, borderBottom: `1px solid ${t.rule}` }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Sticky workflow progress */}
+      <div className="features-steps sticky z-30">
+        <Container>
           <nav ref={navRef} aria-label="Workflow steps" className="relative flex items-center gap-1 overflow-x-auto py-3 lg:justify-center" style={{ scrollbarWidth: "none" }}>
             {FEATURE_GROUPS.map((g, i) => {
               const on = g.id === active;
@@ -259,52 +163,36 @@ export default function Features() {
               return (
                 <div key={g.id} className="flex items-center shrink-0">
                   <button type="button" data-id={g.id} onClick={() => jump(g.id)} aria-current={on ? "step" : undefined}
-                    className="flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 rounded-full text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ff6b00]"
-                    style={{ background: on ? (isDark ? "rgba(255,107,0,0.16)" : "#fff0e3") : "transparent", color: on ? "var(--brand-text)" : t.body }}>
+                    className={`flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 rounded-full text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ff6b00] ${on ? "" : "site-muted"}`}
+                    style={on ? { background: "rgba(255,107,0,0.12)", color: "var(--site-brand-ink)" } : undefined}>
                     <span className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold tabular-nums transition-colors"
-                      style={{ background: on || done ? "#ff6b00" : (isDark ? "rgba(255,255,255,0.10)" : "#efeae3"), color: on || done ? "#fff" : t.body }}>
+                      style={on || done ? { background: "var(--brand-btn)", color: "#fff" } : { background: "var(--site-chip)" }}>
                       {done ? <Check className="w-3 h-3" strokeWidth={3} /> : i + 1}
                     </span>
                     {g.label}
                   </button>
-                  {i < FEATURE_GROUPS.length - 1 && <span className="w-4 sm:w-8 h-px mx-0.5 transition-colors" style={{ background: done ? "#ff6b00" : t.rule }} />}
+                  {i < FEATURE_GROUPS.length - 1 && <span className="w-4 sm:w-8 h-px mx-0.5 transition-colors" style={{ background: done ? "var(--site-brand)" : "var(--site-line-strong)" }} />}
                 </div>
               );
             })}
           </nav>
-        </div>
+        </Container>
       </div>
 
-      {/* ── Workflows ── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {FEATURE_GROUPS.map((g, i) => <Workflow key={g.id} group={g} index={i} isDark={isDark} t={t} />)}
-      </div>
+      {FEATURE_GROUPS.map((g, i) => <Workflow key={g.id} group={g} index={i} />)}
 
-      {/* ── Closing call to action ── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 lg:pb-24">
-        <div className="relative overflow-hidden rounded-[30px] px-7 py-12 sm:px-14 sm:py-16 text-center" style={{ background: "linear-gradient(135deg,#ff7a1a 0%,#e85d04 100%)" }}>
-          <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-white/10 pointer-events-none" />
-          <div className="absolute -left-16 -bottom-24 w-72 h-72 rounded-full bg-white/10 pointer-events-none" />
-          <div className="relative">
-            <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight mb-3" style={{ textWrap: "balance" }}>See it running on your own leads</h2>
-            <p className="text-white/85 text-lg mb-8 max-w-xl mx-auto">Request your workspace, import your existing leads, and have your team calling the same day.</p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-white text-[#c2410c] font-bold hover:-translate-y-0.5 transition-transform">
-                Start Free Trial <ArrowRight className="w-4 h-4" />
-              </a>
-              <Link to="/pricing" className="inline-flex items-center px-7 py-3.5 rounded-2xl border border-white/50 text-white font-semibold hover:bg-white/10 transition-colors">View Pricing</Link>
-            </div>
-            <p className="text-white/90 text-sm mt-7">
-              Moving from another CRM? See how Arthaleads compares with{" "}
-              <Link to="/compare/sell-do-alternative" className="font-semibold underline underline-offset-2 text-white">Sell.Do</Link>,{" "}
-              <Link to="/compare/leadrat-alternative" className="font-semibold underline underline-offset-2 text-white">Leadrat</Link> and{" "}
-              <Link to="/compare/kylas-alternative" className="font-semibold underline underline-offset-2 text-white">Kylas</Link>.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <PublicFooter />
-    </div>
+      <ClosingCta title="See it running" dim="on your own leads."
+        body="Book a 30-minute demo and we will set Arthaleads up on your real leads, or start the 14-day free trial and have your team calling the same day." />
+      <Section tone="white" className="!pt-0 !pb-14">
+        <Container>
+          <p className="text-sm text-center">
+            <span className="site-muted">Moving from another CRM? See how Arthaleads compares with </span>
+            <Link to="/compare/sell-do-alternative" className="font-semibold underline underline-offset-4" style={{ color: "var(--site-brand-ink)" }}>Sell.Do</Link>,{" "}
+            <Link to="/compare/leadrat-alternative" className="font-semibold underline underline-offset-4" style={{ color: "var(--site-brand-ink)" }}>Leadrat</Link> and{" "}
+            <Link to="/compare/kylas-alternative" className="font-semibold underline underline-offset-4" style={{ color: "var(--site-brand-ink)" }}>Kylas</Link>.
+          </p>
+        </Container>
+      </Section>
+    </SitePage>
   );
 }

@@ -1076,3 +1076,12 @@ html[data-public-theme="dark"] .hero-glass {
 .legal-body a { color: var(--site-brand-ink); text-decoration: underline; text-underline-offset: 3px; }
 .legal-toc { color: var(--site-muted); transition: color 0.2s, border-color 0.2s; }
 .legal-toc:hover { color: var(--site-ink); border-color: var(--site-brand); }
+
+/* Features page workflow bar (pages/Features.jsx): sticks under the nav. */
+.features-steps {
+  top: 76px;
+  background: color-mix(in srgb, var(--site-bg) 86%, transparent);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  border-top: 1px solid var(--site-line); border-bottom: 1px solid var(--site-line);
+}
+@media (min-width: 1280px) { .features-steps { top: 80px; } }

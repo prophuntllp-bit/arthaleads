@@ -1,15 +1,16 @@
+// pages/Pricing.jsx - /pricing on the shared marketing theme (components/site/*).
+// Plans come from data/plans.js and prices from utils/plan.js; the comparison
+// table restates both, so change a plan there and here together.
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
-import { Reveal, Spotlight } from "../components/motion/Motion";
-import { Check, Zap, Users, ChevronDown, ArrowRight } from "lucide-react";
-import PublicNav from "../components/PublicNav";
-import PublicFooter from "../components/PublicFooter";
-import { usePublicTheme } from "../context/PublicThemeContext";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
+import { Reveal } from "../components/motion/Motion";
+import { Check, Users, ArrowRight, Minus, CircleCheck } from "lucide-react";
+import { SitePage, Section, Container, SectionHeader, Card, SiteButton } from "../components/site/Site";
+import { PageHero, FaqSection, ClosingCta } from "../components/site/Blocks";
 import { useSEO } from "../utils/useSEO";
 import { PLAN_PRICING, formatINR, freeMonths, withGST } from "../utils/plan";
 import { PLANS } from "../data/plans";
-
 
 const FAQS = [
   ["Is there a free trial?", "Yes. The Growth plan comes with a 14-day free trial that includes every Growth feature, with 1 GB of file storage during the trial (15 GB once you subscribe to Growth). No credit card is required, and you can upgrade or cancel anytime."],
@@ -59,14 +60,10 @@ const COMPARE_ROWS = [
   ["Support", "Email", "Priority", "Dedicated account manager"],
 ];
 
-// Plan colours are too light for small text on white; these darker shades pass WCAG AA (4.5:1).
-const PLAN_TEXT = { "#3b82f6": "#2563eb", "#ff6b00": "#c2410c", "#a855f7": "#7e22ce" };
+const planName = (id) => PLANS.find((p) => p.id === id).name;
 
 export default function Pricing() {
-  const { isDark } = usePublicTheme();
   const [members, setMembers] = useState(5);
-  const [hovered, setHovered] = useState(null);
-  const [openFaq, setOpenFaq] = useState(null);
   const [billing, setBilling] = useState("monthly");
 
   useSEO({
@@ -74,22 +71,6 @@ export default function Pricing() {
     description: "Simple, transparent Arthaleads pricing. Starter, Growth and Enterprise plans for real estate teams of every size. 14-day free trial, no credit card needed.",
     canonical:   "https://www.arthaleads.com/pricing",
   });
-
-  const bg         = isDark ? "#0d0d1a" : "#ffffff";
-  const altBg      = isDark ? "#080810" : "#f9fafb";
-  const heading    = isDark ? "#ffffff" : "#111827";
-  const body       = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const cardBg     = isDark ? "rgba(255,255,255,0.025)" : "#ffffff";
-  const cardBdr    = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
-  const popBg      = isDark ? "rgba(255,107,0,0.05)" : "#fffbf7";
-  const taglineClr = isDark ? "rgba(255,255,255,0.38)" : "#6b7280";
-  const divBdr     = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
-  const grpLabel   = isDark ? "rgba(255,255,255,0.28)" : "#6b7280";
-  const featClr    = isDark ? "rgba(255,255,255,0.72)" : "#374151";
-  const altBtnClr  = isDark ? "rgba(255,255,255,0.70)" : "#374151";
-  const altBtnBdr  = isDark ? "rgba(255,255,255,0.10)" : "#d1d5db";
-  const trialBg    = isDark ? "rgba(34,197,94,0.1)" : "#f0fdf4";
-  const trialBdr   = isDark ? "rgba(34,197,94,0.25)" : "#bbf7d0";
 
   // Interactive: which plan does the chosen team size land in?
   const recommended = useMemo(() => {
@@ -108,301 +89,174 @@ export default function Pricing() {
   }, [members, recommended, billing]);
 
   return (
-    <div className="min-h-screen" style={{ background: bg, color: heading, fontFamily: "Inter, sans-serif" }}>
+    <SitePage>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_JSONLD }} />
-      <PublicNav />
 
-      {/* Hero */}
-      <section className="relative pt-32 pb-8 overflow-hidden">
-        <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl font-black mb-4" style={{ color: heading }}>
-            Plans for every{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">team size</span>
-          </h1>
-          <p className="text-base max-w-lg mx-auto" style={{ color: body }}>
-            Simple per-seat pricing. No setup fee, no hidden charges — pay only for the team members you add.
-          </p>
-        </div>
-      </section>
-
-      {/* Interactive controls */}
-      <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
-        {/* Team-size slider */}
-        <div className="rounded-2xl border p-5 sm:p-6 mb-10"
-          style={{ background: cardBg, borderColor: cardBdr }}>
+      <PageHero
+        eyebrow="Pricing"
+        title={<>Plans for every <span className="site-dim">team size</span></>}
+        lede="Simple per-seat pricing. No setup fee and no hidden charges: you pay only for the team members you add."
+        actions={null}
+      >
+        {/* Team-size calculator */}
+        <Card raised className="mt-10 p-5 sm:p-7 text-left">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-[#ff6b00]" />
-              <p className="text-sm font-semibold" style={{ color: heading }}>
-                How big is your team?
-              </p>
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black text-[#ff6b00]">
-                {members >= 50 ? "50+" : members}
-              </span>
-              <span className="text-sm" style={{ color: body }}>members</span>
-            </div>
+            <p className="flex items-center gap-2 text-sm font-semibold site-ink">
+              <Users className="w-4 h-4" style={{ color: "var(--site-brand)" }} aria-hidden="true" /> How big is your team?
+            </p>
+            <p className="flex items-baseline gap-1.5">
+              <span className="font-display text-3xl font-extrabold tabular-nums" style={{ color: "var(--site-brand-ink)" }}>{members >= 50 ? "50+" : members}</span>
+              <span className="text-sm site-muted">members</span>
+            </p>
           </div>
-
-          <input
-            type="range"
-            min={1}
-            max={50}
-            value={members}
-            onChange={(e) => setMembers(Number(e.target.value))}
-            className="w-full accent-[#ff6b00] cursor-pointer"
-            aria-label="Team size"
-          />
-          <div className="flex justify-between mt-1.5 text-[11px]" style={{ color: taglineClr }}>
+          <input type="range" min={1} max={50} value={members} onChange={(e) => setMembers(Number(e.target.value))}
+            className="w-full accent-[#ff6b00] cursor-pointer" aria-label="Team size" />
+          <div className="flex justify-between mt-1.5 text-[11px] site-muted" aria-hidden="true">
             <span>1</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50+</span>
           </div>
 
-          <div className="mt-5 grid sm:grid-cols-[1fr_auto] gap-4 items-end pt-5" style={{ borderTop: `1px solid ${divBdr}` }}>
-            <div>
-              <p className="text-sm" style={{ color: body }}>
-                Recommended plan:{" "}
-                <span className="font-bold" style={{ color: isDark ? PLANS.find((p) => p.id === recommended).color : PLAN_TEXT[PLANS.find((p) => p.id === recommended).color] }}>
-                  {PLANS.find((p) => p.id === recommended).name}
-                </span>
-              </p>
+          <div className="mt-5 pt-5 grid sm:grid-cols-[1fr_auto] gap-4 items-end" style={{ borderTop: "1px solid var(--site-line)" }}>
+            <div className="min-w-0">
+              <p className="text-sm">Recommended plan: <span className="font-bold" style={{ color: "var(--site-brand-ink)" }}>{planName(recommended)}</span></p>
               {estimate ? (
                 <>
-                  <div className="flex items-baseline gap-2 mt-1.5">
-                    <span key={`${recommended}-${billing}-${estimate.seats}`} className="text-3xl font-black tabular-nums" style={{ color: heading }}>
-                      {formatINR(estimate.base)}
-                    </span>
-                    <span className="text-sm" style={{ color: body }}>/ {billing === "annual" ? "year" : "month"} + GST</span>
-                  </div>
-                  <p className="text-xs mt-1" style={{ color: taglineClr }}>
+                  <p className="flex items-baseline gap-2 mt-1.5">
+                    <span className="font-display text-3xl font-extrabold tabular-nums site-ink">{formatINR(estimate.base)}</span>
+                    <span className="text-sm site-muted">/ {billing === "annual" ? "year" : "month"} + GST</span>
+                  </p>
+                  <p className="text-xs site-muted mt-1">
                     {estimate.seats} seats{members < estimate.seats ? ` (minimum ${estimate.seats})` : ""} · {formatINR(estimate.total)} including 18% GST
                     {billing === "annual" ? ` · works out to ${formatINR(estimate.perMonth)} a month` : ""}
                   </p>
                 </>
               ) : (
-                <p className="text-sm mt-1.5" style={{ color: heading }}>
+                <p className="text-sm mt-1.5 site-ink">
                   Teams this size get a custom Enterprise quote.{" "}
-                  <a href={waLink("Hi Arthaleads! I'd like an Enterprise quote for a team of " + (members >= 50 ? "50+" : members) + " people.")}
-                    target="_blank" rel="noopener noreferrer" className="font-semibold text-[color:var(--brand-text)] hover:underline">Ask on WhatsApp</a>
+                  <Link to="/book-demo" className="font-semibold underline underline-offset-4" style={{ color: "var(--site-brand-ink)" }}>Book a demo for a quote</Link>
                 </p>
               )}
             </div>
-            <div role="radiogroup" aria-label="Billing period" className="inline-flex p-1 rounded-xl self-start sm:self-end"
-              style={{ background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6" }}>
+            <div role="radiogroup" aria-label="Billing period" className="inline-flex p-1 rounded-xl self-start sm:self-end" style={{ background: "var(--site-chip)" }}>
               {[["monthly", "Monthly"], ["annual", "Annual · 2 months free"]].map(([id, label]) => (
                 <button key={id} type="button" role="radio" aria-checked={billing === id} onClick={() => setBilling(id)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer"
-                  style={billing === id
-                    ? { background: isDark ? "#1f1f33" : "#ffffff", color: heading, boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }
-                    : { color: isDark ? body : "#4b5563" }}>
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${billing === id ? "site-ink" : "site-muted"}`}
+                  style={billing === id ? { background: "var(--site-card)", boxShadow: "var(--site-shadow-sm)" } : undefined}>
                   {label}
                 </button>
               ))}
             </div>
           </div>
-        </div>
-
-        {/* Free trial banner */}
-        <div className="flex items-center justify-center mb-10">
-          <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl border"
-            style={{ background: trialBg, borderColor: trialBdr }}>
-            <div className="w-7 h-7 rounded-full bg-[#22c55e] flex items-center justify-center flex-shrink-0">
-              <Check className="w-3.5 h-3.5 text-white" />
-            </div>
-            <div className="text-left">
-              <p className="text-sm font-bold" style={{ color: isDark ? "#4ade80" : "#15803d" }}>
-                14-day free trial - includes all Growth features
-              </p>
-              <p className="text-xs" style={{ color: isDark ? "rgba(74,222,128,0.6)" : "#15803d" }}>
-                No credit card required. Upgrade or cancel anytime.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+        </Card>
+        <p className="mt-5 inline-flex items-center gap-2 text-sm font-medium" style={{ color: "#16a34a" }}>
+          <CircleCheck className="w-4 h-4" aria-hidden="true" /> 14-day free trial with every Growth feature. No credit card.
+        </p>
+      </PageHero>
 
       {/* Plan cards */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
-          {PLANS.map((plan, idx) => {
-            const isHovered = hovered === plan.id;
-            const isPopular = plan.popular;
-            // Behaviour comes from ctaAction, appearance from `popular`. They
-            // used to be one test, which meant a plan could not have a signup
-            // link without also claiming the recommended-plan styling.
-            const ctaStyle = isPopular
-              ? { background: "var(--brand-btn)", color: "#fff", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }
-              : { border: `1px solid ${altBtnBdr}`, color: altBtnClr, background: "transparent" };
-            const ctaHover = isPopular ? {} : {
-              onMouseEnter: (e) => { e.currentTarget.style.borderColor = plan.color; e.currentTarget.style.color = plan.color; },
-              onMouseLeave: (e) => { e.currentTarget.style.borderColor = altBtnBdr; e.currentTarget.style.color = altBtnClr; },
-            };
-            const isReco    = recommended === plan.id;
-            return (
-              <Reveal key={plan.id} delay={idx * 110} className="flex">
-              <Spotlight color={`${plan.color}1a`}
-                className="relative flex flex-col flex-1 rounded-2xl transition-all duration-300 overflow-hidden"
-                style={{
-                  background: isPopular ? popBg : cardBg,
-                  border: isReco
-                    ? `1.5px solid ${plan.color}`
-                    : isPopular
-                      ? "1.5px solid rgba(255,107,0,0.4)"
-                      : `1px solid ${isHovered ? plan.color + "60" : cardBdr}`,
-                  boxShadow: isReco
-                    ? `0 16px 50px ${plan.color}26`
-                    : isPopular
-                      ? "0 20px 60px rgba(255,107,0,0.12)"
-                      : isHovered ? `0 8px 30px ${plan.color}18` : "none",
-                  transform: isPopular ? "translateY(-6px)" : isHovered ? "translateY(-3px)" : "none",
-                }}
-                onMouseEnter={() => setHovered(plan.id)}
-                onMouseLeave={() => setHovered(null)}>
-
-                {/* Top color bar */}
-                <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, ${plan.color}, ${plan.color}88)` }} />
-
-                {/* Badge */}
-                {(isReco || isPopular) && (
-                  <div className="absolute top-4 right-4">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide shadow text-white"
-                      style={{ background: isReco ? plan.color : "#ff6b00" }}>
-                      {isReco ? "Your match" : "Most Popular"}
-                    </span>
-                  </div>
-                )}
-
-                <div className="p-6 flex flex-col flex-1">
-                  {/* Plan header */}
-                  <div className="mb-5">
-                    <div className="flex items-center gap-2.5 mb-1.5">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${plan.color}18` }}>
-                        <Zap className="w-4 h-4" style={{ color: plan.color }} />
-                      </div>
-                      <h2 className="font-black text-xl" style={{ color: heading }}>{plan.name}</h2>
+      <Section tone="tint" className="!pt-14 sm:!pt-20">
+        <Container>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+            {PLANS.map((plan, idx) => {
+              const price = PLAN_PRICING[plan.id];
+              const isPopular = plan.popular;
+              const isReco = recommended === plan.id;
+              const free = freeMonths(plan.id);
+              return (
+                <Reveal key={plan.id} delay={idx * 110} className="flex min-w-0">
+                  <Card glow className={`relative w-full flex flex-col p-6 sm:p-7 transition-shadow duration-300 ${isPopular ? "md:-translate-y-2" : ""}`}
+                    style={isReco ? { borderColor: "rgba(255,107,0,0.65)", boxShadow: "0 0 0 1px rgba(255,107,0,0.35), 0 26px 60px -26px rgba(255,107,0,0.45)" }
+                      : isPopular ? { borderColor: "rgba(255,107,0,0.35)" } : undefined}>
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <h2 className="font-display text-2xl font-extrabold site-ink">{plan.name}</h2>
+                      {(isReco || isPopular) && (
+                        <span className="shrink-0 text-[11px] font-bold rounded-md px-2 py-1 text-white" style={{ background: "var(--brand-btn)" }}>
+                          {isReco ? "Your match" : "Most popular"}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs leading-relaxed mt-1" style={{ color: taglineClr }}>{plan.tagline}</p>
-                  </div>
+                    <p className="text-sm leading-relaxed">{plan.tagline}</p>
+                    <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold site-muted"><Users className="w-3.5 h-3.5" aria-hidden="true" /> {plan.userLimit}</p>
 
-                  {/* User limit pill */}
-                  <div className="inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-lg mb-4"
-                    style={{ background: `${plan.color}12`, border: `1px solid ${plan.color}25` }}>
-                    <Users className="w-3 h-3" style={{ color: plan.color }} />
-                    <span className="text-xs font-semibold" style={{ color: plan.color }}>{plan.userLimit}</span>
-                  </div>
-
-                  {/* Price — published rather than "on request", so a prospect can
-                      qualify themselves before they ever reach the contact form. */}
-                  {(() => {
-                    const price = PLAN_PRICING[plan.id];
-                    if (!price || price.custom) {
-                      return (
-                        <div className="mb-5 pb-5" style={{ borderBottom: `1px solid ${divBdr}` }}>
-                          <div className="text-3xl font-black" style={{ color: heading }}>Custom quote</div>
-                          <p className="text-xs mt-1.5" style={{ color: body }}>
-                            Priced on team size and rollout. From {price?.minSeats ?? 25} seats.
+                    {/* Price: published rather than "on request", so a prospect can
+                        qualify themselves before they ever reach the contact form. */}
+                    <div className="my-6 py-6" style={{ borderTop: "1px solid var(--site-line)", borderBottom: "1px solid var(--site-line)" }}>
+                      {!price || price.custom ? (
+                        <>
+                          <div className="font-display text-4xl font-extrabold site-ink tracking-tight">Custom</div>
+                          <p className="text-xs site-muted mt-2">Priced on team size and rollout. From {price?.minSeats ?? 25} seats.</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="flex items-baseline gap-1.5">
+                            <span className="font-display text-[44px] leading-none font-extrabold site-ink tracking-tight">{formatINR(price.monthly)}</span>
+                            <span className="text-xs site-muted">/ user / month</span>
                           </p>
+                          <p className="text-xs site-muted mt-2">Plus 18% GST · minimum {price.minSeats} seats</p>
+                          <p className="text-xs mt-1 font-semibold" style={{ color: "var(--site-brand-ink)" }}>
+                            {formatINR(price.annual)}/user/year billed annually{free ? `, ${free} months free` : ""}
+                          </p>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-5 flex-1 mb-7">
+                      {plan.groups.map((group) => (
+                        <div key={group.label}>
+                          <p className="text-[11px] font-bold uppercase tracking-[0.12em] site-muted mb-2.5">{group.label}</p>
+                          <ul className="space-y-2">
+                            {group.items.map((item) => (
+                              <li key={item} className="flex items-start gap-2.5 text-[13.5px] leading-relaxed">
+                                <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#16a34a" }} aria-hidden="true" />{item}
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-                      );
-                    }
-                    const free = freeMonths(plan.id);
-                    return (
-                      <div className="mb-5 pb-5" style={{ borderBottom: `1px solid ${divBdr}` }}>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-4xl font-black tracking-tight" style={{ color: heading }}>
-                            {formatINR(price.monthly)}
-                          </span>
-                          <span className="text-xs font-medium" style={{ color: body }}>
-                            / user / month
-                          </span>
-                        </div>
-                        <p className="text-xs mt-1.5" style={{ color: body }}>
-                          Plus 18% GST · minimum {price.minSeats} seats
-                        </p>
-                        <p className="text-xs mt-1 font-semibold" style={{ color: plan.color }}>
-                          {formatINR(price.annual)}/user/year billed annually
-                          {free ? ` — ${free} months free` : ""}
-                        </p>
-                      </div>
-                    );
-                  })()}
+                      ))}
+                    </div>
 
-
-                  {/* Feature groups */}
-                  <div className="flex flex-col gap-4 flex-1 mb-6">
-                    {plan.groups.map((group) => (
-                      <div key={group.label}>
-                        <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: grpLabel }}>
-                          {group.label}
-                        </p>
-                        <ul className="space-y-1.5">
-                          {group.items.map((item) => (
-                            <li key={item} className="flex items-start gap-2">
-                              <div className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center mt-0.5"
-                                style={{ background: `${plan.color}18` }}>
-                                <Check className="w-2.5 h-2.5" style={{ color: plan.color }} />
-                              </div>
-                              <span className="text-xs leading-relaxed" style={{ color: featClr }}>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* CTA */}
-                  <a
-                    {...(plan.ctaAction === "signup"
-                      ? { href: CRM_SIGNUP_URL, ...CRM_LINK_PROPS }
-                      : { href: waLink(`Hi Arthaleads! I'd like a quote for the ${plan.name} plan for my real estate team.`), target: "_blank", rel: "noopener noreferrer" })}
-                    className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-center block"
-                    style={ctaStyle}
-                    {...ctaHover}
-                  >
-                    {plan.cta}
-                  </a>
-                </div>
-              </Spotlight>
-              </Reveal>
-            );
-          })}
-        </div>
-
-        {/* Compare link */}
-        <div className="text-center mt-8">
-          <Link to="/compare" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[color:var(--brand-text)] hover:underline">
-            See how we compare to other CRMs <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </section>
+                    {plan.ctaAction === "signup" ? (
+                      <SiteButton href={CRM_SIGNUP_URL} external variant={isPopular ? "primary" : "secondary"} className="w-full" {...CRM_LINK_PROPS}>
+                        {plan.cta} {isPopular && <ArrowRight className="w-4 h-4" />}
+                      </SiteButton>
+                    ) : (
+                      <SiteButton to="/book-demo" variant="secondary" className="w-full">Book a Demo</SiteButton>
+                    )}
+                  </Card>
+                </Reveal>
+              );
+            })}
+          </div>
+          <p className="mt-10 text-center text-sm">
+            <Link to="/compare" className="site-link">See how we compare to other CRMs <ArrowRight className="w-4 h-4" /></Link>
+          </p>
+        </Container>
+      </Section>
 
       {/* Plans side by side */}
-      <section className="pb-16">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl sm:text-3xl font-black text-center mb-2" style={{ color: heading }}>Compare Arthaleads plans</h2>
-          <p className="text-sm text-center mb-6" style={{ color: body }}>
-            Prices are per user per month, with a five-user minimum and 18% GST on top. New accounts start with a 14-day free trial of Growth.
-          </p>
-          <div className="overflow-x-auto max-w-full rounded-2xl" style={{ border: `1px solid ${cardBdr}`, width: "100%", maxWidth: "calc(100vw - 2rem)" }}>
+      <Section tone="white">
+        <Container narrow>
+          <SectionHeader eyebrow="Side by side" title="Compare Arthaleads plans"
+            lede="Prices are per user per month, with a five-user minimum and 18% GST on top. New accounts start with a 14-day free trial of Growth." />
+          <Card raised className="relative overflow-x-auto">
             <table className="w-full min-w-[560px] text-sm border-collapse">
               <caption className="sr-only">Arthaleads Starter, Growth and Enterprise plans compared</caption>
               <thead>
-                <tr style={{ background: altBg }}>
-                  <th scope="col" className="text-left font-semibold px-4 py-3" style={{ color: body }}>Feature</th>
+                <tr style={{ borderBottom: "1px solid var(--site-line)" }}>
+                  <th scope="col" className="text-left font-semibold px-5 py-4 site-muted">Feature</th>
                   {PLANS.map((p) => (
-                    <th key={p.id} scope="col" className="text-center font-bold px-3 py-3" style={{ color: isDark ? p.color : PLAN_TEXT[p.color] }}>{p.name}</th>
+                    <th key={p.id} scope="col" className="text-center font-display font-bold px-3 py-4 site-ink"
+                      style={p.popular ? { background: "rgba(255,107,0,0.06)", color: "var(--site-brand-ink)" } : undefined}>{p.name}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {COMPARE_ROWS.map(([label, ...vals], ri) => (
-                  <tr key={label} style={{ borderTop: `1px solid ${divBdr}`, background: ri % 2 ? (isDark ? "rgba(255,255,255,0.015)" : "#fcfcfc") : cardBg }}>
-                    <th scope="row" className="text-left font-normal px-4 py-3" style={{ color: featClr }}>{label}</th>
+                  <tr key={label} style={ri < COMPARE_ROWS.length - 1 ? { borderBottom: "1px solid var(--site-line)" } : undefined}>
+                    <th scope="row" className="text-left font-normal px-5 py-3.5">{label}</th>
                     {vals.map((v, i) => (
-                      <td key={i} className="text-center px-3 py-3" style={{ color: featClr }}>
-                        {v === true ? <><Check aria-hidden="true" className="w-4 h-4 mx-auto text-green-600" /><span className="sr-only">Included</span></>
-                          : v === false ? <><span aria-hidden="true" style={{ color: body }}>–</span><span className="sr-only">Not included</span></>
+                      <td key={i} className="text-center px-3 py-3.5 site-ink" style={PLANS[i]?.popular ? { background: "rgba(255,107,0,0.04)" } : undefined}>
+                        {v === true ? <><Check aria-hidden="true" className="w-4 h-4 mx-auto" style={{ color: "#16a34a" }} /><span className="sr-only">Included</span></>
+                          : v === false ? <><Minus aria-hidden="true" className="w-4 h-4 mx-auto site-muted opacity-60" /><span className="sr-only">Not included</span></>
                           : v}
                       </td>
                     ))}
@@ -410,62 +264,14 @@ export default function Pricing() {
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
-      </section>
+          </Card>
+        </Container>
+      </Section>
 
-      {/* FAQ */}
-      <section className="py-14" style={{ background: altBg }}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl sm:text-3xl font-black" style={{ color: heading }}>
-              Pricing questions, answered
-            </h2>
-          </div>
+      <FaqSection title="Pricing questions, answered" items={FAQS} />
 
-          <div className="space-y-3">
-            {FAQS.map(([q, a], i) => {
-              const open = openFaq === i;
-              return (
-                <div key={i} className="rounded-2xl border overflow-hidden"
-                  style={{ background: cardBg, borderColor: cardBdr }}>
-                  <button
-                    type="button"
-                    onClick={() => setOpenFaq(open ? null : i)}
-                    className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left"
-                    aria-expanded={open}
-                  >
-                    <span className="text-sm font-semibold" style={{ color: heading }}>{q}</span>
-                    <ChevronDown
-                      className="w-4 h-4 shrink-0 transition-transform duration-200"
-                      style={{ color: "#ff6b00", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
-                    />
-                  </button>
-                  <div className="grid transition-[grid-template-rows] duration-300 ease-out" style={{ gridTemplateRows: open ? "1fr" : "0fr" }}>
-                    <div className="overflow-hidden">
-                      <p className="px-5 pb-4 text-sm leading-relaxed" style={{ color: body }}>{a}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Bottom CTA */}
-          <div className="text-center mt-10">
-            <p className="text-sm mb-4" style={{ color: body }}>Still have questions about pricing?</p>
-            <a
-              href={waLink(WA_MESSAGES.sales)} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:-translate-y-0.5"
-              style={{ background: "var(--brand-btn)", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }}
-            >
-              Talk to us on WhatsApp <ArrowRight className="w-4 h-4" />
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <PublicFooter />
-    </div>
+      <ClosingCta title="See the price" dim="on your own team."
+        body="Book a 30-minute demo and we will show Arthaleads on your real leads and quote for your team, or start the 14-day free trial yourself." />
+    </SitePage>
   );
 }
