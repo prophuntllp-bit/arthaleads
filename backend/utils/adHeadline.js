@@ -4,14 +4,15 @@
 // the headline "Status ad" instead of the ad's own (26 Oct 2026: a webinar lead
 // showed as "Facebook Ad · Status ad"). The ad id is still right, so the name
 // is taken from another click on the same ad. And when a click with the real
-// name arrives, earlier "Status ad" leads of that ad are renamed.
+// name arrives, earlier "Status ad" leads of that ad are renamed. The label
+// keeps "(Status Ad)" so the team can tell where the click came from.
 const Lead = require("../models/Lead");
 const WaConversation = require("../models/WaConversation");
 
 const PLACEHOLDER_RE = /^\s*status ad\s*$/i;
 const PLACEHOLDER_LABEL_RE = /^Facebook Ad · status ad$/i;
 const isPlaceholderHeadline = (h) => !String(h || "").trim() || PLACEHOLDER_RE.test(h);
-const labelFor = (headline) => `Facebook Ad · ${headline}`;
+const labelFor = (headline) => `Facebook Ad · ${headline} (Status Ad)`;
 
 async function knownHeadline(orgId, adId) {
   const real = { $exists: true, $nin: ["", null], $not: PLACEHOLDER_RE };
@@ -42,7 +43,7 @@ async function withRealHeadline(orgId, referral) {
   if (!adId) return referral;
   if (isPlaceholderHeadline(referral.headline)) {
     const name = await knownHeadline(orgId, adId);
-    return name ? { ...referral, headline: name } : referral;
+    return name ? { ...referral, headline: name, viaStatus: true } : referral;
   }
   renameEarlier(orgId, adId, String(referral.headline).trim())
     .catch((err) => console.error("[WhatsApp] Status ad rename failed:", err.message));
