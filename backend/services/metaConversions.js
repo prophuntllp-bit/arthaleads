@@ -86,9 +86,41 @@ function eventsFor(org, channel = "lead_ads") {
   return saved && saved.length ? saved : DEFAULT_EVENTS;
 }
 
+// Switched on and on Growth or above. Each kind of lead also needs somewhere to
+// send (credentialsFor below).
 function isReady(org) {
-  const c = org?.metaCapi;
-  return Boolean(c?.enabled && c.datasetId && c.accessToken && levelOf(org.plan) >= 2);
+  return Boolean(org?.metaCapi?.enabled && levelOf(org.plan) >= 2 && (leadFormReady(org) || whatsAppReady(org)));
+}
+const leadFormReady = (org) => Boolean(org?.metaCapi?.datasetId && org.metaCapi.accessToken);
+// Click-to-WhatsApp events must go to the dataset of the company's WhatsApp
+// Business account (Meta refuses them anywhere else: "the dataset ... has no
+// WhatsApp Business account linked to it", 26 Oct 2026), sent with the WhatsApp
+// connection's own token, as Meta recommends. Nothing for the company to paste.
+const whatsAppReady = (org) => Boolean(org?.whatsapp?.provider === "meta" && org.whatsapp.apiKey && org.whatsapp.wabaId);
+
+/** The WhatsApp account's dataset id: saved, else fetched (or created once) from Meta and saved. */
+async function whatsAppDataset(org) {
+  if (org.metaCapi?.whatsappDatasetId) return org.metaCapi.whatsappDatasetId;
+  const url = `${GRAPH}/${encodeURIComponent(org.whatsapp.wabaId)}/dataset?access_token=${encodeURIComponent(org.whatsapp.apiKey)}`;
+  let json = await (await fetch(url)).json().catch(() => ({}));
+  let id = json?.data?.[0]?.id;
+  if (!id) {
+    json = await (await fetch(url, { method: "POST" })).json().catch(() => ({}));
+    id = json?.id;
+  }
+  if (!id) throw new Error(json?.error?.error_user_msg || json?.error?.message || "Meta did not give a dataset for this WhatsApp account.");
+  await Organization.updateOne({ _id: org._id }, { $set: { "metaCapi.whatsappDatasetId": String(id) } });
+  org.metaCapi.whatsappDatasetId = String(id);
+  return String(id);
+}
+
+/** Where this kind of lead's events go: { datasetId, token }, or null when not set up. */
+async function credentialsFor(org, channel) {
+  if (channel === "whatsapp_ctwa") {
+    if (!whatsAppReady(org)) return null;
+    return { datasetId: await whatsAppDataset(org), token: org.whatsapp.apiKey };
+  }
+  return leadFormReady(org) ? { datasetId: org.metaCapi.datasetId, token: decryptField(org.metaCapi.accessToken) } : null;
 }
 
 /** Which kind of Meta match this lead has, if any. */
@@ -123,10 +155,9 @@ function buildEvent(lead, org, doc) {
   };
 }
 
-async function post(org, events, { testCode } = {}) {
-  const token = decryptField(org.metaCapi.accessToken);
+async function post({ datasetId, token }, events, { testCode } = {}) {
   const body = { data: events, ...(testCode ? { test_event_code: testCode } : {}) };
-  const res = await fetch(`${GRAPH}/${encodeURIComponent(org.metaCapi.datasetId)}/events?access_token=${encodeURIComponent(token)}`, {
+  const res = await fetch(`${GRAPH}/${encodeURIComponent(datasetId)}/events?access_token=${encodeURIComponent(token)}`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
   const json = await res.json().catch(() => ({}));
@@ -142,7 +173,9 @@ async function sendDoc(org, doc) {
     const lead = await Lead.findById(doc.leadId).select("phone email metaLeadId campaignRef").lean();
     if (!lead || channelOf(lead) !== doc.channel) throw Object.assign(new Error("Lead has no Meta match."), { skip: true });
     if (Date.now() - new Date(doc.eventTime).getTime() > SEVEN_DAYS) throw Object.assign(new Error("Older than 7 days, Meta no longer accepts it."), { skip: true });
-    const out = await post(org, [buildEvent(lead, org, doc)]);
+    const creds = await credentialsFor(org, doc.channel);
+    if (!creds) throw Object.assign(new Error(doc.channel === "whatsapp_ctwa" ? "WhatsApp is not connected to Meta directly." : "No lead-form dataset ID and token."), { skip: true });
+    const out = await post(creds, [buildEvent(lead, org, doc)]);
     await MetaEvent.updateOne({ _id: doc._id }, { $set: { status: "sent", sentAt: new Date(), error: "", fbTraceId: out.fbtrace_id || "" }, $inc: { attempts: 1 } });
     await Organization.updateOne({ _id: org._id }, { $set: { "metaCapi.lastError": "", "metaCapi.lastSentAt": new Date() } });
     return true;
@@ -188,8 +221,10 @@ async function contextFor(leadOrId) {
   if (!lead) return null;
   const channel = channelOf(lead);
   if (!channel) return null;
-  const org = await Organization.findById(lead.orgId).select("plan metaCapi whatsapp.wabaId").lean();
-  return isReady(org) ? { lead, org, channel } : null;
+  const org = await Organization.findById(lead.orgId).select("plan metaCapi whatsapp.wabaId whatsapp.provider whatsapp.apiKey").lean();
+  if (!isReady(org)) return null;
+  if (channel === "whatsapp_ctwa" ? !whatsAppReady(org) : !leadFormReady(org)) return null;
+  return { lead, org, channel };
 }
 
 async function queueAndSend({ lead, org, channel }, stage, configuredName, at) {
@@ -214,7 +249,7 @@ async function queueAndSend({ lead, org, channel }, stage, configuredName, at) {
  * path that did not call track() (AI call outcomes, imports, and so on).
  */
 async function sweep() {
-  const orgs = await Organization.find({ "metaCapi.enabled": true }).select("plan metaCapi whatsapp.wabaId").lean();
+  const orgs = await Organization.find({ "metaCapi.enabled": true }).select("plan metaCapi whatsapp.wabaId whatsapp.provider whatsapp.apiKey").lean();
   let sent = 0;
   for (const org of orgs) {
     if (!isReady(org)) continue;
@@ -255,7 +290,8 @@ async function sendTest(org) {
   const test = org.metaCapi.testEventCode;
   // Without a test code Meta would record this as a real event in the live dataset.
   if (!test) throw new Error("Add a test event code first (Events Manager, Test events tab) so this is not counted as a real lead.");
-  const out = await post(org, [{
+  if (!leadFormReady(org)) throw new Error("Add the lead-form dataset ID and token first.");
+  const out = await post({ datasetId: org.metaCapi.datasetId, token: decryptField(org.metaCapi.accessToken) }, [{
     event_name: "Lead", event_time: Math.floor(Date.now() / 1000), event_id: `test_${Date.now()}`,
     action_source: "system_generated",
     user_data: { em: [sha("test@arthaleads.com")] },
@@ -265,4 +301,4 @@ async function sendTest(org) {
   return { received: out.events_received ?? 0, usedTestCode: true };
 }
 
-module.exports = { DEFAULT_EVENTS, DEFAULT_WHATSAPP_EVENTS, WHATSAPP_EVENT_NAMES, eventsFor, eventNameFor, isReady, channelOf, track, trackChatQualified, QUALIFYING_CLOSINGS, CHAT_QUALIFIED_STAGE, sweep, sendTest, encryptField, decryptField };
+module.exports = { DEFAULT_EVENTS, DEFAULT_WHATSAPP_EVENTS, WHATSAPP_EVENT_NAMES, eventsFor, eventNameFor, isReady, whatsAppReady, leadFormReady, channelOf, track, trackChatQualified, QUALIFYING_CLOSINGS, CHAT_QUALIFIED_STAGE, sweep, sendTest, encryptField, decryptField };
