@@ -71,9 +71,8 @@ function Hero() {
             ))}
           </ul>
         </div>
-        <Reveal delay={150} y={28}>
-          <HeroVisual />
-        </Reveal>
+        {/* No entrance animation: the photo is the page's largest paint (LCP). */}
+        <HeroVisual />
       </Container>
     </Section>
   );
@@ -264,7 +263,7 @@ function StepConnect() {
       <svg width="34" height="120" viewBox="0 0 34 120" fill="none" aria-hidden="true" className="shrink-0">
         {[12, 36, 60, 84, 108].map((y) => <path key={y} d={`M0 ${y} C 18 ${y}, 16 60, 34 60`} stroke="var(--site-brand)" strokeOpacity="0.45" strokeWidth="1.5" strokeDasharray="3 3" />)}
       </svg>
-      <img src="/logo.png" alt="Arthaleads" width="56" height="56" loading="lazy" className="w-14 h-14 rounded-2xl shrink-0" style={{ boxShadow: "0 12px 28px -10px rgba(204,75,0,0.6)" }} />
+      <img src="/logo-112.webp" alt="Arthaleads" width="56" height="56" loading="lazy" className="w-14 h-14 rounded-2xl shrink-0" style={{ boxShadow: "0 12px 28px -10px rgba(204,75,0,0.6)" }} />
     </div>
   );
 }

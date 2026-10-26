@@ -123,7 +123,7 @@ export function CopilotCard() {
         </p>
       </div>
       <div className="mt-3 flex items-start gap-2.5">
-        <img src="/ai-avatar2.png" alt="" width="32" height="32" className="w-8 h-8 rounded-full object-cover shrink-0" loading="lazy" />
+        <img src="/ai-avatar2-96.webp" alt="" width="32" height="32" className="w-8 h-8 rounded-full object-cover shrink-0" loading="lazy" />
         <div className="min-w-0 flex-1">
           <p className="text-[13px] site-ink"><span className="font-semibold">Artha:</span> Start with these three.</p>
           <ul className="mt-2 space-y-1.5">

@@ -139,7 +139,7 @@ export default function MarketingChatBot() {
           >
             <span className="text-[14px] font-bold leading-[1.05] text-left" style={{ color: t.text }}>Ask<br />Artha</span>
             <span className="relative block w-11 h-11 shrink-0">
-              <img src="/ai-avatar2.png" alt="" className="w-11 h-11 rounded-full object-cover" style={{ boxShadow: "0 0 0 2px #ff6b00" }} />
+              <img src="/ai-avatar2-96.webp" width="96" height="96" alt="" className="w-11 h-11 rounded-full object-cover" style={{ boxShadow: "0 0 0 2px #ff6b00" }} />
               <span className="absolute top-0 right-0 w-3 h-3 rounded-full bg-green-500" style={{ border: `2px solid ${t.bg}` }} />
             </span>
           </button>
@@ -164,7 +164,7 @@ export default function MarketingChatBot() {
           <div className="flex items-center gap-2.5 px-4 py-3 shrink-0" style={{ borderBottom: `1px solid ${t.border}`, background: "linear-gradient(to right, rgba(255,107,0,0.08), transparent)" }}>
             <div className="relative shrink-0">
               <div className="w-9 h-9 rounded-full overflow-hidden">
-                <img src="/ai-avatar2.png" alt="Artha" className="w-full h-full object-cover" />
+                <img src="/ai-avatar2-96.webp" width="96" height="96" alt="Artha" className="w-full h-full object-cover" />
               </div>
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 bg-green-500" style={{ borderColor: t.bg }} />
             </div>
@@ -191,7 +191,7 @@ export default function MarketingChatBot() {
             {messages.length === 0 && (
               <div className="space-y-3">
                 <div className="flex gap-2 items-start">
-                  <img src="/ai-avatar2.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
+                  <img src="/ai-avatar2-96.webp" width="96" height="96" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
                   <div className="rounded-2xl rounded-tl-sm px-3 py-2.5 text-sm" style={{ background: t.surfaceLow, color: t.text }}>
                     {GREETING}
                   </div>
@@ -214,7 +214,7 @@ export default function MarketingChatBot() {
             {messages.map((m, i) => (
               <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start gap-2 items-start"}>
                 {m.role === "bot" && (
-                  <img src="/ai-avatar2.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
+                  <img src="/ai-avatar2-96.webp" width="96" height="96" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
                 )}
                 <div className="max-w-[80%]">
                   <div
@@ -234,7 +234,7 @@ export default function MarketingChatBot() {
 
             {loading && (
               <div className="flex justify-start gap-2 items-start">
-                <img src="/ai-avatar2.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
+                <img src="/ai-avatar2-96.webp" width="96" height="96" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
                 <div className="rounded-2xl rounded-tl-sm px-3 py-2.5" style={{ background: t.surfaceLow }}>
                   <span className="inline-flex gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-current opacity-40 animate-bounce" style={{ animationDelay: "0ms", color: t.text }} />
