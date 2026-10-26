@@ -34,6 +34,7 @@ const RoutingRule = require("../models/RoutingRule");
 const { matchRoutingRule, fileLeadInRoutedProject } = require("../utils/routingRules");
 const { samePhone } = require("../utils/phone");
 const { noDashes } = require("../utils/botText");
+const { withRealHeadline } = require("../utils/adHeadline");
 const { emitLeadCreated, routedProject } = require("../utils/emitLeadCreated");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { scoreLead, scoreLabel, aiSummary } = require("../utils/leadScorer");
@@ -1124,8 +1125,11 @@ async function noteProjectLeadReply(org, conv, projectLead, msgText) {
 }
 
 async function handleInbound(org, parsed) {
-  const { phone, name, msgId, msgText, msgType, referral, interactiveId, mediaId, mimeType, filename, caption } = parsed;
+  const { phone, name, msgId, msgText, msgType, interactiveId, mediaId, mimeType, filename, caption } = parsed;
   if (!phone || !msgText) return;
+  // A click from a WhatsApp Status placement arrives headlined "Status ad";
+  // use the ad's real name (utils/adHeadline.js).
+  const referral = parsed.referral ? await withRealHeadline(org._id, parsed.referral) : parsed.referral;
 
   const { conv, isNewConversation } = await withConvSetupLock(`${org._id}:${phone}`, async () => {
   let conv = await WaConversation.findOne({ orgId: org._id, contactPhone: phone });
