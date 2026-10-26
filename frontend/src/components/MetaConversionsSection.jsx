@@ -95,7 +95,7 @@ export default function MetaConversionsSection() {
     return has ? list.map((e) => (e.stage === stage ? { ...e, ...patch } : e)) : [...list, { stage, eventName: blank, enabled: true, ...patch }];
   });
   const stats = d.stats || {};
-  const configured = d.tokenSet && form.datasetId;
+  const configured = (d.tokenSet && form.datasetId) || d.whatsappConnected;
 
   return (
     <section className="card p-6 space-y-6">
@@ -120,12 +120,12 @@ export default function MetaConversionsSection() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="text-xs font-semibold text-app-soft mb-1.5 block">Dataset ID</label>
+          <label className="text-xs font-semibold text-app-soft mb-1.5 block">Dataset ID (Instant Lead Forms)</label>
           <input className="input w-full" name="meta-dataset-id" autoComplete="off" data-lpignore="true" data-1p-ignore inputMode="numeric" placeholder="e.g. 1234567890123456" value={form.datasetId}
             onChange={(e) => setForm((f) => ({ ...f, datasetId: e.target.value }))} />
         </div>
         <div>
-          <label className="text-xs font-semibold text-app-soft mb-1.5 block">Conversions API access token</label>
+          <label className="text-xs font-semibold text-app-soft mb-1.5 block">Conversions API access token (Instant Lead Forms)</label>
           <input className="input w-full" name="meta-capi-token" type="password" autoComplete="new-password" data-lpignore="true" data-1p-ignore
             placeholder={d.tokenSet ? `Saved, ends in ${d.tokenLast4}. Paste a new one to replace it.` : "Paste the token from Events Manager"}
             value={form.accessToken} onChange={(e) => setForm((f) => ({ ...f, accessToken: e.target.value }))} />
@@ -163,6 +163,13 @@ export default function MetaConversionsSection() {
             ? "For leads from Facebook and Instagram lead forms. Meta needs the first event (a lead arriving) plus at least two later stages before it starts learning from them."
             : "For leads who messaged you from a Click to WhatsApp ad. Meta accepts only its own event names for these, so pick one from each list."}
         </p>
+        {tab === "whatsapp_ctwa" && (
+          <p className="text-xs mb-2" style={{ color: d.whatsappConnected ? "#15803d" : "var(--app-text-soft)" }}>
+            {d.whatsappConnected
+              ? `Sent through your WhatsApp connection to your WhatsApp account's own dataset${d.whatsappDatasetId ? ` (${d.whatsappDatasetId})` : ""}. Nothing to paste.`
+              : "Needs WhatsApp connected to Meta directly (WhatsApp Cloud API). AiSensy, Wati and Interakt don't pass on the ad click, so these leads can't be matched."}
+          </p>
+        )}
         <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--app-border)" }}>
           {d.stages.filter((s) => s !== "Closed Lost").map((stage, i) => {
             const list = tab === "lead_ads" ? events : waEvents;

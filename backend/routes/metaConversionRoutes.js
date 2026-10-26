@@ -21,7 +21,7 @@ const last4 = (enc) => { const t = capi.decryptField(enc) || ""; return t ? t.sl
 
 router.get("/", async (req, res) => {
   try {
-    const org = await Organization.findById(req.orgId).select("metaCapi plan").lean();
+    const org = await Organization.findById(req.orgId).select("metaCapi plan whatsapp.provider whatsapp.apiKey whatsapp.wabaId").lean();
     const c = org?.metaCapi || {};
     const [recent, counts, matchable] = await Promise.all([
       MetaEvent.find({ orgId: req.orgId }).sort({ createdAt: -1 }).limit(20).populate("leadId", "name").lean(),
@@ -38,6 +38,9 @@ router.get("/", async (req, res) => {
       whatsappEvents: capi.eventsFor(org, "whatsapp_ctwa"),
       whatsappEventNames: capi.WHATSAPP_EVENT_NAMES,
       whatsappQualified: c.whatsappQualified !== false,
+      // Click to WhatsApp events use the WhatsApp connection; nothing to paste.
+      whatsappConnected: capi.whatsAppReady(org),
+      whatsappDatasetId: c.whatsappDatasetId || "",
       stages: OPTS.STATUS,
       lastSentAt: c.lastSentAt || null,
       lastError: c.lastError || "",
@@ -97,10 +100,11 @@ router.put("/", async (req, res) => {
     if (enabled !== undefined) set["metaCapi.enabled"] = !!enabled;
 
     if (set["metaCapi.enabled"]) {
-      const cur = (await Organization.findById(req.orgId).select("metaCapi").lean())?.metaCapi || {};
+      const curOrg = await Organization.findById(req.orgId).select("metaCapi whatsapp.provider whatsapp.apiKey whatsapp.wabaId").lean();
+      const cur = curOrg?.metaCapi || {};
       const ds = set["metaCapi.datasetId"] ?? cur.datasetId;
       const tok = set["metaCapi.accessToken"] ?? cur.accessToken;
-      if (!ds || !tok) return res.status(400).json({ message: "Add the dataset ID and access token before turning this on." });
+      if ((!ds || !tok) && !capi.whatsAppReady(curOrg)) return res.status(400).json({ message: "Connect WhatsApp to Meta directly, or add a lead-form dataset ID and access token, before turning this on." });
     }
     if (Object.keys(set).length) await Organization.updateOne({ _id: req.orgId }, { $set: set });
     res.json({ success: true });

@@ -16,8 +16,17 @@ const axios = require("axios");
 const oid = () => new mongoose.Types.ObjectId();
 let ORG, org, Lead, capi, wa, seq = 0;
 const sent = []; // every event posted to the Conversions API
-global.fetch = async (url, opts) => {
-  if (String(url).includes("/events?")) for (const e of JSON.parse(opts.body).data) sent.push(e);
+let wabaDatasetCalls = 0;
+global.fetch = async (url, opts = {}) => {
+  url = String(url);
+  if (url.includes("/waba_1/dataset")) {
+    wabaDatasetCalls++;
+    return { ok: true, json: async () => (opts.method === "POST" ? { id: "ds_wa" } : { data: [] }) };
+  }
+  if (url.includes("/events?")) {
+    const where = { dataset: url.split("/events?")[0].split("/").pop(), token: new URL(url).searchParams.get("access_token") };
+    for (const e of JSON.parse(opts.body).data) sent.push({ ...e, where });
+  }
   return { ok: true, json: async () => ({ events_received: 1, fbtrace_id: "t" }) };
 };
 axios.post = async (url) => {
@@ -56,6 +65,26 @@ test("a WhatsApp ad lead arriving is sent as LeadSubmitted over business messagi
   assert.equal(e[0].messaging_channel, "whatsapp");
   assert.equal(e[0].user_data.ctwa_clid, l.campaignRef.ctwaClid);
   assert.equal(e[0].user_data.whatsapp_business_account_id, "waba_1");
+  assert.deepEqual(e[0].where, { dataset: "ds_wa", token: "fake-token" }, "the WhatsApp account's own dataset, with the WhatsApp connection's token");
+  const org2 = await mongoose.connection.collection("organizations").findOne({ _id: ORG });
+  assert.equal(org2.metaCapi.whatsappDatasetId, "ds_wa", "fetched (created) once and saved");
+});
+
+test("the WhatsApp dataset is looked up once, then reused", async () => {
+  const before = wabaDatasetCalls;
+  await capi.track(await ctwa(), "New");
+  await capi.track(await ctwa(), "New");
+  assert.equal(wabaDatasetCalls, before);
+});
+
+test("WhatsApp events need no pasted dataset or token; lead forms still do", async () => {
+  await mongoose.connection.collection("organizations").updateOne({ _id: ORG }, { $set: { "metaCapi.datasetId": "", "metaCapi.accessToken": "" } });
+  const w = await ctwa(), f = await form();
+  await capi.track(w, "New");
+  await capi.track(f, "New");
+  await mongoose.connection.collection("organizations").updateOne({ _id: ORG }, { $set: { "metaCapi.datasetId": "123456789012345", "metaCapi.accessToken": capi.encryptField("EAAtesttokentesttokentesttoken") } });
+  assert.deepEqual(await names(w._id), ["LeadSubmitted"]);
+  assert.deepEqual(await names(f._id), [], "no lead-form dataset: nothing queued");
 });
 
 test("a lead-form lead keeps 'Lead' and the CRM-event fields", async () => {
@@ -64,6 +93,7 @@ test("a lead-form lead keeps 'Lead' and the CRM-event fields", async () => {
   await capi.track(l, "New");
   const e = sent.slice(before)[0];
   assert.equal(e.event_name, "Lead");
+  assert.deepEqual(e.where, { dataset: "123456789012345", token: "EAAtesttokentesttokentesttoken" }, "the pasted lead-form dataset and token");
   assert.equal(e.action_source, "system_generated");
   assert.equal(e.user_data.lead_id, l.metaLeadId);
 });
