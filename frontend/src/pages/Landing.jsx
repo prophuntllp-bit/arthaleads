@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, Globe, QrCode, FileSpreadsheet, Store, ShieldCheck, Download, Lock, MapPin,
-  MessageCircle, Bot, Sparkles, Phone, Plus, Minus, CircleCheck, BadgeCheck, ArrowUpRight, Repeat2,
+  MessageCircle, Bot, Sparkles, Phone, Plus, Minus, CircleCheck, BadgeCheck, ArrowUpRight, Repeat2, CalendarCheck2,
 } from "lucide-react";
 import { SitePage, Section, Container, SectionHeader, Card, SiteButton, SiteImage } from "../components/site/Site";
 import { WhatsAppLogo, FacebookLogo, GoogleLogo } from "../components/site/BrandLogos";
@@ -61,8 +61,8 @@ function Hero() {
           </p>
           {/* Phones: two compact buttons side by side instead of two full-width slabs. */}
           <div className="mt-7 flex flex-wrap gap-2.5 sm:gap-3 justify-center lg:justify-start">
-            {/* The free trial lives in the header; the hero asks for a demo. TODO: /book-demo once the page is approved. */}
-            <SiteButton href={waLink(WA_MESSAGES.demo)} external className="!px-6 text-[15px] sm:!px-8 sm:min-h-[3.5rem] sm:text-base">
+            {/* The free trial lives in the header; the hero asks for a demo. */}
+            <SiteButton to="/book-demo" className="!px-6 text-[15px] sm:!px-8 sm:min-h-[3.5rem] sm:text-base">
               Book a Demo <ArrowRight className="w-4 h-4" />
             </SiteButton>
           </div>
@@ -538,8 +538,8 @@ function FinalCta() {
               <p className="mt-5 text-base sm:text-lg leading-relaxed max-w-lg">Start your 14-day free trial, or message us on WhatsApp and see the AI agent answer you.</p>
               <div className="mt-8 flex gap-2 sm:gap-3">
                 <SiteButton href={CRM_SIGNUP_URL} external className="!px-3.5 text-[14px] sm:!px-7 sm:min-h-[3.5rem] sm:text-base">Start free trial <ArrowRight className="w-4 h-4" /></SiteButton>
-                <SiteButton href={waLink(WA_MESSAGES.demo)} external variant="secondary" className="!px-3.5 text-[14px] sm:!px-7 sm:min-h-[3.5rem] sm:text-base">
-                  <WhatsAppLogo className="w-[18px] h-[18px]" /> Book a demo
+                <SiteButton to="/book-demo" variant="secondary" className="!px-3.5 text-[14px] sm:!px-7 sm:min-h-[3.5rem] sm:text-base">
+                  <CalendarCheck2 className="w-[18px] h-[18px]" aria-hidden="true" /> Book a demo
                 </SiteButton>
               </div>
               <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm site-muted">

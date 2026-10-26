@@ -431,6 +431,7 @@ const ProductUpdates = lazy(() => import("./pages/ProductUpdates"));
 const HelpGuide      = lazy(() => import("./pages/HelpGuide"));
 const WordPressPlugin = lazy(() => import("./pages/WordPressPlugin"));
 const Contact         = lazy(() => import("./pages/Contact"));
+const BookDemo        = lazy(() => import("./pages/BookDemo"));
 const Careers         = lazy(() => import("./pages/Careers"));
 const ShareTarget     = lazy(() => import("./pages/ShareTarget"));
 const Plans           = lazy(() => import("./pages/Plans"));
@@ -451,6 +452,7 @@ const AdminLogin            = lazy(() => import("./pages/AdminLogin"));
 const SuperAdminHome        = lazy(() => import("./pages/SuperAdminHome"));
 const SuperAdminUsers       = lazy(() => import("./pages/SuperAdminUsers"));
 const SuperAdminTickets     = lazy(() => import("./pages/SuperAdminTickets"));
+const SuperAdminDemoRequests = lazy(() => import("./pages/SuperAdminDemoRequests"));
 const SuperAdminAnalytics   = lazy(() => import("./pages/SuperAdminAnalytics"));
 const SuperAdminBroadcast   = lazy(() => import("./pages/SuperAdminBroadcast"));
 const SuperAdminOrgDetail   = lazy(() => import("./pages/SuperAdminOrgDetail"));
@@ -818,6 +820,7 @@ export default function App() {
         <Route path="/wordpress-plugin"     element={<WordPressPlugin />} />
         <Route path="/careers"              element={<Careers />} />
         <Route path="/contact"              element={<Contact />} />
+        <Route path="/book-demo"            element={<BookDemo />} />
         <Route path="/share-target"         element={<ShareTarget />} />
         <Route path="/form/:token"          element={<PublicLeadForm />} />
 
@@ -899,6 +902,7 @@ export default function App() {
             <Route path="/super-admin/orgs"               element={<SuperAdmin />} />
             <Route path="/super-admin/users"              element={<SuperAdminUsers />} />
             <Route path="/super-admin/tickets"            element={<SuperAdminTickets />} />
+            <Route path="/super-admin/demo-requests"      element={<SuperAdminDemoRequests />} />
             <Route path="/super-admin/analytics"          element={<SuperAdminAnalytics />} />
             <Route path="/super-admin/revenue"            element={<SuperAdminRevenue />} />
             <Route path="/super-admin/broadcast"          element={<SuperAdminBroadcast />} />

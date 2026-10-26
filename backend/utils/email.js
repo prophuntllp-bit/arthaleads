@@ -244,6 +244,80 @@ async function notifySuperAdminsOfSignup({ name, email, phone, orgName }) {
   });
 }
 
+// ── Book a Demo (website /book-demo) ─────────────────────────────────────────
+// The team alert goes to every active super admin and the contact inbox; the
+// visitor gets a short confirmation. Requests are reviewed in the super admin
+// panel (Demo requests), next to trial approvals.
+function demoRows(r) {
+  const when = [r.preferredDate, r.preferredTime].filter(Boolean).join(", ");
+  const rows = [
+    ["Name", r.name], ["Email", r.email], ["Phone", r.phone], ["City", r.city],
+    ["Company", r.company], ["Role", r.role], ["Business", r.businessType], ["Team size", r.teamSize],
+    ["Leads per month", r.monthlyLeads], ["Lead sources", (r.leadSources || []).join(", ")],
+    ["Uses today", r.currentTool], ["Preferred time", when], ["Format", r.format], ["Language", r.language],
+  ].filter(([, v]) => v);
+  return rows;
+}
+
+async function notifyDemoRequest(r) {
+  const User = require("../models/User");
+  const admins = await User.find({ role: "super_admin", isActive: true }).select("email").lean();
+  const to = [...new Set([SUPPORT, ...admins.map((a) => a.email)])];
+  const reviewUrl = `${SITE_URL}/super-admin/demo-requests`;
+  const rows = demoRows(r);
+  return send({
+    to,
+    replyTo: r.email,
+    subject: `Demo request: ${r.company} (${r.teamSize} people)`,
+    html: layout({
+      preheader: `${r.name}, ${r.businessType}, ${r.city}`,
+      eyebrow: "Book a Demo",
+      title: `New demo request from ${r.name}`,
+      bodyHtml: `
+        ${panel(rows.map(([k, v], i) => row(k, v, i === rows.length - 1)).join(""))}
+        ${r.message ? paragraph(`<strong style="color:${HEADING};">What they want to see</strong><br />${esc(r.message).replace(/\n/g, "<br />")}`) : ""}
+        ${button(reviewUrl, "Open in admin panel")}
+        <p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};">Reply to this email to write to ${esc(r.name)} directly.</p>`,
+      footerNote: "Sent to Arthaleads platform administrators.",
+    }),
+    text: `New demo request
+
+${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}${r.message ? `
+
+What they want to see:
+${r.message}` : ""}
+
+Review: ${reviewUrl}`,
+  });
+}
+
+async function sendDemoRequestConfirmation(r) {
+  const when = [r.preferredDate, r.preferredTime].filter(Boolean).join(", ");
+  return send({
+    to: r.email,
+    replyTo: SUPPORT,
+    subject: "We got your demo request",
+    html: layout({
+      preheader: "The Arthaleads team will confirm a time with you shortly.",
+      eyebrow: "Book a Demo",
+      title: `Thanks, ${r.name.split(" ")[0]}`,
+      bodyHtml: `
+        ${paragraph("We have your request for an Arthaleads demo. Someone from our team in Pune will contact you on WhatsApp or phone to confirm the time.")}
+        ${panel(row("Company", r.company) + (when ? row("Preferred time", when) : "") + row("Format", r.format || "Video call", true))}
+        ${paragraph(`Want to talk sooner? Reply to this email or write to ${link(`mailto:${SUPPORT}`, SUPPORT)}.`, MUTED)}`,
+      footerNote: "You are receiving this because you asked for a demo on arthaleads.com.",
+    }),
+    text: `Thanks, ${r.name}.
+
+We have your request for an Arthaleads demo. Someone from our team will contact you on WhatsApp or phone to confirm the time.
+
+Company: ${r.company}${when ? `
+Preferred time: ${when}` : ""}
+
+Questions: ${SUPPORT}`,
+  });
+}
+
 // ── Signup email verification ─────────────────────────────────────────────────
 //
 // A link and a code, in that order. The link is the path we want people on --
@@ -415,6 +489,8 @@ module.exports = {
   sendSignupApprovedEmail,
   sendSignupRejectedEmail,
   notifySuperAdminsOfSignup,
+  notifyDemoRequest,
+  sendDemoRequestConfirmation,
   sendSignupVerifyEmail,
   sendAccountDeletionRequestEmails,
   sendLowCreditEmail,

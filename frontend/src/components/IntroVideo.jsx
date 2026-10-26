@@ -11,10 +11,9 @@
 // reduced motion get a play button instead of autoplay.
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Play, Volume2, RotateCcw, ArrowRight, Youtube } from "lucide-react";
+import { Play, Volume2, RotateCcw, ArrowRight, Youtube, CalendarCheck2 } from "lucide-react";
 import { filmJsonLd, fmtTime } from "../data/introFilm";
-import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES, YOUTUBE_FILM } from "../utils/crmLinks";
-import WhatsAppLogo from "./WhatsAppLogo";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS, YOUTUBE_FILM } from "../utils/crmLinks";
 import { SITE_MEDIA } from "../data/siteMedia";
 
 export const INTRO_VIDEOS = {
@@ -234,10 +233,10 @@ export default function IntroVideo({ isDark, id = "tour", chapters = false, seek
                   className="flex items-center gap-2 bg-[color:var(--brand-btn)] text-white font-bold px-6 py-3 rounded-2xl shadow-xl">
                   Start free trial <ArrowRight className="w-4 h-4" />
                 </a>
-                <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
+                <Link to="/book-demo"
                   className="flex items-center gap-2 bg-white text-gray-900 font-semibold px-5 py-3 rounded-2xl">
-                  <WhatsAppLogo className="w-4 h-4" /> Book a demo
-                </a>
+                  <CalendarCheck2 className="w-4 h-4" aria-hidden="true" /> Book a demo
+                </Link>
               </div>
               <button type="button" onClick={() => { setEnded(false); const el = videoRef.current; if (el) { el.currentTime = 0; userPaused.current = false; el.play().catch(() => {}); } }}
                 className="flex items-center gap-1.5 text-sm font-semibold text-white/80 hover:text-white">
@@ -290,10 +289,10 @@ export default function IntroVideo({ isDark, id = "tour", chapters = false, seek
                 className="inline-flex items-center justify-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-6 py-3 rounded-2xl shadow-lg shadow-orange-500/25">
                 Start free trial <ArrowRight className="w-4 h-4" />
               </a>
-              <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 font-semibold" style={{ color: isDark ? "#4ade80" : "#15803d" }}>
-                <WhatsAppLogo className="w-4 h-4" /> Or book a demo on WhatsApp
-              </a>
+              <Link to="/book-demo"
+                className="inline-flex items-center justify-center gap-2 font-semibold text-[color:var(--brand-text)]">
+                <CalendarCheck2 className="w-4 h-4" aria-hidden="true" /> Or book a demo
+              </Link>
             </div>
           </>
         )}

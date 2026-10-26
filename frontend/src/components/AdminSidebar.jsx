@@ -6,8 +6,9 @@ import {
   LayoutDashboard, Building2, Users, TicketIcon, BarChart3,
   Megaphone, FileText, TrendingUp, ShieldCheck, Activity,
   LogOut, Menu, X, ChevronUp, MoonStar, SunMedium,
-  PanelLeftClose, PanelLeft, Settings,
+  PanelLeftClose, PanelLeft, Settings, CalendarCheck2,
 } from "lucide-react";
+import api from "../services/api";
 
 const NAV = [
   { to: "/super-admin",            label: "Dashboard",     icon: LayoutDashboard, end: true },
@@ -15,6 +16,7 @@ const NAV = [
   { to: "/super-admin/users",      label: "Users",         icon: Users },
   { to: "/super-admin/insights",   label: "Insights",      icon: Activity },
   { to: "/super-admin/tickets",    label: "Tickets",       icon: TicketIcon },
+  { to: "/super-admin/demo-requests", label: "Demo requests", icon: CalendarCheck2, badge: "demo" },
   { to: "/super-admin/analytics",  label: "Analytics",     icon: BarChart3 },
   { to: "/super-admin/revenue",    label: "Revenue",       icon: TrendingUp },
   { to: "/super-admin/broadcast",  label: "Broadcast",     icon: Megaphone },
@@ -29,6 +31,16 @@ export default function AdminSidebar() {
 
   // Mobile drawer
   const [open, setOpen] = useState(false);
+
+  // New demo requests from the website: a count on the sidebar item, refreshed every 2 minutes.
+  const [newDemos, setNewDemos] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const load = () => api.get("/super-admin/demo-requests?status=new").then(({ data }) => { if (alive) setNewDemos(data.counts?.new || 0); }).catch(() => {});
+    load();
+    const t = setInterval(load, 120000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
 
   // Desktop: hover-to-expand overlay OR pinned (pushes content)
   const [hovered, setHovered] = useState(false);
@@ -110,7 +122,7 @@ export default function AdminSidebar() {
 
         {/* ── Nav items ── */}
         <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto py-2" style={{ minHeight: 0 }}>
-          {NAV.map(({ to, label, icon: Icon, end }) => (
+          {NAV.map(({ to, label, icon: Icon, end, badge }) => (
             <NavLink
               key={to}
               to={to}
@@ -133,8 +145,17 @@ export default function AdminSidebar() {
                 } : { borderRight: "2px solid transparent" }),
               })}
             >
-              <Icon className="flex-shrink-0" style={{ width: 18, height: 18 }} />
+              <span className="relative flex-shrink-0">
+                <Icon style={{ width: 18, height: 18 }} />
+                {badge === "demo" && newDemos > 0 && !isExpanded && (
+                  <span className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full" style={{ background: "#ff6b00" }} aria-hidden="true" />
+                )}
+              </span>
               <span className="ml-3 flex-1" style={ls}>{label}</span>
+              {badge === "demo" && newDemos > 0 && isExpanded && (
+                <span className="ml-2 min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold text-white flex items-center justify-center" style={{ background: "#ff6b00" }}
+                  aria-label={`${newDemos} new`}>{newDemos}</span>
+              )}
             </NavLink>
           ))}
         </nav>

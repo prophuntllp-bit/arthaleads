@@ -36,6 +36,7 @@ import ProductTour from "./pages/ProductTour";
 import ReferEarn from "./pages/ReferEarn";
 import Careers from "./pages/Careers";
 import Contact from "./pages/Contact";
+import BookDemo from "./pages/BookDemo";
 import Security from "./pages/Security";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
@@ -66,6 +67,7 @@ export const PAGES = {
   "/refer": ReferEarn,
   "/careers": Careers,
   "/contact": Contact,
+  "/book-demo": BookDemo,
   "/security": Security,
   "/privacy": Privacy,
   "/terms": Terms,

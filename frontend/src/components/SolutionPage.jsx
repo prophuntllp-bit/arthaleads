@@ -11,13 +11,13 @@
 // faqs { title, items: [[q, a]] }, related [{ to, label }], close { title, body },
 // jsonLd (from solutionJsonLd below).
 import { Link } from "react-router-dom";
-import { ArrowRight, Check, Minus } from "lucide-react";
+import { ArrowRight, Check, Minus, CalendarCheck2 } from "lucide-react";
 import PublicNav from "./PublicNav";
 import PublicFooter from "./PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
-import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import { Reveal, Spotlight, Magnetic } from "./motion/Motion";
-import WhatsAppLogo, { waButtonClass } from "./WhatsAppLogo";
+import { waButtonClass } from "./WhatsAppLogo";
 
 export default function SolutionPage({ hero, answer, steps, features, compare, faqs, related, close, jsonLd }) {
   const { isDark } = usePublicTheme();
@@ -62,11 +62,11 @@ export default function SolutionPage({ hero, answer, steps, features, compare, f
                   Start 14-day free trial <ArrowRight className="w-4 h-4" />
                 </a>
               </Magnetic>
-              <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
+              <Link to="/book-demo"
                 className="inline-flex items-center justify-center gap-2 font-semibold px-7 py-3.5 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5"
                 style={{ borderColor: cardBorder, color: text, background: cardBg }}>
-                <WhatsAppLogo className="w-[18px] h-[18px]" /> Book a demo on WhatsApp
-              </a>
+                <CalendarCheck2 className="w-[18px] h-[18px]" aria-hidden="true" /> Book a demo
+              </Link>
             </div>
             <p className="text-sm mt-5" style={{ color: muted }}>No credit card needed. Plans from ₹599 per user per month.</p>
           </div>
@@ -233,9 +233,9 @@ export default function SolutionPage({ hero, answer, steps, features, compare, f
                 Start free trial <ArrowRight className="w-4 h-4" />
               </a>
             </Magnetic>
-            <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer" className={waButtonClass(isDark)}>
-              <WhatsAppLogo className="w-[18px] h-[18px]" /> Book a demo on WhatsApp
-            </a>
+            <Link to="/book-demo" className={waButtonClass(isDark)}>
+              <CalendarCheck2 className="w-[18px] h-[18px]" aria-hidden="true" /> Book a demo
+            </Link>
           </div>
         </Reveal>
       </section>

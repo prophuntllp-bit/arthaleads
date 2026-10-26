@@ -114,6 +114,7 @@ export default function PublicFooter() {
                 ["Product Updates", "/product-updates"],
                 ["Help Guide",    "/help-guide"],
                 ["Security",      "/security"],
+                ["Book a Demo",   "/book-demo"],
                 ["Contact Us",    "/contact"],
               ].map(([label, href]) => (
                 <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>

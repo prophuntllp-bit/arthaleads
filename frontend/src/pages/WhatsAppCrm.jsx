@@ -6,7 +6,7 @@
 // must stay true to the product and the plan it sits on: plan limits come from
 // data/plans.js, the WhatsApp feature copy from pages/Features.jsx.
 import { Link } from "react-router-dom";
-import { ArrowRight, Bot, Inbox, UserCheck, Megaphone, ShieldCheck, Clock, Wallet, Sparkles, Check, Minus } from "lucide-react";
+import { ArrowRight, Bot, Inbox, UserCheck, Megaphone, ShieldCheck, Clock, Wallet, Sparkles, Check, Minus, CalendarCheck2 } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
@@ -315,10 +315,9 @@ export default function WhatsAppCrm() {
                 Start free trial <ArrowRight className="w-4 h-4" />
               </a>
             </Magnetic>
-            <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
-              className={waButtonClass(isDark)}>
-              <WhatsAppLogo className="w-[18px] h-[18px]" /> Book a demo on WhatsApp
-            </a>
+            <Link to="/book-demo" className={waButtonClass(isDark)}>
+              <CalendarCheck2 className="w-[18px] h-[18px]" aria-hidden="true" /> Book a demo
+            </Link>
           </div>
         </Reveal>
       </section>

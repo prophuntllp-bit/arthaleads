@@ -34,4 +34,9 @@ router.post("/tickets/:id/reply",   ctrl.replyTicket);
 router.post("/broadcast",           ctrl.broadcast);
 router.get("/insights",             ctrl.insights);
 
+// Book a Demo requests from the website (/book-demo)
+const demo = require("../controllers/demoRequestController");
+router.get("/demo-requests",        demo.listDemoRequests);
+router.patch("/demo-requests/:id",  demo.updateDemoRequest);
+
 module.exports = router;

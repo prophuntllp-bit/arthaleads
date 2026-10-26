@@ -61,7 +61,7 @@ writeFileSync(join(dist, "app.html"), base.replace(/(<meta name="description"[^>
 // of its <title> before " | " / " - ".
 const CRUMB = {
   "/features": "Features", "/pricing": "Pricing", "/compare": "Compare", "/whatsapp-crm": "WhatsApp CRM",
-  "/product-tour": "Product tour", "/blog": "Blog", "/about-us": "About us", "/contact": "Contact",
+  "/product-tour": "Product tour", "/blog": "Blog", "/about-us": "About us", "/contact": "Contact", "/book-demo": "Book a demo",
   "/careers": "Careers", "/security": "Security", "/help-guide": "Help guide", "/product-updates": "Product updates",
   "/download-app": "Download the app", "/wordpress-plugin": "WordPress plugin", "/api-docs": "API docs",
   "/refer": "Refer and earn", "/privacy": "Privacy policy", "/terms": "Terms of service", "/refund": "Refund policy",

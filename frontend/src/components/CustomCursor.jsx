@@ -30,6 +30,7 @@ const MARKETING_PATHS = new Set([
   "/wordpress-plugin",
   "/careers",
   "/contact",
+  "/book-demo",
 ]);
 
 export default function CustomCursor() {

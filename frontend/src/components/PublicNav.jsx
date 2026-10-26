@@ -5,7 +5,7 @@ import {
   BookOpen, BarChart2, Zap, HelpCircle,
   Building2, Briefcase, Puzzle,
   Code2, GitCompare, Shield, Gift,
-  Smartphone, Scale, Bot,
+  Smartphone, Scale, Bot, CalendarCheck2,
 } from "lucide-react";
 import WhatsAppLogo from "./WhatsAppLogo";
 import { usePublicTheme } from "../context/PublicThemeContext";
@@ -49,6 +49,7 @@ const NAV_COMPARE = [
 ];
 
 const NAV_COMPANY = [
+  { label: "Book a demo",   href: "/book-demo", desc: "30 minutes, on your own leads", icon: CalendarCheck2 },
   { label: "Careers",       href: "/careers",  desc: "Join the Arthaleads team",   icon: Briefcase, badge: "Hiring" },
   { label: "Security",      href: "/security", desc: "How we protect your data",   icon: Shield },
   { label: "Refer & Earn",  href: "/refer",    desc: "Give a month, get a month",  icon: Gift, badge: "Earn" },
@@ -67,7 +68,7 @@ const MOBILE_CARDS = [
     { label: "vs Leadrat", href: "/compare/leadrat-alternative" }, { label: "vs Kylas", href: "/compare/kylas-alternative" },
   ] },
   { label: "Company", description: "Learn, get help and get in touch.", links: [
-    { label: "About us", href: "/about-us" }, { label: "Blog", href: "/blog" }, { label: "Help guide", href: "/help-guide" },
+    { label: "Book a demo", href: "/book-demo" }, { label: "About us", href: "/about-us" }, { label: "Blog", href: "/blog" }, { label: "Help guide", href: "/help-guide" },
     { label: "Careers", href: "/careers" }, { label: "Security", href: "/security" }, { label: "Contact", href: "/contact" },
     { label: "Login", href: CRM_LOGIN_URL },
   ] },

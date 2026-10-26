@@ -81,6 +81,10 @@
       "destination": "/contact.html"
     },
     {
+      "source": "/book-demo",
+      "destination": "/book-demo.html"
+    },
+    {
       "source": "/cookie-policy",
       "destination": "/cookie-policy.html"
     },

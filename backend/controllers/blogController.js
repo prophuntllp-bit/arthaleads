@@ -131,6 +131,7 @@ const blogController = {
         { url: "/refer",            priority: "0.5", changefreq: "monthly", lastmod: "2026-10-14" },
         { url: "/careers",          priority: "0.5", changefreq: "monthly", lastmod: "2026-10-14" },
         { url: "/contact",          priority: "0.6", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/book-demo",        priority: "0.7", changefreq: "monthly", lastmod: "2026-10-26" },
         { url: "/security",         priority: "0.5", changefreq: "monthly", lastmod: "2026-10-14" },
         { url: "/privacy",          priority: "0.3", changefreq: "yearly", lastmod: "2026-10-08" },
         { url: "/terms",            priority: "0.3", changefreq: "yearly", lastmod: "2026-06-25" },
