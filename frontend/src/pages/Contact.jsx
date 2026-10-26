@@ -21,7 +21,7 @@ const FAQ_JSONLD = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": FAQS.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
-}).replace(/</g, "<");
+}).replace(/</g, "\\u003c");
 
 const inputCls = "w-full rounded-2xl px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-[color:var(--site-brand)]";
 const inputStyle = { background: "var(--site-bg)", border: "1px solid var(--site-line-strong)", color: "var(--site-ink)" };

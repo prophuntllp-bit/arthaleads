@@ -1,9 +1,14 @@
-import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
-import { Check, Download, ArrowRight, ChevronDown, Zap, Shield, RefreshCw, Globe, Star, Bell, Code2, PlugZap } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
-import PublicNav from "../components/PublicNav";
-import PublicFooter from "../components/PublicFooter";
-import { usePublicTheme } from "../context/PublicThemeContext";
+// pages/WordPressPlugin.jsx - /wordpress-plugin on the shared marketing theme
+// (components/site/*). The hero form is a coded illustration, not a screenshot.
+// Form-builder icons are the official WordPress.org plugin icons; a plugin with
+// no icon (Gravity Forms is premium, not on wp.org) is shown by name only,
+// never as a letter tile (owner rule: real logos or text).
+import { CRM_SIGNUP_URL } from "../utils/crmLinks";
+import { Check, Download, ArrowRight, Zap, Shield, RefreshCw, Globe, Bell, Code2, PlugZap, ChevronDown, Mail } from "lucide-react";
+import { useState, useEffect } from "react";
+import { SitePage, Section, Container, SectionHeader, Card, SiteButton } from "../components/site/Site";
+import { PageHero, FaqSection } from "../components/site/Blocks";
+import { Reveal } from "../components/motion/Motion";
 import { useSEO } from "../utils/useSEO";
 
 // ── Brand logos using official WordPress.org plugin icon URLs ─────────────────
@@ -139,153 +144,120 @@ const FAQ_JSONLD = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": FAQS.map(({ q, a }) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
-}).replace(/</g, "\u003c");
+}).replace(/</g, "\\u003c");
 
-// ── Animated counter ──────────────────────────────────────────────────────────
 const REDUCED_MOTION = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-function Counter({ target, suffix = "" }) {
-  // Reduced motion (and the prerender, which renders with it) shows the real number, never "0".
-  const [count, setCount] = useState(() => (REDUCED_MOTION() ? target : 0));
-  const ref = useRef(null);
-  const started = useRef(false);
+const iconTile = { background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" };
+const btnLg = "!px-6 sm:!px-7 sm:min-h-[3.5rem] sm:text-base";
 
-  useEffect(() => {
-    if (REDUCED_MOTION()) return undefined;
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting && !started.current) {
-        started.current = true;
-        let start = 0;
-        const step = Math.ceil(target / 60);
-        const t = setInterval(() => {
-          start = Math.min(start + step, target);
-          setCount(start);
-          if (start >= target) clearInterval(t);
-        }, 20);
-      }
-    }, { threshold: 0.5 });
-    if (ref.current) obs.observe(ref.current);
-    return () => obs.disconnect();
-  }, [target]);
-
-  return <span ref={ref}>{count.toLocaleString("en-IN")}{suffix}</span>;
-}
-
-// ── FAQ item with smooth CSS transition ───────────────────────────────────────
-function FAQItem({ q, a, isDark }) {
-  const [open, setOpen] = useState(false);
-  const border = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-  const text   = isDark ? "#fff" : "#111827";
-  const soft   = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-
-  return (
-    <div className="rounded-2xl overflow-hidden transition-all" style={{ border: `1px solid ${open ? "rgba(255,107,0,0.35)" : border}`, background: open ? (isDark ? "rgba(255,107,0,0.05)" : "#fffaf7") : "transparent" }}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between gap-4 px-6 py-4 text-left"
-        style={{ color: text }}
-      >
-        <span className="font-semibold text-sm leading-snug">{q}</span>
-        <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform duration-300 ${open ? "rotate-180 text-[#ff6b00]" : ""}`} style={{ color: soft }} />
-      </button>
-      <div className={`overflow-hidden transition-all duration-300 ${open ? "max-h-48" : "max-h-0"}`}>
-        <div className="px-6 pb-5 pt-1">
-          <p className="text-sm leading-relaxed" style={{ color: soft }}>{a}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Plugin logo card ──────────────────────────────────────────────────────────
-function PluginCard({ plugin, isDark }) {
+// ── Form-builder card: official icon, or the name alone when there is none ───
+function PluginCard({ plugin }) {
   const [imgOk, setImgOk] = useState(!!plugin.logo);
-  const cardBg     = isDark ? "rgba(255,255,255,0.04)" : "#ffffff";
-  const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-  const text       = isDark ? "#fff" : "#111827";
-  const soft       = isDark ? "rgba(255,255,255,0.4)" : "#6b7280";
-
   return (
-    <div
-      className="group flex flex-col items-center gap-3 p-5 rounded-2xl cursor-default transition-all duration-200 hover:-translate-y-1"
-      style={{
-        background: cardBg, border: `1px solid ${cardBorder}`,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-      }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = plugin.color + "55"; e.currentTarget.style.boxShadow = `0 8px 24px ${plugin.color}22`; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = cardBorder; e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.05)"; }}
-    >
+    <Card hover className="h-full flex flex-col items-center justify-center gap-3 p-5 text-center">
       {imgOk ? (
         <img
           src={plugin.logo}
           alt={plugin.name}
           width={52} height={52}
-          className="rounded-xl object-contain"
+          loading="lazy"
+          decoding="async"
+          className="w-[52px] h-[52px] rounded-xl object-contain"
           onError={() => setImgOk(false)}
         />
-      ) : (
-        <div className="w-13 h-13 w-[52px] h-[52px] rounded-xl flex items-center justify-center text-white font-black text-base flex-shrink-0"
-          style={{ background: plugin.color }}>
-          {plugin.name.slice(0, 2).toUpperCase()}
-        </div>
-      )}
-      <div className="text-center">
-        <p className="text-xs font-bold leading-tight" style={{ color: text }}>{plugin.name}</p>
-        <p className="text-[11px] mt-0.5" style={{ color: soft }}>{plugin.users} installs</p>
+      ) : null}
+      <div>
+        <p className={imgOk ? "text-[13px] font-bold site-ink leading-tight" : "font-display text-base font-bold site-ink leading-tight"}>{plugin.name}</p>
+        <p className="text-xs site-muted mt-1">{plugin.users} installs</p>
       </div>
-      <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: plugin.color + "20" }}>
-        <Check className="w-3 h-3" style={{ color: plugin.color }} />
-      </div>
-    </div>
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold" style={{ color: "#16a34a" }}>
+        <Check className="w-3.5 h-3.5" aria-hidden="true" /> Supported
+      </span>
+    </Card>
   );
 }
 
-// ── Live notification widget ──────────────────────────────────────────────────
+// ── Live notification widget (illustrative leads, cycles after mount) ────────
 const FAKE_LEADS = [
-  { name: "Rahul Sharma",    form: "Contact Form",   site: "mahindracitadel.in" },
-  { name: "Priya Desai",     form: "Enquiry Form",   site: "runwalrealty.com" },
-  { name: "Suresh Patil",    form: "Site Visit Form", site: "lodhaworld.com" },
-  { name: "Anita Kulkarni",  form: "Callback Form",  site: "koltepatil.com" },
+  { name: "Rahul Sharma",    form: "Contact Form",    site: "Aurum Heights website" },
+  { name: "Priya Desai",     form: "Enquiry Form",    site: "Skyline Residency website" },
+  { name: "Suresh Patil",    form: "Site Visit Form", site: "Green Acres website" },
+  { name: "Anita Kulkarni",  form: "Callback Form",   site: "Aurum Heights website" },
 ];
 
-function LiveNotification({ isDark }) {
+function LiveNotification() {
   const [idx, setIdx] = useState(0);
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
+    if (REDUCED_MOTION()) return undefined;
+    let swap;
     const t = setInterval(() => {
       setVisible(false);
-      setTimeout(() => { setIdx(i => (i + 1) % FAKE_LEADS.length); setVisible(true); }, 400);
+      swap = setTimeout(() => { setIdx(i => (i + 1) % FAKE_LEADS.length); setVisible(true); }, 400);
     }, 3000);
-    return () => clearInterval(t);
+    return () => { clearInterval(t); clearTimeout(swap); };
   }, []);
 
   const lead = FAKE_LEADS[idx];
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-400 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
-      style={{
-        background: isDark ? "rgba(255,255,255,0.07)" : "#fff",
-        border: `1px solid ${isDark ? "rgba(255,107,0,0.2)" : "#fde8d8"}`,
-        boxShadow: "0 4px 20px rgba(0,0,0,0.10)",
-        maxWidth: 320,
-      }}
+      className={`flex items-center gap-3 rounded-2xl border p-3.5 text-left transition-all duration-300 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
+      style={{ background: "var(--site-card)", borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}
     >
-      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,107,0,0.12)" }}>
-        <Bell className="w-3.5 h-3.5 text-[#ff6b00]" />
+      <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,107,0,0.12)" }}>
+        <Bell className="w-[18px] h-[18px]" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] font-semibold site-ink leading-tight truncate">New lead: {lead.name}</span>
+        <span className="block text-[11px] site-muted leading-tight mt-0.5 truncate">{lead.form} · {lead.site}</span>
+      </span>
+      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0" style={{ background: "rgba(22,163,74,0.14)", color: "#16a34a" }}>Live</span>
+    </div>
+  );
+}
+
+/** A coded WordPress enquiry form sending a lead to Arthaleads (an illustration, not a screenshot). */
+function FormToCrmViz() {
+  const fields = [["Full name", "Rahul Sharma"], ["Phone", "98765 43210"], ["Interested in", "2 BHK, Aurum Heights"]];
+  return (
+    <div className="relative mx-auto w-full max-w-[460px] px-3 sm:px-6 lg:px-0 pb-16 sm:pb-12">
+      <div aria-hidden="true" className="hero-glass" />
+      <div className="relative rounded-[24px] border overflow-hidden text-left" role="img"
+        aria-label="A contact form on a WordPress property website, with each submission arriving in Arthaleads as a new lead"
+        style={{ background: "var(--site-card)", borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
+        <div className="flex items-center gap-2 px-4 py-3 border-b" style={{ borderColor: "var(--site-line)", background: "var(--site-card-soft)" }}>
+          <span className="flex gap-1.5" aria-hidden="true">
+            {[0, 1, 2].map((d) => <span key={d} className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--site-line-strong)" }} />)}
+          </span>
+          <span className="ml-2 flex-1 min-w-0 flex items-center gap-2 rounded-lg px-2.5 py-1 text-[11px] site-muted site-chip truncate">
+            <WordPressMark size={13} /> yourprojectwebsite.in/contact
+          </span>
+        </div>
+        <div className="p-5 sm:p-6">
+          <p className="font-display text-base font-bold site-ink">Book a site visit</p>
+          <p className="text-xs site-muted mt-0.5">Contact Form 7</p>
+          <div className="mt-4 space-y-3">
+            {fields.map(([label, value]) => (
+              <div key={label}>
+                <span className="block text-[11px] font-semibold site-muted mb-1">{label}</span>
+                <span className="block rounded-xl border px-3 py-2 text-[13px] site-ink" style={{ borderColor: "var(--site-line-strong)" }}>{value}</span>
+              </div>
+            ))}
+          </div>
+          <span className="mt-4 flex items-center justify-center rounded-xl py-2.5 text-[13px] font-bold text-white" style={{ background: "var(--brand-btn)" }}>Send enquiry</span>
+        </div>
       </div>
-      <div className="min-w-0">
-        <p className="text-xs font-bold truncate" style={{ color: isDark ? "#ededed" : "#111" }}>New lead: {lead.name}</p>
-        <p className="text-[11px] truncate" style={{ color: isDark ? "rgba(255,255,255,0.45)" : "#6b7280" }}>{lead.form} · {lead.site}</p>
+      <div className="absolute left-0 right-0 sm:left-auto sm:-right-2 lg:-right-8 bottom-0 mx-3 sm:mx-0 sm:w-[300px]">
+        <LiveNotification />
       </div>
-      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: "rgba(34,197,94,0.15)", color: isDark ? "#4ade80" : "#166534" }}>Live</span>
     </div>
   );
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 function WordPressPluginInner() {
-  const { isDark } = usePublicTheme();
   const [activeStep, setActiveStep] = useState(0);
 
   useSEO({
@@ -294,282 +266,203 @@ function WordPressPluginInner() {
     canonical: "https://www.arthaleads.com/wordpress-plugin",
   });
 
-  const bg         = isDark ? "#0d0d1a" : "#ffffff";
-  const altBg      = isDark ? "#0a0a14" : "#f9fafb";
-  const text       = isDark ? "#ffffff" : "#111827";
-  const soft       = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const cardBg     = isDark ? "rgba(255,255,255,0.04)" : "#ffffff";
-  const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-
   return (
-    <div style={{ background: bg, color: text, fontFamily: "Inter, sans-serif" }} className="min-h-screen">
+    <SitePage>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_JSONLD }} />
-      <PublicNav />
 
       {/* ── Hero ── */}
-      <section className="relative pt-28 pb-24 overflow-hidden text-center"
-        style={{ background: isDark ? "#0d0d1a" : "linear-gradient(135deg, #fff7f0 0%, #fff 60%)" }}>
-        {/* Grid background – matches homepage */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div style={{ position: "absolute", top: "25%", left: "25%", width: 384, height: 384, borderRadius: "50%", background: "rgba(255,107,0,0.10)", filter: "blur(60px)", animation: "blobDrift1 8s ease-in-out infinite" }} />
-          <div style={{ position: "absolute", bottom: "25%", right: "25%", width: 320, height: 320, borderRadius: "50%", background: "rgba(120,53,15,0.10)", filter: "blur(60px)", animation: "blobDrift2 10s ease-in-out infinite" }} />
-          <div style={{ position: "absolute", top: 0, right: 0, width: 256, height: 256, borderRadius: "50%", background: "rgba(255,107,0,0.05)", filter: "blur(60px)", animation: "blobDrift1 12s ease-in-out infinite reverse" }} />
-          <div style={{ position: "absolute", inset: 0, opacity: isDark ? 0.03 : 0.04, backgroundImage: "linear-gradient(rgba(255,107,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,1) 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
-        </div>
-        <style>{`
-          @keyframes blobDrift1 { 0%,100% { transform:translate(0,0); } 50% { transform:translate(-20px,15px); } }
-          @keyframes blobDrift2 { 0%,100% { transform:translate(0,0); } 50% { transform:translate(18px,-18px); } }
-        `}</style>
-
-        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] mb-6" style={{ color: text }}>
-            Every Website Enquiry{" "}<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
-              Lands in Your CRM
-            </span>
-          </h1>
-          <p className="text-lg leading-relaxed mb-3 max-w-xl mx-auto" style={{ color: soft }}>
-            Connect Contact Form 7, WPForms, Elementor and 5 more form builders to Arthaleads in under 5 minutes. No code needed.
-          </p>
-
-          {/* Live notification demo */}
-          <div className="flex justify-center mb-8 mt-6">
-            <LiveNotification isDark={isDark} />
+      <PageHero
+        eyebrow="WordPress plugin"
+        title={<>Every Website Enquiry <span className="site-dim">Lands in Your CRM</span></>}
+        lede="Connect Contact Form 7, WPForms, Elementor and 5 more form builders to Arthaleads in under 5 minutes. No code needed."
+        visual={<FormToCrmViz />}
+        actions={
+          <div className="mt-7 flex flex-wrap gap-2.5 sm:gap-3 justify-center lg:justify-start">
+            <SiteButton href="/arthaleads-integration.zip" download className={btnLg}><Download className="w-5 h-5" /> Download Plugin - Free</SiteButton>
+            <SiteButton href={CRM_SIGNUP_URL} external variant="secondary" className={btnLg}>Get Free CRM Account <ArrowRight className="w-4 h-4" /></SiteButton>
           </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a href="/arthaleads-integration.zip" download
-              className="inline-flex items-center gap-2 text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:-translate-y-0.5 hover:shadow-orange-500/40"
-              style={{ background: "linear-gradient(135deg,#e05d00,#ff6b00)" }}>
-              <Download className="w-5 h-5" />
-              Download Plugin - Free
-            </a>
-            <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-              className="inline-flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5"
-              style={{ borderColor: cardBorder, color: text }}>
-              Get Free CRM Account
-              <ArrowRight className="w-4 h-4" />
-            </a>
-          </div>
-
-          <a href={WP_ORG_URL} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 mt-6 text-sm font-semibold hover:underline underline-offset-4"
-            style={{ color: text }}>
-            <WordPressMark />
-            Also on WordPress.org: search “Arthaleads” in Plugins → Add New
-          </a>
-
-          <p className="text-xs mt-3" style={{ color: soft }}>
-            v{PLUGIN_VERSION} &nbsp;·&nbsp; Free forever &nbsp;·&nbsp; 8 form plugins &nbsp;·&nbsp; No credit card
-          </p>
-        </div>
-      </section>
+        }
+        trust={false}
+      >
+        <a href={WP_ORG_URL} target="_blank" rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 mt-6 text-sm font-semibold site-ink hover:underline underline-offset-4">
+          <WordPressMark />
+          Also on WordPress.org: search “Arthaleads” in Plugins → Add New
+        </a>
+        <p className="text-[13px] site-muted mt-3">
+          v{PLUGIN_VERSION} &nbsp;·&nbsp; Free forever &nbsp;·&nbsp; 8 form plugins &nbsp;·&nbsp; No credit card
+        </p>
+      </PageHero>
 
       {/* ── Stats strip ── */}
-      <section className="py-12 border-y" style={{ borderColor: cardBorder, background: isDark ? "rgba(255,107,0,0.04)" : "#fffaf5" }}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
+      <Section tone="tint" className="!py-10 sm:!py-12">
+        <Container>
+          <ul className="grid grid-cols-3 gap-3 sm:gap-4 max-w-3xl mx-auto">
             {[
-              { label: "Form plugins supported", value: 8, suffix: "" },
-              { label: "Minutes to set up", value: 5, suffix: "" },
-              { label: "Lines of code needed", value: 0, suffix: "" },
-              { label: "Monthly leads captured", value: 2000, suffix: "+" },
-            ].map(({ label, value, suffix }) => (
-              <div key={label}>
-                <p className="text-3xl font-black text-[#ff6b00]">
-                  <Counter target={value} suffix={suffix} />
-                </p>
-                <p className="text-xs mt-1" style={{ color: soft }}>{label}</p>
-              </div>
+              { label: "Form plugins supported", value: "8" },
+              { label: "Minutes to set up", value: "5" },
+              { label: "Lines of code needed", value: "0" },
+            ].map(({ label, value }) => (
+              <li key={label}>
+                <Card className="h-full p-4 sm:p-6 text-center">
+                  <p className="font-display text-3xl sm:text-4xl font-extrabold" style={{ color: "var(--site-brand-ink)" }}>{value}</p>
+                  <p className="text-xs sm:text-sm site-muted mt-1">{label}</p>
+                </Card>
+              </li>
             ))}
-          </div>
-        </div>
-      </section>
+          </ul>
+        </Container>
+      </Section>
 
       {/* ── Supported Form Plugins ── */}
-      <section className="py-20" style={{ background: altBg }}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-3" style={{ color: text }}>Works With Every Major Form Builder</h2>
-            <p className="text-base max-w-xl mx-auto" style={{ color: soft }}>
-              Covering 95% of all WordPress contact forms used on real estate websites in India.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {FORM_PLUGINS.map((plugin) => (
-              <PluginCard key={plugin.name} plugin={plugin} isDark={isDark} />
+      <Section tone="white">
+        <Container>
+          <SectionHeader eyebrow="Supported form builders" title="Works With Every Major Form Builder" align="center"
+            lede="Covering 95% of all WordPress contact forms used on real estate websites in India." />
+          <ul className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-5xl mx-auto">
+            {FORM_PLUGINS.map((plugin, i) => (
+              <Reveal as="li" key={plugin.name} delay={(i % 4) * 60} className="min-w-0">
+                <PluginCard plugin={plugin} />
+              </Reveal>
             ))}
-          </div>
-          <p className="text-center text-xs mt-6" style={{ color: soft }}>
-            More integrations added regularly · <a href="mailto:contact@arthaleads.com" className="text-[color:var(--brand-text)] underline underline-offset-2">Request a plugin</a>
+          </ul>
+          <p className="text-center text-sm site-muted mt-8">
+            More integrations added regularly · <a href="mailto:contact@arthaleads.com" className="site-link">Request a plugin</a>
           </p>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
       {/* ── How it works (3-step) ── */}
-      <section className="py-20" style={{ background: bg }}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold mb-3" style={{ color: text }}>How It Works</h2>
-            <p className="text-base" style={{ color: soft }}>Three steps. Five minutes. Done.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 relative">
+      <Section tone="tint">
+        <Container>
+          <SectionHeader eyebrow="How it works" title="How It Works" lede="Three steps. Five minutes. Done." />
+          <ol className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
               { n: "01", icon: Download, title: "Install Plugin", desc: "Install it from WordPress.org (search “Arthaleads”) or upload the ZIP. Takes about a minute." },
               { n: "02", icon: PlugZap,  title: "Paste Your Token", desc: "Copy your Arthaleads account token and paste it in the plugin settings." },
               { n: "03", icon: Zap,      title: "Leads Flow In",   desc: "Every form submission arrives in your CRM instantly, assigned to the right agent." },
-            ].map(({ n, icon: Icon, title, desc }) => (
-              <div key={n} className="relative flex flex-col items-center text-center p-6 rounded-2xl transition-all hover:-translate-y-1"
-                style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4" style={{ background: "rgba(255,107,0,0.12)", border: "1px solid rgba(255,107,0,0.22)" }}>
-                  <Icon className="w-5 h-5 text-[#ff6b00]" />
-                </div>
-                <span className="text-xs font-black mb-2" style={{ color: "var(--brand-text)" }}>{n}</span>
-                <h3 className="text-base font-bold mb-2" style={{ color: text }}>{title}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: soft }}>{desc}</p>
-              </div>
+            ].map(({ n, icon: Icon, title, desc }, i) => (
+              <Reveal as="li" key={n} delay={i * 80} className="min-w-0 flex">
+                <Card glow className="w-full p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <span className="w-11 h-11 rounded-xl flex items-center justify-center" style={iconTile}>
+                      <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
+                    </span>
+                    <span className="font-display text-sm font-extrabold site-muted">{n}</span>
+                  </div>
+                  <h3 className="font-display text-base font-bold site-ink mb-2">{title}</h3>
+                  <p className="text-[14px] leading-relaxed">{desc}</p>
+                </Card>
+              </Reveal>
             ))}
-          </div>
-        </div>
-      </section>
+          </ol>
+        </Container>
+      </Section>
 
       {/* ── Interactive Install Steps ── */}
-      <section className="py-20" style={{ background: altBg }}>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-3" style={{ color: text }}>Step-by-Step Setup Guide</h2>
-            <p className="text-base" style={{ color: soft }}>Be up and running in under 5 minutes. No developer needed.</p>
+      <Section tone="white" id="setup">
+        <Container className="grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16">
+          <div className="lg:sticky lg:top-28 self-start">
+            <SectionHeader eyebrow="Setup guide" title="Step-by-Step Setup Guide" className="!mb-6"
+              lede="Be up and running in under 5 minutes. No developer needed." />
+            <div className="flex flex-wrap gap-3">
+              <SiteButton href="/arthaleads-integration.zip" download><Download className="w-4 h-4" /> Download Plugin ZIP</SiteButton>
+              <SiteButton href={WP_ORG_URL} external variant="secondary"><WordPressMark /> View on WordPress.org</SiteButton>
+            </div>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {INSTALL_STEPS.map(({ title, desc }, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveStep(activeStep === i ? -1 : i)}
-                className="text-left flex items-start gap-4 p-4 rounded-2xl transition-all duration-200 w-full"
-                style={{
-                  background: activeStep === i ? (isDark ? "rgba(255,107,0,0.10)" : "#fff7ed") : cardBg,
-                  border: `1px solid ${activeStep === i ? "rgba(255,107,0,0.35)" : cardBorder}`,
-                }}
-              >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm flex-shrink-0 transition-all"
-                  style={{
-                    background: activeStep === i ? "#ff6b00" : "rgba(255,107,0,0.12)",
-                    color: activeStep === i ? "#fff" : "#ff6b00",
-                  }}>
-                  {i + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold" style={{ color: text }}>{title}</p>
-                  {activeStep === i && (
-                    <p className="text-xs mt-1.5 leading-relaxed" style={{ color: soft }}>{desc}</p>
-                  )}
-                </div>
-                <ChevronDown className={`w-4 h-4 flex-shrink-0 mt-1 transition-transform duration-200 ${activeStep === i ? "rotate-180 text-[#ff6b00]" : ""}`}
-                  style={{ color: soft }} />
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-10 text-center">
-            <a href="/arthaleads-integration.zip" download
-              className="inline-flex items-center gap-2 text-white font-bold px-8 py-4 rounded-2xl transition-all shadow-lg shadow-orange-500/25 hover:-translate-y-0.5"
-              style={{ background: "linear-gradient(135deg,#e05d00,#ff6b00)" }}>
-              <Download className="w-5 h-5" />
-              Download Plugin ZIP
-            </a>
-            <a href={WP_ORG_URL} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl border transition-all hover:-translate-y-0.5 ml-0 sm:ml-3 mt-3 sm:mt-0"
-              style={{ borderColor: cardBorder, color: text }}>
-              <WordPressMark /> View on WordPress.org
-            </a>
-          </div>
-        </div>
-      </section>
+          <ol className="space-y-3 min-w-0">
+            {INSTALL_STEPS.map(({ title, desc }, i) => {
+              const open = activeStep === i;
+              return (
+                <li key={title}>
+                  <Card className="overflow-hidden" style={open ? { borderColor: "rgba(255,107,0,0.35)" } : undefined}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveStep(open ? -1 : i)}
+                      aria-expanded={open}
+                      aria-controls={`wp-step-${i}`}
+                      className="w-full text-left flex items-start gap-4 p-4 sm:p-5"
+                    >
+                      <span className="font-display w-9 h-9 rounded-full flex items-center justify-center text-sm font-extrabold shrink-0 transition-colors"
+                        style={open
+                          ? { background: "var(--brand-btn)", color: "#fff", boxShadow: "0 12px 26px -12px rgba(204,75,0,0.7)" }
+                          : { background: "rgba(255,107,0,0.10)", color: "var(--site-brand-ink)" }}>
+                        {i + 1}
+                      </span>
+                      <span className="flex-1 min-w-0 pt-1.5">
+                        <span className="block font-display font-bold site-ink">{title}</span>
+                      </span>
+                      <ChevronDown className={`w-4 h-4 shrink-0 mt-2.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+                        style={{ color: open ? "var(--site-brand-ink)" : "var(--site-muted)" }} aria-hidden="true" />
+                    </button>
+                    {/* Always in the HTML (visually hidden when closed) so every step is readable by crawlers. */}
+                    <div id={`wp-step-${i}`} className={open ? "px-4 sm:px-5 pb-5 pl-[4.25rem] sm:pl-[4.75rem] -mt-2" : "sr-only"}>
+                      <p className="text-[15px] leading-relaxed">{desc}</p>
+                    </div>
+                  </Card>
+                </li>
+              );
+            })}
+          </ol>
+        </Container>
+      </Section>
 
       {/* ── Features ── */}
-      <section className="py-20" style={{ background: bg }}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold mb-3" style={{ color: text }}>Everything Your Team Needs</h2>
-            <p className="text-base" style={{ color: soft }}>
-              More than just a form-to-CRM bridge. Built for real estate teams.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {FEATURES.map(({ icon: Icon, title, desc }) => (
-              <div key={title}
-                className="p-6 rounded-2xl transition-all duration-200 hover:-translate-y-1 group"
-                style={{ background: cardBg, border: `1px solid ${cardBorder}` }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,107,0,0.3)"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = cardBorder; }}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: "rgba(255,107,0,0.12)" }}>
-                  <Icon className="w-4.5 h-4.5 w-[18px] h-[18px] text-[#ff6b00]" />
-                </div>
-                <h3 className="text-sm font-bold mb-2" style={{ color: text }}>{title}</h3>
-                <p className="text-xs leading-relaxed" style={{ color: soft }}>{desc}</p>
-              </div>
+      <Section tone="tint">
+        <Container>
+          <SectionHeader eyebrow="Features" title="Everything Your Team Needs"
+            lede="More than just a form-to-CRM bridge. Built for real estate teams." />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {FEATURES.map(({ icon: Icon, title, desc }, i) => (
+              <Reveal key={title} delay={(i % 3) * 80} className="min-w-0 flex">
+                <Card glow className="w-full p-6">
+                  <span className="w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
+                    <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
+                  </span>
+                  <h3 className="font-display text-base font-bold site-ink mb-2">{title}</h3>
+                  <p className="text-[14px] leading-relaxed">{desc}</p>
+                </Card>
+              </Reveal>
             ))}
           </div>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
       {/* ── FAQ ── */}
-      <section className="py-20" style={{ background: altBg }}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-3" style={{ color: text }}>Frequently Asked Questions</h2>
-            <p className="text-base" style={{ color: soft }}>Everything you need to know before connecting your WordPress site.</p>
-          </div>
-          <div className="space-y-2">
-            {FAQS.map(({ q, a }) => (
-              <FAQItem key={q} q={q} a={a} isDark={isDark} />
-            ))}
-          </div>
-          <p className="text-center text-sm mt-8" style={{ color: soft }}>
-            Still have questions? &nbsp;
-            <a href="mailto:contact@arthaleads.com" className="text-[color:var(--brand-text)] font-semibold hover:underline">
-              Email us →
-            </a>
+      <FaqSection title="Frequently Asked Questions" items={FAQS.map(({ q, a }) => [q, a])} tone="white" />
+      <Section tone="white" className="!pt-0 !pb-12 sm:!pb-16">
+        <Container>
+          <p className="text-center text-sm site-muted">
+            Still have questions?{" "}
+            <a href="mailto:contact@arthaleads.com" className="site-link"><Mail className="w-4 h-4" aria-hidden="true" /> Email us <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" /></a>
           </p>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
       {/* ── CTA ── */}
-      <section className="py-24 relative overflow-hidden" style={{ background: isDark ? "linear-gradient(135deg,#1a0a00,#0d0d1a)" : "linear-gradient(135deg,#fff7ed,#ffedd5)" }}>
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/3 w-96 h-96 rounded-full blur-3xl" style={{ background: "rgba(255,107,0,0.1)" }} />
-        </div>
-        <div className="relative max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "rgba(255,107,0,0.12)", border: "1px solid rgba(255,107,0,0.25)" }}>
-            <Globe className="w-6 h-6 text-[#ff6b00]" />
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-black mb-4" style={{ color: text }}>
-            Your Website Leads Deserve<br />a Better CRM
-          </h2>
-          <p className="text-base mb-8" style={{ color: soft }}>
-            Stop copy-pasting form submissions into Excel. Connect your WordPress site and let Arthaleads handle lead capture, follow-ups, and team routing automatically.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a href="/arthaleads-integration.zip" download
-              className="inline-flex items-center gap-2 text-white font-bold px-8 py-4 rounded-2xl transition-all shadow-xl shadow-orange-500/30 hover:-translate-y-0.5"
-              style={{ background: "linear-gradient(135deg,#e05d00,#ff6b00)" }}>
-              <Download className="w-5 h-5" />
-              Download Plugin Free
-            </a>
-            <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-              className="inline-flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl border transition-all hover:-translate-y-0.5"
-              style={{ borderColor: "rgba(255,107,0,0.35)", color: "var(--brand-text)" }}>
-              Create Free Account
-              <ArrowRight className="w-4 h-4" />
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <PublicFooter />
-    </div>
+      <Section tone="white" className="!pt-0">
+        <Container>
+          <Reveal>
+            <div className="site-cta-panel relative overflow-hidden rounded-[28px] sm:rounded-[32px] p-6 sm:p-12 text-center">
+              <span className="relative w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6" style={iconTile}>
+                <Globe className="w-6 h-6" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
+              </span>
+              <h2 className="relative font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[30px] sm:text-[40px]" style={{ textWrap: "balance" }}>
+                Your Website Leads Deserve <span className="site-dim">a Better CRM</span>
+              </h2>
+              <p className="relative mt-4 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
+                Stop copy-pasting form submissions into Excel. Connect your WordPress site and let Arthaleads handle lead capture, follow-ups, and team routing automatically.
+              </p>
+              <div className="relative mt-8 flex flex-wrap gap-3 justify-center">
+                <SiteButton href="/arthaleads-integration.zip" download className={btnLg}><Download className="w-5 h-5" /> Download Plugin Free</SiteButton>
+                <SiteButton to="/book-demo" variant="secondary" className={btnLg}>Book a Demo</SiteButton>
+                <SiteButton href={CRM_SIGNUP_URL} external variant="secondary" className={btnLg}>Create Free Account <ArrowRight className="w-4 h-4" /></SiteButton>
+              </div>
+            </div>
+          </Reveal>
+        </Container>
+      </Section>
+    </SitePage>
   );
 }
 

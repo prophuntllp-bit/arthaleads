@@ -1,9 +1,10 @@
-﻿import { useState } from "react";
-import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
-import { ChevronDown, ArrowRight, Mail } from "lucide-react";
-import PublicNav from "../components/PublicNav";
-import PublicFooter from "../components/PublicFooter";
-import { usePublicTheme } from "../context/PublicThemeContext";
+﻿// pages/HelpGuide.jsx - /help-guide on the shared marketing theme (components/site/*).
+// The FAQ and HowTo JSON-LD are built from the same arrays the page renders.
+import { CRM_SIGNUP_URL } from "../utils/crmLinks";
+import { ArrowRight, Mail, LifeBuoy } from "lucide-react";
+import { SitePage, Section, Container, SectionHeader, Card, SiteButton } from "../components/site/Site";
+import { PageHero, FaqSection, ClosingCta } from "../components/site/Blocks";
+import { Reveal } from "../components/motion/Motion";
 import { useSEO } from "../utils/useSEO";
 
 const steps = [
@@ -66,140 +67,76 @@ const HELP_JSONLD = JSON.stringify([
   },
 ]).replace(/</g, "\\u003c");
 
-function FAQItem({ q, a, isDark }) {
-  const [open, setOpen] = useState(false);
-  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-  const textColor   = isDark ? "#ffffff" : "#111827";
-  const bodyColor   = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const hoverBg     = isDark ? "rgba(255,255,255,0.03)" : "#f9fafb";
-
-  return (
-    <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${borderColor}` }}>
-      <button
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        className="w-full flex items-center justify-between gap-4 px-6 py-4 text-left transition-colors"
-        style={{ color: textColor }}
-        onMouseEnter={e => (e.currentTarget.style.background = hoverBg)}
-        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-      >
-        <span className="font-medium text-sm leading-snug">{q}</span>
-        <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} style={{ color: bodyColor }} />
-      </button>
-      {/* Always in the HTML (hidden when closed) so the answer matches the FAQ schema for crawlers. */}
-      <div className="px-6 pb-5" hidden={!open} style={{ borderTop: `1px solid ${borderColor}` }}>
-        <p className="text-sm leading-relaxed pt-4" style={{ color: bodyColor }}>{a}</p>
-      </div>
-    </div>
-  );
-}
+const iconTile = { background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" };
 
 function HelpGuideInner() {
-  const { isDark } = usePublicTheme();
-
   useSEO({
     title: "Help Guide - Getting Started with Arthaleads CRM",
     description: "Learn how to use Arthaleads CRM with step-by-step guides and FAQs. Set up leads, automate workflows, track site visits, and close deals faster.",
     canonical: "https://www.arthaleads.com/help-guide",
   });
 
-  const bg         = isDark ? "#0d0d1a" : "#ffffff";
-  const altBg      = isDark ? "#080810" : "#f9fafb";
-  const textColor  = isDark ? "#ffffff" : "#111827";
-  const softText   = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const cardBg     = isDark ? "rgba(255,255,255,0.02)" : "#ffffff";
-  const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-
   return (
-    <div className="min-h-screen" style={{ background: bg, color: textColor, fontFamily: "Inter, sans-serif" }}>
+    <SitePage>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: HELP_JSONLD }} />
-      <PublicNav />
 
-      {/* Hero */}
-      <section className="relative pt-32 pb-16 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full blur-3xl" style={{ background: "rgba(255,107,0,0.06)" }} />
-        </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl font-black mb-5" style={{ color: textColor }}>
-            Arthaleads{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
-              Help Center
-            </span>
-          </h1>
-          <p className="text-lg max-w-xl mx-auto" style={{ color: softText }}>
-            Step-by-step guides and answers to the most common questions about setting up and using Arthaleads CRM.
-          </p>
-        </div>
-      </section>
+      <PageHero
+        eyebrow="Help guide"
+        title={<>Arthaleads <span className="site-dim">Help Center</span></>}
+        lede="Step-by-step guides and answers to the most common questions about setting up and using Arthaleads CRM."
+        actions={null}
+        trust={false}
+      />
 
-      {/* Getting Started */}
-      <section className="py-16" style={{ background: altBg }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-3" style={{ color: textColor }}>Getting Started</h2>
-            <p className="text-base max-w-lg mx-auto" style={{ color: softText }}>
-              Follow these five steps to go from sign-up to your first managed lead in under 15 minutes.
-            </p>
+      {/* Getting started */}
+      <Section tone="tint" id="getting-started">
+        <Container className="grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16">
+          <div className="lg:sticky lg:top-28 self-start">
+            <SectionHeader eyebrow="Getting started" title="Getting Started" className="!mb-6"
+              lede="Follow these five steps to go from sign-up to your first managed lead in under 15 minutes." />
+            <SiteButton href={CRM_SIGNUP_URL} external>Create Your Account <ArrowRight className="w-4 h-4" /></SiteButton>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
-            {steps.map(({ num, title, desc }) => (
-              <div key={num} className="p-5 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
-                <div className="text-[#ff6b00] font-black text-2xl mb-3">{num}</div>
-                <h3 className="font-semibold text-sm mb-2" style={{ color: textColor }}>{title}</h3>
-                <p className="text-xs leading-relaxed" style={{ color: softText }}>{desc}</p>
+          <ol className="space-y-3 min-w-0">
+            {steps.map(({ num, title, desc }, i) => (
+              <Reveal as="li" key={num} delay={i * 80}>
+                <Card className="flex gap-4 p-5 sm:p-6">
+                  <span className="font-display shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-extrabold text-white"
+                    style={{ background: "var(--brand-btn)", boxShadow: "0 12px 26px -12px rgba(204,75,0,0.7)" }}>{num}</span>
+                  <div className="min-w-0">
+                    <h3 className="font-display font-bold site-ink mb-1">{title}</h3>
+                    <p className="text-[15px] leading-relaxed">{desc}</p>
+                  </div>
+                </Card>
+              </Reveal>
+            ))}
+          </ol>
+        </Container>
+      </Section>
+
+      <FaqSection title="Frequently Asked Questions" items={faqs.map(({ q, a }) => [q, a])} tone="white" />
+
+      {/* Support */}
+      <Section tone="tint">
+        <Container narrow>
+          <Reveal>
+            <Card raised className="p-6 sm:p-10 flex flex-col sm:flex-row sm:items-center gap-6">
+              <span className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={iconTile}>
+                <LifeBuoy className="w-7 h-7" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="font-display text-xl sm:text-2xl font-bold site-ink mb-2">Need more help?</h2>
+                <p className="text-[15px] leading-relaxed">Can't find what you're looking for? Our team is ready to assist.</p>
               </div>
-            ))}
-          </div>
-          <div className="mt-8 text-center">
-            <a
-              href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-              className="inline-flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25"
-            >
-              Create Your Account
-              <ArrowRight className="w-4 h-4" />
-            </a>
-          </div>
-        </div>
-      </section>
+              <SiteButton href="mailto:contact@arthaleads.com" variant="secondary" className="shrink-0">
+                <Mail className="w-4 h-4" /> contact@arthaleads.com
+              </SiteButton>
+            </Card>
+          </Reveal>
+        </Container>
+      </Section>
 
-      {/* FAQ */}
-      <section className="py-16" style={{ background: bg }}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-3" style={{ color: textColor }}>Frequently Asked Questions</h2>
-            <p className="text-base" style={{ color: softText }}>
-              Quick answers to the questions we hear most often from real estate teams getting started.
-            </p>
-          </div>
-          <div className="space-y-3">
-            {faqs.map(({ q, a }) => (
-              <FAQItem key={q} q={q} a={a} isDark={isDark} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Support CTA */}
-      <section className="py-20" style={{ background: altBg }}>
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl font-bold mb-3" style={{ color: textColor }}>Need more help?</h2>
-          <p className="text-base mb-6" style={{ color: softText }}>
-            Can't find what you're looking for? Our team is ready to assist.
-          </p>
-          <a
-            href="mailto:contact@arthaleads.com"
-            className="inline-flex items-center gap-2 font-semibold px-6 py-3 rounded-xl transition-colors"
-            style={{ borderColor: "rgba(255,107,0,0.40)", background: "rgba(255,107,0,0.06)", color: "var(--brand-text)", border: "1px solid rgba(255,107,0,0.40)" }}
-          >
-            <Mail className="w-4 h-4" />
-            contact@arthaleads.com
-          </a>
-        </div>
-      </section>
-
-      <PublicFooter />
-    </div>
+      <ClosingCta />
+    </SitePage>
   );
 }
 

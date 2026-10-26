@@ -1,9 +1,10 @@
+// pages/ApiDocs.jsx - /api-docs on the shared marketing theme (components/site/*).
+// Code samples stay on a dark panel in both themes.
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Copy, Check, Terminal, Webhook, KeyRound, ArrowRight, Mail } from "lucide-react";
-import PublicNav from "../components/PublicNav";
-import PublicFooter from "../components/PublicFooter";
-import { usePublicTheme } from "../context/PublicThemeContext";
+import { Copy, Check, Terminal, KeyRound, ArrowRight, Mail } from "lucide-react";
+import { SitePage, Section, Container, Card, SiteButton } from "../components/site/Site";
+import { PageHero, ClosingCta } from "../components/site/Blocks";
+import { Reveal } from "../components/motion/Motion";
 import { useSEO } from "../utils/useSEO";
 
 const METHOD_COLORS = {
@@ -13,14 +14,16 @@ const METHOD_COLORS = {
   DELETE: "#ef4444",
 };
 
-// ── Copy-able code block with language tabs ───────────────────────────────────
-function CodeBlock({ samples, isDark }) {
+const iconTile = { background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" };
+const inlineCode = "px-1.5 py-0.5 rounded-md text-[13px] font-mono site-chip";
+
+// ── Copy-able code block with language tabs (dark in both themes) ─────────────
+function CodeBlock({ samples }) {
   const langs = Object.keys(samples);
   const [lang, setLang] = useState(langs[0]);
   const [copied, setCopied] = useState(false);
 
-  const bg     = isDark ? "#0a0a14" : "#1e1e2e";
-  const border = isDark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.1)";
+  const border = "rgba(255,255,255,0.09)";
 
   const copy = () => {
     navigator.clipboard?.writeText(samples[lang]);
@@ -29,29 +32,31 @@ function CodeBlock({ samples, isDark }) {
   };
 
   return (
-    <div className="rounded-xl overflow-hidden" style={{ background: bg, border: `1px solid ${border}` }}>
-      <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: `1px solid ${border}` }}>
-        <div className="flex items-center gap-1">
+    <div className="rounded-2xl overflow-hidden" style={{ background: "#0f1117", border: `1px solid ${border}`, boxShadow: "var(--site-shadow)" }}>
+      <div className="flex items-center justify-between gap-2 px-3 py-2" style={{ borderBottom: `1px solid ${border}` }}>
+        <div className="flex items-center gap-1 min-w-0">
           {langs.map((l) => (
             <button
               key={l}
+              type="button"
+              aria-pressed={lang === l}
               onClick={() => setLang(l)}
-              className="px-3 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
               style={{
-                background: lang === l ? "rgba(255,107,0,0.15)" : "transparent",
-                color: lang === l ? "#ff6b00" : "rgba(255,255,255,0.5)",
+                background: lang === l ? "rgba(255,107,0,0.16)" : "transparent",
+                color: lang === l ? "#ff8a3d" : "rgba(230,230,230,0.6)",
               }}
             >
               {l}
             </button>
           ))}
         </div>
-        <button onClick={copy} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer" style={{ color: copied ? "#22c55e" : "rgba(255,255,255,0.6)" }}>
-          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+        <button type="button" onClick={copy} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer shrink-0" style={{ color: copied ? "#4ade80" : "rgba(230,230,230,0.7)" }}>
+          {copied ? <Check className="w-3.5 h-3.5" aria-hidden="true" /> : <Copy className="w-3.5 h-3.5" aria-hidden="true" />}
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <pre className="px-4 py-4 overflow-x-auto text-xs leading-relaxed" style={{ color: "#e2e8f0", fontFamily: "ui-monospace, monospace" }}>
+      <pre className="relative px-4 sm:px-5 py-4 overflow-x-auto text-[12.5px] leading-relaxed" style={{ color: "#e6e6e6", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
         <code>{samples[lang]}</code>
       </pre>
     </div>
@@ -173,7 +178,6 @@ requests.post(
 ];
 
 export default function ApiDocs() {
-  const { isDark } = usePublicTheme();
   const [activeId, setActiveId] = useState(ENDPOINTS[0].id);
 
   useSEO({
@@ -182,119 +186,112 @@ export default function ApiDocs() {
     canonical:   "https://www.arthaleads.com/api-docs",
   });
 
-  const bg         = isDark ? "#0d0d1a" : "#ffffff";
-  const altBg      = isDark ? "#080810" : "#f9fafb";
-  const textColor  = isDark ? "#ffffff" : "#111827";
-  const softText   = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const cardBg     = isDark ? "rgba(255,255,255,0.02)" : "#ffffff";
-  const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-
   const scrollTo = (id) => {
     setActiveId(id);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
-    <div className="min-h-screen" style={{ background: bg, color: textColor, fontFamily: "Inter, sans-serif" }}>
-      <PublicNav />
+    <SitePage>
+      <PageHero
+        eyebrow="Developers"
+        title={<>Arthaleads <span className="site-dim">API</span></>}
+        lede="A simple REST API to push leads into your CRM, list your pipeline, and connect any form on the web. Available on the Enterprise plan."
+        actions={null}
+        trust={false}
+      />
 
-      {/* Hero */}
-      <section className="relative pt-32 pb-12 overflow-hidden">
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl font-black mb-5" style={{ color: textColor }}>
-            Arthaleads{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">API</span>
-          </h1>
-          <p className="text-lg max-w-xl mx-auto" style={{ color: softText }}>
-            A simple REST API to push leads into your CRM, list your pipeline, and connect any form on the
-            web. Available on the Enterprise plan.
-          </p>
-        </div>
-      </section>
-
-      {/* Auth note */}
-      <section className="pb-8">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="p-5 rounded-2xl flex items-start gap-4" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,107,0,0.1)" }}>
-              <KeyRound className="w-5 h-5 text-[#ff6b00]" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-sm mb-1" style={{ color: textColor }}>Authentication</h3>
-              <p className="text-sm leading-relaxed" style={{ color: softText }}>
-                Lead capture endpoints (website form, Google, custom source) use the token of the connection you created. Find it under{" "}
-                <strong style={{ color: textColor }}>Integrations</strong> in your CRM, on that connection's card, and send it in the request body as <code className="px-1.5 py-0.5 rounded text-xs" style={{ background: isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6", color: "var(--brand-text)" }}>token</code>. The CRM endpoints below (leads and so on) take a Bearer token: sign in with POST /api/auth/login and use the token it returns as YOUR_API_TOKEN. It acts as that user, with that user's role and access.
-                Base URL: <code className="px-1.5 py-0.5 rounded text-xs" style={{ background: isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6", color: "var(--brand-text)" }}>https://api.arthaleads.com</code>
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Docs body: sidebar + endpoints */}
-      <section className="pb-16">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-8">
+      <Section tone="tint" className="!pt-12 sm:!pt-16">
+        <Container className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-10 items-start">
           {/* Sidebar */}
-          <aside className="hidden lg:block">
-            <div className="sticky top-28">
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: softText }}>Endpoints</p>
-              <nav className="space-y-1">
-                {ENDPOINTS.map((e) => (
+          <nav aria-label="Endpoints" className="hidden lg:block sticky top-28">
+            <p className="site-eyebrow mb-4">Endpoints</p>
+            <ol className="space-y-1">
+              {ENDPOINTS.map((e) => (
+                <li key={e.id}>
                   <button
-                    key={e.id}
+                    type="button"
                     onClick={() => scrollTo(e.id)}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs font-medium cursor-pointer transition-colors"
+                    aria-current={activeId === e.id ? "true" : undefined}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-sm font-medium cursor-pointer transition-colors"
                     style={{
-                      background: activeId === e.id ? "rgba(255,107,0,0.1)" : "transparent",
-                      color: activeId === e.id ? "#ff6b00" : softText,
+                      background: activeId === e.id ? "rgba(255,107,0,0.10)" : "transparent",
+                      color: activeId === e.id ? "var(--site-brand-ink)" : "var(--site-muted)",
                     }}
                   >
-                    <span className="font-bold" style={{ color: METHOD_COLORS[e.method], fontSize: 9 }}>{e.method}</span>
+                    <span className="font-bold w-9 shrink-0" style={{ color: METHOD_COLORS[e.method], fontSize: 10 }}>{e.method}</span>
                     {e.title}
                   </button>
-                ))}
-              </nav>
-            </div>
-          </aside>
+                </li>
+              ))}
+            </ol>
+          </nav>
 
-          {/* Endpoint cards */}
-          <div className="space-y-10 min-w-0">
-            {ENDPOINTS.map((e) => (
-              <div key={e.id} id={e.id} className="scroll-mt-28">
-                <div className="flex items-center gap-3 mb-3 flex-wrap">
-                  <span className="px-2.5 py-1 rounded-md text-xs font-bold text-white" style={{ background: METHOD_COLORS[e.method] }}>{e.method}</span>
-                  <code className="text-sm font-mono" style={{ color: textColor }}>{e.path}</code>
+          <div className="min-w-0 space-y-12">
+            {/* Auth note */}
+            <Reveal>
+              <Card raised className="p-6 sm:p-7 flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
+                <span className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
+                  <KeyRound className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <h2 className="font-display text-lg font-bold site-ink mb-2">Authentication</h2>
+                  <p className="text-[15px] leading-relaxed">
+                    Lead capture endpoints (website form, Google, custom source) use the token of the connection you created. Find it under{" "}
+                    <strong className="site-ink">Integrations</strong> in your CRM, on that connection's card, and send it in the request body as <code className={inlineCode}>token</code>. The CRM endpoints below (leads and so on) take a Bearer token: sign in with POST /api/auth/login and use the token it returns as YOUR_API_TOKEN. It acts as that user, with that user's role and access.
+                    Base URL: <code className={`${inlineCode} break-all`}>https://api.arthaleads.com</code>
+                  </p>
                 </div>
-                <h2 className="text-xl font-bold mb-2" style={{ color: textColor }}>{e.title}</h2>
-                <p className="text-sm mb-4 leading-relaxed" style={{ color: softText }}>{e.desc}</p>
-                <CodeBlock samples={e.samples} isDark={isDark} />
-              </div>
+              </Card>
+            </Reveal>
+
+            {/* Endpoints */}
+            {ENDPOINTS.map((e) => (
+              <Reveal key={e.id}>
+                <div id={e.id} className="scroll-mt-28">
+                  <div className="flex items-center gap-3 mb-3 flex-wrap">
+                    <span className="px-2.5 py-1 rounded-lg text-xs font-bold text-white" style={{ background: METHOD_COLORS[e.method] }}>{e.method}</span>
+                    <code className="text-sm font-mono site-ink">{e.path}</code>
+                  </div>
+                  <h2 className="font-display text-xl sm:text-2xl font-bold site-ink mb-2">{e.title}</h2>
+                  <p className="text-[15px] mb-5 leading-relaxed">{e.desc}</p>
+                  <CodeBlock samples={e.samples} />
+                </div>
+              </Reveal>
             ))}
           </div>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
       {/* Help CTA */}
-      <section className="py-16" style={{ background: altBg }}>
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Terminal className="w-8 h-8 text-[#ff6b00] mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-3" style={{ color: textColor }}>Need a custom integration?</h2>
-          <p className="text-base mb-6" style={{ color: softText }}>
-            Our team can help you connect Arthaleads to your existing tools and portals. Reach out and we'll
-            get you set up.
-          </p>
-          <div className="flex items-center justify-center gap-3 flex-wrap">
-            <a href="mailto:contact@arthaleads.com?subject=API%20Integration" className="inline-flex items-center gap-2 font-semibold px-6 py-3 rounded-xl" style={{ background: "rgba(255,107,0,0.06)", color: "var(--brand-text)", border: "1px solid rgba(255,107,0,0.40)" }}>
-              <Mail className="w-4 h-4" /> contact@arthaleads.com
-            </a>
-            <Link to="/wordpress-plugin" className="inline-flex items-center gap-2 font-semibold px-6 py-3 rounded-xl text-white bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] transition-colors">
-              WordPress Plugin <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
+      <Section tone="white">
+        <Container narrow>
+          <Reveal>
+            <Card raised className="p-6 sm:p-10 flex flex-col sm:flex-row sm:items-start gap-6">
+              <span className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={iconTile}>
+                <Terminal className="w-7 h-7" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="font-display text-xl sm:text-2xl font-bold site-ink mb-2">Need a custom integration?</h2>
+                <p className="text-[15px] leading-relaxed">
+                  Our team can help you connect Arthaleads to your existing tools and portals. Reach out and we'll
+                  get you set up.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <SiteButton href="mailto:contact@arthaleads.com?subject=API%20Integration" variant="secondary">
+                    <Mail className="w-4 h-4" /> contact@arthaleads.com
+                  </SiteButton>
+                  <SiteButton to="/wordpress-plugin" variant="secondary">
+                    WordPress Plugin <ArrowRight className="w-4 h-4" />
+                  </SiteButton>
+                </div>
+              </div>
+            </Card>
+          </Reveal>
+        </Container>
+      </Section>
 
-      <PublicFooter />
-    </div>
+      <ClosingCta tone="tint" />
+    </SitePage>
   );
 }

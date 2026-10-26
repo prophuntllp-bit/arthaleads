@@ -1088,3 +1088,35 @@ html[data-public-theme="dark"] .hero-glass {
 /* Anything else that sticks under the marketing nav (e.g. the /compare table header). */
 .site-sticky-top { top: 76px; }
 @media (min-width: 1280px) { .site-sticky-top { top: 80px; } }
+
+/* Blog article body (pages/PublicBlogPost.jsx): long-form reading on the marketing theme. */
+.blog-prose { font-size: 17px; line-height: 1.8; color: var(--site-text); max-width: 70ch; overflow-wrap: break-word; }
+.blog-prose > :first-child { margin-top: 0; }
+.blog-prose p { margin: 0 0 1.35em; }
+.blog-prose h2, .blog-prose h3, .blog-prose h4 { color: var(--site-ink); letter-spacing: -0.02em; text-wrap: balance; scroll-margin-top: 7rem; }
+.blog-prose h2 { font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2rem); line-height: 1.18; font-weight: 800; margin: 1.75em 0 0.6em; }
+.blog-prose h3 { font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem); line-height: 1.25; font-weight: 800; margin: 1.6em 0 0.5em; }
+.blog-prose h4 { font-size: 1.125rem; line-height: 1.3; font-weight: 700; margin: 1.6em 0 0.4em; }
+.blog-prose a { color: var(--site-brand-ink); font-weight: 500; text-decoration: underline; text-decoration-color: rgba(255, 107, 0, 0.4); text-decoration-thickness: 1.5px; text-underline-offset: 3px; transition: text-decoration-color 0.2s; }
+.blog-prose a:hover { text-decoration-color: currentColor; }
+.blog-prose strong, .blog-prose b { color: var(--site-ink); font-weight: 700; }
+.blog-prose mark { background: rgba(255, 107, 0, 0.16); color: var(--site-ink); padding: 0 0.2em; border-radius: 4px; }
+.blog-prose :not(pre) > code { font-size: 0.875em; padding: 0.15em 0.4em; border-radius: 6px; background: var(--site-chip); color: var(--site-ink); box-shadow: inset 0 0 0 1px var(--site-line); }
+.blog-prose ul, .blog-prose ol { margin: 1.5em 0; padding: 0; list-style: none; display: grid; gap: 0.75em; }
+.blog-prose li { position: relative; padding-left: 1.75em; line-height: 1.7; }
+.blog-prose ul > li::before { content: ""; position: absolute; left: 0.35em; top: 0.72em; width: 6px; height: 6px; border-radius: 999px; background: var(--site-brand); }
+.blog-prose ol { counter-reset: blog-ol; }
+.blog-prose ol > li { counter-increment: blog-ol; padding-left: 2.6em; }
+.blog-prose ol > li::before { content: counter(blog-ol); position: absolute; left: 0; top: 0.1em; width: 1.75rem; height: 1.75rem; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--site-brand-ink); background: rgba(255, 107, 0, 0.10); box-shadow: inset 0 0 0 1px rgba(255, 107, 0, 0.22); }
+.blog-prose blockquote { margin: 2.25em 0; padding: 0.25em 0 0.25em 1.5em; border-left: 3px solid var(--site-brand); }
+.blog-prose blockquote p { margin: 0; color: var(--site-ink); font-size: clamp(1.2rem, 1.1rem + 0.5vw, 1.4rem); line-height: 1.4; font-weight: 600; }
+.blog-prose figure { margin: 2.5em 0; }
+.blog-prose img { display: block; width: 100%; height: auto; border-radius: 20px; border: 1px solid var(--site-line); box-shadow: var(--site-shadow); }
+.blog-prose figcaption { margin-top: 0.75rem; text-align: center; font-size: 0.8125rem; line-height: 1.5; color: var(--site-muted); }
+.blog-prose hr { margin: 3em 0; border: 0; height: 1px; background: var(--site-line); }
+.blog-prose table { width: 100%; margin: 2em 0; border-collapse: collapse; font-size: 0.9375rem; }
+.blog-prose th, .blog-prose td { padding: 0.65em 0.9em; border-bottom: 1px solid var(--site-line); text-align: left; vertical-align: top; }
+.blog-prose th { color: var(--site-ink); font-weight: 700; background: var(--site-chip); }
+.blog-code { margin: 2em 0; border-radius: 16px; overflow: hidden; background: #14151d; border: 1px solid rgba(255, 255, 255, 0.08); }
+.blog-code__lang { padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 255, 255, 0.45); }
+.blog-code pre { margin: 0; padding: 1.25rem; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.875rem; line-height: 1.7; color: #e6e8ef; }
