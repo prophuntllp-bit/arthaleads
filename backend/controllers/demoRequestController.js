@@ -3,6 +3,7 @@
 // Public submit (reCAPTCHA + rate limit in server.js), stored as a DemoRequest,
 // the team and super admins alerted by email, the visitor sent a confirmation.
 // Super admins list and update them under /api/super-admin/demo-requests.
+// (Live from the 26 Oct 2026 website release.)
 const DemoRequest = require("../models/DemoRequest");
 const { STATUSES } = require("../models/DemoRequest");
 const { checkRecaptcha } = require("../utils/recaptcha");
