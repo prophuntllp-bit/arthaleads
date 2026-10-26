@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, Globe, QrCode, FileSpreadsheet, Store, ShieldCheck, Download, Lock, MapPin,
-  MessageCircle, Bot, Sparkles, Phone, Plus, Minus, CircleCheck, BadgeCheck, ArrowUpRight, Repeat2, CalendarCheck2,
+  MessageCircle, Bot, Sparkles, Phone, Plus, Minus, CircleCheck, BadgeCheck, ArrowUpRight, Repeat2,
 } from "lucide-react";
 import { SitePage, Section, Container, SectionHeader, Card, SiteButton, SiteImage } from "../components/site/Site";
 import { WhatsAppLogo, FacebookLogo, GoogleLogo } from "../components/site/BrandLogos";
@@ -535,12 +535,11 @@ function FinalCta() {
               <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[30px] sm:text-[38px] lg:text-[40px] xl:text-[44px]" style={{ textWrap: "balance" }}>
                 Stop losing buyers <span className="site-dim">to whoever replies first.</span>
               </h2>
-              <p className="mt-5 text-base sm:text-lg leading-relaxed max-w-lg">Start your 14-day free trial, or message us on WhatsApp and see the AI agent answer you.</p>
+              <p className="mt-5 text-base sm:text-lg leading-relaxed max-w-lg">Book a 30-minute demo on your own leads, or start the 14-day free trial yourself.</p>
               <div className="mt-8 flex gap-2 sm:gap-3">
-                <SiteButton href={CRM_SIGNUP_URL} external className="!px-3.5 text-[14px] sm:!px-7 sm:min-h-[3.5rem] sm:text-base">Start free trial <ArrowRight className="w-4 h-4" /></SiteButton>
-                <SiteButton to="/book-demo" variant="secondary" className="!px-3.5 text-[14px] sm:!px-7 sm:min-h-[3.5rem] sm:text-base">
-                  <CalendarCheck2 className="w-[18px] h-[18px]" aria-hidden="true" /> Book a demo
-                </SiteButton>
+                {/* Book a Demo is the page's main action (owner, 26 Oct 2026); the trial is the second choice. */}
+                <SiteButton to="/book-demo" className="!px-3.5 text-[14px] sm:!px-7 sm:min-h-[3.5rem] sm:text-base">Book a Demo <ArrowRight className="w-4 h-4" /></SiteButton>
+                <SiteButton href={CRM_SIGNUP_URL} external variant="secondary" className="!px-3.5 text-[14px] sm:!px-7 sm:min-h-[3.5rem] sm:text-base">Start free trial</SiteButton>
               </div>
               <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm site-muted">
                 {["14-day free trial", "No credit card", "Made in Pune"].map((t) => (
