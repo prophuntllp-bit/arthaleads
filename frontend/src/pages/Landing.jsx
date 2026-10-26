@@ -37,35 +37,16 @@ const scrollToId = (id) => document.getElementById(id)?.scrollIntoView({ behavio
 // ── Live backgrounds (React Bits, desktop and tablet only; see LiveBackground) ──
 // Grainient in our orange. The first colour is the page background so the
 // gradient melts into the section; lightMode turns the same ramp into pale tints.
-const GRAIN_COLORS = ["#0a0b10", "#2a0f0a", "#9a3412", "#f97316", "#fed7aa"];
 const GRAIN_COLORS_PANEL = ["#17110d", "#3a1a0c", "#9a3412", "#f97316", "#fed7aa"];
 
 // ── 1. Hero ────────────────────────────────────────────────────────────────────
-const HERO_FACTS = [
-  ["24/7", "AI replies to buyers on WhatsApp"],
-  ["4", "languages: English, Hinglish, Hindi, Marathi"],
-  [formatINR(PLAN_PRICING.starter.monthly), "per user per month, plus GST"],
-];
 
 function Hero() {
-  const { isDark } = usePublicTheme();
   return (
     <Section id="hero" tone="white" className="site-hero !pt-[5.5rem] sm:!pt-28 lg:!pt-[6.5rem] !pb-14 lg:!pb-10 overflow-x-clip">
-      {/* Grain sits on the photo side and fades out before the headline, so text keeps full contrast. */}
-      {/* Dark mode: Ghost Fibers (ember, in our orange and amber). Light mode: the soft Grainient glow,
-          because glowing fibres wash out on white. Both sit on the photo side and fade before the headline. */}
-      {isDark ? (
-        <LiveBackground key="fibers" kind="ghostfibers" glowColor="#ff6a1a" lineColor="#ffd9a8" secondaryColor="#ffaa00"
-          fiberStyle="dashes" flow={0.9} speed={0.6} sparkle={1} particles={0.8} twist={0.9} rotation={8}
-          mouseInteraction={false} pulseOnClick={false} vignette={0} grain={0.04} brightness={1.05}
-          fallback="radial-gradient(60% 55% at 85% 25%, rgba(255,107,0,0.16), transparent 70%), radial-gradient(45% 40% at 0% 100%, rgba(255,170,0,0.08), transparent 70%)"
-          style={{ WebkitMaskImage: "linear-gradient(100deg, transparent 22%, #000 60%)", maskImage: "linear-gradient(100deg, transparent 22%, #000 60%)" }} />
-      ) : (
-        <LiveBackground key="grain" kind="grainient" colors={GRAIN_COLORS} lightMode angle={120} flow={0.7} speed={0.6}
-          silk={0.3} grainAmount={0.05} clickSwirl={false} stir={0.6}
-          fallback="radial-gradient(60% 55% at 85% 25%, rgba(255,107,0,0.13), transparent 70%), radial-gradient(45% 40% at 0% 100%, rgba(255,170,0,0.08), transparent 70%)"
-          style={{ WebkitMaskImage: "linear-gradient(100deg, transparent 18%, #000 62%)", maskImage: "linear-gradient(100deg, transparent 18%, #000 62%)", opacity: 0.75 }} />
-      )}
+      {/* Calm on purpose: a fine grid and a soft static glow, so the headline and photo keep the attention. */}
+      <div aria-hidden="true" className="absolute inset-0 pointer-events-none"
+        style={{ background: "radial-gradient(55% 55% at 82% 35%, rgba(255,107,0,0.12), transparent 70%), radial-gradient(40% 40% at 0% 100%, rgba(255,170,0,0.06), transparent 70%)" }} />
       <div aria-hidden="true" className="site-grid-bg" />
       <Container className="relative grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-center">
         <div className="text-center lg:text-left">
@@ -80,11 +61,9 @@ function Hero() {
           </p>
           {/* Phones: two compact buttons side by side instead of two full-width slabs. */}
           <div className="mt-7 flex flex-wrap gap-2.5 sm:gap-3 justify-center lg:justify-start">
-            <SiteButton href={CRM_SIGNUP_URL} external className="!px-3.5 text-[14px] sm:!px-7 sm:min-h-[3.5rem] sm:text-base">
-              <span className="sm:hidden">Start free trial</span><span className="hidden sm:inline">Start 14-day free trial</span> <ArrowRight className="w-4 h-4" />
-            </SiteButton>
-            <SiteButton href={waLink(WA_MESSAGES.demo)} external variant="secondary" className="!px-3.5 text-[14px] sm:!px-7 sm:min-h-[3.5rem] sm:text-base">
-              <WhatsAppLogo className="w-[18px] h-[18px]" /> <span className="xl:hidden">Book a demo</span><span className="hidden xl:inline">Book a demo on WhatsApp</span>
+            {/* The free trial lives in the header; the hero asks for a demo. TODO: /book-demo once the page is approved. */}
+            <SiteButton href={waLink(WA_MESSAGES.demo)} external className="!px-6 text-[15px] sm:!px-8 sm:min-h-[3.5rem] sm:text-base">
+              Book a Demo <ArrowRight className="w-4 h-4" />
             </SiteButton>
           </div>
           <ul className="mt-4 flex flex-wrap justify-center lg:justify-start gap-x-5 gap-y-2 text-[13px] sm:text-sm site-muted">
@@ -92,16 +71,6 @@ function Hero() {
               <li key={t} className="inline-flex items-center gap-1.5"><CircleCheck className="w-4 h-4" style={{ color: "#16a34a" }} aria-hidden="true" />{t}</li>
             ))}
           </ul>
-          {/* Product facts, not social proof: what the product does and costs. */}
-          <dl className="hero-facts hidden sm:grid mt-7 grid-cols-3 gap-3 max-w-xl mx-auto lg:mx-0">
-            {HERO_FACTS.map(([v, l]) => (
-              <div key={l} className="site-card px-4 py-3 text-left" style={{ background: "var(--site-card)", boxShadow: "var(--site-shadow)" }}>
-                <dt className="sr-only">{l}</dt>
-                <dd className="font-display text-[22px] font-extrabold site-ink leading-none">{v}</dd>
-                <dd className="mt-1.5 text-[12px] leading-snug site-muted">{l}</dd>
-              </div>
-            ))}
-          </dl>
         </div>
         <Reveal delay={150} y={28}>
           <HeroVisual />
@@ -426,7 +395,7 @@ function Trust() {
                 <ul className="space-y-1.5">
                   <TrustRow left="Business number" right="Verified" tone={T_GREEN} />
                   <TrustRow left="Templates" right="Approved by Meta" tone={T_GREEN} />
-                  <TrustRow left="AI agent" right="Replying 24/7" tone={T_ORANGE} />
+                  <TrustRow left="AI agent" right="Live 24/7" tone={T_GREEN} />
                 </ul>
               </div>
             </Card>

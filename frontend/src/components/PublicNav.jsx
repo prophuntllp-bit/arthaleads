@@ -406,7 +406,7 @@ function NavInner({ onScrollTo }) {
             <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
               className="bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white text-sm font-semibold px-5 py-2.5 rounded-xl whitespace-nowrap transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-0.5"
             >
-              Get Started Free
+              Start 14-day free trial
             </a>
           </div>
 
@@ -429,7 +429,7 @@ function NavInner({ onScrollTo }) {
           logo={<img src={isDark ? "/logo-lockup-dark.png" : "/logo-lockup.png"} alt="" width={isDark ? 1515 : 1574} height={isDark ? 459 : 471} />}
           logoHref="/"
           logoAlt="Arthaleads home"
-          cta={{ label: "Get started free", href: CRM_SIGNUP_URL }}
+          cta={{ label: "Start free trial", href: CRM_SIGNUP_URL }}
           items={MOBILE_CARDS}
           barEnd={
             <button type="button" onClick={toggle} className="w-10 h-10 flex items-center justify-center rounded-xl" style={{ color: textMuted }} aria-label="Toggle theme">
