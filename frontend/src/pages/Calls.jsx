@@ -770,7 +770,8 @@ function CallVolumeChart({ volumeByDay }) {
                 const total = d.answered + d.missed + d.other;
                 return (
                   <div className="pointer-events-none absolute z-10 rounded-xl px-3 py-2 text-xs shadow-lg whitespace-nowrap"
-                    style={{ left: `${left}%`, bottom: Math.min(h(d.answered + d.missed) + 10, PLOT_H - 70), transform: `translateX(${hover < 3 ? "-15%" : hover > days.length - 4 ? "-85%" : "-50%"})`,
+                    // Beside the column at the top of the plot, so it never covers the column.
+                    style={{ left: `${left}%`, top: 0, transform: hover >= days.length / 2 ? "translateX(calc(-100% - 18px))" : "translateX(18px)",
                       background: "var(--app-surface-solid, var(--app-surface))", border: "1px solid var(--app-border)" }}>
                     <p className="font-semibold text-app mb-1">{d.label}{d.today ? " (today)" : ""}</p>
                     <p className="flex items-center gap-1.5 text-app-soft"><span className="h-2 w-2 rounded-sm" style={{ background: "var(--viz-answered)" }} /> Answered <b className="ml-auto pl-3 text-app tabular-nums">{d.answered}</b></p>
