@@ -53,6 +53,14 @@ router.post("/me/checklist-dismissed", async (req, res, next) => {
     res.json({ success: true });
   } catch (err) { next(err); }
 });
+// Hide the "Welcome, take the tour" card for good (this person only).
+router.post("/me/tour-offer-dismissed", async (req, res, next) => {
+  try {
+    const User = require("../models/User");
+    await User.updateOne({ _id: req.user._id }, { $set: { tourOfferDismissedAt: new Date() } });
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
 router.get("/agents",         authController.getAgents);
 // Team performance dashboard: Growth and up (pricing). The 24 Oct 2026 sweep
 // found it answering Starter; only the menu hid it.

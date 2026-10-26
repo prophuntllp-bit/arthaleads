@@ -49,6 +49,8 @@ const userSchema = new mongoose.Schema(
     // the account, not in the browser, so it stays hidden after logging in
     // again, on another browser or on another device.
     checklistDismissedAt: { type: Date, default: null },
+    // The dashboard's "Welcome, take the tour" card was skipped or taken.
+    tourOfferDismissedAt: { type: Date, default: null },
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: false, default: null, index: true },
     // Set whenever the password changes. Sessions signed in before this moment
     // are no longer accepted (middlewares/auth.js), so a reset or change really

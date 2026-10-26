@@ -8,7 +8,7 @@ import CookieBanner from "./components/CookieBanner";
 import { Spinner } from "./components/Spinner";
 import ErrorBoundary from "./components/ErrorBoundary";
 import CustomCursor from "./components/CustomCursor";
-import { Download, X, Bell, Share } from "lucide-react";
+import { X, Bell } from "lucide-react";
 import { subscribeToPush } from "./utils/pushNotifications";
 import api from "./services/api";
 import { hydrateLeadOptions } from "./utils/constants";
@@ -84,175 +84,10 @@ export function applyBrandColor(hex) {
   root.style.setProperty("--app-primary-deep-rgb", `${dr}, ${dg}, ${db}`);
 }
 
-// ── Detect iOS ────────────────────────────────────────────────────────────────
-function isIOS() {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent);
-}
-
-function isAndroid() {
-  return /android/i.test(navigator.userAgent);
-}
-
-function isInStandaloneMode() {
-  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
-}
-
-// ── Install Banner ────────────────────────────────────────────────────────────
-// Three audiences, three different right answers:
-//
-//   Android  There is a real native app now. It logs calls and delivers push
-//            reliably, neither of which a home-screen shortcut can do, so the
-//            banner sends people to /download-app rather than offering to
-//            bookmark the website. This branch does NOT wait for
-//            beforeinstallprompt -- the offer has nothing to do with whether
-//            Chrome feels like firing that event.
-//   iOS      No app, and no install prompt either. Manual Add to Home Screen
-//            instructions are still the only thing on offer.
-//   Desktop  The APK is useless here, so the PWA prompt stays exactly as it
-//            was. beforeinstallprompt fires on desktop Chrome too.
-function InstallBanner() {
-  const { user } = useAuth();
-  const [prompt, setPrompt]           = useState(null);
-  const [showIOS, setShowIOS]         = useState(false);
-  const [showAndroid, setShowAndroid] = useState(false);
-  const [dismissed, setDismissed]     = useState(
-    () => localStorage.getItem("pwa_dismissed") === "1"
-  );
-
-  useEffect(() => {
-    // Already installed as PWA - don't show banner
-    if (isInStandaloneMode()) return;
-    // Not on the marketing site: visitors there have no account yet, so the app is
-    // no use to them, and the banner covered the hero buttons on phones. The site
-    // has its own Start-free-trial bar (MobileCtaBar) and /download-app instead.
-    if (isMarketingHost()) return;
-    // Only for people already signed in to the CRM. A first-time visitor (on the
-    // login or signup page, or any public page) has no account for the app yet.
-    if (!user) return;
-    if (dismissed) return;
-
-    // Android: offer the real app. Delayed like the iOS card so it does not
-    // land on top of whatever the person opened the CRM to do.
-    if (isAndroid()) {
-      const t = setTimeout(() => setShowAndroid(true), 3000);
-      return () => clearTimeout(t);
-    }
-
-    // iOS: no beforeinstallprompt, show manual instructions after a short delay
-    if (isIOS()) {
-      const t = setTimeout(() => setShowIOS(true), 3000);
-      return () => clearTimeout(t);
-    }
-
-    // Desktop - capture the native PWA prompt
-    const handler = (e) => { e.preventDefault(); setPrompt(e); };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, [dismissed, user]);
-
-  const dismiss = () => {
-    setDismissed(true);
-    setShowIOS(false);
-    setShowAndroid(false);
-    setPrompt(null);
-    localStorage.setItem("pwa_dismissed", "1");
-  };
-
-  const install = async () => {
-    prompt.prompt();
-    const { outcome } = await prompt.userChoice;
-    if (outcome === "accepted" || outcome === "dismissed") {
-      setPrompt(null);
-      setDismissed(true);
-      localStorage.setItem("pwa_dismissed", "1");
-    }
-  };
-
-  const bannerStyle = {
-    background: "rgba(14,14,22,0.88)",
-    backdropFilter: "blur(24px)",
-    border: "1px solid rgba(255,107,0,0.25)",
-    boxShadow: "0 8px 32px rgba(0,0,0,0.50), 0 0 0 1px rgba(255,107,0,0.08)",
-  };
-
-  // Android: the native app, not a shortcut
-  if (!user) return null;
-
-  if (showAndroid && !dismissed) {
-    return (
-      <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm">
-        <div className="flex items-center gap-3 rounded-2xl px-4 py-3 shadow-xl" style={bannerStyle}>
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#a04100] to-[#ff6b00]">
-            <Download className="h-5 w-5 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white">Get the Android app</p>
-            <p className="text-xs text-white/60">Call logging and instant lead alerts</p>
-          </div>
-          <a
-            href="https://www.arthaleads.com/download-app"
-            target="_blank" rel="noopener noreferrer"
-            onClick={dismiss}
-            className="flex-shrink-0 rounded-xl bg-[color:var(--brand-btn)] px-3 py-1.5 text-xs font-bold text-white"
-          >
-            Get app
-          </a>
-          <button onClick={dismiss} aria-label="Dismiss" className="flex-shrink-0 text-white/40 hover:text-white/70">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // iOS manual instruction card
-  if (showIOS && !dismissed) {
-    return (
-      <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm">
-        <div className="flex flex-col gap-2 rounded-2xl px-4 py-3 shadow-xl" style={bannerStyle}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#a04100] to-[#ff6b00]">
-                <Share className="h-4 w-4 text-white" />
-              </div>
-              <p className="text-sm font-semibold text-white">Install Arthaleads</p>
-            </div>
-            <button onClick={dismiss} aria-label="Dismiss" className="text-white/40 hover:text-white/70">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <p className="text-xs text-white/70 leading-5">
-            Tap the <span className="font-bold text-orange-400">Share</span> button (↑) in Safari, then tap <span className="font-bold text-orange-400">"Add to Home Screen"</span> to install the app.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Desktop PWA prompt
-  if (!prompt || dismissed) return null;
-
-  return (
-    <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm">
-      <div className="flex items-center gap-3 rounded-2xl px-4 py-3 shadow-xl" style={bannerStyle}>
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#a04100] to-[#ff6b00]">
-          <Download className="h-5 w-5 text-white" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white">Install Arthaleads</p>
-          <p className="text-xs text-white/60">Add to home screen for quick access</p>
-        </div>
-        <button onClick={install}
-          className="flex-shrink-0 rounded-xl bg-[color:var(--brand-btn)] px-3 py-1.5 text-xs font-bold text-white">
-          Install
-        </button>
-        <button onClick={dismiss} aria-label="Dismiss" className="flex-shrink-0 text-white/40 hover:text-white/70">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
+// The "Install Arthaleads" banner (PWA prompt on desktop, app link on Android,
+// Add to Home Screen steps on iOS) was removed on 26 Oct 2026 at the owner's
+// request: one popup too many on top of the dashboard. /download-app and the
+// browser's own install button still work.
 
 // ── Notification Permission Banner ────────────────────────────────────────────
 // Shows a clear, clickable banner asking users to enable push notifications.
@@ -769,7 +604,6 @@ function SiteChrome() {
     <>
       <CustomCursor />
       <CookieBanner />
-      <InstallBanner />
     </>
   );
 }
