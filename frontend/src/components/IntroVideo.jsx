@@ -11,8 +11,9 @@
 // reduced motion get a play button instead of autoplay.
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Play, Volume2 } from "lucide-react";
-import { filmJsonLd } from "../data/introFilm";
+import { Play, Volume2, RotateCcw, ArrowRight, Youtube, CalendarCheck2 } from "lucide-react";
+import { filmJsonLd, fmtTime } from "../data/introFilm";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS, YOUTUBE_FILM } from "../utils/crmLinks";
 import { SITE_MEDIA } from "../data/siteMedia";
 
 export const INTRO_VIDEOS = {
@@ -25,12 +26,22 @@ export const INTRO_VIDEOS = {
 // moments, the film starting at ?t=N, and `seek` ({ t, n }, n bumps on every
 // click) jumping to a chapter. The home page sends no structured data: Google
 // indexes a video only where it is the main content of the page.
+// Home page only: short chapter chips under the player (times from data/introFilm CHAPTERS).
+const HOME_CHAPTERS = [
+  { t: 0,   label: "The 1 AM message" },
+  { t: 29,  label: "AI replies and books the visit" },
+  { t: 58,  label: "The lead fills itself in" },
+  { t: 86,  label: "AI calling" },
+  { t: 125, label: "Pricing and demo" },
+];
+
 export default function IntroVideo({ isDark, id = "tour", chapters = false, seek = null }) {
   const bare = chapters;
   const [lang, setLang]         = useState("en");
   const [started, setStarted]   = useState(false);   // has played at least once: show the player controls
   const [blocked, setBlocked]   = useState(false);   // autoplay refused or disabled: show the big play button
   const [muted, setMuted]       = useState(true);
+  const [ended, setEnded]       = useState(false);   // home: show the next-step screen over the last frame
   const videoRef   = useRef(null);
   const sectionRef = useRef(null);
   const visible    = useRef(false);
@@ -129,6 +140,16 @@ export default function IntroVideo({ isDark, id = "tour", chapters = false, seek
   const segBg   = isDark ? "rgba(255,255,255,0.05)" : "#ffffff";
   const segBdr  = isDark ? "rgba(255,255,255,0.10)" : "#e7e1d8";
 
+  // Same film on the Arthaleads YouTube channel, in the language being shown.
+  const ytLink = (
+    <a href={YOUTUBE_FILM[lang]} target="_blank" rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 text-sm font-semibold hover:underline underline-offset-4"
+      style={{ color: heading }}>
+      <Youtube className="w-[18px] h-[18px]" style={{ color: "#FF0000" }} strokeWidth={2} aria-hidden="true" />
+      Watch on YouTube
+    </a>
+  );
+
   return (
     <section id={id} ref={sectionRef}
       className={bare ? "relative scroll-mt-20" : "relative py-16 lg:py-24 overflow-hidden scroll-mt-20"}
@@ -147,24 +168,31 @@ export default function IntroVideo({ isDark, id = "tour", chapters = false, seek
               Two minutes on how Arthaleads replies on WhatsApp, qualifies the buyer, books the
               site visit and hands your team a lead with every answer already filled in.
             </p>
-            <Link to="/product-tour" className="inline-block mt-3 text-sm font-semibold underline underline-offset-4 text-[color:var(--brand-text)]">
-              Watch with chapters and a transcript
-            </Link>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3">
+              <Link to="/product-tour" className="text-sm font-semibold underline underline-offset-4 text-[color:var(--brand-text)]">
+                Watch with chapters and a transcript
+              </Link>
+              {ytLink}
+            </div>
           </div>
           )}
 
-          <div role="group" aria-label="Video language" className="inline-flex self-start md:self-auto p-1 rounded-full shrink-0"
+          <div className="flex items-center gap-3 self-start md:self-auto shrink-0">
+          {bare && ytLink}
+          {!bare && <span className="text-sm font-semibold" style={{ color: heading }}>Watch in</span>}
+          <div role="group" aria-label="Video language" className="inline-flex p-1 rounded-full"
             style={{ background: segBg, border: `1px solid ${segBdr}` }}>
             {Object.entries(INTRO_VIDEOS).map(([k, item]) => {
               const on = k === lang;
               return (
                 <button key={k} type="button" onClick={() => switchLang(k)} aria-pressed={on}
-                  className="px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ff6b00]"
+                  className={`${bare ? "px-4 py-1.5 text-sm" : "px-5 py-2.5 text-[15px]"} rounded-full font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ff6b00]`}
                   style={{ background: on ? "var(--brand-btn)" : "transparent", color: on ? "#fff" : body }}>
-                  {item.label}
+                  {item.label}{!bare && k === "hi" ? " (Hindi)" : ""}
                 </button>
               );
             })}
+          </div>
           </div>
         </div>
 
@@ -192,8 +220,30 @@ export default function IntroVideo({ isDark, id = "tour", chapters = false, seek
               else if (visible.current) tryPlay();
             }}
             onPause={() => { if (ourPause.current) ourPause.current = false; else if (started && !document.hidden) userPaused.current = true; }}
-            onPlay={() => { userPaused.current = false; }}
+            onPlay={() => { userPaused.current = false; setEnded(false); }}
+            onEnded={() => { if (!bare) setEnded(true); }}
           />
+
+          {/* Home: the people who watched to the end are the warmest visitors on the page. */}
+          {ended && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center bg-black/70 backdrop-blur-sm">
+              <p className="text-white text-xl sm:text-2xl font-black" style={{ textWrap: "balance" }}>Try it on your own leads</p>
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
+                  className="flex items-center gap-2 bg-[color:var(--brand-btn)] text-white font-bold px-6 py-3 rounded-2xl shadow-xl">
+                  Start free trial <ArrowRight className="w-4 h-4" />
+                </a>
+                <Link to="/book-demo"
+                  className="flex items-center gap-2 bg-white text-gray-900 font-semibold px-5 py-3 rounded-2xl">
+                  <CalendarCheck2 className="w-4 h-4" aria-hidden="true" /> Book a demo
+                </Link>
+              </div>
+              <button type="button" onClick={() => { setEnded(false); const el = videoRef.current; if (el) { el.currentTime = 0; userPaused.current = false; el.play().catch(() => {}); } }}
+                className="flex items-center gap-1.5 text-sm font-semibold text-white/80 hover:text-white">
+                <RotateCcw className="w-4 h-4" /> Watch again
+              </button>
+            </div>
+          )}
 
           {/* Only shown when the browser made the film start silent. */}
           {started && muted && !blocked && (
@@ -221,6 +271,31 @@ export default function IntroVideo({ isDark, id = "tour", chapters = false, seek
             </button>
           )}
         </div>
+
+        {!bare && (
+          <>
+            <div className="mt-5 flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pb-1" style={{ scrollbarWidth: "none" }}>
+              {HOME_CHAPTERS.map((c) => (
+                <button key={c.t} type="button" onClick={() => { setEnded(false); seekTo(c.t, true); }}
+                  className="shrink-0 flex items-center gap-2 rounded-full pl-2 pr-3.5 py-1.5 text-sm font-medium transition-colors hover:border-[#ff6b00] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ff6b00]"
+                  style={{ background: segBg, border: `1px solid ${segBdr}`, color: heading }}>
+                  <span className="text-[11px] font-bold tabular-nums rounded-full px-2 py-0.5" style={{ background: "rgba(255,107,0,0.12)", color: "var(--brand-text)" }}>{fmtTime(c.t)}</span>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+              <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
+                className="inline-flex items-center justify-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-6 py-3 rounded-2xl shadow-lg shadow-orange-500/25">
+                Start free trial <ArrowRight className="w-4 h-4" />
+              </a>
+              <Link to="/book-demo"
+                className="inline-flex items-center justify-center gap-2 font-semibold text-[color:var(--brand-text)]">
+                <CalendarCheck2 className="w-4 h-4" aria-hidden="true" /> Or book a demo
+              </Link>
+            </div>
+          </>
+        )}
       </div>
     </section>
   );

@@ -27,6 +27,8 @@ import WordPressPlugin from "./pages/WordPressPlugin";
 import ApiDocs from "./pages/ApiDocs";
 import DownloadApp from "./pages/DownloadApp";
 import WhatsAppCrm from "./pages/WhatsAppCrm";
+import AiCrm from "./pages/AiCrm";
+import BuilderCrm from "./pages/BuilderCrm";
 import SellDoAlternative from "./pages/SellDoAlternative";
 import LeadratAlternative from "./pages/LeadratAlternative";
 import KylasAlternative from "./pages/KylasAlternative";
@@ -34,6 +36,7 @@ import ProductTour from "./pages/ProductTour";
 import ReferEarn from "./pages/ReferEarn";
 import Careers from "./pages/Careers";
 import Contact from "./pages/Contact";
+import BookDemo from "./pages/BookDemo";
 import Security from "./pages/Security";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
@@ -55,6 +58,8 @@ export const PAGES = {
   "/api-docs": ApiDocs,
   "/download-app": DownloadApp,
   "/whatsapp-crm": WhatsAppCrm,
+  "/ai-crm": AiCrm,
+  "/builder-crm": BuilderCrm,
   "/compare/sell-do-alternative": SellDoAlternative,
   "/compare/leadrat-alternative": LeadratAlternative,
   "/compare/kylas-alternative": KylasAlternative,
@@ -62,6 +67,7 @@ export const PAGES = {
   "/refer": ReferEarn,
   "/careers": Careers,
   "/contact": Contact,
+  "/book-demo": BookDemo,
   "/security": Security,
   "/privacy": Privacy,
   "/terms": Terms,

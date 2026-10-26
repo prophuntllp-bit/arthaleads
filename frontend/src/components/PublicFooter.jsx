@@ -1,5 +1,9 @@
 import { Link } from "react-router-dom";
-import { Instagram, Facebook, Linkedin, Mail } from "lucide-react";
+import { Instagram, Facebook, Linkedin, Youtube, Mail, Phone } from "lucide-react";
+import WhatsAppLogo from "./WhatsAppLogo";
+
+// The WhatsApp glyph in the social row, coloured like the lucide icons beside it.
+const WaIcon = ({ strokeWidth, ...props }) => <WhatsAppLogo {...props} color="currentColor" />;
 import { PHONE_DISPLAY, PHONE_TEL, waLink, WA_MESSAGES, SOCIAL_LINKS } from "../utils/crmLinks";
 import { usePublicTheme } from "../context/PublicThemeContext";
 
@@ -35,14 +39,14 @@ export default function PublicFooter() {
             >
               contact@arthaleads.com
             </a>
-            <a href={PHONE_TEL} style={{ color: text }} className="block text-sm mt-2 hover:text-[color:var(--brand-text)] transition-colors">
+            {/* The phone number is the fastest way to reach sales: shown as a highlighted call chip. */}
+            <a href={PHONE_TEL}
+              className="inline-flex items-center gap-2 mt-3 pl-1.5 pr-3.5 py-1.5 rounded-full text-[15px] font-bold transition-transform duration-200 hover:-translate-y-0.5"
+              style={{ color: isDark ? "#ffffff" : "#111827", background: "rgba(255,107,0,0.10)", border: "1px solid rgba(255,107,0,0.35)" }}>
+              <span className="w-7 h-7 rounded-full flex items-center justify-center text-white" style={{ background: "var(--brand-btn)" }}>
+                <Phone className="w-3.5 h-3.5" aria-hidden="true" />
+              </span>
               {PHONE_DISPLAY}
-            </a>
-            <a href={waLink(WA_MESSAGES.sales)} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5"
-              style={{ background: "var(--wa-btn)" }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.09 1.76-.72 2.01-1.41.25-.69.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35zM12.05 21.5h-.01a9.4 9.4 0 0 1-4.8-1.31l-.34-.2-3.57.93.95-3.48-.22-.36a9.4 9.4 0 0 1-1.44-5.02c0-5.2 4.23-9.43 9.44-9.43a9.38 9.38 0 0 1 6.67 2.77 9.37 9.37 0 0 1 2.76 6.67c0 5.2-4.24 9.43-9.44 9.43zm8.03-17.46A11.3 11.3 0 0 0 12.05.73C5.8.73.7 5.82.7 12.08c0 2 .52 3.95 1.52 5.67L.6 23.27l5.66-1.48a11.33 11.33 0 0 0 5.42 1.38h.01c6.25 0 11.35-5.09 11.35-11.35 0-3.03-1.18-5.88-3.33-8.03z"/></svg>
-              Chat on WhatsApp
             </a>
 
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] mt-7 mb-3" style={{ color: heading }}>
@@ -50,9 +54,11 @@ export default function PublicFooter() {
             </p>
             <div className="flex flex-wrap gap-2.5">
               {[
+                { label: "Chat on WhatsApp",        href: waLink(WA_MESSAGES.sales), Icon: WaIcon, hover: "#25D366" },
                 { label: "Arthaleads on Instagram", href: SOCIAL_LINKS.instagram, Icon: Instagram, hover: "#E1306C" },
                 { label: "Arthaleads on Facebook",  href: SOCIAL_LINKS.facebook,  Icon: Facebook,  hover: "#1877F2" },
                 { label: "Arthaleads on LinkedIn",  href: SOCIAL_LINKS.linkedin,  Icon: Linkedin,  hover: "#0A66C2" },
+                { label: "Arthaleads on YouTube",   href: SOCIAL_LINKS.youtube,   Icon: Youtube,   hover: "#FF0000" },
                 { label: "Email Arthaleads",        href: "mailto:contact@arthaleads.com", Icon: Mail, hover: "#ff6b00" },
               ].map(({ label, href, Icon, hover }) => (
                 <a key={label} href={href} aria-label={label} title={label}
@@ -69,12 +75,14 @@ export default function PublicFooter() {
 
           {/* Product */}
           <div>
-            <h2 style={{ color: heading }} className="font-semibold text-sm mb-4">Product</h2>
+            <p style={{ color: heading }} className="font-semibold text-sm mb-4">Product</p>
             <div className="space-y-2.5">
               {[
                 ["Features",           "/features"],
                 ["Pricing",            "/pricing"],
                 ["WhatsApp CRM",       "/whatsapp-crm"],
+                ["AI CRM",             "/ai-crm"],
+                ["Builder CRM",        "/builder-crm"],
                 ["Download App",       "/download-app"],
                 ["WordPress Plugin",   "/wordpress-plugin"],
                 ["API Docs",           "/api-docs"],
@@ -87,7 +95,7 @@ export default function PublicFooter() {
 
           {/* Compare */}
           <div>
-            <h2 style={{ color: heading }} className="font-semibold text-sm mb-4">Compare</h2>
+            <p style={{ color: heading }} className="font-semibold text-sm mb-4">Compare</p>
             <div className="space-y-2.5">
               {[
                 ["All comparisons",        "/compare"],
@@ -102,7 +110,7 @@ export default function PublicFooter() {
 
           {/* Company */}
           <div>
-            <h2 style={{ color: heading }} className="font-semibold text-sm mb-4">Company</h2>
+            <p style={{ color: heading }} className="font-semibold text-sm mb-4">Company</p>
             <div className="space-y-2.5">
               {[
                 ["About Us",      "/about-us"],
@@ -111,6 +119,7 @@ export default function PublicFooter() {
                 ["Product Updates", "/product-updates"],
                 ["Help Guide",    "/help-guide"],
                 ["Security",      "/security"],
+                ["Book a Demo",   "/book-demo"],
                 ["Contact Us",    "/contact"],
               ].map(([label, href]) => (
                 <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
@@ -120,7 +129,7 @@ export default function PublicFooter() {
 
           {/* Legal */}
           <div>
-            <h2 style={{ color: heading }} className="font-semibold text-sm mb-4">Legal</h2>
+            <p style={{ color: heading }} className="font-semibold text-sm mb-4">Legal</p>
             <div className="space-y-2.5">
               {[
                 ["Privacy Policy",   "/privacy"],

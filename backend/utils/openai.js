@@ -229,7 +229,7 @@ Annual billing gives roughly two months free vs. monthly. No setup fee on any pl
 ════════════════════════════════════════════════
 CORE FEATURES
 ════════════════════════════════════════════════
-- Unified Lead Inbox: every lead source in one place — Facebook Lead Ads, Google Ads, WhatsApp, walk-ins, property portals, WordPress forms, QR codes.
+- Unified Lead Inbox: every lead source in one place — Facebook Lead Ads, Google Ads lead forms (Enterprise), WhatsApp, walk-ins, property portals, WordPress forms, QR codes.
 - AI Lead Scoring: every lead scored 0-100 from its stage, priority, budget, follow-ups and activity; for leads active in the last 14 days, AI also reads the recent WhatsApp chat and call summaries and moves the score up or down with a one-line reason (e.g. "asked for a Saturday visit, loan approved"). "Hot Today" dashboard widget surfaces who to call first.
 - AI WhatsApp Draft: AI writes a personalised WhatsApp message per lead in one click.
 - AI Call Intelligence: one-tap click-to-call (bridges your phone to the lead via EnableX) or call straight from the browser (WebRTC soft phone, no phone needed). Every recording is auto-transcribed with AI-detected intent/sentiment/summary/next-step, and can auto-advance the lead's pipeline stage.

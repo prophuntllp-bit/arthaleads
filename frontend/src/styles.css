@@ -724,8 +724,15 @@
   50%  { transform: translate3d(5%, 3%, 0) rotate(8deg) scale(1.08); }
   100% { transform: translate3d(-6%, -4%, 0) rotate(0deg) scale(1); }
 }
-@keyframes word-rise { from { opacity: 0; transform: translateY(0.45em); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
-.word-rise { display: inline-block; opacity: 0; animation: word-rise 800ms cubic-bezier(.2,.7,.2,1) forwards; }
+/* The hero headline is readable from the first paint: words only rise a little,
+   they never start invisible or blurred (that hid the H1 for seconds on phones). */
+@keyframes word-rise { from { transform: translateY(0.25em); } to { transform: none; } }
+.word-rise { display: inline-block; animation: word-rise 500ms cubic-bezier(.2,.7,.2,1) both; }
+/* Phones: the chat avatar used to sit on the hero's buttons. It now appears with
+   the sticky trial bar (MobileCtaBar) and sits above it. */
+@media (max-width: 767px) {
+  html[data-mcta="off"] .mkt-chat-launcher { opacity: 0; pointer-events: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   .shine-btn::after, .word-rise { animation: none !important; }
   .word-rise { opacity: 1; }
@@ -745,3 +752,315 @@ html[data-public-theme="dark"] { --brand-text: #ff6b00; }
    orange #cc4b00 (4.6:1) and green #0f7f72 (4.9:1). Icons, accents, numbers
    and gradient headings keep #ff6b00. */
 :root { --brand-btn: #cc4b00; --brand-btn-hover: #b34200; --wa-btn: #0f7f72; --wa-btn-hover: #0b6b60; }
+
+/* ══ Shared marketing theme (24 Oct 2026) ══════════════════════════════════
+   Used by components/site/* and every marketing page built on them. One
+   padding rhythm, one container, and cards that always contrast with the
+   section they sit on: soft-tinted cards on white sections, white cards on
+   tinted sections, lighter cards on dark bands, each with a border and a
+   shadow so nothing bleeds into the background. Headings use Manrope
+   (.font-display), body text stays Inter.
+   Dark theme is layered, not flat: page, tinted bands, cards and the dark
+   AI band each sit on their own surface, separated by hairlines and lit by
+   a soft brand glow, so sections never merge into one black page. */
+:root {
+  --site-bg: #ffffff;
+  --site-tint: #f7f3ee;
+  --site-ink: #0f1222;
+  --site-text: #474d5c;
+  --site-muted: #6b7180;
+  --site-line: rgba(15, 18, 34, 0.09);
+  --site-line-strong: rgba(15, 18, 34, 0.16);
+  --site-card: #ffffff;
+  --site-card-soft: #faf7f3;
+  --site-chip: #f3eee8;
+  --site-stage: #f1ebe4;
+  --site-dark: #0d0e15;
+  --site-dark-card: #181a25;
+  --site-brand: #ff6b00;
+  --site-brand-ink: #c2410c;
+  --site-grid: rgba(15, 18, 34, 0.055);
+  --site-card-shine: linear-gradient(transparent, transparent);
+  --site-shadow-sm: 0 1px 2px rgba(15, 18, 34, 0.05), 0 6px 16px -6px rgba(15, 18, 34, 0.08);
+  --site-shadow: 0 1px 2px rgba(15, 18, 34, 0.05), 0 18px 40px -16px rgba(15, 18, 34, 0.2);
+  --site-shadow-lg: 0 2px 6px rgba(15, 18, 34, 0.05), 0 36px 80px -28px rgba(15, 18, 34, 0.35);
+  --site-radius: 20px;
+  --site-radius-lg: 28px;
+}
+html[data-public-theme="dark"] {
+  --site-bg: #0a0b10;
+  --site-tint: #10121a;
+  --site-ink: #f5f6f9;
+  --site-text: rgba(245, 246, 249, 0.72);
+  --site-muted: rgba(245, 246, 249, 0.52);
+  --site-line: rgba(255, 255, 255, 0.08);
+  --site-line-strong: rgba(255, 255, 255, 0.16);
+  --site-card: #171923;
+  --site-card-soft: #13151e;
+  --site-chip: rgba(255, 255, 255, 0.06);
+  --site-stage: #0c0d12;
+  --site-dark: #140e0a;
+  --site-dark-card: #1f1a16;
+  --site-brand-ink: #ff8a3d;
+  --site-grid: rgba(255, 255, 255, 0.045);
+  --site-card-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0) 42%);
+  --site-shadow-sm: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+  --site-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 22px 50px -20px rgba(0, 0, 0, 0.85);
+  --site-shadow-lg: 0 40px 90px -30px rgba(0, 0, 0, 0.9);
+}
+
+.site { color: var(--site-text); background: var(--site-bg); }
+.site-container { width: 100%; max-width: 1240px; margin-inline: auto; padding-inline: 1rem; }
+@media (min-width: 640px) { .site-container { padding-inline: 1.5rem; } }
+@media (min-width: 1024px) { .site-container { padding-inline: 2rem; } }
+
+.site-section { position: relative; padding-block: clamp(3.75rem, 7vw, 6.25rem); color: var(--site-text); }
+.site-section--white { background: var(--site-bg); --card-bg: var(--site-card-soft); }
+.site-section--tint  { background: var(--site-tint); --card-bg: var(--site-card); }
+/* Hairlines between bands in dark mode, where colour alone is too subtle. */
+html[data-public-theme="dark"] .site-section--tint,
+html[data-public-theme="dark"] .site-section.site-section--dark { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(255, 255, 255, 0.06); }
+/* Dark bands stay dark in both themes and carry their full token set, so any
+   component placed inside reads correctly (cards, chips, rows, buttons). */
+.site-section--dark {
+  background: var(--site-dark);
+  --site-bg: #10121a;
+  --site-tint: rgba(255, 255, 255, 0.05);
+  --site-chip: rgba(255, 255, 255, 0.07);
+  --site-stage: rgba(0, 0, 0, 0.28);
+  --site-card: #1b1d29;
+  --site-card-soft: #161823;
+  --card-bg: var(--site-dark-card);
+  --site-ink: #ffffff;
+  --site-text: rgba(255, 255, 255, 0.74);
+  --site-muted: rgba(255, 255, 255, 0.55);
+  --site-line: rgba(255, 255, 255, 0.1);
+  --site-line-strong: rgba(255, 255, 255, 0.2);
+  --site-brand-ink: #ff8a3d;
+  --site-grid: rgba(255, 255, 255, 0.05);
+  --site-card-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 42%);
+  --site-shadow-sm: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --site-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 18px 40px -18px rgba(0, 0, 0, 0.8);
+  color: var(--site-text);
+}
+
+/* Decorative backdrops: a fine grid that fades out towards the edges. */
+.site-grid-bg {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(var(--site-grid) 1px, transparent 1px), linear-gradient(90deg, var(--site-grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 35%, #000 30%, transparent 78%);
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 35%, #000 30%, transparent 78%);
+}
+
+.site-card {
+  background: var(--site-card-shine), var(--card-bg, var(--site-card));
+  border: 1px solid var(--site-line);
+  border-radius: var(--site-radius);
+  box-shadow: var(--site-shadow-sm);
+}
+.site-card--raised { box-shadow: var(--site-shadow); }
+.site-card--hover { transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease; }
+.site-card--hover:hover { transform: translateY(-3px); box-shadow: var(--site-shadow); border-color: var(--site-line-strong); }
+/* The stage a feature card's illustration sits on: page colour + dot grid. */
+.site-stage {
+  position: relative; overflow: hidden; border-radius: 16px;
+  background: var(--site-stage); border: 1px solid var(--site-line);
+}
+.site-stage::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(var(--site-grid) 1.2px, transparent 1.2px); background-size: 14px 14px;
+}
+.site-stage > * { position: relative; }
+
+.site-eyebrow { font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--site-brand-ink); }
+.site-ink { color: var(--site-ink); }
+.site-muted { color: var(--site-muted); }
+.site-chip { background: var(--site-chip); color: var(--site-text); box-shadow: inset 0 0 0 1px var(--site-line); }
+/* Second half of a two-tone heading: the brand gradient (owner, 24 Oct 2026: no grey). */
+.site-dim {
+  background-image: linear-gradient(90deg, #ff6b00 0%, #ffaa00 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  padding-bottom: 0.06em;
+}
+.site-link { font-weight: 600; color: var(--site-brand-ink); display: inline-flex; align-items: center; gap: 0.25rem; }
+.site-link:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+.site-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  min-height: 3rem; padding: 0 1.5rem; border-radius: 0.875rem;
+  font-weight: 600; font-size: 0.9375rem; line-height: 1; white-space: nowrap;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.site-btn:focus-visible { outline: 2px solid var(--site-brand); outline-offset: 3px; }
+.site-btn--primary { background: var(--brand-btn); color: #fff; box-shadow: 0 10px 24px -10px rgba(204, 75, 0, 0.6); }
+.site-btn--primary:hover { background: var(--brand-btn-hover); transform: translateY(-1px); }
+.site-btn--secondary { background: var(--site-card); color: var(--site-ink); border: 1px solid var(--site-line-strong); }
+.site-btn--secondary:hover { border-color: var(--site-brand); transform: translateY(-1px); }
+.site-section--dark .site-btn--secondary { background: rgba(255, 255, 255, 0.06); color: #fff; }
+/* For use on the orange CTA panel. */
+.site-btn--light { background: #fff; color: #0f1222; }
+.site-btn--light:hover { transform: translateY(-1px); box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.45); }
+.site-btn--ghost-light { background: rgba(255, 255, 255, 0.12); color: #fff; border: 1px solid rgba(255, 255, 255, 0.4); }
+.site-btn--ghost-light:hover { background: rgba(255, 255, 255, 0.2); transform: translateY(-1px); }
+.site-btn--whatsapp { background: var(--wa-btn); color: #fff; }
+.site-btn--whatsapp:hover { background: var(--wa-btn-hover); transform: translateY(-1px); }
+.site-btn--lg { min-height: 3.5rem; padding: 0 1.75rem; font-size: 1rem; border-radius: 1rem; }
+@keyframes site-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.8); } }
+.site-pulse { animation: site-pulse 1.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .site-card--hover, .site-btn { transition: none; }
+  .site-card--hover:hover, .site-btn:hover { transform: none; }
+  .site-pulse { animation: none; }
+}
+
+/* Bento cards with a cursor-following glow (vistrowvoice-style). The card
+   sets --mx/--my on pointer move (components/site/Site.jsx, Card `glow`);
+   a soft fill and a lit border follow the cursor, and the card lifts. */
+.site-glow { position: relative; isolation: isolate; transition: transform 0.35s cubic-bezier(.2,.7,.2,1), box-shadow 0.35s ease, border-color 0.35s ease; }
+.site-glow::before, .site-glow::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity 0.35s ease; }
+.site-glow::before { z-index: -1; background: radial-gradient(480px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 107, 0, 0.09), transparent 45%); }
+.site-glow::after {
+  z-index: 2; padding: 1px;
+  background: radial-gradient(300px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 122, 26, 0.7), transparent 55%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+}
+@media (hover: hover) {
+  .site-glow:hover { transform: translateY(-4px); box-shadow: var(--site-shadow), 0 26px 50px -30px rgba(255, 107, 0, 0.35); }
+  .site-glow:hover::before, .site-glow:hover::after { opacity: 1; }
+}
+/* An always-on soft accent for the one featured card in a bento grid. */
+.site-feature-glow { box-shadow: var(--site-shadow), 0 0 0 1px rgba(255, 122, 26, 0.25), 0 30px 70px -40px rgba(255, 107, 0, 0.55); }
+
+/* Closing call-to-action panel: warm and light, not a solid orange slab. */
+.site-cta-panel {
+  background: radial-gradient(70% 120% at 0% 0%, rgba(255, 107, 0, 0.10), transparent 60%), linear-gradient(135deg, #fffaf6 0%, #fff0e4 100%);
+  border: 1px solid rgba(255, 107, 0, 0.18);
+  box-shadow: 0 40px 80px -50px rgba(194, 65, 12, 0.45);
+}
+html[data-public-theme="dark"] .site-cta-panel {
+  background: radial-gradient(70% 120% at 0% 0%, rgba(255, 107, 0, 0.16), transparent 60%), linear-gradient(135deg, #17110d 0%, #1e150f 100%);
+  border-color: rgba(255, 138, 61, 0.18);
+  box-shadow: 0 40px 80px -50px rgba(0, 0, 0, 0.9);
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-glow { transition: none; }
+  .site-glow:hover { transform: none; }
+}
+
+/* The app shell pads every <main> by the header height; the marketing theme
+   lets each hero set its own top spacing instead of stacking the two. */
+.site main { padding-top: 0 !important; }
+/* Phones: the decorative grid masks and hover glows cost GPU memory and made
+   Android Chrome paint blank tiles while scrolling back up, so drop them. */
+@media (max-width: 767px) {
+  .site-grid-bg { display: none; }
+  .site-glow::before, .site-glow::after { display: none; }
+}
+/* The chat launcher would cover the mobile menu's links while it is open. */
+.menu-open .mkt-chat-launcher, .menu-open .wa-widget { display: none; }
+/* Phones and tablets use the floating Card Nav, which has its own surface:
+   the full-width bar background only applies on desktop. */
+@media (max-width: 1279px) {
+  .public-nav { background: transparent !important; box-shadow: none !important; pointer-events: none; }
+  .public-nav .card-nav { pointer-events: auto; }
+}
+/* Brand gradient text (orange to amber), the same as the live site's headline accent. */
+.site-gradient-text {
+  background-image: linear-gradient(90deg, #ff6b00 0%, #ffaa00 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  padding-bottom: 0.08em; /* keeps descenders inside the painted area */
+}
+
+/* Hero = exactly the first screen on tablet and desktop: content centred,
+   the fixed header's height reserved at the top. Taller content still grows. */
+@media (min-width: 640px) {
+  .site-hero { min-height: 100svh; display: flex; flex-direction: column; justify-content: center; }
+}
+@media (min-width: 1024px) {
+  /* Photo width follows screen height (6:7 photo), so the hero never overflows a short laptop screen. */
+  .hero-visual { max-width: min(460px, calc((100svh - 190px) * 0.857)) !important; }
+}
+@media (min-width: 1700px) and (min-height: 900px) {
+  .hero-visual { max-width: min(540px, calc((100svh - 190px) * 0.857)) !important; }
+}
+@media (min-width: 1024px) and (max-height: 700px), (min-width: 1024px) and (max-width: 1279px) and (max-height: 820px) {
+  .hero-facts { display: none !important; }
+}
+
+/* AI band phone (HeroChat): sized from the screen height on desktop so the
+   whole band fits one screen; fixed comfortable size on phones and tablets. */
+.ai-band { --hc-h: 460px; --hc-w: 280px; }
+@media (min-width: 1024px) {
+  /* Natural iPhone proportions (318 x 600 screen); shrinks a little on short screens. */
+  .ai-band { --hc-h: clamp(520px, calc(100svh - 200px), 600px); --hc-w: calc(var(--hc-h) * 0.53); }
+}
+@media (max-width: 1023px) { .hide-chat-mobile .mkt-chat-launcher, .hide-chat-mobile .wa-widget { display: none; } }
+
+/* ── Hero: warm glass stage (26 Oct 2026) ─────────────────────────────────
+   Three layers, no libraries: warm light blobs behind the photo side, a
+   frosted glass panel the photo stands on, and
+   solid floating cards on top so their text stays crisp. The blobs drift very
+   slowly; phones get the colour without blur or motion (blur on phones caused
+   blank repaints on Android). */
+.hero-warm { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.hero-warm::before, .hero-warm::after {
+  content: ""; position: absolute; border-radius: 50%; filter: blur(60px); will-change: transform;
+}
+.hero-warm::before {
+  width: 46vw; height: 46vw; max-width: 720px; max-height: 720px; right: -6vw; top: -8vw;
+  background: radial-gradient(closest-side, rgba(255,122,26,0.42), rgba(255,122,26,0) 100%);
+  animation: hero-drift-a 26s ease-in-out infinite alternate;
+}
+.hero-warm::after {
+  width: 34vw; height: 34vw; max-width: 540px; max-height: 540px; right: 12vw; bottom: -10vw;
+  background: radial-gradient(closest-side, rgba(255,176,0,0.34), rgba(255,176,0,0) 100%);
+  animation: hero-drift-b 32s ease-in-out infinite alternate;
+}
+html[data-public-theme="dark"] .hero-warm::before { background: radial-gradient(closest-side, rgba(255,107,0,0.38), rgba(255,107,0,0) 100%); }
+html[data-public-theme="dark"] .hero-warm::after  { background: radial-gradient(closest-side, rgba(255,150,0,0.26), rgba(255,150,0,0) 100%); }
+@keyframes hero-drift-a { to { transform: translate(-4vw, 3vw) scale(1.08); } }
+@keyframes hero-drift-b { to { transform: translate(3vw, -3vw) scale(0.94); } }
+
+.hero-glass {
+  position: absolute; inset: -28px -32px; border-radius: 40px; pointer-events: none;
+  background: linear-gradient(145deg, rgba(255,255,255,0.62), rgba(255,255,255,0.28));
+  border: 1px solid rgba(255,255,255,0.75);
+  box-shadow: 0 30px 80px -30px rgba(194,65,12,0.35), inset 0 1px 0 rgba(255,255,255,0.9);
+  backdrop-filter: blur(22px) saturate(1.5); -webkit-backdrop-filter: blur(22px) saturate(1.5);
+}
+html[data-public-theme="dark"] .hero-glass {
+  background: linear-gradient(145deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
+  border-color: rgba(255,255,255,0.14);
+  box-shadow: 0 30px 80px -30px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+@media (max-width: 767px) {
+  .hero-warm::before, .hero-warm::after { animation: none; filter: none; }
+  .hero-warm::before { width: 120vw; height: 120vw; right: -50vw; top: 30%; }
+  .hero-warm::after { display: none; }
+  .hero-glass { inset: -14px -8px; border-radius: 34px; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+@media (prefers-reduced-motion: reduce) { .hero-warm::before, .hero-warm::after { animation: none; } }
+
+/* Trust card: the AI agent row gets a slowly travelling orange/green gradient
+   border and a soft pulse so it stands out from the static rows. */
+.ai-live-row { position: relative; isolation: isolate; border-color: transparent !important; }
+.ai-live-row::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; z-index: -1;
+  background: linear-gradient(90deg, #ff6b00, #ffaa00, #25d366, #ff6b00); background-size: 300% 100%;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+  animation: ai-border 4s linear infinite;
+}
+.ai-live-row::after {
+  content: ""; position: absolute; inset: -6px; border-radius: 16px; z-index: -2; pointer-events: none;
+  background: radial-gradient(60% 120% at 50% 50%, rgba(255,122,26,0.35), transparent 70%);
+  animation: ai-pulse 2.6s ease-in-out infinite;
+}
+@keyframes ai-border { to { background-position: 300% 0; } }
+@keyframes ai-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.9; } }
+@media (prefers-reduced-motion: reduce) { .ai-live-row::before, .ai-live-row::after { animation: none; } }

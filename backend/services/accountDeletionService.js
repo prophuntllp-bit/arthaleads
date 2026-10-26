@@ -77,6 +77,8 @@ const DISPOSITION = {
   Payment:        { scalar: [["createdBy", null]] },
   Developer:      { scalar: [["createdBy", null]] },
   BlogPost:       { scalar: [["author", null]] },
+  // A website demo request is about the prospect; only the admin who handled it is unlinked.
+  DemoRequest:    { scalar: [["handledBy", null]] },
   // Kept and unlinked rather than dropped. A report is a signal about the
   // model's output, not a record about the person who raised it, and deleting
   // it would throw away the moderation history Play expects us to act on.

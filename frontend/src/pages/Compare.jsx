@@ -41,7 +41,7 @@ const CATEGORIES = [
       ["WhatsApp Business API integration",  ["y", "y", "y", "y"]],
       ["Website form capture",               ["y", "y", "y", "y"]],
       ["Free WordPress plugin",              ["y", "u", "u", "u"]],
-      ["Google Ads lead capture",            ["y", "y", "y", "y"]],
+      ["Google Ads lead capture",            ["e", "y", "y", "y"]],   // Arthaleads: Enterprise plan only
       ["Automatic lead assignment",          ["y", "y", "y", "p"]],   // Kylas: round-robin via a workflow webhook
       ["REST API & webhooks",                ["y", "y", "y", "y"]],
     ],
@@ -119,7 +119,7 @@ const GUIDE_FAQS = [
   ["How much does a real estate CRM cost in India?",
    `Published prices on the websites we checked on ${CHECKED} range from ${inr(PLAN_PRICING.starter.monthly)} per user per month (Arthaleads Starter) to ₹2,299 per user per month (Leadrat at 10 users, billed annually). Kylas charges a flat ${inr(KYLAS_FLAT)} a month for unlimited users, and Sell.Do quotes per team. Check whether GST is included and whether billing is monthly or yearly.`],
   ["What should a real estate CRM include?",
-   "Automatic capture from Facebook and Instagram lead ads, WhatsApp and your website, with the source on every lead; instant assignment and alerts; follow-up reminders; project-wise pipelines if you sell more than one project; and reports on response time, site visits and bookings by source and person."],
+   "Automatic capture from Facebook, Instagram and Google lead ads, WhatsApp and your website, with the source on every lead; instant assignment and alerts; follow-up reminders; project-wise pipelines if you sell more than one project; and reports on response time, site visits and bookings by source and person."],
   ["Can I try a real estate CRM before paying?",
    "Arthaleads has a 14-day free trial of the Growth plan with no credit card. Kylas has a free plan and a 7-day trial of Elevate. Sell.Do and Leadrat start with a demo, according to their websites."],
 ];
@@ -133,6 +133,7 @@ const GUIDE_JSONLD = JSON.stringify({
 
 function Cell({ val }) {
   if (val === "y") return <span><Check aria-hidden="true" className="w-4 h-4 mx-auto" style={{ color: "#22c55e" }} /><span className="sr-only">Yes</span></span>;
+  if (val === "e") return <span className="text-xs font-medium" style={{ color: "#15803d" }}>Enterprise</span>;
   if (val === "p") return <span className="text-xs font-medium" style={{ color: "#b45309" }}>Partial</span>;
   if (val === "u") return <span className="text-sm" style={{ color: "#6b7280" }} title="Not stated on their website"><span aria-hidden="true">–</span><span className="sr-only">Not stated</span></span>;
   return <span><X aria-hidden="true" className="w-4 h-4 mx-auto" style={{ color: "#ef4444" }} /><span className="sr-only">No</span></span>;

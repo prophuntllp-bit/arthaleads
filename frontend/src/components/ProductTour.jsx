@@ -17,13 +17,15 @@ import {
   LayoutDashboard, MessageCircle, UserRound, KanbanSquare, Building2, BarChart3, Receipt,
 } from "lucide-react";
 
+// WhatsApp opens the tour: it is what the hero headline promises, and the
+// dashboard is too dense to read at phone width.
 const STEPS = [
-  { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", path: "dashboard",
-    title: "Your whole business on one screen",
-    desc: "New leads, follow-ups due today, hot leads to call first and how each source is performing, the moment you log in." },
   { id: "inbox", icon: MessageCircle, label: "WhatsApp", path: "conversations",
     title: "Every WhatsApp chat, answered",
     desc: "The AI agent replies day and night, asks the right questions, sends photos, the brochure and location, and books the site visit. Your team steps in any time." },
+  { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", path: "dashboard",
+    title: "Your whole business on one screen",
+    desc: "New leads, follow-ups due today, hot leads to call first and how each source is performing, the moment you log in." },
   { id: "lead", icon: UserRound, label: "Lead record", path: "leads",
     title: "Every answer lands in the lead",
     desc: "Budget, configuration, location and timeline fill themselves in from the ad form and the chat. No retyping, nothing lost." },
@@ -152,7 +154,7 @@ function TourScreen({ step, isDark, playClip, loop, inView, onEnded, onFail }) {
         {/* The still sits underneath the clip, so there is never a blank frame. */}
         <img src={step.image} alt={`${step.label}: ${step.title}`}
           className="absolute inset-0 w-full h-full object-cover object-top" decoding="async"
-          {...(step.id === "dashboard" ? { fetchpriority: "high" } : {})} />
+          {...(step.id === STEPS[0].id ? { fetchpriority: "high" } : {})} />
         {playClip && (
           <video key={step.id} ref={videoRef}
             className="tour-anim absolute inset-0 w-full h-full object-cover object-top"
@@ -181,8 +183,9 @@ export function HeroTour({ isDark }) {
   return (
     <div ref={rootRef}>
       <style>{TOUR_CSS}</style>
+      {/* Auto margins centre the tabs only when they fit; justify-center cut off the first tab when the row overflowed. */}
       <div role="tablist" aria-label="Product screens"
-        className="flex sm:justify-center gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 mb-5 sm:mb-6"
+        className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 mb-5 sm:mb-6 [&>*:first-child]:ml-auto [&>*:last-child]:mr-auto"
         style={{ scrollbarWidth: "none" }}>
         {STEPS.map((s, i) => {
           const on = i === active;

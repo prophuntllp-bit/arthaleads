@@ -10,15 +10,15 @@
 // History: first built 12 Oct 2026 (f8793a8) and removed the same evening at the
 // owner's request (751dce3); restored 16 Oct 2026 with the owner's approval,
 // kept out of the nav and footer, without the eyebrow pill.
+import { Link } from "react-router-dom";
 import { useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CalendarCheck2 } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import IntroVideo from "../components/IntroVideo";
-import WhatsAppLogo from "../components/WhatsAppLogo";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
-import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import { CHAPTERS, TRANSCRIPT, fmtTime } from "../data/introFilm";
 
 export default function ProductTour() {
@@ -113,12 +113,12 @@ export default function ProductTour() {
               Start free trial
               <ArrowRight className="w-4 h-4" />
             </a>
-            <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
+            <Link to="/book-demo"
               className="inline-flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5"
               style={{ borderColor: cardBorder, color: text, background: cardBg }}>
-              <WhatsAppLogo className="w-[18px] h-[18px]" />
-              Book a demo on WhatsApp
-            </a>
+              <CalendarCheck2 className="w-[18px] h-[18px]" aria-hidden="true" />
+              Book a demo
+            </Link>
           </div>
         </div>
       </section>

@@ -7,12 +7,12 @@
 // and carry its source link; never write that they lack something we could not
 // confirm on their site. Re-check the facts and `checked` before editing.
 import { Link } from "react-router-dom";
-import { ArrowRight, Check, ChevronRight, Receipt, FileText } from "lucide-react";
+import { ArrowRight, Check, ChevronRight, Receipt, FileText, CalendarCheck2 } from "lucide-react";
 import PublicNav from "./PublicNav";
 import PublicFooter from "./PublicFooter";
-import WhatsAppLogo, { waButtonClass } from "./WhatsAppLogo";
+import { waButtonClass } from "./WhatsAppLogo";
 import { usePublicTheme } from "../context/PublicThemeContext";
-import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import { PLAN_PRICING } from "../utils/plan";
 import { Reveal, Spotlight, Magnetic, CountUp } from "./motion/Motion";
 
@@ -382,10 +382,9 @@ export default function CompetitorComparison({ c }) {
                 Start free trial <ArrowRight className="w-4 h-4" />
               </a>
             </Magnetic>
-            <a href={waLink(WA_MESSAGES.demo)} target="_blank" rel="noopener noreferrer"
-              className={waButtonClass(isDark)}>
-              <WhatsAppLogo className="w-[18px] h-[18px]" /> Book a demo on WhatsApp
-            </a>
+            <Link to="/book-demo" className={waButtonClass(isDark)}>
+              <CalendarCheck2 className="w-[18px] h-[18px]" aria-hidden="true" /> Book a demo
+            </Link>
           </div>
         </Reveal>
       </section>

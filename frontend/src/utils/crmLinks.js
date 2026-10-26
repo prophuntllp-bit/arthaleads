@@ -29,6 +29,14 @@ export const SOCIAL_LINKS = {
   instagram: "https://www.instagram.com/arthaleads.crm/",
   linkedin:  "https://www.linkedin.com/company/arthaleads/",
   facebook:  "https://www.facebook.com/profile.php?id=61589532765469",
+  youtube:   "https://www.youtube.com/@Arthaleads",
+};
+
+// The 2-minute film on YouTube, per language (IntroVideo's "Watch on YouTube").
+// Views there are what lets YouTube start recommending the channel.
+export const YOUTUBE_FILM = {
+  en: "https://www.youtube.com/watch?v=htXLDOPHzac",
+  hi: "https://www.youtube.com/watch?v=bAkgsfgfPKw",
 };
 
 /**

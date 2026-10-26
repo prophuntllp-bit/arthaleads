@@ -7,7 +7,7 @@ export const QUICK_ANSWERS = [
   {
     id: "add-lead",
     q: "How do I add a new lead?",
-    a: "Go to the Leads page and click the '+ Add Lead' button at the top right. You can also import leads in bulk from a CSV, or connect Facebook so they arrive automatically.",
+    a: "Go to the Leads page and click the '+ Add Lead' button at the top right. You can also import leads in bulk from a CSV, or connect Facebook (or Google Ads lead forms on Enterprise) so they arrive automatically.",
     goto: "/leads",
     tour: "addLead",
   },

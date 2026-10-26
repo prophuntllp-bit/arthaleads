@@ -381,6 +381,7 @@ app.use("/api/invoices",    require("./routes/invoiceRoutes"));
 // matched first and never hits `protect`.
 app.use("/api/billing",     require("./routes/billingRoutes"));
 app.use("/api/contact",    contactLimiter, require("./routes/contactRoutes"));
+app.post("/api/demo-requests", contactLimiter, require("./controllers/demoRequestController").submitDemoRequest);
 app.use("/api/careers",    contactLimiter, require("./routes/careersRoutes"));
 app.use("/api/media",      require("./routes/mediaRoutes"));
 // Reads under /api/public (the options list every page loads at startup, form

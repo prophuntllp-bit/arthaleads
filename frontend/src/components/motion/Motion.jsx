@@ -42,8 +42,10 @@ export function useInView(ref) {
 }
 
 /**
- * Fades and lifts its children in when they scroll into view.
- * `delay` (ms) staggers siblings; `y` is the travel distance in px.
+ * Lifts its children into place when they scroll into view.
+ * Content is never hidden: no fade from 0 and no blur, so a fast scroll, a jump
+ * link or a screenshot never shows an empty block. `delay` (ms) staggers
+ * siblings; `y` is the travel distance in px (capped at 12).
  */
 export function Reveal({ as: Tag = "div", delay = 0, y = 24, className = "", style, children, ...rest }) {
   const ref = useRef(null);
@@ -55,13 +57,9 @@ export function Reveal({ as: Tag = "div", delay = 0, y = 24, className = "", sty
     <Tag ref={ref} className={className} {...rest}
       style={{
         ...style,
-        opacity: hidden ? 0 : 1,
-        transform: hidden ? `translate3d(0, ${y}px, 0) scale(0.985)` : "none",
-        filter: hidden ? "blur(6px)" : "none",
-        transition: armed
-          ? `opacity 700ms cubic-bezier(.2,.7,.2,1) ${delay}ms, transform 800ms cubic-bezier(.2,.7,.2,1) ${delay}ms, filter 700ms ease ${delay}ms`
-          : undefined,
-        willChange: hidden ? "opacity, transform" : undefined,
+        transform: hidden ? `translate3d(0, ${Math.min(y, 12)}px, 0)` : "none",
+        transition: armed ? `transform 600ms cubic-bezier(.2,.7,.2,1) ${Math.min(delay, 240)}ms` : undefined,
+        willChange: hidden ? "transform" : undefined,
       }}>
       {children}
     </Tag>

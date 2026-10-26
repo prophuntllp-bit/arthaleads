@@ -9,7 +9,7 @@ function getResend() {
 
 const { layout, panel, row, paragraph, esc, nl2br, HEADING, MUTED } = require("../utils/emailLayout");
 const FROM_ADDRESS = process.env.SMTP_FROM || "Arthaleads <onboarding@resend.dev>";
-const CONTACT_EMAIL = "prophuntllp@gmail.com";
+const CONTACT_EMAIL = "contact@arthaleads.com";
 const YEAR = new Date().getFullYear();
 
 // Strip HTML tags and dangerous chars from user input
