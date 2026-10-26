@@ -120,7 +120,7 @@ export default function MetaConversionsSection() {
           <span className="text-xs font-semibold text-app-soft">{d.enabled ? "On" : "Off"}</span>
           <input type="checkbox" className="sr-only peer" checked={d.enabled} disabled={saving || !configured}
             onChange={(e) => save({ enabled: e.target.checked })} />
-          <span className="w-10 h-6 rounded-full relative transition peer-checked:bg-[var(--app-primary)] peer-disabled:opacity-40" style={{ background: "var(--app-border)" }}>
+          <span className="w-10 h-6 rounded-full relative transition peer-disabled:opacity-40" style={{ background: d.enabled ? "#16a34a" : "var(--app-border)" }}>
             <span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform" style={{ transform: d.enabled ? "translateX(16px)" : "none" }} />
           </span>
         </label>

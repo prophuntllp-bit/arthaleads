@@ -1064,3 +1064,7 @@ html[data-public-theme="dark"] .hero-glass {
 @keyframes ai-border { to { background-position: 300% 0; } }
 @keyframes ai-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.9; } }
 @media (prefers-reduced-motion: reduce) { .ai-live-row::before, .ai-live-row::after { animation: none; } }
+
+/* Call charts: answered / missed (validated pair, see pages/Calls.jsx). */
+:root { --viz-answered: #1baf7a; --viz-missed: #d03b3b; }
+:root.dark { --viz-answered: #199e70; --viz-missed: #d03b3b; }

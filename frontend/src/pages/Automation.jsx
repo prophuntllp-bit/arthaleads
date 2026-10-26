@@ -1834,7 +1834,6 @@ export default function Automation() {
             </div>
             <h3 className="mt-3 text-sm font-semibold text-app">Facebook</h3>
             <p className="mt-1 text-xs text-app-soft">Lead Ads · One click</p>
-            <span className="absolute top-3 right-3 rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-semibold text-blue-400">Popular</span>
           </button>
 
           {/* WhatsApp Business tile - connects your own number for the Inbox/AI
@@ -1852,11 +1851,6 @@ export default function Automation() {
             <p className="mt-1 text-xs text-app-soft">
               {waStatus?.connected ? "Connected · manage provider & profile" : "Connect your number for WhatsApp chats, templates & the AI agent"}
             </p>
-            {waStatus?.connected && (
-              <span className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-500">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Connected
-              </span>
-            )}
           </button>
 
           {Object.entries(PLATFORM_PRESETS)
