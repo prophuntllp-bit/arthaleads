@@ -999,3 +999,4 @@ html[data-public-theme="dark"] .site-cta-panel {
   /* Natural iPhone proportions (318 x 600 screen); shrinks a little on short screens. */
   .ai-band { --hc-h: clamp(520px, calc(100svh - 200px), 600px); --hc-w: calc(var(--hc-h) * 0.53); }
 }
+@media (max-width: 1023px) { .hide-chat-mobile .mkt-chat-launcher { display: none; } }

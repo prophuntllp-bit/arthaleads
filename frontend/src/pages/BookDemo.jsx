@@ -100,6 +100,16 @@ export default function BookDemo() {
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
   useEffect(() => setDays(nextDays()), []);
+  // The Ask Artha pill would sit on the form's Next button on phones (styles.css).
+  useEffect(() => {
+    document.documentElement.classList.add("hide-chat-mobile");
+    return () => document.documentElement.classList.remove("hide-chat-mobile");
+  }, []);
+  // A new step starts at the top of the form (on phones the button sits far below it).
+  const toForm = () => {
+    const el = document.getElementById("demo-form");
+    if (el && el.getBoundingClientRect().top < 0) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const set = (k) => (v) => setF((s) => ({ ...s, [k]: v?.target ? v.target.value : v }));
 
@@ -113,8 +123,8 @@ export default function BookDemo() {
     return "";
   }, [step, f]);
 
-  const next = () => { if (stepError) { setError(stepError); return; } setError(""); setStep((s) => s + 1); };
-  const back = () => { setError(""); setStep((s) => s - 1); };
+  const next = () => { if (stepError) { setError(stepError); return; } setError(""); setStep((s) => s + 1); setTimeout(toForm, 0); };
+  const back = () => { setError(""); setStep((s) => s - 1); setTimeout(toForm, 0); };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -129,7 +139,7 @@ export default function BookDemo() {
         body: JSON.stringify({ ...f, recaptchaToken, source: document.referrer ? new URL(document.referrer).pathname : "" }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success) { setDone(true); window.scrollTo({ top: 0, behavior: "smooth" }); }
+      if (res.ok && data.success) { setDone(true); setTimeout(toForm, 0); }
       else setError(data.message || "Something went wrong. Please try again.");
     } catch {
       setError("Network error. Please check your connection and try again.");
@@ -144,9 +154,10 @@ export default function BookDemo() {
         <div aria-hidden="true" className="site-grid-bg" />
         <div aria-hidden="true" className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(50% 45% at 85% 20%, rgba(255,107,0,0.10), transparent 70%)" }} />
-        <Container className="relative grid lg:grid-cols-[0.9fr_1.1fr] gap-10 lg:gap-14 items-start">
-          {/* Left: what the demo covers */}
-          <div className="lg:sticky lg:top-28">
+        {/* Desktop: heading + what the demo covers on the left, the form on the right.
+            Phones: heading, then the form, then what the demo covers (DOM order). */}
+        <Container className="relative grid lg:grid-cols-[0.9fr_1.1fr] lg:grid-rows-[auto_1fr] gap-x-14 gap-y-8 items-start">
+          <div className="lg:col-start-1 lg:row-start-1">
             <p className="site-eyebrow mb-4">Book a demo</p>
             <h1 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[32px] sm:text-[40px] lg:text-[44px]">
               See Arthaleads <span className="site-dim">on your own leads.</span>
@@ -154,7 +165,9 @@ export default function BookDemo() {
             <p className="mt-5 text-base sm:text-[17px] leading-relaxed max-w-lg">
               Tell us a little about your team and pick a time. Someone from our team in Pune will confirm on WhatsApp or phone.
             </p>
-            <ul className="mt-8 grid sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3">
+          </div>
+          <div className="lg:col-start-1 lg:row-start-2 order-last lg:order-none">
+            <ul className="grid sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3">
               {COVERS.map(({ Icon, title, body }) => (
                 <li key={title} className="site-card p-4 flex gap-3">
                   <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,107,0,0.10)" }}>
@@ -174,7 +187,7 @@ export default function BookDemo() {
           </div>
 
           {/* Right: the form */}
-          <Card raised className="p-5 sm:p-8" style={{ background: "var(--site-card)" }}>
+          <Card raised id="demo-form" className="p-5 sm:p-8 scroll-mt-24 lg:col-start-2 lg:row-start-1 lg:row-span-2" style={{ background: "var(--site-card)" }}>
             {done ? (
               <div className="py-6 text-center" role="status">
                 <span className="mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-5" style={{ background: "rgba(22,163,74,0.12)" }}>
