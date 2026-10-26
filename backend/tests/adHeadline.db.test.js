@@ -29,10 +29,14 @@ test("a Status click on an ad already known by name gets that name", async () =>
   const phone = nextPhone();
   await click(phone, "ad_web", "Status ad");
   const lead = await leadOf(phone);
-  assert.equal(lead.leadSourceLabel, "Facebook Ad · FREE Shapoorji Pallonji Webinar");
+  assert.equal(lead.leadSourceLabel, "Facebook Ad · FREE Shapoorji Pallonji Webinar (Status Ad)");
   assert.equal(lead.campaignRef.headline, "FREE Shapoorji Pallonji Webinar");
   assert.equal(lead.campaignRef.adId, "ad_web");
   assert.equal((await convOf(phone)).campaignRef.headline, "FREE Shapoorji Pallonji Webinar");
+  assert.equal(lead.campaignRef.viaStatus, undefined, "the marker is not stored");
+  const normal = nextPhone();
+  await click(normal, "ad_web", "FREE Shapoorji Pallonji Webinar");
+  assert.equal((await leadOf(normal)).leadSourceLabel, "Facebook Ad · FREE Shapoorji Pallonji Webinar", "a normal click has no (Status Ad)");
 });
 
 test("a Status click first stays 'Status ad', then is renamed when the real name arrives", async () => {
@@ -42,7 +46,7 @@ test("a Status click first stays 'Status ad', then is renamed when the real name
   await click(nextPhone(), "ad_new", "1 BHK from 45L");
   await new Promise((r) => setTimeout(r, 200)); // the rename runs in the background
   const lead = await leadOf(early);
-  assert.equal(lead.leadSourceLabel, "Facebook Ad · 1 BHK from 45L");
+  assert.equal(lead.leadSourceLabel, "Facebook Ad · 1 BHK from 45L (Status Ad)");
   assert.equal(lead.campaignRef.headline, "1 BHK from 45L");
   const c = await convOf(early);
   assert.equal(c.campaignRef.headline, "1 BHK from 45L");

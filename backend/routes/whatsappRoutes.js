@@ -434,12 +434,14 @@ function campaignRefFromReferral(referral) {
     sourceUrl: String(referral.source_url || "").trim(),
     ctwaClid:  String(referral.ctwa_clid || "").trim(),
   };
+  // Not stored (not in the schema); only for the lead's label below.
+  if (referral.viaStatus) ref.viaStatus = true;
   return (ref.adId || ref.ctwaClid) ? ref : null;
 }
 
 function campaignLabel(campaignRef) {
   if (!campaignRef) return "";
-  return `Facebook Ad · ${campaignRef.headline || campaignRef.adId || "Click to WhatsApp"}`;
+  return `Facebook Ad · ${campaignRef.headline || campaignRef.adId || "Click to WhatsApp"}${campaignRef.viaStatus ? " (Status Ad)" : ""}`;
 }
 
 // ── Lead auto-capture from WhatsApp (source: "WhatsApp") ─────────────────────
