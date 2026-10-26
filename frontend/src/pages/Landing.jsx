@@ -44,10 +44,9 @@ const GRAIN_COLORS_PANEL = ["#17110d", "#3a1a0c", "#9a3412", "#f97316", "#fed7aa
 function Hero() {
   return (
     <Section id="hero" tone="white" className="site-hero !pt-[5.5rem] sm:!pt-28 lg:!pt-[6.5rem] !pb-14 lg:!pb-10 overflow-x-clip">
-      {/* Calm on purpose: a fine grid and a soft static glow, so the headline and photo keep the attention. */}
-      <div aria-hidden="true" className="absolute inset-0 pointer-events-none"
-        style={{ background: "radial-gradient(55% 55% at 82% 35%, rgba(255,107,0,0.12), transparent 70%), radial-gradient(40% 40% at 0% 100%, rgba(255,170,0,0.06), transparent 70%)" }} />
-      <div aria-hidden="true" className="site-grid-bg" />
+      {/* Warm glass stage: soft orange/amber light on the photo side (styles.css .hero-warm);
+          the photo sits on a frosted glass panel (HeroVisual). The headline side stays clean. */}
+      <div aria-hidden="true" className="hero-warm" />
       <Container className="relative grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-center">
         <div className="text-center lg:text-left">
           <h1 className="font-display site-ink font-extrabold tracking-[-0.03em]">
