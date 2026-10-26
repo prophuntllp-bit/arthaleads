@@ -37,6 +37,10 @@ const navItems = [
   },
   { to: "/dashboard",   label: "Dashboard",    icon: LayoutDashboard, hint: "Today's numbers, follow-ups due and how each lead source is doing" },
   { to: "/leads",       label: "Leads",        icon: Users, hint: "Every lead from every source. Filter, assign, import and export" },
+  // Flat on purpose. The section navigates itself with in-page tabs — a
+  // sidebar flyout for five WhatsApp screens buried the ones that matter and
+  // put nav in two places at once. Third, after Leads, as in the Android app.
+  { to: "/conversations", label: "WhatsApp", icon: WhatsAppIcon, hint: "WhatsApp chats, templates, campaigns, credits and AI agents" },
   { to: "/pipeline",    label: "Pipeline",     icon: Kanban, hint: "Drag leads from New to Contacted, Site Visit and beyond" },
   { to: "/projects",    label: "Projects",     icon: FolderKanban, hint: "Your projects with their leads, photos, brochures and advisor" },
   { divider: true },
@@ -51,10 +55,6 @@ const navItems = [
   },
   { to: "/calls",       label: "Calls",        icon: Phone, hint: "Click-to-call history and call recordings" },
   { to: "/followups",   label: "Follow Ups",   icon: CalendarClock, hint: "Follow-ups that are overdue, due today and coming up" },
-  // Flat on purpose. The section navigates itself with in-page tabs — a
-  // sidebar flyout for five WhatsApp screens buried the ones that matter and
-  // put nav in two places at once.
-  { to: "/conversations", label: "WhatsApp", icon: WhatsAppIcon, hint: "WhatsApp chats, templates, campaigns, credits and AI agents" },
   {
     label: "Tasks", icon: ClipboardList, hint: "Tasks for you and your team",
     children: [

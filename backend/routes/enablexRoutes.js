@@ -1087,7 +1087,8 @@ router.get("/analytics", async (req, res, next) => {
       { $unwind: "$activities" },
       { $match: { "activities.type": "called", "activities.createdAt": { $gte: thirtyAgo }, ...ownCallsMatch(req.user) } },
       { $group: {
-        _id:      { y: { $year: "$activities.createdAt" }, m: { $month: "$activities.createdAt" }, d: { $dayOfMonth: "$activities.createdAt" } },
+        // Days in IST, not UTC: a call at 1 AM IST belongs to that day.
+        _id:      { y: { $year: { date: "$activities.createdAt", timezone: "Asia/Kolkata" } }, m: { $month: { date: "$activities.createdAt", timezone: "Asia/Kolkata" } }, d: { $dayOfMonth: { date: "$activities.createdAt", timezone: "Asia/Kolkata" } } },
         total:    { $sum: 1 },
         answered: { $sum: { $cond: [{ $eq: ["$activities.meta.status", "answered"] }, 1, 0] } },
         missed:   { $sum: { $cond: [{ $eq: ["$activities.meta.status", "missed"]   }, 1, 0] } },
