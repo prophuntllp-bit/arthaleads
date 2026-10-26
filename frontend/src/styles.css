@@ -1068,3 +1068,11 @@ html[data-public-theme="dark"] .hero-glass {
 /* Call charts: answered / missed (validated pair, see pages/Calls.jsx). */
 :root { --viz-answered: #1baf7a; --viz-missed: #d03b3b; }
 :root.dark { --viz-answered: #199e70; --viz-missed: #d03b3b; }
+
+/* Legal pages (components/LegalLayout.jsx): the page files colour <strong>
+   with the app's tokens; on the marketing theme they follow the site ink. */
+.legal-body strong { color: var(--site-ink) !important; }
+.legal-body em { color: var(--site-muted) !important; }
+.legal-body a { color: var(--site-brand-ink); text-decoration: underline; text-underline-offset: 3px; }
+.legal-toc { color: var(--site-muted); transition: color 0.2s, border-color 0.2s; }
+.legal-toc:hover { color: var(--site-ink); border-color: var(--site-brand); }
