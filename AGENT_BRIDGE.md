@@ -103,6 +103,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-26 IST: staging: React Bits GhostFibers added (components/site/reactbits, CSS in main.jsx, LiveBackground kind 'ghostfibers'); home hero uses it in dark mode only, Grainient stays in light. Not live yet.
 - [claude] 2026-10-26 IST (main 195346b6 + 559f3d39 from staging 9a98325c + 8c7279f4, owner said yes; main push waiting for the owner's permission): Status ad label. Meta sends headline "Status ad" for WhatsApp Status placements; utils/adHeadline.js withRealHeadline (top of handleInbound) takes the ad's real name from another lead/chat with the same ad id and the label reads "Facebook Ad · <ad name> (Status Ad)" (owner asked to keep the bracket; viaStatus marker is not stored). A click with the real name renames that ad's earlier "Status ad" leads (label only when still exactly "Facebook Ad · Status ad") and chats. scripts/fixStatusAdLabels.js --apply RUN on prod 26 Oct: 7 ads, 23 leads renamed, 0 left. tests/adHeadline.db.test.js (3) in npm test.
 - [claude] 2026-10-24 IST: staging: home AI band layout = text + cards left, HeroChat alone right at natural size (.ai-band vars). Not live yet.
 - [claude] 2026-10-24 IST: staging c63b6026: home AI band compacted to ~1 screen (HeroChat reads --hc-w/--hc-h; .ai-band in styles.css sizes the phone from screen height). Not live yet.
