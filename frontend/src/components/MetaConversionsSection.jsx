@@ -22,6 +22,7 @@ export default function MetaConversionsSection() {
   const [d, setD] = useState(null);
   const [form, setForm] = useState({ datasetId: "", accessToken: "", testEventCode: "" });
   const [events, setEvents] = useState([]);
+  const [chatQualified, setChatQualified] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testNote, setTestNote] = useState(null);
@@ -32,6 +33,7 @@ export default function MetaConversionsSection() {
       setD(r.data);
       setForm((f) => ({ ...f, datasetId: r.data.datasetId, testEventCode: r.data.testEventCode, accessToken: "" }));
       setEvents(r.data.events);
+      setChatQualified(r.data.whatsappQualified !== false);
     }).catch(() => {});
   }, []);
   useEffect(() => { if (allowed) load(); }, [allowed, load]);
@@ -52,7 +54,7 @@ export default function MetaConversionsSection() {
   const save = async (extra = {}) => {
     setSaving(true);
     try {
-      await api.put("/meta-conversions", { ...form, events, ...extra });
+      await api.put("/meta-conversions", { ...form, events, whatsappQualified: chatQualified, ...extra });
       toast.success("Saved.");
       load();
       return true;
@@ -142,7 +144,18 @@ export default function MetaConversionsSection() {
               </div>
             );
           })}
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3" style={{ borderTop: "1px solid var(--app-border)" }}>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input type="checkbox" checked={chatQualified} onChange={(ev) => setChatQualified(ev.target.checked)} />
+              <span className="text-sm text-app">WhatsApp ad lead asks for a <b>site visit</b> or an <b>advisor</b>, or <b>registers</b>, in the chat</span>
+            </label>
+            <span className="text-xs text-app-soft">send event <b className="text-app">QualifiedLead</b></span>
+          </div>
         </div>
+        <p className="text-xs text-app-soft mt-2">
+          For WhatsApp ad leads Meta accepts only its own event names, so Lead is sent as LeadSubmitted and Schedule as QualifiedLead.
+          A stage with no WhatsApp name (like Contacted) is sent for lead-form leads only. Each event goes once per lead.
+        </p>
         <p className="text-xs text-app-soft mt-2">
           {d.matchableLeads.toLocaleString("en-IN")} of your leads came from a Meta lead form or WhatsApp ad and can be matched.
           Website, manual and other leads are never sent.
