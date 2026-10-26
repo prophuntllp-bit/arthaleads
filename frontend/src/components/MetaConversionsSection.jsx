@@ -8,9 +8,18 @@ import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { canAccess } from "../utils/plan";
 import CustomSelect from "./CustomSelect";
-import { WhatsAppLogo, FacebookLogo } from "./site/BrandLogos";
+import WhatsAppLogo from "./WhatsAppLogo";
 
 const CHANNEL = { lead_ads: "Lead form", whatsapp_ctwa: "WhatsApp ad" };
+// The official Facebook glyph (same as components/site/BrandLogos.jsx, which is
+// website-only), for the Instant Lead Forms tab.
+function FacebookLogo({ className = "w-4 h-4" }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true" focusable="false">
+      <path fill="#1877F2" d="M22.676 0H1.324C.593 0 0 .593 0 1.324v21.352C0 23.408.593 24 1.324 24h11.494v-9.294H9.689v-3.621h3.129V8.41c0-3.099 1.894-4.785 4.659-4.785 1.325 0 2.464.097 2.796.141v3.24h-1.921c-1.5 0-1.792.721-1.792 1.771v2.311h3.584l-.465 3.63H16.56V24h6.115c.733 0 1.325-.592 1.325-1.324V1.324C24 .593 23.408 0 22.676 0" />
+    </svg>
+  );
+}
 const STATUS_TONE = {
   sent: { bg: "rgba(34,197,94,0.12)", fg: "#15803d", label: "Sent" },
   failed: { bg: "rgba(220,38,38,0.12)", fg: "#dc2626", label: "Failed" },
