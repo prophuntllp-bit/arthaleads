@@ -197,7 +197,7 @@ export default function MetaConversionsSection() {
             <div className="flex flex-wrap items-center gap-3 px-4 py-3" style={{ borderTop: "1px solid var(--app-border)" }}>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={chatQualified} onChange={(ev) => setChatQualified(ev.target.checked)} />
-                <span className="text-sm text-app">Lead asks for a <b>site visit</b> or an <b>advisor</b>, or <b>registers</b>, in the chat</span>
+                <span className="text-sm text-app">Lead answers <b>budget and timeline</b>, or asks for a <b>site visit</b> or an <b>advisor</b>, or <b>registers</b>, in the chat</span>
               </label>
               <span className="text-xs text-app-soft">send event <b className="text-app">QualifiedLead</b></span>
             </div>

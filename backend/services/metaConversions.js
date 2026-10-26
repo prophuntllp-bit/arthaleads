@@ -68,13 +68,23 @@ function eventNameFor(channel, eventName) {
   return WHATSAPP_EQUIVALENT[eventName] || null;
 }
 
-// The customer asked for a site visit or an advisor, or registered, in the
-// WhatsApp button flow. Far more of these happen than site visits, so Meta
-// can learn which ads bring serious buyers. WhatsApp ad leads only.
+// The customer showed buying intent in the WhatsApp button flow: answered both
+// the budget and the timeline question, or asked for a site visit or an
+// advisor, or registered. About 16 a week for Prophunt (26 Oct 2026) against ~0
+// site visits, so Meta can learn which ads bring serious buyers. WhatsApp ad
+// leads only.
 const CHAT_QUALIFIED_STAGE = "Qualified on WhatsApp";
 const CHAT_QUALIFIED_EVENT = "QualifiedLead";
 const QUALIFYING_CLOSINGS = ["site_visit", "handoff", "register"];
 const chatQualifiedOn = (org) => org?.metaCapi?.whatsappQualified !== false;
+const isChatQualified = (lead) => {
+  const e = lead?.engagement;
+  return Boolean(e && (QUALIFYING_CLOSINGS.includes(e.closing) || (e.flow?.budget && e.flow?.timeline)));
+};
+const CHAT_QUALIFIED_QUERY = { $or: [
+  { "engagement.closing": { $in: QUALIFYING_CLOSINGS } },
+  { "engagement.flow.budget": true, "engagement.flow.timeline": { $nin: ["", null] } },
+] };
 
 /** The stage list for one kind of lead: lead forms (default) or WhatsApp ads. */
 function eventsFor(org, channel = "lead_ads") {
@@ -205,11 +215,11 @@ async function track(leadOrId, status, at = new Date()) {
   }
 }
 
-/** The customer qualified themselves in the WhatsApp flow (see CHAT_QUALIFIED_STAGE). Never throws. */
+/** Reports the lead if it has qualified itself in the WhatsApp flow (see isChatQualified). Never throws. */
 async function trackChatQualified(leadOrId, at = new Date()) {
   try {
     const ctx = await contextFor(leadOrId);
-    if (!ctx || ctx.channel !== "whatsapp_ctwa" || !chatQualifiedOn(ctx.org)) return;
+    if (!ctx || ctx.channel !== "whatsapp_ctwa" || !chatQualifiedOn(ctx.org) || !isChatQualified(ctx.lead)) return;
     await queueAndSend(ctx, CHAT_QUALIFIED_STAGE, CHAT_QUALIFIED_EVENT, at);
   } catch (err) {
     logger.warn(`[meta-capi] chat qualified failed: ${err.message}`);
@@ -217,7 +227,7 @@ async function trackChatQualified(leadOrId, at = new Date()) {
 }
 
 async function contextFor(leadOrId) {
-  const lead = leadOrId?.orgId ? leadOrId : await Lead.findById(leadOrId).select("orgId phone email metaLeadId campaignRef createdAt").lean();
+  const lead = leadOrId?.orgId ? leadOrId : await Lead.findById(leadOrId).select("orgId phone email metaLeadId campaignRef createdAt engagement").lean();
   if (!lead) return null;
   const channel = channelOf(lead);
   if (!channel) return null;
@@ -277,8 +287,8 @@ async function sweep() {
 
     // Chat qualifications whose send was missed (the process stopped, say).
     if (chatQualifiedOn(org)) {
-      const qualified = await Lead.find({ orgId: org._id, "engagement.closing": { $in: QUALIFYING_CLOSINGS }, "engagement.at": { $gte: since }, "campaignRef.ctwaClid": { $nin: ["", null] } })
-        .select("orgId phone email metaLeadId campaignRef createdAt engagement.at").limit(300).lean();
+      const qualified = await Lead.find({ orgId: org._id, ...CHAT_QUALIFIED_QUERY, "engagement.at": { $gte: since }, "campaignRef.ctwaClid": { $nin: ["", null] } })
+        .select("orgId phone email metaLeadId campaignRef createdAt engagement").limit(300).lean();
       for (const l of qualified) await trackChatQualified(l, l.engagement.at);
     }
   }
@@ -301,4 +311,4 @@ async function sendTest(org) {
   return { received: out.events_received ?? 0, usedTestCode: true };
 }
 
-module.exports = { DEFAULT_EVENTS, DEFAULT_WHATSAPP_EVENTS, WHATSAPP_EVENT_NAMES, eventsFor, eventNameFor, isReady, whatsAppReady, leadFormReady, channelOf, track, trackChatQualified, QUALIFYING_CLOSINGS, CHAT_QUALIFIED_STAGE, sweep, sendTest, encryptField, decryptField };
+module.exports = { DEFAULT_EVENTS, DEFAULT_WHATSAPP_EVENTS, WHATSAPP_EVENT_NAMES, eventsFor, eventNameFor, isReady, whatsAppReady, leadFormReady, channelOf, track, trackChatQualified, isChatQualified, CHAT_QUALIFIED_QUERY, QUALIFYING_CLOSINGS, CHAT_QUALIFIED_STAGE, sweep, sendTest, encryptField, decryptField };

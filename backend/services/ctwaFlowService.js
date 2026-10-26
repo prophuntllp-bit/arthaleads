@@ -933,10 +933,12 @@ ${stepMsg.bodyText}`;
   async function noteEngagement(leadId, set) {
     if (!leadId) return;
     await Lead.updateOne({ _id: leadId }, { $set: { ...set, "engagement.at": new Date() } }).catch(() => {});
-    // Asked for a site visit or an advisor, or registered: tell Meta (if the
-    // company has Conversions API on) that this ad brought a serious buyer.
-    const capi = require("./metaConversions");
-    if (capi.QUALIFYING_CLOSINGS.includes(set["engagement.closing"])) capi.trackChatQualified(leadId);
+    // Answered budget and timeline, or asked for a site visit or an advisor, or
+    // registered: tell Meta (if the company has Conversions API on) that this
+    // ad brought a serious buyer. trackChatQualified checks the lead itself.
+    if (["engagement.closing", "engagement.flow.budget", "engagement.flow.timeline"].some((k) => set[k] !== undefined)) {
+      require("./metaConversions").trackChatQualified(leadId);
+    }
   }
   // "Not now" / "Later" / "No": an end button that turns the offer down.
   const DECLINE_RE = /\b(not now|later|no|nahi|nako|not interested|maybe later|skip)\b/i;

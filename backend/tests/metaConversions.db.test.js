@@ -33,7 +33,7 @@ axios.post = async (url) => {
   if (String(url).startsWith("https://graph.facebook.com/")) return { data: { messages: [{ id: `wamid.out.${++seq}` }] } };
   return { data: { choices: [{ message: { content: "Hello!" } }], usage: {} } };
 };
-const AD = "ad_flow_1";
+const AD = "ad_flow_1", AD_BT = "ad_flow_bt";
 const nextPhone = () => `9198444${String(10000 + ++seq).padStart(5, "0")}`;
 const settle = () => new Promise((r) => setTimeout(r, 150));
 
@@ -41,7 +41,8 @@ async function makeLead(extra) {
   const l = await Lead.create({ orgId: ORG, name: "Asha", phone: nextPhone(), source: "WhatsApp", status: "New", ...extra });
   return l.toObject();
 }
-const ctwa = () => makeLead({ campaignRef: { adId: "ad1", headline: "Ad", ctwaClid: `clid${++seq}` } });
+const ctwa = (extra = {}) => makeLead({ campaignRef: { adId: "ad1", headline: "Ad", ctwaClid: `clid${++seq}` }, ...extra });
+const ADVISOR = { engagement: { closing: "handoff", at: new Date() } };
 const form = () => makeLead({ source: "Facebook", metaLeadId: `lead${++seq}`, email: "asha@example.com" });
 const names = async (leadId) => (await mongoose.connection.collection("metaevents").find({ leadId }).sort({ createdAt: 1 }).toArray()).map((e) => e.eventName);
 
@@ -107,7 +108,7 @@ test("a stage with no WhatsApp name (Contacted) goes for lead forms only", async
 });
 
 test("chat QualifiedLead, then Site Visit: reported once; Closed Won is Purchase", async () => {
-  const l = await ctwa();
+  const l = await ctwa(ADVISOR);
   await capi.trackChatQualified(l);
   await capi.track(l, "Site Visit");
   await capi.track(l, "Closed Won");
@@ -132,14 +133,42 @@ test("WhatsApp leads use the WhatsApp stage list; lead forms keep theirs", async
 });
 
 test("chat QualifiedLead is only for WhatsApp ad leads, and can be switched off", async () => {
-  const f = await form();
-  await capi.trackChatQualified(f);
+  const f = await form(); // no WhatsApp click
+  await Lead.updateOne({ _id: f._id }, { $set: ADVISOR });
+  await capi.trackChatQualified(f._id);
   assert.deepEqual(await names(f._id), []);
   await mongoose.connection.collection("organizations").updateOne({ _id: ORG }, { $set: { "metaCapi.whatsappQualified": false } });
-  const w = await ctwa();
+  const w = await ctwa(ADVISOR);
   await capi.trackChatQualified(w);
   await mongoose.connection.collection("organizations").updateOne({ _id: ORG }, { $set: { "metaCapi.whatsappQualified": true } });
   assert.deepEqual(await names(w._id), []);
+});
+
+test("budget and timeline both answered is QualifiedLead; one of them, or a 'Not now', is not", async () => {
+  const both = await ctwa({ engagement: { flow: { budget: true, timeline: "Within 30 Days" }, at: new Date() } });
+  const budgetOnly = await ctwa({ engagement: { flow: { budget: true }, at: new Date() } });
+  const declined = await ctwa({ engagement: { closing: "declined", flow: { purpose: true }, at: new Date() } });
+  for (const l of [both, budgetOnly, declined]) await capi.trackChatQualified(l._id);
+  assert.deepEqual(await names(both._id), ["QualifiedLead"]);
+  assert.deepEqual(await names(budgetOnly._id), []);
+  assert.deepEqual(await names(declined._id), []);
+});
+
+test("in the real flow: answering budget then timeline reports QualifiedLead at the second answer", async () => {
+  const say = (phone, msgText, extra = {}) => wa._handleInbound(org, { phone, name: "Meena", msgId: `wamid.in.${phone}.${++seq}`, msgText, msgType: "text", ...extra });
+  const tap = (phone, id, title) => say(phone, title, { msgType: "interactive", interactiveId: id });
+  const p = nextPhone();
+  await say(p, "Hi, share the price", { referral: { source_id: AD_BT, headline: "Homes", ctwa_clid: "clid_bt" } });
+  await tap(p, "b1", "50L to 1Cr");
+  await settle();
+  const after1 = await Lead.findOne({ orgId: ORG, phone: p }).lean();
+  assert.equal(after1.engagement.flow.budget, true);
+  assert.ok(!(await names(after1._id)).includes("QualifiedLead"), "budget alone is not enough");
+  await tap(p, "t1", "Within 30 Days");
+  await settle();
+  const after2 = await Lead.findOne({ orgId: ORG, phone: p }).lean();
+  assert.equal(after2.engagement.flow.timeline, "Within 30 Days");
+  assert.ok((await names(after2._id)).includes("QualifiedLead"));
 });
 
 test("in the real flow: tapping Talk to Advisor reports QualifiedLead; 'Not now' does not", async () => {
@@ -194,6 +223,14 @@ test("in the real flow: tapping Talk to Advisor reports QualifiedLead; 'Not now'
     _id: oid(), orgId: ORG, name: "Plots Desk", status: "active", isDefault: true, adIds: [AD], greetingEnabled: false, createdAt: new Date(),
     ctwaFlow: { enabled: true, welcomeText: "", qualifyingQuestions: question,
       closingButtons: [{ id: "advisor", label: "Talk to Advisor", action: "handoff" }, { id: "later", label: "Not now", action: "end" }] },
+  });
+  await WaAgent.collection.insertOne({
+    _id: oid(), orgId: ORG, name: "Homes Desk", status: "active", adIds: [AD_BT], greetingEnabled: false, createdAt: new Date(),
+    ctwaFlow: { enabled: true, welcomeText: "", closingButtons: [{ id: "advisor", label: "Talk to Advisor", action: "handoff" }, { id: "later", label: "Not now", action: "end" }],
+      qualifyingQuestions: [
+        { id: "budget", questionText: "Your budget?", mapsTo: "budget", options: [{ id: "b1", label: "50L to 1Cr", action: "none", next: "", min: 5000000, max: 10000000 }, { id: "b2", label: "Above 1Cr", action: "none", next: "", min: 10000000 }] },
+        { id: "timeline", questionText: "When do you plan to buy?", mapsTo: "timeline", options: [{ id: "t1", label: "Within 30 Days", action: "none", next: "" }, { id: "t2", label: "3-6 Months", action: "none", next: "" }] },
+      ] },
   });
   wa = require("../routes/whatsappRoutes");
   const origExit = process.exit;
