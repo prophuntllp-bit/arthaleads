@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
-- [claude] 2026-10-26 IST: WhatsApp Status placements send headline "Status ad"; leads get the ad's real name (from other clicks on the same ad id), and earlier "Status ad" leads are renamed when the real name arrives. backend/utils/adHeadline.js (new), routes/whatsappRoutes.js handleInbound, scripts/fixStatusAdLabels.js, tests/adHeadline.db.test.js
 - [claude] 2026-10-22 IST: AI Agent editor redesign: one section at a time (Basics, How it talks, What it knows, Button questions, What it can send, Ads and go live, Advanced), sticky Save bar with setup ring + unsaved warning, questions folded to one line, preview tabs Chat/Button flow. frontend/src/pages/conversations/AgentBuilder.jsx; backend/utils/botText.js (range dash fix)
 - [claude] 2026-10-22 IST: Customer photos/voice notes/documents on WhatsApp are fetched from Meta and saved; bot looks at photos (gpt-4o-mini vision), acknowledges voice notes/files, team alerted; chat bubbles show media or say it is missing. backend/utils/waInboundMedia.js, routes/whatsappRoutes.js, models/WaMessage.js, frontend components/WaMessageMedia.jsx, pages/Inbox.jsx, components/LeadDetail.jsx
 - [claude] 2026-10-22 IST: Returning WhatsApp customers: lead moved to a project stays with the project (activity + alert, no duplicate in Leads); other re-created leads carry old details; purpose labels by meaning. backend/routes/whatsappRoutes.js (relinkConversationLead), utils/formFieldMapper.js, scripts/fixProjectLeadDuplicates.js, tests/whatsappLeadRelink.db.test.js
@@ -104,6 +103,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-26 IST (staging 9a98325c, NOT on main yet): Status ad label. Meta sends headline "Status ad" for WhatsApp Status placements; utils/adHeadline.js withRealHeadline (called at the top of handleInbound) takes the ad's real name from another lead/chat with the same ad id, and a click with a real name renames that ad's earlier "Status ad" leads (label only when it is still exactly "Facebook Ad · Status ad") and chats. scripts/fixStatusAdLabels.js (dry run by default) for the existing ones: prod dry run found 7 ads, all nameable, ~23 leads; NOT run on prod yet (owner yes needed). tests/adHeadline.db.test.js (3) in npm test.
 - [claude] 2026-10-24 IST: staging: home AI band layout = text + cards left, HeroChat alone right at natural size (.ai-band vars). Not live yet.
 - [claude] 2026-10-24 IST: staging c63b6026: home AI band compacted to ~1 screen (HeroChat reads --hc-w/--hc-h; .ai-band in styles.css sizes the phone from screen height). Not live yet.
 - [claude] 2026-10-24 IST: staging 95fad61f: React Bits CSS imported in main.jsx (lazy-chunk CSS left the prerendered phone menu unstyled on first paint); CardNav.css narrow layout via media query from first paint; lead-sources strip compacted. Not live yet.
