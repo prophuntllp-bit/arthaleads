@@ -178,23 +178,35 @@ export function FaqSection({ items, title = "Questions people ask", eyebrow = "F
  * The closing panel, as on the home page: title (with an optional gradient
  * part), body, Book a Demo + trial, and a photo on the right.
  */
-// The closing panel's photo changes from page to page (owner, 27 Oct 2026:
-// "the footer card uses the same photo on every page"). Each page gets one of
-// the six AI photos, chosen so it differs from that page's own hero photo.
+// Every page has its own closing photo (owner, 27 Oct 2026: no photo used
+// twice). AI-generated per outputs/site-images/cta/BRIEF.md, served as
+// public/img/site/cta-*-{640,1024,1600}.webp. The home page keeps "keys".
 const CTA_PHOTOS = {
-  keys:    "A sales executive handing house keys to a young couple",
-  broker:  "A broker showing a bright new apartment to a family",
-  builder: "A sales head explaining a scale model of residential towers to a young couple in a sales gallery",
-  field:   "A sales executive in a hard hat checking her phone outside a residential construction site",
-  partner: "A real estate sales team working through their leads together in the office",
-  hero:    "A real estate sales manager smiling at her phone in a modern sales lounge",
+  keys:                "A sales executive handing house keys to a young couple",
+  "cta-ai-crm":        "A young woman on a sofa at night smiling as a reply arrives on her phone",
+  "cta-builder-crm":   "A sales manager handing a project brochure to a couple at a site office",
+  "cta-whatsapp-crm":  "A man at a sunlit cafe smiling as he reads a message on his phone",
+  "cta-selldo":        "A developer's sales leadership meeting in a glass-walled room",
+  "cta-leadrat":       "A brokerage team's morning huddle in an open office",
+  "cta-kylas":         "A brokerage owner reviewing paperwork at his desk",
+  "cta-pricing":       "Two business partners discussing costs over tea at their office desk",
+  "cta-features":      "A telecalling team with headsets at work in a bright office",
+  "cta-compare":       "Two colleagues comparing notes side by side at a coworking table",
+  "cta-about":         "A small product team planning at a whiteboard in a Pune office",
+  "cta-security":      "An office manager locking her laptop at a tidy desk at dusk",
+  "cta-product-tour":  "A young couple watching something together on a tablet at home",
+  "cta-help":          "A support specialist with a headset smiling while he helps a customer",
+  "cta-api":           "A software developer reviewing code at her desk",
+  "cta-updates":       "Two colleagues high-fiving as the team celebrates a win",
+  "cta-refer":         "Two brokers shaking hands warmly at a cafe",
+  "cta-cases":         "A builder's sales team in hard hats reviewing a site plan at a project",
 };
 const CTA_BY_PAGE = {
-  "/ai-crm": "broker", "/builder-crm": "field", "/whatsapp-crm": "partner",
-  "/compare/sell-do-alternative": "builder", "/compare/leadrat-alternative": "partner", "/compare/kylas-alternative": "field",
-  "/pricing": "hero", "/features": "field", "/compare": "partner", "/about-us": "builder",
-  "/security": "broker", "/product-tour": "hero", "/help-guide": "partner", "/api-docs": "field",
-  "/product-updates": "builder", "/refer": "hero", "/case-studies": "broker",
+  "/ai-crm": "cta-ai-crm", "/builder-crm": "cta-builder-crm", "/whatsapp-crm": "cta-whatsapp-crm",
+  "/compare/sell-do-alternative": "cta-selldo", "/compare/leadrat-alternative": "cta-leadrat", "/compare/kylas-alternative": "cta-kylas",
+  "/pricing": "cta-pricing", "/features": "cta-features", "/compare": "cta-compare", "/about-us": "cta-about",
+  "/security": "cta-security", "/product-tour": "cta-product-tour", "/help-guide": "cta-help", "/api-docs": "cta-api",
+  "/product-updates": "cta-updates", "/refer": "cta-refer", "/case-studies": "cta-cases",
 };
 
 export function ClosingCta({
@@ -221,7 +233,7 @@ export function ClosingCta({
             </div>
             <div className="relative overflow-hidden rounded-[24px] border" style={{ borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
               <SiteImage name={photo} width={1600} height={900} sizes="(min-width: 1024px) 520px, 92vw" alt={alt}
-                className={cx("block w-full h-auto aspect-[16/10] object-cover", photo === "hero" && "object-[50%_25%]")} />
+                className="block w-full h-auto aspect-[16/10] object-cover" />
             </div>
           </div>
         </Reveal>
