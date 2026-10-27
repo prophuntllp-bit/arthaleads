@@ -11,7 +11,7 @@ const { layout, panel, row, paragraph, esc, nl2br, HEADING, BRAND } = require(".
 const link = (href, text) => `<a href="${href}" style="color:${BRAND};text-decoration:none;">${text}</a>`;
 
 const FROM_ADDRESS = process.env.SMTP_FROM || "Arthaleads <onboarding@resend.dev>";
-const HR_EMAIL = "prophuntllp@gmail.com";
+const HR_EMAIL = "hr@arthaleads.com";
 const YEAR = new Date().getFullYear();
 
 function sanitize(str, maxLen = 200) {

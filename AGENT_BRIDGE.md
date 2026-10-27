@@ -101,6 +101,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-27 IST (main, released from staging 27ccde5f by file copy): careers applications to hr@arthaleads.com, softened Careers claims, Case Studies headline, WordPress install counts re-verified. Only these 4 files.
 - [claude] 2026-10-27 IST (main, released from staging 011fe942..44b34746 by file copy): Website redesign live on every marketing page: components/site/Blocks.jsx, SolutionPage, CompetitorComparison, LegalLayout, 20 pages, styles.css, frontend/api/blog-index.js. Only these files were copied; staging's other unreleased work (Plivo, Calls, AI Agent editor etc.) is NOT in this release.
 - [claude] 2026-10-27 IST (main ccc3254a..e43ba155 from staging 1ca3f2a3, a88a9925, 24f48595, d75b26d6, 9cc4c6a3; owner said push live): Plivo outbound click-to-call (company setting, nobody switched yet) + speaker transcripts for ALL calls (gpt-transcribe; EnableX mono = AI split). First real Plivo call on staging: answered 38 s, all callbacks signed OK, stereo WAV, left channel = agent (default now). Cost note for the owner: EnableX fixed ~Rs 6,450/month (CPS 4,500 + 3 voice resources 1,500 + 3 numbers) vs Plivo ~Rs 700/month at Prophunt volume. Next: inbound Plivo calls on staging, then Prophunt switches before EnableX renewals (16-23 Nov).
 - [claude] 2026-10-27 IST (main, from staging 4cdc9044, owner said push live): setup popup fix live: Field/PhoneInput moved out of OnboardingGate so typing the mobile number no longer jumps to the name field.

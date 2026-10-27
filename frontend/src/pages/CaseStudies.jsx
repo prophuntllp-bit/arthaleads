@@ -103,8 +103,8 @@ function CaseStudiesInner() {
     <SitePage>
       <PageHero
         eyebrow="Case studies"
-        title={<>Real Estate Teams. <span className="site-dim">Real Results.</span></>}
-        lede="How developers, channel partners, and agencies across India use Arthaleads to capture more leads, respond faster, and close more property deals."
+        title={<>How real estate teams <span className="site-dim">use Arthaleads</span></>}
+        lede="How developers, channel partners and agencies across India use Arthaleads to capture their leads, reply faster and keep every follow-up on track."
         actions={null}
       />
 

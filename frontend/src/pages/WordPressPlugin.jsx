@@ -12,37 +12,40 @@ import { Reveal } from "../components/motion/Motion";
 import { useSEO } from "../utils/useSEO";
 
 // ── Brand logos using official WordPress.org plugin icon URLs ─────────────────
+// users: active installs as WordPress.org shows them (checked 27 Oct 2026).
+// Elementor Pro is sold outside WordPress.org, so its row shows Elementor's own
+// count; Gravity Forms is premium-only and shows "Premium".
 const FORM_PLUGINS = [
   {
-    name: "Contact Form 7", users: "5M+", color: "#0073aa",
+    name: "Contact Form 7", users: "10M+", color: "#0073aa",
     logo: "https://ps.w.org/contact-form-7/assets/icon-256x256.png",
   },
   {
-    name: "WPForms", users: "6M+", color: "#1f4dc4",
+    name: "WPForms", users: "5M+", color: "#1f4dc4",
     logo: "https://ps.w.org/wpforms-lite/assets/icon-256x256.png",
   },
   {
-    name: "Ninja Forms", users: "800K+", color: "#ff7900",
+    name: "Ninja Forms", users: "500K+", color: "#ff7900",
     logo: "https://ps.w.org/ninja-forms/assets/icon-256x256.png",
   },
   {
-    name: "Elementor Pro Forms", users: "9M+", color: "#e2185b",
+    name: "Elementor Pro Forms", users: "10M+ Elementor", color: "#e2185b",
     logo: "https://ps.w.org/elementor/assets/icon-256x256.gif",
   },
   {
-    name: "Fluent Forms", users: "400K+", color: "#18b77e",
+    name: "Fluent Forms", users: "800K+", color: "#18b77e",
     logo: "https://ps.w.org/fluentform/assets/icon-256x256.png",
   },
   {
-    name: "Forminator", users: "500K+", color: "#17a1fa",
+    name: "Forminator", users: "600K+", color: "#17a1fa",
     logo: "https://ps.w.org/forminator/assets/icon-256x256.gif",
   },
   {
-    name: "MetForm", users: "100K+", color: "#7c3aed",
+    name: "MetForm", users: "500K+", color: "#7c3aed",
     logo: "https://ps.w.org/metform/assets/icon-256x256.png",
   },
   {
-    name: "Gravity Forms", users: "1M+", color: "#c2410c",
+    name: "Gravity Forms", users: "Premium", color: "#c2410c",
     logo: null, // premium plugin, not on wp.org
   },
 ];
@@ -83,7 +86,7 @@ const FEATURES = [
 const FAQS = [
   {
     q: "Which WordPress form plugins are supported?",
-    a: "Arthaleads supports Contact Form 7 (5M+ installs), WPForms, Elementor Pro Forms, Ninja Forms, Gravity Forms, MetForm, Forminator, and Fluent Forms. We cover all the major form builders used on Indian real estate websites.",
+    a: "Arthaleads supports Contact Form 7 (10M+ installs), WPForms, Elementor Pro Forms, Ninja Forms, Gravity Forms, MetForm, Forminator, and Fluent Forms. We cover all the major form builders used on Indian real estate websites.",
   },
   {
     q: "Is the Arthaleads WordPress plugin free?",
@@ -169,7 +172,7 @@ function PluginCard({ plugin }) {
       ) : null}
       <div>
         <p className={imgOk ? "text-[13px] font-bold site-ink leading-tight" : "font-display text-base font-bold site-ink leading-tight"}>{plugin.name}</p>
-        <p className="text-xs site-muted mt-1">{plugin.users} installs</p>
+        <p className="text-xs site-muted mt-1">{plugin.users === "Premium" ? "Premium plugin" : `${plugin.users} installs`}</p>
       </div>
       <span className="inline-flex items-center gap-1 text-[11px] font-semibold" style={{ color: "#16a34a" }}>
         <Check className="w-3.5 h-3.5" aria-hidden="true" /> Supported
@@ -318,7 +321,7 @@ function WordPressPluginInner() {
       <Section tone="white">
         <Container>
           <SectionHeader eyebrow="Supported form builders" title="Works With Every Major Form Builder" align="center"
-            lede="Covering 95% of all WordPress contact forms used on real estate websites in India." />
+            lede="The form builders most WordPress sites already run. Install counts are from WordPress.org (October 2026); Gravity Forms is a paid plugin sold outside it." />
           <ul className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-5xl mx-auto">
             {FORM_PLUGINS.map((plugin, i) => (
               <Reveal as="li" key={plugin.name} delay={(i % 4) * 60} className="min-w-0">
