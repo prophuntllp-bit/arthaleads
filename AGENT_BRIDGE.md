@@ -103,6 +103,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-27 IST (staging 8fe1f35a, NOT on main yet): components/site/AndroidLockScreen.jsx replaces the Download App hero phone; BookDemo.jsx adds the intro film section (YouTube ZybPiXyK2vQ via youtube-nocookie, click-to-load, GA event video_play); vercel.json CSP frame-src + https://www.youtube-nocookie.com.
 - [claude] 2026-10-27 IST (staging 3aa3c55c, NOT on main yet): 17 new closing-card photos public/img/site/cta-*.webp (brief + PNGs in main checkout outputs/site-images/cta/, generated with Codex); Blocks.jsx CTA_BY_PAGE maps every inner page to its own photo.
 - [claude] 2026-10-27 IST (staging c0fb168b, NOT on main yet): hero cards: removed fc-bob idle float (owner: stepping/stuck); <Cycle> is now a stacked grid crossfade (.cycle/.cycle-item in styles.css), interval 4.2 s.
 - [claude] 2026-10-27 IST eca73e3c (staging only): Integrations: Conversion tracking (Settings, Recent events) and Property portals (Set up portals) buttons are btn-primary orange. components/MetaConversionsSection.jsx, PortalLeadsSection.jsx.
