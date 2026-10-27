@@ -220,7 +220,9 @@ async function savePortalLead(org, portal, fields, { via = "push" } = {}) {
   }
 
   if (project) await fileLeadInRoutedProject({ assignToProject: project._id, assignTo: assignee?._id || null, assignToName: assignee?.name || "", ruleOwner: assignee?._id || project.createdBy }, lead);
-  emitLeadCreated(lead, { origin: `portal-${portal}`, routeSource: portal, isTest: false, project: project ? { id: project._id, name: project.name } : undefined });
+  // Recorded for Vistrow but not auto-called: portal origins are not in its CALLABLE_ORIGINS.
+  const origin = { "99acres": "portal-99acres", housing: "portal-housing", magicbricks: "portal-magicbricks" }[portal];
+  emitLeadCreated(lead, { origin, routeSource: portal, isTest: false, project: project ? { id: project._id, name: project.name } : undefined });
 
   const pushBody = [lead.phone, fields.project || label].filter(Boolean).join(" · ");
   if (assignee?._id) sendPushToUser(assignee._id, { type: "lead_assigned", title: `New ${label} lead: ${lead.name}`, body: pushBody, data: { url: "/leads", leadId: String(lead._id) } }).catch(() => {});
