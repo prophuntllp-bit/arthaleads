@@ -326,6 +326,10 @@ const orgSchema = new mongoose.Schema(
       // Which stereo channel is the agent. Empty = left: Plivo puts the first
       // leg (the agent's phone) on the left, confirmed on a real call 27 Oct 2026.
       agentChannel: { type: String, enum: ["", "left", "right"], default: "" },
+      // Incoming calls: the Plivo Application our answer URL lives on, and when
+      // the number was attached to it (services/plivo.js connectInbound).
+      appId:              { type: String, trim: true, default: "" },
+      inboundConnectedAt: { type: Date, default: null },
     },
     enablex: {
       enabled:       { type: Boolean, default: false },

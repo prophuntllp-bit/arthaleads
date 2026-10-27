@@ -13,6 +13,7 @@ export default function PlivoSettings({ onSaved }) {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [note, setNote] = useState(null);
+  const [connecting, setConnecting] = useState(false);
 
   const load = () => api.get("/plivo/settings").then((r) => {
     setD(r.data);
@@ -46,6 +47,17 @@ export default function PlivoSettings({ onSaved }) {
     } catch (e) {
       setNote({ ok: false, text: e?.response?.data?.message || "Could not reach Plivo." });
     } finally { setTesting(false); }
+  };
+
+  const connectInbound = async () => {
+    setConnecting(true);
+    try {
+      const { data } = await api.post("/plivo/settings/inbound");
+      toast.success(data.message);
+      await load();
+    } catch (e) {
+      toast.error(e?.response?.data?.message || "Could not connect incoming calls.");
+    } finally { setConnecting(false); }
   };
 
   return (
@@ -88,6 +100,22 @@ export default function PlivoSettings({ onSaved }) {
             options={[{ value: "", label: "Left channel (your phone, Plivo's default)" }, { value: "right", label: "Right channel" }]}
             style={{ width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 }} />
         </div>
+      </div>
+
+      <div className="rounded-2xl px-4 py-3 flex flex-wrap items-center justify-between gap-3" style={{ border: "1px solid var(--app-border)" }}>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-app">Incoming calls</p>
+          <p className="text-xs text-app-soft mt-0.5">
+            {d.plivo.inboundConnected
+              ? "Connected. A lead calling your Plivo number rings the agent who last called them, and the call is logged and recorded."
+              : "Not connected yet. Calls to your Plivo number won't reach your team until you connect them."}
+          </p>
+        </div>
+        <button type="button" onClick={connectInbound} disabled={connecting || !d.plivo.hasAuthToken || !d.plivo.number}
+          className="btn-secondary rounded-full px-4 py-2 text-xs font-semibold shrink-0 flex items-center gap-2 disabled:opacity-50">
+          {connecting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+          {d.plivo.inboundConnected ? "Reconnect" : "Connect incoming calls"}
+        </button>
       </div>
 
       <div className="rounded-xl px-4 py-3 text-xs text-app-soft leading-relaxed" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>

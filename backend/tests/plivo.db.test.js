@@ -30,7 +30,9 @@ global.fetch = async (url, opts = {}) => {
   if (url.startsWith("https://api.plivo.com/")) {
     plivoCalls.push({ url, method: opts.method || "GET", body: opts.body ? JSON.parse(opts.body) : null, auth: opts.headers?.Authorization });
     if (/\/Call\/$/.test(url)) return new Response(JSON.stringify({ message: "call fired", request_uuid: "req-123", api_id: "a1" }), { status: 201 });
-    if (/\/Number\//.test(url)) return new Response("{}", { status: 200 });
+    if (/\/Application\/$/.test(url)) return new Response(JSON.stringify({ message: "created", app_id: "app-1" }), { status: 201 });
+    if (/\/Application\/app-1\/$/.test(url)) return new Response(JSON.stringify({ message: "changed" }), { status: 202 });
+    if (/\/Number\//.test(url)) return new Response(JSON.stringify({ message: "changed" }), { status: 202 });
     return new Response(JSON.stringify({ name: "Prophunt LLP", cash_credits: "1000" }), { status: 200 });
   }
   if (url.startsWith("https://media.plivo.com/")) { downloads++; return new Response(Buffer.from("RIFF....WAVE"), { status: 200 }); }
@@ -39,7 +41,9 @@ global.fetch = async (url, opts = {}) => {
 let uploads = 0;
 require("../utils/storage").isConfigured = () => true;
 require("../utils/upload").uploadCallRecording = async () => `https://files.example.com/rec-${++uploads}.wav`;
-require("../utils/push").sendPushToUser = async () => {};
+const pushes = [];
+require("../utils/push").sendPushToUser = async (id, msg) => { pushes.push({ id, ...msg }); };
+require("../utils/push").sendPushToAll = async (msg) => { pushes.push({ all: true, ...msg }); };
 
 const tokenFor = (id) => jwt.sign({ id: String(id) }, process.env.JWT_SECRET, { expiresIn: "1h" });
 async function api(method, path, userId, body) {
@@ -182,6 +186,81 @@ test("settings: the token is stored encrypted and never sent back; switching to 
   const t = await api("POST", "/api/plivo/settings/test", admin2);
   assert.equal(t.status, 200, JSON.stringify(t.json));
   assert.equal((await api("PATCH", "/api/plivo/settings", admin2, { number: "12345" })).status, 400, "not an Indian number");
+});
+
+// ── Incoming calls ────────────────────────────────────────────────────────────
+test("connect incoming calls: an application pointing at us, the number attached; again = update", async () => {
+  plivoCalls.length = 0;
+  const r = await api("POST", "/api/plivo/settings/inbound", ADMIN);
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  const app = plivoCalls.find((c) => /\/Application\/$/.test(c.url));
+  assert.equal(app.body.answer_url, `https://api.test.example/api/plivo/inbound/${ORG}`);
+  assert.equal(app.body.hangup_url, `https://api.test.example/api/plivo/inbound-hangup/${ORG}`);
+  const num = plivoCalls.find((c) => /\/Number\/912240123456\/$/.test(c.url));
+  assert.equal(num.body.app_id, "app-1");
+  const org = await db.collection("organizations").findOne({ _id: ORG });
+  assert.equal(org.plivo.appId, "app-1");
+  assert.ok(org.plivo.inboundConnectedAt);
+  plivoCalls.length = 0;
+  await api("POST", "/api/plivo/settings/inbound", ADMIN);
+  assert.ok(plivoCalls.some((c) => /\/Application\/app-1\/$/.test(c.url)), "updates the existing app");
+  assert.ok(!plivoCalls.some((c) => /\/Application\/$/.test(c.url)), "no second app");
+});
+
+async function leadCalledBy(phone, userId, userName) {
+  const lead = await db.collection("leads").insertOne({ orgId: ORG, name: "Ravi Kulkarni", phone, status: "Contacted", createdAt: new Date(), updatedAt: new Date(),
+    activities: [{ _id: oid(), type: "called", performedBy: userId, performedByName: userName, createdAt: new Date(Date.now() - 86400000), meta: { direction: "outbound", status: "answered", agentPhone: "9876500001" } }] });
+  return lead.insertedId;
+}
+
+test("a lead calls back: it rings the agent who last called them, recorded in stereo, logged on the lead", async () => {
+  const leadId = await leadCalledBy("9822001200", AGENT, "Sheetal Powar");
+  pushes.length = 0;
+  const r = await callback(`/api/plivo/inbound/${ORG}`, { CallUUID: "in-1", From: "919822001200", To: "912240123456", Direction: "inbound", CallStatus: "ringing" });
+  assert.match(r.text, /<Record [^>]*startOnDialAnswer="true"[^>]*recordChannelType="stereo"/);
+  assert.match(r.text, /<Dial callerId="912240123456"[^>]*action="https:\/\/api\.test\.example\/api\/plivo\/inbound-dialed\//);
+  assert.match(r.text, /<Number>919876500001<\/Number>/);
+  const lead = await db.collection("leads").findOne({ _id: leadId });
+  const a = lead.activities.find((x) => x.meta?.direction === "inbound");
+  assert.equal(a.meta.provider, "plivo");
+  assert.equal(a.meta.callUuid, "in-1");
+  assert.equal(a.performedByName, "Sheetal Powar");
+  assert.ok(pushes.some((p) => p.title === "Incoming Call" && /Ravi Kulkarni is calling/.test(p.body)));
+});
+
+test("incoming call answered: talk time from the agent leg, then the caller's hangup changes nothing", async () => {
+  const leadId = await leadCalledBy("9822001201", AGENT, "Sheetal Powar");
+  const r = await callback(`/api/plivo/inbound/${ORG}`, { CallUUID: "in-2", From: "919822001201" });
+  const ref = decodeURIComponent(r.text.match(/inbound-dialed\/[^?]+\?ref=([^"&]+)/)[1]);
+  await callback(`/api/plivo/dial/${ORG}?ref=${encodeURIComponent(ref)}`, { DialAction: "answer", DialBLegUUID: "ag-2" });
+  await callback(`/api/plivo/dial/${ORG}?ref=${encodeURIComponent(ref)}`, { DialAction: "hangup", DialBLegDuration: "50" });
+  await callback(`/api/plivo/inbound-hangup/${ORG}`, { CallUUID: "in-2", CallStatus: "completed" });
+  await sleep(200);
+  const a = (await db.collection("leads").findOne({ _id: leadId })).activities.find((x) => x.meta?.callUuid === "in-2");
+  assert.equal(a.meta.status, "answered");
+  assert.equal(a.meta.duration, 50);
+});
+
+test("incoming call nobody picks up: the caller hears a sorry message; missed, and the agent is told", async () => {
+  const leadId = await leadCalledBy("9822001202", AGENT, "Sheetal Powar");
+  const r = await callback(`/api/plivo/inbound/${ORG}`, { CallUUID: "in-3", From: "919822001202" });
+  const ref = decodeURIComponent(r.text.match(/inbound-dialed\/[^?]+\?ref=([^"&]+)/)[1]);
+  const dialed = await callback(`/api/plivo/inbound-dialed/${ORG}?ref=${encodeURIComponent(ref)}`, { DialStatus: "no-answer" });
+  assert.match(dialed.text, /<Speak[^>]*>Sorry, we could not connect your call right now/);
+  pushes.length = 0;
+  await callback(`/api/plivo/inbound-hangup/${ORG}`, { CallUUID: "in-3", CallStatus: "completed" });
+  await sleep(200);
+  const a = (await db.collection("leads").findOne({ _id: leadId })).activities.find((x) => x.meta?.callUuid === "in-3");
+  assert.equal(a.meta.status, "missed");
+  assert.match(a.description, /^Missed inbound call from Ravi Kulkarni/);
+  assert.ok(pushes.some((p) => /Missed call from Ravi Kulkarni/.test(p.body)));
+  assert.match((await callback(`/api/plivo/inbound-dialed/${ORG}?ref=x`, { DialStatus: "completed" })).text, /^<Response><Hangup\/><\/Response>$/);
+});
+
+test("an unknown number still reaches someone on the team; nothing logged against a lead", async () => {
+  const r = await callback(`/api/plivo/inbound/${ORG}`, { CallUUID: "in-4", From: "919000000099" });
+  assert.match(r.text, /<Number>919876500001<\/Number>/, "the only team member with a phone");
+  assert.equal(await db.collection("leads").countDocuments({ "activities.meta.callUuid": "in-4" }), 0);
 });
 
 (async () => {

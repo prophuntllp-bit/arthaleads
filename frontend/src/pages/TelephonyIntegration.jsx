@@ -34,9 +34,10 @@ export default function TelephonyIntegration() {
     if (key === provider) return;
     setSwitching(true);
     try {
-      await api.patch("/plivo/settings", { provider: key });
+      const { data } = await api.patch("/plivo/settings", { provider: key });
       setProvider(key);
       toast.success(`Calls now go through ${key === "plivo" ? "Plivo" : "EnableX"}.`);
+      if (data?.inbound && data.inbound !== "connected") toast.error(`Incoming calls ${data.inbound}. Use "Connect incoming calls" in Plivo settings.`);
     } catch (e) {
       toast.error(e?.response?.data?.message || "Could not switch.");
       setView(key);
