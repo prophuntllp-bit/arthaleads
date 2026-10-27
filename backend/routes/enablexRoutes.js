@@ -132,7 +132,8 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
     if (last10.length >= 8) {
       const phoneQuery = {
         orgId:     new mongoose.Types.ObjectId(orgId),
-        phone:     { $regex: last10 + "$", $options: "i" },
+        // Any stored format ("+91 744 743 0431" included), see utils/phone.js.
+        phone:     require("../utils/phone").samePhone(callerRaw) || { $regex: last10 + "$", $options: "i" },
         isDeleted: { $ne: true },   // also matches docs without the field
       };
       lead = await Lead.findOne(phoneQuery).select("name phone activities").lean();
