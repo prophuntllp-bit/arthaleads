@@ -229,8 +229,16 @@ router.post("/recording/:orgId", form, async (req, res) => {
       where: { "meta.recordingUrl": { $in: [null, ""] }, "meta.recordingSaveRequested": { $ne: true } },
     });
     if (!claimed) return;
-    const buf = await plivo.downloadRecording(org, url);
-    const recordingUrl = await uploadCallRecording(buf, `call-plivo-${String(b.RecordingID || call.act.meta?.callUuid || lead._id)}.wav`, "audio/wav", req.params.orgId);
+    // Our own storage when it's set up (production). Where it isn't (staging),
+    // keep Plivo's link: recordings there are public unless the account turned
+    // on Basic auth, and Plivo keeps them (free for 90 days).
+    let recordingUrl = url;
+    if (require("../utils/storage").isConfigured()) {
+      const buf = await plivo.downloadRecording(org, url);
+      recordingUrl = await uploadCallRecording(buf, `call-plivo-${String(b.RecordingID || call.act.meta?.callUuid || lead._id)}.wav`, "audio/wav", req.params.orgId);
+    } else {
+      console.warn("[plivo recording] storage not configured; keeping Plivo's recording URL");
+    }
     const duration = Math.round(Number(b.RecordingDuration || 0));
     await updateCallActivity(Model, lead._id, match, { set: {
       "meta.recordingUrl": recordingUrl,
