@@ -13,8 +13,9 @@ const cx = (...c) => c.filter(Boolean).join(" ");
 
 /**
  * A small floating UI card used over photos. Always opaque so it never bleeds.
- * `index` staggers it: the cards rise in one after another, then each bobs
- * gently on its own rhythm (styles.css .float-card; still under reduced motion).
+ * `index` staggers it: the cards rise in one after another (styles.css
+ * .float-card; still under reduced motion). No idle bobbing: a slow drift
+ * makes text step from pixel to pixel and reads as stutter.
  */
 export function FloatCard({ className, children, style, index = 0 }) {
   return (
@@ -28,28 +29,33 @@ export function FloatCard({ className, children, style, index = 0 }) {
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 /**
- * Shows one of `items` at a time and swaps to the next every few seconds with
- * a short fade and lift, like the live lead card on the WordPress page.
- * `offset` delays the first swap so cards on one visual don't change together.
- * The first item is what the prerendered HTML shows.
+ * Shows one of `items` at a time and moves to the next every few seconds,
+ * like the live lead card on the WordPress page. Every item is rendered in the
+ * same grid cell, so the card is sized to the longest one and never jumps;
+ * the active one crossfades in (opacity, a small lift and a soft blur, all on
+ * the compositor; styles.css .cycle-item). `offset` delays the first change
+ * so cards on one visual don't change together. The prerendered HTML shows
+ * the first item; the others are hidden from screen readers.
  */
-export function Cycle({ items, children, interval = 3600, offset = 0 }) {
+export function Cycle({ items, children, interval = 4200, offset = 0 }) {
   const [idx, setIdx] = useState(0);
-  const [shown, setShown] = useState(true);
   useEffect(() => {
     if (items.length < 2 || reducedMotion()) return undefined;
-    let tick, swap;
+    let tick;
     const start = setTimeout(() => {
-      tick = setInterval(() => {
-        setShown(false);
-        swap = setTimeout(() => { setIdx((i) => (i + 1) % items.length); setShown(true); }, 380);
-      }, interval);
-    }, offset);
-    return () => { clearTimeout(start); clearInterval(tick); clearTimeout(swap); };
+      setIdx((i) => (i + 1) % items.length);
+      tick = setInterval(() => setIdx((i) => (i + 1) % items.length), interval);
+    }, offset + interval);
+    return () => { clearTimeout(start); clearInterval(tick); };
   }, [items.length, interval, offset]);
+  if (items.length < 2) return children(items[0]);
   return (
-    <div className={cx("transition-all duration-300 ease-out", shown ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1.5")}>
-      {children(items[idx])}
+    <div className="cycle">
+      {items.map((it, i) => (
+        <div key={i} className={cx("cycle-item", i === idx && "is-active")} aria-hidden={i === idx ? undefined : true}>
+          {children(it)}
+        </div>
+      ))}
     </div>
   );
 }

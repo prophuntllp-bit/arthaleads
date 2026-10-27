@@ -1148,12 +1148,25 @@ html[data-public-theme="dark"] .hero-glass {
   .site-glow:active { transform: scale(0.985); }
 }
 
-/* Floating hero cards (HomeVisuals FloatCard): rise in one after another, then
-   bob gently, each on its own phase. Content swaps are handled by <Cycle>. */
+/* Floating hero cards (HomeVisuals FloatCard): rise in one after another,
+   then hold still. Content changes are crossfades inside <Cycle>. */
 .float-card {
-  animation: fc-in 0.7s cubic-bezier(.2,.7,.2,1) both, fc-bob 7s ease-in-out infinite;
-  animation-delay: calc(var(--fc-i, 0) * 180ms + 250ms), calc(var(--fc-i, 0) * 1.1s + 1.4s);
+  animation: fc-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--fc-i, 0) * 160ms + 250ms);
 }
-@keyframes fc-in { from { opacity: 0; transform: translateY(16px) scale(0.97); } to { opacity: 1; transform: none; } }
-@keyframes fc-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
-@media (prefers-reduced-motion: reduce) { .float-card { animation: none; } }
+@keyframes fc-in { from { opacity: 0; transform: translate3d(0, 18px, 0) scale(0.97); } to { opacity: 1; transform: none; } }
+
+/* <Cycle>: all items share one grid cell; only the active one is shown. */
+.cycle { display: grid; min-width: 0; }
+.cycle-item {
+  grid-area: 1 / 1; min-width: 0;
+  opacity: 0; transform: translate3d(0, 8px, 0); filter: blur(4px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1), filter 0.6s ease;
+  will-change: opacity, transform;
+  pointer-events: none;
+}
+.cycle-item.is-active { opacity: 1; transform: none; filter: none; pointer-events: auto; transition-delay: 0.12s; }
+@media (prefers-reduced-motion: reduce) {
+  .float-card { animation: none; }
+  .cycle-item { transition: none; filter: none; transform: none; }
+}
