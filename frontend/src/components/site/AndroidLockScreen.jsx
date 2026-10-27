@@ -10,11 +10,11 @@ import { useEffect, useRef, useState } from "react";
 import { Bell, Phone, MapPin, Fingerprint, Camera } from "lucide-react";
 
 const ALERTS = [
-  { Icon: MapPin, tint: "#2563eb", title: "Clocked in at Aurum Heights", body: "Selfie and location recorded" },
-  { Icon: Phone, tint: "#16a34a", title: "Call logged · 4 min 12 sec", body: "Raj Patil · recording saved" },
-  { Icon: Bell, tint: "#ea580c", title: "New lead · Ananya Iyer", body: "2 BHK · Aurum Heights · Facebook ad" },
+  { Icon: MapPin, tint: "#2563eb", title: "Clocked in on site", body: "Aurum Heights · selfie" },
+  { Icon: Phone, tint: "#16a34a", title: "Call logged · 4 min", body: "Raj Patil · recording saved" },
+  { Icon: Bell, tint: "#ea580c", title: "New lead · Ananya Iyer", body: "2 BHK · Facebook ad" },
 ];
-const CARD_H = 70;     // px, one notification
+const CARD_H = 66;     // px, one notification
 const GAP = 8;
 const STEP_MS = 1500;  // between arrivals
 const HOLD_MS = 4200;  // full stack on screen before it clears
@@ -59,18 +59,18 @@ export default function AndroidLockScreen() {
   }, []);
 
   return (
-    <div ref={root} className="relative mx-auto w-[272px] sm:w-[292px]" role="img"
+    <div ref={root} className="relative mx-auto w-[236px] sm:w-[250px]" role="img"
       aria-label="An Android phone lock screen showing Arthaleads notifications: a new lead, a logged call and a site attendance check-in">
       {/* Side keys: volume and power on the right, like most Android phones */}
-      <span aria-hidden="true" className="absolute -right-[3px] top-[118px] w-[4px] h-[54px] rounded-r-md" style={{ background: "linear-gradient(270deg,#7b7e85,#2f3136)" }} />
-      <span aria-hidden="true" className="absolute -right-[3px] top-[186px] w-[4px] h-[32px] rounded-r-md" style={{ background: "linear-gradient(270deg,#7b7e85,#2f3136)" }} />
+      <span aria-hidden="true" className="absolute -right-[3px] top-[100px] w-[4px] h-[46px] rounded-r-md" style={{ background: "linear-gradient(270deg,#7b7e85,#2f3136)" }} />
+      <span aria-hidden="true" className="absolute -right-[3px] top-[158px] w-[4px] h-[28px] rounded-r-md" style={{ background: "linear-gradient(270deg,#7b7e85,#2f3136)" }} />
 
       {/* Aluminium frame */}
-      <div className="relative rounded-[2.9rem] p-[3px]"
+      <div className="relative rounded-[2.6rem] p-[3px]"
         style={{ background: "linear-gradient(150deg,#b4b7bd 0%,#4a4d54 20%,#1d1e22 50%,#55585f 80%,#b9bcc2 100%)", boxShadow: "0 50px 90px -30px rgba(0,0,0,0.6), 0 30px 70px -30px rgba(194,65,12,0.35)" }}>
-        <div className="rounded-[2.75rem] p-[7px] bg-black">
+        <div className="rounded-[2.45rem] p-[6px] bg-black">
           {/* Screen */}
-          <div className="relative overflow-hidden rounded-[2.35rem] h-[560px] sm:h-[600px]"
+          <div className="relative overflow-hidden rounded-[2.1rem] h-[480px] sm:h-[505px]"
             style={{ background: "radial-gradient(120% 60% at 15% 0%, #ff9a52 0%, rgba(255,154,82,0) 55%), radial-gradient(90% 60% at 100% 30%, #c2410c 0%, rgba(194,65,12,0) 60%), radial-gradient(120% 80% at 50% 110%, #1b0d06 0%, #3a1608 55%, #7c2d0b 100%)" }}>
             {/* soft grain so the wallpaper reads as an image, not a flat fill */}
             <div aria-hidden="true" className="absolute inset-0 opacity-[0.12] mix-blend-overlay"
@@ -81,13 +81,13 @@ export default function AndroidLockScreen() {
             <div className="relative">
               <StatusBar />
               {/* Clock */}
-              <div className="mt-9 text-center text-white">
+              <div className="mt-7 text-center text-white">
                 <p className="text-[13px] font-medium text-white/85">Saturday · 29°C</p>
-                <p className="mt-1 font-display text-[64px] leading-none font-light tracking-[-0.04em]" style={{ textShadow: "0 2px 18px rgba(0,0,0,0.25)" }}>10:42</p>
+                <p className="mt-1 font-display text-[54px] leading-none font-light tracking-[-0.04em]" style={{ textShadow: "0 2px 18px rgba(0,0,0,0.25)" }}>10:42</p>
               </div>
 
               {/* Notifications: newest on top, older ones slide down */}
-              <div className="relative mx-3 mt-7" style={{ height: ALERTS.length * (CARD_H + GAP) }}>
+              <div className="relative mx-2.5 mt-6" style={{ height: ALERTS.length * (CARD_H + GAP) }}>
                 {ALERTS.map(({ Icon, tint, title, body }, k) => {
                   const shown = k < n;
                   const slot = n - 1 - k;
