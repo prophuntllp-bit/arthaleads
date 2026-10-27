@@ -50,10 +50,11 @@ export function SectionTitle({ title, note }) {
  * logo, name + category, status chip, one line, then a footer with the state
  * on the left and the action on the right.
  */
-export function IntegrationCard({ logo, name, category, status, statusTone = "off", description, footer, action = "Set up", onOpen, locked, lockLabel }) {
+export function IntegrationCard({ logo, name, category, status, statusTone = "off", description, footer, action = "Set up", onOpen, locked, lockLabel, toggle }) {
   return (
-    <button type="button" onClick={onOpen}
-      className="card text-left p-5 flex flex-col h-full transition hover:-translate-y-0.5 focus-visible:outline-none"
+    <div role="button" tabIndex={0} onClick={onOpen}
+      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onOpen?.(); } }}
+      className="card text-left p-5 flex flex-col h-full cursor-pointer transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--app-primary-rgb),0.5)]"
       style={{ boxShadow: "none" }}>
       <div className="flex items-start gap-3">
         {logo}
@@ -61,7 +62,9 @@ export function IntegrationCard({ logo, name, category, status, statusTone = "of
           <p className="text-[15px] font-bold text-app leading-tight">{name}</p>
           <p className="text-xs text-app-soft mt-0.5">{category}</p>
         </div>
-        {locked ? <StatusChip tone="plan">{lockLabel}</StatusChip> : <StatusChip tone={statusTone}>{status}</StatusChip>}
+        {locked ? <StatusChip tone="plan">{lockLabel}</StatusChip>
+          : toggle ? <Switch {...toggle} label={name} />
+          : <StatusChip tone={statusTone}>{status}</StatusChip>}
       </div>
       <p className="text-[13px] text-app-soft mt-3 leading-relaxed line-clamp-2 flex-1">{description}</p>
       <div className="mt-4 pt-3 flex items-center justify-between gap-3" style={{ borderTop: "1px solid var(--app-border)" }}>
@@ -70,14 +73,31 @@ export function IntegrationCard({ logo, name, category, status, statusTone = "of
           {locked ? "See plans" : action} <ArrowRight className="h-3.5 w-3.5" />
         </span>
       </div>
+    </div>
+  );
+}
+
+/** On/off switch (green when on). Clicks don't reach the card around it. */
+export function Switch({ on, onChange, disabled, busy, title, label }) {
+  return (
+    <button type="button" role="switch" aria-checked={!!on} aria-label={`${label}: ${on ? "on" : "off"}`} title={title || ""}
+      disabled={disabled || busy}
+      onClick={(e) => { e.stopPropagation(); onChange?.(!on); }}
+      onKeyDown={(e) => e.stopPropagation()}
+      className="flex items-center gap-2 shrink-0 select-none disabled:cursor-not-allowed">
+      <span className="text-xs font-semibold" style={{ color: on ? "#15803d" : "var(--app-text-soft)" }}>{busy ? "..." : on ? "On" : "Off"}</span>
+      <span className="w-10 h-6 rounded-full relative transition" style={{ background: on ? "#16a34a" : "var(--app-border-strong)", opacity: disabled && !on ? 0.5 : 1 }}>
+        <span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" style={{ transform: on ? "translateX(16px)" : "none" }} />
+      </span>
     </button>
   );
 }
 
 /** A stat tile: icon, small caps label, value, optional note. */
-export function StatTile({ icon: Icon, label, value, note }) {
+export function StatTile({ icon: Icon, label, value, note, inset = false }) {
   return (
-    <div className="card p-3 sm:p-4 flex items-center gap-3" style={{ boxShadow: "none" }}>
+    <div className={`${inset ? "rounded-2xl" : "card"} p-3 sm:p-4 flex items-center gap-3`}
+      style={inset ? { border: "1px solid var(--app-border-strong)", background: "var(--app-surface-low)" } : { boxShadow: "none" }}>
       {Icon && (
         <div className="hidden sm:flex h-9 w-9 rounded-xl items-center justify-center shrink-0" style={{ background: "rgba(var(--app-primary-rgb),0.10)" }}>
           <Icon className="h-4 w-4" style={{ color: "var(--app-primary)" }} />
