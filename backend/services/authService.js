@@ -206,7 +206,7 @@ const authService = {
 
     const token = signToken(user._id);
     const org = user.orgId
-      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch enablex.webrtc.enabled").lean()
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch enablex.webrtc.enabled telephony.provider").lean()
       : null;
     return { token, user, org };
   },
@@ -362,7 +362,7 @@ const authService = {
 
     const token = signToken(user._id);
     const org = user.orgId
-      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch enablex.webrtc.enabled").lean()
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch enablex.webrtc.enabled telephony.provider").lean()
       : null;
     return { token, user, org };
   },
@@ -375,7 +375,7 @@ const authService = {
     const user = await User.findById(userId).select("+password");
     if (!user) throw new AppError("User not found", 404);
     const org = user.orgId
-      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch enablex.webrtc.enabled").lean()
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch enablex.webrtc.enabled telephony.provider").lean()
       : null;
     // Agents get the slim company record, as from GET /org/me (24 Oct 2026:
     // /auth/me still sent them bank, PAN, GST and CIN, and the phone app
@@ -580,7 +580,7 @@ const authService = {
 
     const token = signToken(user._id);
     const org   = user.orgId
-      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch enablex.webrtc.enabled").lean()
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch enablex.webrtc.enabled telephony.provider").lean()
       : null;
     return { token, user, org };
   },

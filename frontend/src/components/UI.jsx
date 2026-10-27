@@ -8,6 +8,7 @@ import HoldToConfirmButton from "./HoldToConfirmButton";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import { useSoftPhone } from "../context/SoftPhoneContext";
+import { useAuth } from "../context/AuthContext";
 
 /**
  * An <img> that survives a transient failure.
@@ -364,6 +365,7 @@ export function PhoneActions({ phone, lead, projectLead, onContact, compact = fa
   const ref       = useRef(null);
   const hoverTimer = useRef(null);
   const sp        = useSoftPhone();   // null on pages outside the authed CRM shell
+  const { org }   = useAuth() || {};
 
   if (!phone) return <span className="text-xs text-app-soft">-</span>;
 
@@ -499,7 +501,8 @@ export function PhoneActions({ phone, lead, projectLead, onContact, compact = fa
                   onMouseEnter={e => e.currentTarget.style.background="rgba(249,115,22,0.08)"}
                   onMouseLeave={e => e.currentTarget.style.background=""}>
                   <Phone className="w-4 h-4 shrink-0" />
-                  Call via EnableX IVR
+                  {/* Whichever phone service the company uses (Telephony settings). */}
+                  {org?.telephony?.provider === "plivo" ? "Call via company number" : "Call via EnableX IVR"}
                 </button>
               )}
               <button onClick={callPersonal}
