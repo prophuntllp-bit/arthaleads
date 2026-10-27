@@ -12,6 +12,7 @@ import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../compon
 import CustomSelect from "../components/CustomSelect";
 import WhatsAppIcon from "../components/WhatsAppIcon";
 import MetaConversionsSection from "../components/MetaConversionsSection";
+import PortalLeadsSection from "../components/PortalLeadsSection";
 import { VistrowVoiceIcon } from "../components/VistrowVoiceSettings";
 import ConnectionCard, { ConnectionGroups } from "../components/ConnectionCard";
 
@@ -2091,11 +2092,13 @@ export default function Automation() {
           <LeadRoutingSection />
           {/* Meta Conversions API */}
           <MetaConversionsSection />
+          {/* 99acres, Housing.com, MagicBricks */}
+          <PortalLeadsSection />
         </div>
       ) : (
         <section className="card p-5">
-          <p className="text-sm font-bold text-app">Campaign routing rules and Meta Conversions API</p>
-          <p className="text-xs text-app-soft mt-1">Part of the Growth plan: send each campaign's leads to the right person or project automatically, and report results back to Meta.</p>
+          <p className="text-sm font-bold text-app">Campaign routing rules, Meta Conversions API and property portals</p>
+          <p className="text-xs text-app-soft mt-1">Part of the Growth plan: send each campaign's leads to the right person or project automatically, report results back to Meta, and get 99acres, Housing.com and MagicBricks enquiries straight into your leads.</p>
         </section>
       )}
 

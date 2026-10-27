@@ -5,7 +5,7 @@
 // from GET /api/public/options at startup, so a deployed backend can add an
 // option without the client needing a rebuild.
 export const STATUS_OPTIONS = ["New", "Contacted", "Site Visit", "Negotiation", "Closed Won", "Closed Lost"];
-export const SOURCE_OPTIONS = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Custom", "Vistrow Voice", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "QR Code", "Other"];
+export const SOURCE_OPTIONS = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Custom", "Vistrow Voice", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "Housing.com", "QR Code", "Other"];
 export const PRIORITY_OPTIONS = ["Low", "Medium", "High", "Hot"];
 export const PROPERTY_TYPES = ["Apartment", "Villa", "Plot", "Commercial", "Office", "Penthouse", "Other", "N/A"];
 export const BHK_OPTIONS = ["1BHK", "2BHK", "3BHK", "4BHK", "5BHK+", "Studio", "N/A"];
@@ -67,6 +67,7 @@ export const SOURCE_COLORS = {
   "Walk-in": "bg-[#D97706] text-white",
   PropTiger: "bg-[#DC2626] text-white",
   "99acres": "bg-[#65A30D] text-white",
+  "Housing.com": "bg-[#7C3AED] text-white",
   MagicBricks: "bg-[#4F46E5] text-white",
   "QR Code": "bg-[#1F2937] text-white",
   Other: "bg-[#6B7280] text-white",

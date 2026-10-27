@@ -286,6 +286,11 @@ cron.schedule("*/5 * * * *", () => {
   pollGoogleAdsLeads().catch((err) => logger.error(`[google-ads-poll] cron failed: ${err.message}`));
 });
 
+// ── Every 15 minutes: fetch Housing.com builder leads for companies that turned it on ──
+cron.schedule("7,22,37,52 * * * *", () => {
+  require("../services/housingPull").pullAll().catch((err) => logger.error(`[housing pull] cron failed: ${err.message}`));
+});
+
 // ── Daily 5 AM IST (UTC 23:30): downgrade lapsed paid plans ──────────────────
 // paidUntil was previously written and displayed but never acted on, so a plan
 // bought for one month granted its features indefinitely.

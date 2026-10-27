@@ -19,7 +19,7 @@ const HEAD_RULE = "D45A00";  // lines between the orange header cells
 export const SOURCE_FILL = {
   Facebook: "1877F2", Google: "4285F4", WhatsApp: "2AB540", Manual: "64748B",
   Website: "F88025", Custom: "14B8A6", Referral: "9333EA", "Walk-in": "D97706",
-  PropTiger: "DC2626", "99acres": "65A30D", MagicBricks: "4F46E5", "QR Code": "1F2937",
+  PropTiger: "DC2626", "99acres": "65A30D", MagicBricks: "4F46E5", "Housing.com": "7C3AED", "QR Code": "1F2937",
   Other: "6B7280",
 };
 // The Vistrow Voice pill is a purple to pink gradient.

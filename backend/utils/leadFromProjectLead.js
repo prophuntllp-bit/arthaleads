@@ -4,7 +4,7 @@
 // remark, note and follow-up gone. This copies everything the Lead can hold and
 // records where it was deleted from, so Restore can put it back there.
 
-const VALID_SOURCES = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "Other"];
+const VALID_SOURCES = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "Housing.com", "Other"];
 
 function plain(v) {
   return v && typeof v.toObject === "function" ? v.toObject() : v;
