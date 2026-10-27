@@ -149,10 +149,10 @@ export default function MetaConversionsSection() {
       )}
 
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => setOpen("settings")} className="btn-secondary rounded-full px-4 py-2 text-sm font-semibold flex items-center gap-2">
+        <button type="button" onClick={() => setOpen("settings")} className="btn-primary rounded-full px-4 py-2 text-sm font-semibold flex items-center gap-2">
           <Settings2 className="w-4 h-4" /> Settings
         </button>
-        <button type="button" onClick={() => { load(); setOpen("events"); }} className="btn-secondary rounded-full px-4 py-2 text-sm font-semibold flex items-center gap-2">
+        <button type="button" onClick={() => { load(); setOpen("events"); }} className="btn-primary rounded-full px-4 py-2 text-sm font-semibold flex items-center gap-2">
           <ListChecks className="w-4 h-4" /> Recent events
         </button>
       </div>

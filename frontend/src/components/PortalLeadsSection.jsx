@@ -124,7 +124,7 @@ export default function PortalLeadsSection() {
         </div>
       )}
 
-      <button type="button" onClick={() => setOpen(true)} className="btn-secondary rounded-full px-4 py-2 text-sm font-semibold flex items-center gap-2">
+      <button type="button" onClick={() => setOpen(true)} className="btn-primary rounded-full px-4 py-2 text-sm font-semibold flex items-center gap-2">
         <Settings2 className="w-4 h-4" /> Set up portals
       </button>
 
