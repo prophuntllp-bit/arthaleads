@@ -15,6 +15,8 @@ const SECRET_PATHS = [
   ["enablex", "webrtc", "videoAppKey"],
   ["metaCapi", "accessToken"],
   ["plivo", "authToken"],
+  ["portals", "token"],
+  ["portals", "housing", "secretKey"],
   ["voiceApiKey"],
   ["qrToken"],
 ];

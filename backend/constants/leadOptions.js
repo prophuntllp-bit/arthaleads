@@ -24,7 +24,7 @@ const PRIORITY = ["Low", "Medium", "High", "Hot"];
 const SOURCE = [
   "Facebook", "Google", "WhatsApp", "Manual", "Website", "Custom",
   "Vistrow Voice", "Referral", "Walk-in", "PropTiger", "99acres",
-  "MagicBricks", "QR Code", "Other",
+  "MagicBricks", "Housing.com", "QR Code", "Other",
 ];
 
 // "" is a real, selectable value here — it means "no booking status set".

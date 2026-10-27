@@ -312,6 +312,27 @@ const orgSchema = new mongoose.Schema(
       },
     },
 
+    // ── Property portal leads (27 Oct 2026, Growth) ──────────────────────────
+    // 99acres, Housing.com and MagicBricks send each enquiry to the company's
+    // private link (/api/portal-leads/in/<portal>/<token>); Housing.com can also
+    // be fetched with the ID and key it issues (services/housingPull.js).
+    portals: {
+      token: { type: String, default: undefined, index: { unique: true, sparse: true } },
+      lastLeadAt: {
+        acres99:     { type: Date, default: null },
+        housing:     { type: Date, default: null },
+        magicbricks: { type: Date, default: null },
+      },
+      housing: {
+        enabled:      { type: Boolean, default: false },
+        profileId:    { type: String, trim: true, default: "" },
+        secretKey:    { type: String, default: "" },   // stored encrypted (utils/fieldCrypto)
+        lastPulledTo: { type: Date, default: null },
+        lastPullAt:   { type: Date, default: null },
+        lastError:    { type: String, default: "" },
+      },
+    },
+
     // ── EnableX Telephony Integration ─────────────────────────────────────────
     // Which phone service click-to-call goes through (27 Oct 2026). EnableX
     // stays the default; Plivo records each side on its own channel.
