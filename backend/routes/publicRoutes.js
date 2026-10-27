@@ -36,12 +36,38 @@ router.get("/whatsapp-es-config", (req, res) => {
   res.json({ appId, configId, configured: !!(appId && configId) });
 });
 
+// Saves each exchange into the visitor's conversation (models/WebsiteChat.js),
+// after the answer has gone out, so a storage hiccup never costs a reply.
+const SESSION_RE = /^[A-Za-z0-9_-]{8,64}$/;
+async function saveWebsiteChat(req, question, result) {
+  const sessionId = String(req.body.sessionId || "");
+  if (!SESSION_RE.test(sessionId)) return;
+  const WebsiteChat = require("../models/WebsiteChat");
+  const now = new Date();
+  await WebsiteChat.updateOne(
+    { sessionId },
+    {
+      $setOnInsert: {
+        sessionId,
+        page: String(req.body.page || "").slice(0, 200),
+        device: /Mobi|Android|iPhone/i.test(req.get("user-agent") || "") ? "mobile" : "desktop",
+      },
+      $push: { messages: { $each: [
+        { role: "user", text: question, at: now },
+        { role: "bot", text: String(result.answer || "").slice(0, 4000), cta: result.cta || null, at: now },
+      ], $slice: -200 } },
+      $inc: { questions: 1 },
+      $set: { lastAt: now },
+    },
+    { upsert: true }
+  );
+}
+
 // ── Marketing site chatbot ───────────────────────────────────────────────────
 // POST /api/public/chat — Body: { question, history? }
-// No auth, no access to any customer data — pre-sales Q&A only. Inherits the
-// contactLimiter rate limit already applied to this whole router in server.js
-// (10 req / 15 min / IP), which is the abuse guard for this AI-cost-incurring
-// endpoint since it's reachable by anyone.
+// No auth, no access to any customer data — pre-sales Q&A only. Rate limited
+// by its own chatLimiter in server.js (30 req / 15 min / IP), the abuse guard
+// for this AI-cost-incurring endpoint since it's reachable by anyone.
 router.post("/chat", async (req, res, next) => {
   try {
     const question = (req.body.question || "").toString().trim().slice(0, 500);
@@ -63,6 +89,7 @@ router.post("/chat", async (req, res, next) => {
 
     const result = await answerMarketingQuestion(question, history);
     res.json({ success: true, answer: result.answer, cta: result.cta });
+    saveWebsiteChat(req, question, result).catch((e) => console.error("website chat save:", e.message));
   } catch (err) {
     if (err.message?.includes("OPENAI_API_KEY")) {
       return res.status(503).json({ success: false, message: "Chat isn't available right now." });
@@ -183,3 +210,4 @@ router.get("/app-version", (req, res) => {
 });
 
 module.exports = router;
+router.__saveWebsiteChat = saveWebsiteChat;   // for tests/websiteChat.db.test.js

@@ -42,6 +42,7 @@ function CookiePreferences() {
   const save = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
     localStorage.setItem("artha_cookie_consent", prefs.analytics ? "accepted" : "declined");   // keeps the banner in step
+    window.dispatchEvent(new Event("cookie-consent"));   // utils/analytics.js starts GA if allowed
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };

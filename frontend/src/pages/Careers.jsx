@@ -5,6 +5,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSEO } from "../utils/useSEO";
 import api from "../services/api";
+import { track } from "../utils/analytics";
 import {
   MapPin, Clock, Briefcase, ChevronDown,
   TrendingUp, Users, Zap, Heart, ArrowRight, Mail,
@@ -201,6 +202,7 @@ function ApplyModal({ job, onClose }) {
         resumeFilename: resumeFile.name,
         resumeMime:     resumeFile.type,
       });
+      track("generate_lead", { form: "careers" });
       setStatus("success");
     } catch (err) {
       setErrorMsg(err.response?.data?.message || "Something went wrong. Please try again.");

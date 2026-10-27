@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Building2, Users, TicketIcon, BarChart3,
   Megaphone, FileText, TrendingUp, ShieldCheck, Activity,
   LogOut, Menu, X, ChevronUp, MoonStar, SunMedium,
-  PanelLeftClose, PanelLeft, Settings, CalendarCheck2,
+  PanelLeftClose, PanelLeft, Settings, CalendarCheck2, MessageCircle,
 } from "lucide-react";
 import api from "../services/api";
 
@@ -17,6 +17,7 @@ const NAV = [
   { to: "/super-admin/insights",   label: "Insights",      icon: Activity },
   { to: "/super-admin/tickets",    label: "Tickets",       icon: TicketIcon },
   { to: "/super-admin/demo-requests", label: "Demo requests", icon: CalendarCheck2, badge: "demo" },
+  { to: "/super-admin/website-chats", label: "Website chats", icon: MessageCircle },
   { to: "/super-admin/analytics",  label: "Analytics",     icon: BarChart3 },
   { to: "/super-admin/revenue",    label: "Revenue",       icon: TrendingUp },
   { to: "/super-admin/broadcast",  label: "Broadcast",     icon: Megaphone },

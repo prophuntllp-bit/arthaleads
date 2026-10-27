@@ -288,6 +288,7 @@ const SuperAdminHome        = lazy(() => import("./pages/SuperAdminHome"));
 const SuperAdminUsers       = lazy(() => import("./pages/SuperAdminUsers"));
 const SuperAdminTickets     = lazy(() => import("./pages/SuperAdminTickets"));
 const SuperAdminDemoRequests = lazy(() => import("./pages/SuperAdminDemoRequests"));
+const SuperAdminWebsiteChats = lazy(() => import("./pages/SuperAdminWebsiteChats"));
 const SuperAdminAnalytics   = lazy(() => import("./pages/SuperAdminAnalytics"));
 const SuperAdminBroadcast   = lazy(() => import("./pages/SuperAdminBroadcast"));
 const SuperAdminOrgDetail   = lazy(() => import("./pages/SuperAdminOrgDetail"));
@@ -737,6 +738,7 @@ export default function App() {
             <Route path="/super-admin/users"              element={<SuperAdminUsers />} />
             <Route path="/super-admin/tickets"            element={<SuperAdminTickets />} />
             <Route path="/super-admin/demo-requests"      element={<SuperAdminDemoRequests />} />
+            <Route path="/super-admin/website-chats"      element={<SuperAdminWebsiteChats />} />
             <Route path="/super-admin/analytics"          element={<SuperAdminAnalytics />} />
             <Route path="/super-admin/revenue"            element={<SuperAdminRevenue />} />
             <Route path="/super-admin/broadcast"          element={<SuperAdminBroadcast />} />

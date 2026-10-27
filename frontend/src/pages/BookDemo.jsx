@@ -14,6 +14,7 @@ import { WhatsAppLogo } from "../components/site/BrandLogos";
 import { useSEO } from "../utils/useSEO";
 import { getRecaptchaToken } from "../utils/recaptcha";
 import { waLink, WA_MESSAGES } from "../utils/crmLinks";
+import { track } from "../utils/analytics";
 
 // Must match the allowed values in backend/controllers/demoRequestController.js.
 const ROLES = ["Owner / Director", "Sales head", "Marketing", "Broker", "Other"];
@@ -139,7 +140,7 @@ export default function BookDemo() {
         body: JSON.stringify({ ...f, recaptchaToken, source: document.referrer ? new URL(document.referrer).pathname : "" }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success) { setDone(true); setTimeout(toForm, 0); }
+      if (res.ok && data.success) { track("generate_lead", { form: "book_demo" }); setDone(true); setTimeout(toForm, 0); }
       else setError(data.message || "Something went wrong. Please try again.");
     } catch {
       setError("Network error. Please check your connection and try again.");
