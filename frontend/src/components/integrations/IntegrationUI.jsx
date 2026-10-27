@@ -57,7 +57,7 @@ export function IntegrationCard({ logo, name, category, status, statusTone = "of
       <div className="flex items-start gap-3">
         {logo}
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-bold text-app leading-tight truncate">{name}</p>
+          <p className="text-[15px] font-bold text-app leading-tight">{name}</p>
           <p className="text-xs text-app-soft mt-0.5">{category}</p>
         </div>
         {locked ? <StatusChip tone="plan">{lockLabel}</StatusChip> : <StatusChip tone={statusTone}>{status}</StatusChip>}
@@ -76,16 +76,16 @@ export function IntegrationCard({ logo, name, category, status, statusTone = "of
 /** A stat tile: icon, small caps label, value, optional note. */
 export function StatTile({ icon: Icon, label, value, note }) {
   return (
-    <div className="card p-4 flex items-center gap-3" style={{ boxShadow: "none" }}>
+    <div className="card p-3 sm:p-4 flex items-center gap-3" style={{ boxShadow: "none" }}>
       {Icon && (
-        <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(var(--app-primary-rgb),0.10)" }}>
+        <div className="hidden sm:flex h-9 w-9 rounded-xl items-center justify-center shrink-0" style={{ background: "rgba(var(--app-primary-rgb),0.10)" }}>
           <Icon className="h-4 w-4" style={{ color: "var(--app-primary)" }} />
         </div>
       )}
       <div className="min-w-0">
         <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-app-soft truncate">{label}</p>
         <p className="text-lg font-bold text-app leading-tight truncate">{value}</p>
-        {note && <p className="text-[11px] text-app-soft truncate">{note}</p>}
+        {note && <p className="hidden sm:block text-[11px] text-app-soft truncate">{note}</p>}
       </div>
     </div>
   );
