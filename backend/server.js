@@ -360,6 +360,8 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/push", pushRoutes);
 app.use("/api/voice", require("./routes/voiceRoutes"));
 app.use("/api/calls", require("./routes/enablexRoutes"));
+// Plivo click-to-call: settings + call callbacks (routes/plivoRoutes.js).
+app.use("/api/plivo", require("./routes/plivoRoutes"));
 app.use("/api/followups",   require("./routes/followupRoutes"));
 app.use("/api/tasks",       require("./routes/taskRoutes"));
 app.use("/api/attendance",   require("./routes/attendanceRoutes"));

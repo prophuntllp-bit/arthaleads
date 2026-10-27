@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import CallTranscript from "./CallTranscript";
 import toast from "react-hot-toast";
 import { useCopilot } from "../context/CopilotContext";
 import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText, Clock, Headphones, PhoneIncoming, PhoneOutgoing, Trash2, Check, X, MapPin, AlertCircle, ChevronDown, Bot, MessageCircle } from "lucide-react";
@@ -929,7 +930,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                           <summary className="text-xs font-semibold text-app-soft hover:text-app transition cursor-pointer flex items-center gap-1.5 select-none">
                             <AlignLeft className="w-3 h-3" /> View Transcript
                           </summary>
-                          <p className="mt-1.5 text-xs text-app-soft leading-relaxed whitespace-pre-wrap">{meta.transcript}</p>
+                          <div className="mt-1.5"><CallTranscript meta={meta} maxHeight={260} /></div>
                         </details>
                       )}
 
@@ -1192,7 +1193,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                           <summary className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-app-soft hover:text-app transition select-none">
                             <AlignLeft className="w-3 h-3" /> View Transcript
                           </summary>
-                          <p className="mt-1.5 text-xs text-app-soft leading-relaxed whitespace-pre-wrap">{meta.transcript}</p>
+                          <div className="mt-1.5"><CallTranscript meta={meta} maxHeight={260} /></div>
                         </details>
                       )}
                     </div>
