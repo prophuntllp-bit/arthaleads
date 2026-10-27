@@ -4,6 +4,7 @@
 // (back link, header card, stat tiles, tabs).
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Lock } from "lucide-react";
+import SegmentTabs from "../SegmentTabs";
 
 const TONES = {
   on:   { bg: "rgba(22,163,74,0.10)",  fg: "#15803d", dot: "#16a34a" },
@@ -167,18 +168,8 @@ export function IntegrationShell({ logo, name, status, statusTone = "off", descr
       )}
 
       {tabs.length > 1 && (
-        <div role="tablist" className="flex gap-1 overflow-x-auto" style={{ borderBottom: "1px solid var(--app-border)", scrollbarWidth: "none" }}>
-          {tabs.map((t) => {
-            const on = tab === t.key;
-            return (
-              <button key={t.key} type="button" role="tab" aria-selected={on} onClick={() => onTab(t.key)}
-                className="px-3.5 py-2.5 text-sm font-semibold whitespace-nowrap -mb-px transition-colors"
-                style={{ color: on ? "var(--app-primary)" : "var(--app-text-soft)", borderBottom: `2px solid ${on ? "var(--app-primary)" : "transparent"}` }}>
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
+        <SegmentTabs ariaLabel={`${name} sections`} value={tab} onChange={onTab}
+          tabs={tabs.map((t) => ({ value: t.key, label: t.label, count: t.count }))} />
       )}
 
       {children}

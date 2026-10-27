@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Building2, Inbox, Clock, Link2, Copy, Check, RefreshCw, Loader2, KeyRound } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../services/api";
+import SegmentTabs from "../../components/SegmentTabs";
 import { useAuth } from "../../context/AuthContext";
 import { canAccess } from "../../utils/plan";
 import { IntegrationShell, Panel, KeyValues, Steps, PlanLocked, StatusChip, PortalsLogo, MiniLogo, ago, istWhen } from "../../components/integrations/IntegrationUI";
@@ -132,19 +133,8 @@ export default function PortalsPage() {
       {tab === "settings" && d && (
         <div className="space-y-4">
           <Panel>
-            <div role="tablist" aria-label="Portal" className="inline-flex flex-wrap gap-1 rounded-xl p-1"
-              style={{ border: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}>
-              {portals.map((p) => {
-                const on = portal === p.slug;
-                return (
-                  <button key={p.slug} type="button" role="tab" aria-selected={on} onClick={() => setPortal(p.slug)}
-                    className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors"
-                    style={on ? { color: "var(--app-text)", background: "var(--app-surface-solid)", boxShadow: "0 0 0 1px rgba(var(--app-primary-rgb),0.45)" } : { color: "var(--app-text-soft)" }}>
-                    <MiniLogo brand={p.slug} size={16} /> {p.label}
-                  </button>
-                );
-              })}
-            </div>
+            <SegmentTabs ariaLabel="Portal" value={portal} onChange={setPortal}
+              tabs={portals.map((p) => ({ value: p.slug, label: <span className="inline-flex items-center gap-2"><MiniLogo brand={p.slug} size={16} /> {p.label}</span> }))} />
             <div className="space-y-2 pt-1">
               <label className="text-xs font-semibold text-app-soft block">Your {current.label} link</label>
               <div className="flex items-center gap-2">

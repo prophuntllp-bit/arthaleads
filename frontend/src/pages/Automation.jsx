@@ -12,6 +12,7 @@ import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../compon
 import CustomSelect from "../components/CustomSelect";
 import WhatsAppIcon from "../components/WhatsAppIcon";
 import { IntegrationCard, LogoTile, SectionTitle, StatTile, BrandLogo, ago } from "../components/integrations/IntegrationUI";
+import SegmentTabs from "../components/SegmentTabs";
 import { PortalLogo } from "./integrations/PortalsPage";
 import { RoutingLogo } from "./integrations/RoutingRulesPage";
 import { VistrowVoiceIcon } from "../components/VistrowVoiceSettings";
@@ -1673,6 +1674,8 @@ export default function Automation() {
   // Status for the telephony, portal, routing and conversion cards. Each call
   // may be refused (plan or role); the card then just shows "Not set up yet".
   const [extra, setExtra] = useState({});
+  // Which group of integrations is shown: all, or one section (owner, 27 Oct 2026).
+  const [group, setGroup] = useState("all");
   useEffect(() => {
     const put = (k) => (r) => setExtra((e) => ({ ...e, [k]: r.data }));
     api.get("/plivo/settings").then(put("telephony")).catch(() => {});
@@ -1819,6 +1822,8 @@ export default function Automation() {
 
   const SECTIONS = [
     {
+      key: "sources",
+      tab: "Lead sources",
       title: "Lead sources",
       note: "Where your leads come from. Each one drops new leads straight into Leads.",
       cards: [
@@ -1850,6 +1855,8 @@ export default function Automation() {
       ],
     },
     {
+      key: "calling",
+      tab: "Calling",
       title: "Calling",
       note: "Click-to-call, recordings, AI call summaries and AI calling.",
       cards: [
@@ -1865,6 +1872,8 @@ export default function Automation() {
       ],
     },
     {
+      key: "ads",
+      tab: "Ads and routing",
       title: "Ads and routing",
       note: "Send leads to the right person, and tell Meta which leads turn into buyers.",
       cards: [
@@ -1897,7 +1906,14 @@ export default function Automation() {
         <StatTile icon={Plug} label="Your connections" value={items.length} note="pages, sites and links below" />
       </div>
 
-      {SECTIONS.map((s) => (
+      <SegmentTabs ariaLabel="Integrations" value={group} onChange={setGroup}
+        tabs={[
+          { value: "all", label: "All", count: allCards.length },
+          ...SECTIONS.map((s) => ({ value: s.key, label: s.tab, count: s.cards.length })),
+          ...(items.length ? [{ value: "connections", label: "Your connections", count: items.length }] : []),
+        ]} />
+
+      {SECTIONS.filter((s) => group === "all" || group === s.key).map((s) => (
         <section key={s.title} className="space-y-3">
           <SectionTitle title={s.title} note={s.note} />
           <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
@@ -1906,7 +1922,7 @@ export default function Automation() {
         </section>
       ))}
 
-      {items.length > 0 && (
+      {items.length > 0 && (group === "all" || group === "connections") && (
         <section className="space-y-3">
           <SectionTitle title="Your connections" note="Every Facebook page, website and link sending you leads. Pause or edit one here." />
           <ConnectionGroups
