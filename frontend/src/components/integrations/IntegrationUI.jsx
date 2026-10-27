@@ -221,7 +221,8 @@ export const LOGOS = {
 export function BrandLogo({ brand, alt, size = 40 }) {
   return (
     <LogoTile size={size} bg="#fff">
-      <img src={LOGOS[brand]} alt={alt || brand} className="object-contain" style={{ width: size * 0.62, height: size * 0.62 }} loading="lazy" />
+      {/* Meta's mark comes with wide white margins, so it is drawn larger to match. */}
+      <img src={LOGOS[brand]} alt={alt || brand} className="object-contain" style={{ width: size * (brand === "meta" ? 0.95 : 0.62), height: size * (brand === "meta" ? 0.95 : 0.62) }} loading="lazy" />
     </LogoTile>
   );
 }
