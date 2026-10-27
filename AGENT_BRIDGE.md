@@ -101,6 +101,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-27 IST (main, released from staging b318fa8b by file copy): Artha website chat always shows Book a Demo + Start Free Trial; prompt defaults cta to demo. Only backend/utils/openai.js and MarketingChatBot.jsx.
 - [claude] 2026-10-27 IST (main, released from staging c92ec36d + ada36ec6 by file copy): Artha website chat knowledge fixed (founded 2025, no fake stats, Book a Demo CTA, own 30/15min limiter), website chats saved (WebsiteChat + super admin Website chats), GA4 G-YB3DEB0JHG on the live marketing site after consent (CSP updated). package.json: only the websiteChat test line was added to main's script (staging's Plivo tests not released).
 - [claude] 2026-10-27 IST (main, released from staging 27ccde5f by file copy): careers applications to hr@arthaleads.com, softened Careers claims, Case Studies headline, WordPress install counts re-verified. Only these 4 files.
 - [claude] 2026-10-27 IST (main, released from staging 011fe942..44b34746 by file copy): Website redesign live on every marketing page: components/site/Blocks.jsx, SolutionPage, CompetitorComparison, LegalLayout, 20 pages, styles.css, frontend/api/blog-index.js. Only these files were copied; staging's other unreleased work (Plivo, Calls, AI Agent editor etc.) is NOT in this release.

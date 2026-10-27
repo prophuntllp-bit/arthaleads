@@ -263,7 +263,12 @@ export default function MarketingChatBot() {
           </div>
 
           {/* Input */}
-          <form onSubmit={send} className="flex items-center gap-2 px-3 py-3 shrink-0" style={{ borderTop: `1px solid ${t.border}` }}>
+          {/* Always one step away from a demo, whatever the answer offered (owner, 27 Oct 2026). */}
+          <div className="flex items-center gap-2 px-3 pt-2.5 shrink-0" style={{ borderTop: `1px solid ${t.border}` }}>
+            <span onClickCapture={() => track("artha_cta_click", { cta: "demo", from: "panel" })}><CtaChip cta="demo" /></span>
+            <span onClickCapture={() => track("artha_cta_click", { cta: "signup", from: "panel" })}><CtaChip cta="signup" /></span>
+          </div>
+          <form onSubmit={send} className="flex items-center gap-2 px-3 pt-2 pb-3 shrink-0">
             <input
               ref={inputRef}
               value={input}
