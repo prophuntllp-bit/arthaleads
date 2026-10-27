@@ -81,6 +81,7 @@ import "./components/site/reactbits/CardNav.css";
 import "./components/site/reactbits/Grainient.css";
 import "./components/site/reactbits/Threads.css";
 import { isAppHost, isMarketingHost } from "./utils/hosts";
+import "./utils/analytics";   // GA4 on the live website, after cookie consent
 
 // Google sign-in is only used on /login and /signup, which live on
 // app.arthaleads.com. On the marketing site the provider would still load

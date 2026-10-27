@@ -24,6 +24,7 @@ export default function CookieBanner() {
       localStorage.setItem(STORAGE_KEY, value);
       localStorage.setItem(PREFS_KEY, JSON.stringify({ necessary: true, analytics: value === "accepted", marketing: false }));
     } catch { /* storage blocked */ }
+    window.dispatchEvent(new Event("cookie-consent"));   // utils/analytics.js starts GA if allowed
     setVisible(false);
   };
 

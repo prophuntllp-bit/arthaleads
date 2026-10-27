@@ -14,6 +14,12 @@ import { Link } from "react-router-dom";
 import { X, Send, ArrowRight, Sparkles, MessageCircle, ChevronDown } from "lucide-react";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
+import { track } from "../utils/analytics";
+
+// One random id per visit, so the saved conversation (backend models/WebsiteChat.js)
+// keeps a visitor's questions together. Not stored anywhere in the browser.
+let sessionId = "";
+const chatSessionId = () => sessionId || (sessionId = (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, ""));
 
 // Exact values from styles.css's :root / :root.dark --app-* tokens, so this
 // panel matches the real in-app HelpBot pixel-for-pixel regardless of
@@ -106,13 +112,14 @@ export default function MarketingChatBot() {
     }));
 
     setMessages((m) => [...m, { role: "user", text: question }]);
+    track("artha_question", { length: question.length, suggested: !!overrideText });
     setLoading(true);
     try {
       const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/api$/, "");
       const res = await fetch(`${apiBase}/api/public/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, history: historyToSend }),
+        body: JSON.stringify({ question, history: historyToSend, sessionId: chatSessionId(), page: window.location.pathname }),
       });
       const data = await res.json();
       if (data.success) {
@@ -141,7 +148,7 @@ export default function MarketingChatBot() {
           {/* "Ask Artha" pill: a label says what the face is for. */}
           <button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={() => { setOpen(true); track("artha_open"); }}
             aria-label="Ask Artha, the Arthaleads assistant"
             className="relative flex items-center gap-2.5 rounded-full pl-4 pr-1.5 py-1.5 cursor-pointer transition hover:-translate-y-0.5"
             style={{ background: t.bg, border: `1px solid ${t.border}`, boxShadow: "0 14px 34px -12px rgba(0,0,0,0.35), 0 0 0 4px rgba(255,107,0,0.10)" }}
@@ -234,7 +241,7 @@ export default function MarketingChatBot() {
                   </div>
                   {m.role === "bot" && m.cta && (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      <CtaChip cta={m.cta} />
+                      <span onClickCapture={() => track("artha_cta_click", { cta: m.cta })}><CtaChip cta={m.cta} /></span>
                     </div>
                   )}
                 </div>

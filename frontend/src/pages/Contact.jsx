@@ -9,6 +9,7 @@ import { SitePage, Section, Container, Card, SiteButton } from "../components/si
 import { PageHero, FaqSection } from "../components/site/Blocks";
 import { useSEO } from "../utils/useSEO";
 import { getRecaptchaToken } from "../utils/recaptcha";
+import { track } from "../utils/analytics";
 
 const FAQS = [
   ["How quickly do you respond?", "We reply within 24 hours on weekdays, usually much sooner."],
@@ -59,6 +60,7 @@ export default function Contact() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
+        track("generate_lead", { form: "contact" });
         setSent(true);
       } else {
         setError(data.message || "Something went wrong. Please try again.");
