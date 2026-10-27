@@ -323,8 +323,8 @@ const orgSchema = new mongoose.Schema(
       authId:    { type: String, trim: true, default: "" },
       authToken: { type: String, default: "" },        // stored encrypted (utils/fieldCrypto)
       number:    { type: String, trim: true, default: "" }, // Plivo Indian number, the caller ID
-      // Which stereo channel is the agent. Plivo doesn't document it; set after
-      // the first real recording, empty = worked out from what each side says.
+      // Which stereo channel is the agent. Empty = left: Plivo puts the first
+      // leg (the agent's phone) on the left, confirmed on a real call 27 Oct 2026.
       agentChannel: { type: String, enum: ["", "left", "right"], default: "" },
     },
     enablex: {

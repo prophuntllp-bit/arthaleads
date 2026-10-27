@@ -85,7 +85,7 @@ export default function PlivoSettings({ onSaved }) {
         <div>
           <label className="text-xs font-semibold text-app-soft mb-1.5 block">Agent's side of the recording</label>
           <CustomSelect value={form.agentChannel} onChange={(v) => setForm((f) => ({ ...f, agentChannel: v }))}
-            options={[{ value: "", label: "Work it out from the call (recommended)" }, { value: "left", label: "Left channel" }, { value: "right", label: "Right channel" }]}
+            options={[{ value: "", label: "Left channel (your phone, Plivo's default)" }, { value: "right", label: "Right channel" }]}
             style={{ width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 }} />
         </div>
       </div>
