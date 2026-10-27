@@ -34,6 +34,31 @@ const LEAD_SOURCES = [
   { id: "import",     label: "Import a spreadsheet", desc: "Bring in your existing leads from CSV or Excel", icon: FileUp,   tint: "#FF6B00", to: "/leads" },
 ];
 
+// Field and PhoneInput live outside OnboardingGate on purpose: defined inside it,
+// each keystroke made them new components, React rebuilt every field, and the
+// name field's autoFocus pulled the cursor back up while typing the mobile
+// number (27 Oct 2026).
+const Field = ({ label, children, helper }) => (
+  <div>
+    <label className="label">{label} <span className="text-orange-500">*</span></label>
+    {children}
+    {helper && <p className="text-xs text-app-soft mt-1.5">{helper}</p>}
+  </div>
+);
+
+// Fixed +91 chip rather than a typed prefix — country-code formatting is the
+// single most common cause of a rejected number here.
+const PhoneInput = ({ value, onChange, placeholder, autoFocus }) => (
+  <div className="flex items-stretch gap-2">
+    <span className="flex items-center px-3 rounded-2xl text-sm font-semibold flex-shrink-0"
+      style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}>
+      +91
+    </span>
+    <input className="input flex-1" type="tel" value={value} onChange={onChange}
+      placeholder={placeholder} autoComplete="tel" autoFocus={autoFocus} />
+  </div>
+);
+
 export default function OnboardingGate() {
   const { user, org, updateOrg, updateUserState } = useAuth();
   const navigate = useNavigate();
@@ -152,26 +177,7 @@ export default function OnboardingGate() {
     ]} />
   );
 
-  const Field = ({ label, children, helper }) => (
-    <div>
-      <label className="label">{label} <span className="text-orange-500">*</span></label>
-      {children}
-      {helper && <p className="text-xs text-app-soft mt-1.5">{helper}</p>}
-    </div>
-  );
 
-  // Fixed +91 chip rather than a typed prefix — country-code formatting is the
-  // single most common cause of a rejected number here.
-  const PhoneInput = ({ value, onChange, placeholder, autoFocus }) => (
-    <div className="flex items-stretch gap-2">
-      <span className="flex items-center px-3 rounded-2xl text-sm font-semibold flex-shrink-0"
-        style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}>
-        +91
-      </span>
-      <input className="input flex-1" type="tel" value={value} onChange={onChange}
-        placeholder={placeholder} autoComplete="tel" autoFocus={autoFocus} />
-    </div>
-  );
 
   return (
     <div className="fixed inset-0 z-[9997] flex items-center justify-center p-4 overflow-y-auto"
