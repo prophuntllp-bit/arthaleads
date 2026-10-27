@@ -4,21 +4,65 @@
 // the product does, layered over AI-generated photos. Names, projects and
 // prices are illustrations. Everything reads theme tokens, so it works in
 // light, dark and inside dark bands.
+import { useEffect, useState } from "react";
 import { CalendarCheck2, Sparkles, Flame, Phone, CheckCheck, ArrowUpRight, FileText, MapPin, Users } from "lucide-react";
 import { SiteImage, Card } from "./Site";
 import { WhatsAppLogo, FacebookLogo, GoogleLogo } from "./BrandLogos";
 
 const cx = (...c) => c.filter(Boolean).join(" ");
 
-/** A small floating UI card used over photos. Always opaque so it never bleeds. */
-export function FloatCard({ className, children, style }) {
+/**
+ * A small floating UI card used over photos. Always opaque so it never bleeds.
+ * `index` staggers it: the cards rise in one after another, then each bobs
+ * gently on its own rhythm (styles.css .float-card; still under reduced motion).
+ */
+export function FloatCard({ className, children, style, index = 0 }) {
   return (
-    <div className={cx("absolute rounded-2xl border p-3.5 text-left", className)}
-      style={{ background: "var(--site-card)", borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)", ...style }}>
+    <div className={cx("float-card absolute rounded-2xl border p-3.5 text-left", className)}
+      style={{ background: "var(--site-card)", borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)", "--fc-i": index, ...style }}>
       {children}
     </div>
   );
 }
+
+const reducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+/**
+ * Shows one of `items` at a time and swaps to the next every few seconds with
+ * a short fade and lift, like the live lead card on the WordPress page.
+ * `offset` delays the first swap so cards on one visual don't change together.
+ * The first item is what the prerendered HTML shows.
+ */
+export function Cycle({ items, children, interval = 3600, offset = 0 }) {
+  const [idx, setIdx] = useState(0);
+  const [shown, setShown] = useState(true);
+  useEffect(() => {
+    if (items.length < 2 || reducedMotion()) return undefined;
+    let tick, swap;
+    const start = setTimeout(() => {
+      tick = setInterval(() => {
+        setShown(false);
+        swap = setTimeout(() => { setIdx((i) => (i + 1) % items.length); setShown(true); }, 380);
+      }, interval);
+    }, offset);
+    return () => { clearTimeout(start); clearInterval(tick); clearTimeout(swap); };
+  }, [items.length, interval, offset]);
+  return (
+    <div className={cx("transition-all duration-300 ease-out", shown ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1.5")}>
+      {children(items[idx])}
+    </div>
+  );
+}
+
+// Each enquiry and the AI's reply to it; the reply card swaps half a second
+// after the enquiry card, so it reads like the answer arriving.
+const HERO_ENQUIRIES = [
+  { src: "Facebook ad · 1:04 AM", msg: "Is the 2 BHK at Aurum Heights still available?", reply: "Yes, it is. 2 BHK homes start at ₹82 L. Would you like to visit this Saturday?" },
+  { src: "Google ad · 11:42 PM", msg: "What is the price of a 3 BHK at Skyline Residency?", reply: "3 BHK homes at Skyline Residency start at ₹1.2 Cr. Shall I send you the floor plan?" },
+  { src: "Website · 6:15 AM", msg: "Can I visit Green Acres this Sunday?", reply: "Yes, Sunday works. Would 11 AM or 4 PM suit you?" },
+];
+const HERO_VISITS = ["Saturday · 11:00 AM", "Sunday · 4:00 PM", "Monday · 10:30 AM"];
+const HERO_SCORES = ["Lead score 87 · Hot", "Lead score 74 · Warm", "Lead score 91 · Hot"];
 
 // ── Hero: photo + the 1 AM enquiry, the AI reply and the booked visit ─────────
 export function HeroVisual() {
@@ -32,41 +76,49 @@ export function HeroVisual() {
           className="block w-full h-auto aspect-[4/5] lg:aspect-[6/7] object-cover object-[50%_30%]" />
       </div>
 
-      <FloatCard className="left-0 top-6 sm:-left-2 lg:-left-6 xl:-left-12 w-[230px] sm:w-[250px]">
-        <div className="flex items-center gap-2.5">
-          <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(37,211,102,0.14)" }}>
-            <WhatsAppLogo className="w-4 h-4" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-[13px] font-semibold site-ink leading-tight">New enquiry</p>
-            <p className="text-[11px] site-muted leading-tight">Facebook ad · 1:04 AM</p>
-          </div>
-        </div>
-        <p className="mt-2.5 text-[13px] leading-snug site-ink">Is the 2 BHK at Aurum Heights still available?</p>
+      <FloatCard index={0} className="left-0 top-6 sm:-left-2 lg:-left-6 xl:-left-12 w-[230px] sm:w-[250px]">
+        <Cycle items={HERO_ENQUIRIES} offset={600}>
+          {(e) => (
+            <>
+              <div className="flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(37,211,102,0.14)" }}>
+                  <WhatsAppLogo className="w-4 h-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold site-ink leading-tight">New enquiry</p>
+                  <p className="text-[11px] site-muted leading-tight">{e.src}</p>
+                </div>
+              </div>
+              <p className="mt-2.5 text-[13px] leading-snug site-ink">{e.msg}</p>
+            </>
+          )}
+        </Cycle>
       </FloatCard>
 
-      <FloatCard className="hidden sm:block right-0 lg:-right-3 xl:-right-10 top-[42%] w-[240px]">
+      <FloatCard index={1} className="hidden sm:block right-0 lg:-right-3 xl:-right-10 top-[42%] w-[240px]">
         <p className="flex items-center gap-1.5 text-[11px] font-semibold" style={{ color: "var(--site-brand-ink)" }}>
           <Sparkles className="w-3.5 h-3.5" /> AI agent replied in seconds
         </p>
-        <p className="mt-2 rounded-xl px-3 py-2 text-[13px] leading-snug" style={{ background: "rgba(37,211,102,0.12)", color: "var(--site-ink)" }}>
-          Yes, it is. 2 BHK homes start at ₹82 L. Would you like to visit this Saturday?
-        </p>
+        <Cycle items={HERO_ENQUIRIES} offset={1100}>
+          {(e) => (
+            <p className="mt-2 rounded-xl px-3 py-2 text-[13px] leading-snug" style={{ background: "rgba(37,211,102,0.12)", color: "var(--site-ink)" }}>{e.reply}</p>
+          )}
+        </Cycle>
       </FloatCard>
 
-      <FloatCard className="left-2 bottom-6 sm:left-4 lg:-left-4 xl:-left-8 flex items-center gap-3 !py-3">
+      <FloatCard index={2} className="left-2 bottom-6 sm:left-4 lg:-left-4 xl:-left-8 flex items-center gap-3 !py-3">
         <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(22,163,74,0.12)" }}>
           <CalendarCheck2 className="w-[18px] h-[18px]" style={{ color: "#16a34a" }} />
         </span>
         <div>
           <p className="text-[13px] font-semibold site-ink leading-tight">Site visit booked</p>
-          <p className="text-[11px] site-muted leading-tight">Saturday · 11:00 AM</p>
+          <Cycle items={HERO_VISITS} offset={2400}>{(v) => <p className="text-[11px] site-muted leading-tight">{v}</p>}</Cycle>
         </div>
       </FloatCard>
 
-      <FloatCard className="hidden sm:flex right-4 top-6 lg:right-2 xl:-right-6 items-center gap-2 !py-2.5 !px-3">
+      <FloatCard index={3} className="hidden sm:flex right-4 top-6 lg:right-2 xl:-right-6 items-center gap-2 !py-2.5 !px-3">
         <Flame className="w-4 h-4" style={{ color: "#ff6b00" }} />
-        <span className="text-[12px] font-semibold site-ink">Lead score 87 · Hot</span>
+        <Cycle items={HERO_SCORES} offset={1500}>{(s) => <span className="text-[12px] font-semibold site-ink">{s}</span>}</Cycle>
       </FloatCard>
     </div>
   );

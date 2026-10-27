@@ -11,9 +11,10 @@
 // coded illustrations only), no fake social proof, no eyebrow pills, Book a
 // Demo is the main action.
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { ArrowRight, CircleCheck, Plus, Minus } from "lucide-react";
 import { Section, Container, SectionHeader, Card, SiteButton, SiteImage } from "./Site";
-import { FloatCard } from "./HomeVisuals";
+import { FloatCard, Cycle } from "./HomeVisuals";
 import { Reveal } from "../motion/Motion";
 import { WhatsAppLogo } from "./BrandLogos";
 import { CRM_SIGNUP_URL, waLink, WA_MESSAGES } from "../../utils/crmLinks";
@@ -101,7 +102,8 @@ const CARD_POS = [
 
 /**
  * An AI photo (public/img/site/{name}-*.webp, 3:2) on the glass panel with
- * up to three floating cards: [{ Icon, iconColor, iconBg, title, sub }].
+ * up to three floating cards: [{ Icon, iconColor, iconBg, title, sub, cycle? }],
+ * where `cycle` is more [{ title, sub }] the card rotates through.
  */
 export function PhotoVisual({ name, alt, cards = [], aspect = "aspect-[4/3]", position = "object-center", priority = true }) {
   return (
@@ -111,17 +113,21 @@ export function PhotoVisual({ name, alt, cards = [], aspect = "aspect-[4/3]", po
         <SiteImage name={name} width={1536} height={1024} priority={priority} sizes="(min-width: 1024px) 540px, 92vw" alt={alt}
           className={cx("block w-full h-auto object-cover", aspect, position)} />
       </div>
-      {cards.slice(0, 3).map(({ Icon, iconColor = "var(--site-brand-ink)", iconBg = "rgba(255,107,0,0.12)", title, sub }, i) => (
-        <FloatCard key={title} className={cx(CARD_POS[i], "flex items-center gap-3 !py-3 max-w-[260px]")}>
+      {cards.slice(0, 3).map(({ Icon, iconColor = "var(--site-brand-ink)", iconBg = "rgba(255,107,0,0.12)", title, sub, cycle }, i) => (
+        <FloatCard key={title} index={i} className={cx(CARD_POS[i], "flex items-center gap-3 !py-3 max-w-[260px]")}>
           {Icon && (
             <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: iconBg }}>
               <Icon className="w-[18px] h-[18px]" style={{ color: iconColor }} aria-hidden="true" />
             </span>
           )}
-          <span className="min-w-0">
-            <span className="block text-[13px] font-semibold site-ink leading-tight">{title}</span>
-            {sub && <span className="block text-[11px] site-muted leading-tight mt-0.5">{sub}</span>}
-          </span>
+          <Cycle items={[{ title, sub }, ...(cycle || [])]} offset={600 + i * 1300}>
+            {(c) => (
+              <span className="min-w-0 block">
+                <span className="block text-[13px] font-semibold site-ink leading-tight">{c.title}</span>
+                {c.sub && <span className="block text-[11px] site-muted leading-tight mt-0.5">{c.sub}</span>}
+              </span>
+            )}
+          </Cycle>
         </FloatCard>
       ))}
     </div>
@@ -172,11 +178,33 @@ export function FaqSection({ items, title = "Questions people ask", eyebrow = "F
  * The closing panel, as on the home page: title (with an optional gradient
  * part), body, Book a Demo + trial, and a photo on the right.
  */
+// The closing panel's photo changes from page to page (owner, 27 Oct 2026:
+// "the footer card uses the same photo on every page"). Each page gets one of
+// the six AI photos, chosen so it differs from that page's own hero photo.
+const CTA_PHOTOS = {
+  keys:    "A sales executive handing house keys to a young couple",
+  broker:  "A broker showing a bright new apartment to a family",
+  builder: "A sales head explaining a scale model of residential towers to a young couple in a sales gallery",
+  field:   "A sales executive in a hard hat checking her phone outside a residential construction site",
+  partner: "A real estate sales team working through their leads together in the office",
+  hero:    "A real estate sales manager smiling at her phone in a modern sales lounge",
+};
+const CTA_BY_PAGE = {
+  "/ai-crm": "broker", "/builder-crm": "field", "/whatsapp-crm": "partner",
+  "/compare/sell-do-alternative": "builder", "/compare/leadrat-alternative": "partner", "/compare/kylas-alternative": "field",
+  "/pricing": "hero", "/features": "field", "/compare": "partner", "/about-us": "builder",
+  "/security": "broker", "/product-tour": "hero", "/help-guide": "partner", "/api-docs": "field",
+  "/product-updates": "builder", "/refer": "hero", "/case-studies": "broker",
+};
+
 export function ClosingCta({
   title = "Stop losing buyers", dim = "to whoever replies first.",
   body = "Book a 30-minute demo on your own leads, or start the 14-day free trial yourself.",
-  image = "keys", imageAlt = "A sales executive handing house keys to a young couple", tone = "white",
+  image, imageAlt, tone = "white",
 }) {
+  const { pathname } = useLocation();
+  const photo = image || CTA_BY_PAGE[pathname.replace(/\/$/, "") || "/"] || "keys";
+  const alt = imageAlt || CTA_PHOTOS[photo] || "";
   return (
     <Section tone={tone}>
       <Container>
@@ -192,8 +220,8 @@ export function ClosingCta({
               <TrustLine className="mt-6 !justify-start" />
             </div>
             <div className="relative overflow-hidden rounded-[24px] border" style={{ borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
-              <SiteImage name={image} width={1600} height={900} sizes="(min-width: 1024px) 520px, 92vw" alt={imageAlt}
-                className="block w-full h-auto aspect-[16/10] object-cover" />
+              <SiteImage name={photo} width={1600} height={900} sizes="(min-width: 1024px) 520px, 92vw" alt={alt}
+                className={cx("block w-full h-auto aspect-[16/10] object-cover", photo === "hero" && "object-[50%_25%]")} />
             </div>
           </div>
         </Reveal>

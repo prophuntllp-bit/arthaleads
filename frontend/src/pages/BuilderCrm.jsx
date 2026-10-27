@@ -57,9 +57,9 @@ export default function BuilderCrm() {
         photo: "builder",
         photoAlt: "A sales head explaining a scale model of residential towers to a young couple in a sales gallery",
         cards: [
-          { Icon: FacebookLogo, iconColor: "#1877F2", iconBg: "rgba(24,119,242,0.12)", title: "New lead · Aurum Heights", sub: "Facebook ad · sent to Neha" },
+          { Icon: FacebookLogo, iconColor: "#1877F2", iconBg: "rgba(24,119,242,0.12)", title: "New lead · Aurum Heights", sub: "Facebook ad · sent to Neha", cycle: [{ title: "New lead · Skyline Residency", sub: "Facebook ad · sent to Rohit" }, { title: "New lead · Green Acres", sub: "Facebook ad · sent to Sana" }] },
           { Icon: Building2, title: "3 projects · 412 leads", sub: "Each with its own team" },
-          { Icon: CalendarCheck2, iconColor: "#16a34a", iconBg: "rgba(22,163,74,0.12)", title: "Site visit booked", sub: "Saturday · 11:00 AM" },
+          { Icon: CalendarCheck2, iconColor: "#16a34a", iconBg: "rgba(22,163,74,0.12)", title: "Site visit booked", sub: "Saturday · 11:00 AM", cycle: [{ title: "Site visit booked", sub: "Sunday · 4:00 PM" }, { title: "Site visit done", sub: "Feedback logged on the lead" }] },
         ],
       }}
       answer={{
