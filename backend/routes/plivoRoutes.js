@@ -23,7 +23,6 @@ const { uploadCallRecording } = require("../utils/upload");
 const { sendPushToUser } = require("../utils/push");
 
 const form = express.urlencoded({ extended: false });
-const apiBase = () => (process.env.APP_URL || "https://api.arthaleads.com").replace(/\/+$/, "");
 const callEvents = () => require("./enablexRoutes")._callEvents;
 
 // ── Settings (admins) ─────────────────────────────────────────────────────────
@@ -89,7 +88,7 @@ async function verify(req, orgId, label) {
   const org = await Organization.findById(orgId).select("name plivo").lean();
   const creds = plivo.credentials(org);
   const result = creds ? plivo.checkSignature({
-    url: `${apiBase()}${req.originalUrl}`,
+    url: `${plivo.publicBase(req)}${req.originalUrl}`,
     params: req.body || {},
     nonce: req.get("X-Plivo-Signature-V3-Nonce"),
     signature: req.get("X-Plivo-Signature-V3"),
@@ -126,7 +125,7 @@ router.post("/answer/:orgId", form, async (req, res) => {
       "meta.agentAnswered": true,
       "meta.callUuid": String(req.body.CallUUID || ""),
     } });
-    xml(res, plivo.answerXml({ number: org.plivo.number, leadPhone: lead.phone, base: apiBase(), orgId: req.params.orgId, ref: req.query.ref }));
+    xml(res, plivo.answerXml({ number: org.plivo.number, leadPhone: lead.phone, base: plivo.publicBase(req), orgId: req.params.orgId, ref: req.query.ref }));
   } catch (err) {
     console.error("[plivo answer] error:", err.message);
     xml(res, plivo.hangupXml("Sorry, this call could not be connected."));
