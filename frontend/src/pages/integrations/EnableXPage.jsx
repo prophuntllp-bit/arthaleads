@@ -41,7 +41,7 @@ export default function EnableXPage() {
       back="/integrations/telephony" backLabel="Telephony"
       logo={<BrandLogo brand="enablex" alt="EnableX" size={52} />}
       name="EnableX"
-      status={!d ? undefined : inUse ? "In use" : ready ? "Connected" : "Not connected"}
+      status={!d ? undefined : inUse ? "In use" : ready ? "Off" : "Not connected"}
       statusTone={inUse ? "on" : "off"}
       description="Click-to-call through your EnableX number, with call recordings, AI summaries and the in-app browser phone."
       actions={isAdmin && d && ready && !inUse ? (

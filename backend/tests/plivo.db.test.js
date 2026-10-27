@@ -291,6 +291,19 @@ test("an unknown number still reaches someone on the team; nothing logged agains
   assert.equal(await db.collection("leads").countDocuments({ "activities.meta.callUuid": "in-4" }), 0);
 });
 
+test("both services off: click-to-call is refused and an incoming call is not put through", async () => {
+  await db.collection("organizations").updateOne({ _id: ORG }, { $set: { "telephony.provider": "none" } });
+  const lead = await db.collection("leads").insertOne({ orgId: ORG, name: "Off Test", phone: "9822001199", status: "New", activities: [], createdAt: new Date() });
+  const r = await api("POST", "/api/calls/initiate", AGENT, { leadId: String(lead.insertedId) });
+  assert.equal(r.status, 400);
+  assert.match(r.json.message, /switched off/);
+  const inb = await callback(`/api/plivo/inbound/${ORG}`, { CallUUID: "in-off", From: "919822001199", To: "912240123456" });
+  assert.doesNotMatch(inb.text, /<Dial/, "nobody's phone rings");
+  assert.match(inb.text, /<Hangup|<Speak/);
+  assert.equal((await api("PATCH", "/api/plivo/settings", ADMIN, { provider: "none" })).status, 200, "an admin can switch both off");
+  await db.collection("organizations").updateOne({ _id: ORG }, { $set: { "telephony.provider": "plivo" } });
+});
+
 (async () => {
   const mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri());

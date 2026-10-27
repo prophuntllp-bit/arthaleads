@@ -455,7 +455,10 @@ export function PhoneActions({ phone, lead, projectLead, onContact, compact = fa
               Call {lead?.name || projectLead?.name || phone}
             </p>
             <div className="p-2 space-y-0.5">
-              {sp?.enabled && (lead?._id || projectLead?._id) && (
+              {org?.telephony?.provider === "none" && (
+                <p className="px-3 py-2 text-xs text-app-soft">Calling through the company number is switched off.</p>
+              )}
+              {sp?.enabled && org?.telephony?.provider !== "none" && (lead?._id || projectLead?._id) && (
                 <button onClick={callInBrowser}
                   className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-left transition"
                   style={{ color:"#f97316" }}
@@ -465,7 +468,7 @@ export function PhoneActions({ phone, lead, projectLead, onContact, compact = fa
                   Call in browser
                 </button>
               )}
-              {(lead?._id || projectLead?._id) && (
+              {(lead?._id || projectLead?._id) && org?.telephony?.provider !== "none" && (
                 <button onClick={callIVR}
                   className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-left transition"
                   style={{ color:"#f97316" }}

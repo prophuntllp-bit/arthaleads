@@ -848,6 +848,9 @@ router.post("/initiate", protect, async (req, res, next) => {
     const lead = found.doc;
     const isProjectLead = found.Model === ProjectLead;
 
+    // Both phone services switched off in Telephony.
+    if (org?.telephony?.provider === "none") return res.status(400).json({ success: false, message: "Calling is switched off for your company. An admin can switch it on in Integrations → Telephony." });
+
     // Companies switched to Plivo (27 Oct 2026) ring the agent through Plivo;
     // routes/plivoRoutes.js bridges the customer and records each side.
     if (org?.telephony?.provider === "plivo") {
@@ -991,7 +994,8 @@ router.post("/webrtc/session", protect, async (req, res, next) => {
       return res.status(400).json({ success: false, message: "leadId or projectLeadId is required." });
     }
 
-    const org = await Organization.findById(req.user.orgId).select("enablex name").lean();
+    const org = await Organization.findById(req.user.orgId).select("enablex name telephony").lean();
+    if (org?.telephony?.provider === "none") return res.status(400).json({ success: false, message: "Calling is switched off for your company. An admin can switch it on in Integrations → Telephony." });
     const wc  = org?.enablex?.webrtc;
     if (!wc?.enabled || !wc.videoAppId || !wc.videoAppKey) {
       return res.status(400).json({

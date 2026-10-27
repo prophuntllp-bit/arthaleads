@@ -335,9 +335,10 @@ const orgSchema = new mongoose.Schema(
 
     // ── EnableX Telephony Integration ─────────────────────────────────────────
     // Which phone service click-to-call goes through (27 Oct 2026). EnableX
-    // stays the default; Plivo records each side on its own channel.
+    // stays the default; Plivo records each side on its own channel; "none"
+    // means the admin switched calling off (both switches off).
     telephony: {
-      provider: { type: String, enum: ["enablex", "plivo"], default: "enablex" },
+      provider: { type: String, enum: ["enablex", "plivo", "none"], default: "enablex" },
     },
     plivo: {
       enabled:   { type: Boolean, default: false },

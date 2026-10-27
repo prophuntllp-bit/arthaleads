@@ -42,21 +42,16 @@ export default function TelephonyIntegration() {
     try {
       const { data } = await api.patch("/plivo/settings", { provider: key });
       setProvider(key);
-      toast.success(`Calls now go through ${PROVIDERS[key].label}.`);
+      toast.success(key === "none" ? "Calling is off. Switch a service on to call leads again." : `Calls now go through ${PROVIDERS[key].label}.`);
       if (data?.inbound && data.inbound !== "connected") toast.error(`Incoming calls ${data.inbound}. Open Plivo settings to connect them.`);
     } catch (e) {
       toast.error(e?.response?.data?.message || "Could not switch.");
     } finally { setSwitching(""); }
   };
 
-  // One service is always the one calls go through: switching one on turns the
-  // other off; switching the one in use off hands calls to the other, if it's set up.
-  const toggle = (key, next) => {
-    if (next) return switchTo(key);
-    const other = key === "plivo" ? "enablex" : "plivo";
-    if (!ready[other]) { toast.error(`Click-to-call needs one phone service on. Set up ${PROVIDERS[other].label} before switching ${PROVIDERS[key].label} off.`); return; }
-    return switchTo(other);
-  };
+  // Only one can be on. Switching one on turns the other off; switching the one
+  // in use off leaves both off, and click-to-call is off until one is switched on.
+  const toggle = (key, next) => switchTo(next ? key : "none");
 
   const ready = { plivo: !!(plivo?.hasAuthToken && plivo?.number), enablex: !!enablex?.connected };
   const footer = {
@@ -68,18 +63,18 @@ export default function TelephonyIntegration() {
     <IntegrationShell
       logo={<PhoneLogo size={52} />}
       name="Telephony"
-      status={provider ? `Calls through ${PROVIDERS[provider].label}` : undefined}
-      statusTone="on"
+      status={!provider ? undefined : provider === "none" ? "Calling off" : `Calls through ${PROVIDERS[provider].label}`}
+      statusTone={provider && provider !== "none" ? "on" : "off"}
       description="Click-to-call from the CRM and the app, call recordings and AI call summaries. Call history stays the same whichever service you use."
     >
-      <SectionTitle title="Phone services" note="Switch on the one your calls should go through; only one can be on. Open a card for its calls and settings." />
+      <SectionTitle title="Phone services" note="Switch on the one your calls should go through; only one can be on. With both off, click-to-call is off. Open a card for its calls and settings." />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {["plivo", "enablex"].map((key) => (
           <IntegrationCard key={key}
             logo={<BrandLogo brand={key} alt={PROVIDERS[key].label} />}
             name={PROVIDERS[key].label}
             category="Telephony"
-            status={provider === key ? "In use" : ready[key] ? "Connected" : "Not connected"}
+            status={provider === key ? "In use" : ready[key] ? "Off" : "Not connected"}
             statusTone={provider === key ? "on" : "off"}
             toggle={isAdmin && provider ? {
               on: provider === key,

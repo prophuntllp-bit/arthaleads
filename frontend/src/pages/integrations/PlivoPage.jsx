@@ -52,7 +52,7 @@ export default function PlivoPage() {
       back="/integrations/telephony" backLabel="Telephony"
       logo={<BrandLogo brand="plivo" alt="Plivo" size={52} />}
       name="Plivo"
-      status={!d ? undefined : inUse ? "In use" : ready ? "Connected" : "Not connected"}
+      status={!d ? undefined : inUse ? "In use" : ready ? "Off" : "Not connected"}
       statusTone={inUse ? "on" : "off"}
       description="Your phone rings first; when you answer, the lead is dialled from your Plivo number. Each side is recorded on its own channel, so the transcript shows who said what."
       actions={isAdmin && d ? (
