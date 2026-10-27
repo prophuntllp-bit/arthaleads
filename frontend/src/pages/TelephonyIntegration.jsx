@@ -4,7 +4,7 @@
 // and /integrations/telephony/enablex.
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Phone, Loader2 } from "lucide-react";
+import { Phone } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -49,6 +49,15 @@ export default function TelephonyIntegration() {
     } finally { setSwitching(""); }
   };
 
+  // One service is always the one calls go through: switching one on turns the
+  // other off; switching the one in use off hands calls to the other, if it's set up.
+  const toggle = (key, next) => {
+    if (next) return switchTo(key);
+    const other = key === "plivo" ? "enablex" : "plivo";
+    if (!ready[other]) { toast.error(`Click-to-call needs one phone service on. Set up ${PROVIDERS[other].label} before switching ${PROVIDERS[key].label} off.`); return; }
+    return switchTo(other);
+  };
+
   const ready = { plivo: !!(plivo?.hasAuthToken && plivo?.number), enablex: !!enablex?.connected };
   const footer = {
     plivo: ready.plivo ? `Calls go out from ${showNumber(plivo.number)}` : "Not set up yet",
@@ -62,24 +71,8 @@ export default function TelephonyIntegration() {
       status={provider ? `Calls through ${PROVIDERS[provider].label}` : undefined}
       statusTone="on"
       description="Click-to-call from the CRM and the app, call recordings and AI call summaries. Call history stays the same whichever service you use."
-      actions={isAdmin && provider ? (
-        <div role="radiogroup" aria-label="Calls go through" className="inline-flex items-center gap-1 rounded-full p-1"
-          style={{ border: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}>
-          <span className="text-xs font-semibold text-app-soft px-2">Calls go through</span>
-          {Object.entries(PROVIDERS).map(([key, p]) => {
-            const on = provider === key;
-            return (
-              <button key={key} type="button" role="radio" aria-checked={on} onClick={() => switchTo(key)} disabled={!!switching}
-                className="rounded-full px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-60"
-                style={on ? { background: "var(--app-primary)", color: "#fff" } : { color: "var(--app-text-soft)" }}>
-                {switching === key && <Loader2 className="h-3 w-3 animate-spin" />} {p.label}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
     >
-      <SectionTitle title="Phone services" note="Open one to see its calls, change its settings or set it up." />
+      <SectionTitle title="Phone services" note="Switch on the one your calls should go through; only one can be on. Open a card for its calls and settings." />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {["plivo", "enablex"].map((key) => (
           <IntegrationCard key={key}
@@ -88,6 +81,13 @@ export default function TelephonyIntegration() {
             category="Telephony"
             status={provider === key ? "In use" : ready[key] ? "Connected" : "Not connected"}
             statusTone={provider === key ? "on" : "off"}
+            toggle={isAdmin && provider ? {
+              on: provider === key,
+              busy: !!switching,
+              disabled: !ready[key] && provider !== key,
+              title: !ready[key] && provider !== key ? `Set up ${PROVIDERS[key].label} first` : "",
+              onChange: (next) => toggle(key, next),
+            } : undefined}
             description={PROVIDERS[key].line}
             footer={footer[key]}
             action={ready[key] ? "Manage" : "Set up"}

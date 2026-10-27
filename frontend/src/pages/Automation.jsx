@@ -1895,23 +1895,24 @@ export default function Automation() {
 
   return (
     <div className="stitch-page space-y-5">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight text-app">Integrations</h1>
-        <p className="text-sm text-app-soft">Connect where your leads come from, how you call them, and how your ads learn from them.</p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <StatTile icon={Link2} label="Connected" value={liveCards} note="live and sending" />
-        <StatTile icon={LayoutGrid} label="Available" value={allCards.length} note="open one to set it up" />
-        <StatTile icon={Plug} label="Your connections" value={items.length} note="pages, sites and links below" />
-      </div>
-
-      <SegmentTabs ariaLabel="Integrations" value={group} onChange={setGroup}
-        tabs={[
-          { value: "all", label: "All", count: allCards.length },
-          ...SECTIONS.map((s) => ({ value: s.key, label: s.tab, count: s.cards.length })),
-          ...(items.length ? [{ value: "connections", label: "Your connections", count: items.length }] : []),
-        ]} />
+      {/* One main card, like the Leads page: title, totals, then the tabs. */}
+      <section className="card px-5 py-4 space-y-4">
+        <div className="pb-3" style={{ borderBottom: "1px solid var(--app-border)" }}>
+          <h1 className="text-[15px] sm:text-xl font-black tracking-tight text-app leading-none">Integrations</h1>
+          <p className="text-xs text-app-soft mt-1.5">Connect where your leads come from, how you call them, and how your ads learn from them.</p>
+        </div>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <StatTile inset icon={Link2} label="Connected" value={liveCards} note="live and sending" />
+          <StatTile inset icon={LayoutGrid} label="Available" value={allCards.length} note="open one to set it up" />
+          <StatTile inset icon={Plug} label="Your connections" value={items.length} note="pages, sites and links below" />
+        </div>
+        <SegmentTabs ariaLabel="Integrations" value={group} onChange={setGroup} fullWidth
+          tabs={[
+            { value: "all", label: "All", count: allCards.length },
+            ...SECTIONS.map((s) => ({ value: s.key, label: s.tab, count: s.cards.length })),
+            ...(items.length ? [{ value: "connections", label: "Your connections", count: items.length }] : []),
+          ]} />
+      </section>
 
       {SECTIONS.filter((s) => group === "all" || group === s.key).map((s) => (
         <section key={s.title} className="space-y-3">
