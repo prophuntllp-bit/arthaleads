@@ -1128,6 +1128,11 @@ export default function Sidebar() {
         [/^agent\/[^/]+$/, [{ label: "AI Agents", to: `${C}/agent` }, { label: "Edit agent" }]],
         [/^settings$/, [{ label: "Settings" }]],
         [/^telephony$/, [{ label: "Telephony" }]], [/^whatsapp$/, [{ label: "WhatsApp" }]],
+        [/^telephony\/plivo$/, [{ label: "Telephony", to: "/integrations/telephony" }, { label: "Plivo" }]],
+        [/^telephony\/enablex$/, [{ label: "Telephony", to: "/integrations/telephony" }, { label: "EnableX" }]],
+        [/^portals$/, [{ label: "Property portals" }]],
+        [/^conversion-tracking$/, [{ label: "Conversion tracking" }]],
+        [/^routing$/, [{ label: "Routing rules" }]],
       ].find(([re]) => re.test(rest));
       const steps = named ? named[1] : [{ label: base === "/conversations" ? "Chat" : base === "/projects" ? "Project" : "Details" }];
       steps.forEach((st) => out.push(st));

@@ -203,6 +203,11 @@ const Performance    = lazy(() => import("./pages/Performance"));
 const Automation     = lazy(() => import("./pages/Automation"));
 const VistrowVoiceSettingsPage = lazy(() => import("./pages/VistrowVoiceSettingsPage"));
 const TelephonyIntegration = lazy(() => import("./pages/TelephonyIntegration"));
+const PlivoPage = lazy(() => import("./pages/integrations/PlivoPage"));
+const EnableXPage = lazy(() => import("./pages/integrations/EnableXPage"));
+const PortalsPage = lazy(() => import("./pages/integrations/PortalsPage"));
+const ConversionTrackingPage = lazy(() => import("./pages/integrations/ConversionTrackingPage"));
+const RoutingRulesPage = lazy(() => import("./pages/integrations/RoutingRulesPage"));
 const WhatsAppIntegration = lazy(() => import("./pages/WhatsAppIntegration"));
 const Settings       = lazy(() => import("./pages/Settings"));
 const HelpSupport    = lazy(() => import("./pages/HelpSupport"));
@@ -718,6 +723,11 @@ export default function App() {
               <Route path="/integrations/vistrow-voice" element={<VistrowVoiceSettingsPage tab="connection" />} />
               <Route path="/integrations/vistrow-calling" element={<VistrowVoiceSettingsPage tab="calling" />} />
               <Route path="/integrations/telephony" element={<TelephonyIntegration />} />
+              <Route path="/integrations/telephony/plivo" element={<PlivoPage />} />
+              <Route path="/integrations/telephony/enablex" element={<EnableXPage />} />
+              <Route path="/integrations/portals" element={<PortalsPage />} />
+              <Route path="/integrations/conversion-tracking" element={<ConversionTrackingPage />} />
+              <Route path="/integrations/routing" element={<RoutingRulesPage />} />
               <Route path="/integrations/whatsapp" element={<WhatsAppIntegration />} />
               {/* The page was renamed Automation -> Integrations. Keep the old
                   slug redirecting: push notifications already delivered to

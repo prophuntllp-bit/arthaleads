@@ -1,24 +1,21 @@
-// MetaConversionsSection.jsx — send each lead's progress back to Meta so its ads
-// can be aimed at people who turn into site visits and sales, not just form fills.
-// Settings and the event log live in /api/meta-conversions.
-//
-// On the Integrations page this is a short card (switch, status, two buttons);
-// the settings and the event log open in popups, like the other integrations,
-// so the page does not need long scrolling (owner, 26 Oct 2026).
+// ConversionTrackingPage.jsx — /integrations/conversion-tracking: send each
+// lead's progress back to Meta so its ads are aimed at people who turn into
+// site visits and sales, not just form fills (Growth). Its own page since
+// 27 Oct 2026 (was a card with popups on Integrations). Backend: /api/meta-conversions.
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, CheckCircle2, AlertTriangle, Lock, Settings2, ListChecks } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle, Send, XCircle, Users, Radio } from "lucide-react";
 import toast from "react-hot-toast";
-import api from "../services/api";
-import { useAuth } from "../context/AuthContext";
-import { canAccess } from "../utils/plan";
-import { Modal } from "./UI";
-import CustomSelect from "./CustomSelect";
-import WhatsAppLogo from "./WhatsAppLogo";
+import api from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
+import { canAccess } from "../../utils/plan";
+import CustomSelect from "../../components/CustomSelect";
+import WhatsAppLogo from "../../components/WhatsAppLogo";
+import { IntegrationShell, LogoTile, Panel, KeyValues, Steps, PlanLocked } from "../../components/integrations/IntegrationUI";
 
 const CHANNEL = { lead_ads: "Lead form", whatsapp_ctwa: "WhatsApp ad" };
 // The official Facebook glyph (same as components/site/BrandLogos.jsx, which is
 // website-only), for the Instant Lead Forms tab.
-function FacebookLogo({ className = "w-4 h-4" }) {
+export function FacebookLogo({ className = "w-4 h-4" }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true" focusable="false">
       <path fill="#1877F2" d="M22.676 0H1.324C.593 0 0 .593 0 1.324v21.352C0 23.408.593 24 1.324 24h11.494v-9.294H9.689v-3.621h3.129V8.41c0-3.099 1.894-4.785 4.659-4.785 1.325 0 2.464.097 2.796.141v3.24h-1.921c-1.5 0-1.792.721-1.792 1.771v2.311h3.584l-.465 3.63H16.56V24h6.115c.733 0 1.325-.592 1.325-1.324V1.324C24 .593 23.408 0 22.676 0" />
@@ -33,7 +30,7 @@ const STATUS_TONE = {
 };
 const when = (d) => new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" });
 
-export default function MetaConversionsSection() {
+export default function ConversionTrackingPage() {
   const { user, org } = useAuth();
   const [d, setD] = useState(null);
   const [form, setForm] = useState({ datasetId: "", accessToken: "", testEventCode: "" });
@@ -44,7 +41,7 @@ export default function MetaConversionsSection() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testNote, setTestNote] = useState(null);
-  const [open, setOpen] = useState(null); // "settings" | "events" | null
+  const [view, setView] = useState("overview");
 
   const allowed = user?.role === "super_admin" || (user?.role === "admin" && canAccess(org, "growth"));
   const load = useCallback(() => {
@@ -57,21 +54,22 @@ export default function MetaConversionsSection() {
     }).catch(() => {});
   }, []);
   useEffect(() => { if (allowed) load(); }, [allowed, load]);
-  // Closing without saving drops unsaved edits, so they can't be saved by accident later.
-  const close = useCallback(() => { setOpen(null); setTestNote(null); load(); }, [load]);
+  // Leaving the Settings tab without saving drops unsaved edits, so they can't be saved by accident later.
+  const switchView = (v) => { if (view === "settings" && v !== "settings") { setTestNote(null); load(); } setView(v); };
 
-  if (user?.role === "admin" && !canAccess(org, "growth")) {
+  const shell = {
+    logo: <LogoTile size={52} bg="rgba(24,119,242,0.08)"><FacebookLogo className="w-6 h-6" /></LogoTile>,
+    name: "Meta conversion tracking",
+    description: "Tells Meta which of your ad leads become serious buyers, so it shows your ads to more people like them.",
+  };
+  if (!allowed) {
     return (
-      <section className="card p-6 flex items-start gap-3">
-        <Lock className="w-4 h-4 mt-1 text-app-soft shrink-0" />
-        <div>
-          <h3 className="text-base font-bold text-app">Meta conversion tracking</h3>
-          <p className="text-sm text-app-soft mt-1">Send site visits and closed deals back to Meta so your ads find more buyers. Available on Growth and above.</p>
-        </div>
-      </section>
+      <IntegrationShell {...shell}>
+        {user?.role === "admin" ? <PlanLocked what="Meta conversion tracking" /> : <Panel><p className="text-sm text-app-soft">Only an admin can set up conversion tracking.</p></Panel>}
+      </IntegrationShell>
     );
   }
-  if (!allowed || !d) return null;
+  if (!d) return <IntegrationShell {...shell} />;
 
   const save = async (extra = {}) => {
     setSaving(true);
@@ -107,57 +105,60 @@ export default function MetaConversionsSection() {
   const configured = (d.tokenSet && form.datasetId) || d.whatsappConnected;
 
   return (
-    <section className="card p-6 space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="stitch-kicker mb-1">Meta ads</p>
-          <h3 className="text-base font-bold text-app">Conversion tracking</h3>
-          <p className="text-sm text-app-soft mt-1 max-w-xl">
-            Tells Meta which of your ad leads become serious buyers, so it shows your ads to more people like them.
-          </p>
-        </div>
-        <label className="flex items-center gap-2 shrink-0 cursor-pointer select-none" title={configured ? "" : "Connect WhatsApp to Meta, or add a lead-form dataset in Settings, to switch this on"}>
-          <span className="text-xs font-semibold text-app-soft">{d.enabled ? "On" : "Off"}</span>
+    <IntegrationShell {...shell}
+      status={d.enabled ? "On" : configured ? "Off" : "Not connected"}
+      statusTone={d.enabled ? "on" : "off"}
+      actions={
+        <label className="flex items-center gap-2 cursor-pointer select-none rounded-full px-3 py-1.5" style={{ border: "1px solid var(--app-border)" }}
+          title={configured ? "" : "Connect WhatsApp to Meta, or add a lead-form dataset in Settings, to switch this on"}>
+          <span className="text-sm font-semibold text-app">{d.enabled ? "Sending to Meta" : "Off"}</span>
           <input type="checkbox" className="sr-only peer" checked={d.enabled} disabled={saving || !configured}
             onChange={(e) => save({ enabled: e.target.checked })} />
           <span className="w-10 h-6 rounded-full relative transition peer-disabled:opacity-40" style={{ background: d.enabled ? "#16a34a" : "var(--app-border)" }}>
             <span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform" style={{ transform: d.enabled ? "translateX(16px)" : "none" }} />
           </span>
         </label>
-      </div>
-
-      <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs">
-        <span className="flex items-center gap-1.5 text-app-soft">
-          <WhatsAppLogo className="w-3.5 h-3.5" /> Click to WhatsApp Ads: <b className="text-app">{d.whatsappConnected ? "connected" : "not connected"}</b>
-        </span>
-        <span className="flex items-center gap-1.5 text-app-soft">
-          <FacebookLogo className="w-3.5 h-3.5" /> Instant Lead Forms: <b className="text-app">{leadFormsSet ? "dataset added" : "not set up"}</b>
-        </span>
-        <span className="text-app-soft">
-          Events: <b className="text-app">{(stats.sent || 0).toLocaleString("en-IN")} sent</b>{stats.failed ? <b style={{ color: "#dc2626" }}>, {stats.failed} failed</b> : ""}
-        </span>
-      </div>
-      {!configured && (
-        <p className="text-xs text-app-soft">Open Settings to connect a dataset. The switch unlocks once Meta can be reached.</p>
-      )}
-
-      {d.lastError && (
-        <div className="rounded-xl px-3 py-2 text-xs flex items-start gap-2" style={{ background: "rgba(220,38,38,0.07)", border: "1px solid rgba(220,38,38,0.2)", color: "#dc2626" }}>
-          <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-          <span className="line-clamp-2">Meta refused the last event: {d.lastError}</span>
+      }
+      stats={[
+        { icon: Send, label: "Events sent", value: (stats.sent || 0).toLocaleString("en-IN") },
+        { icon: XCircle, label: "Failed", value: (stats.failed || 0).toLocaleString("en-IN") },
+        { icon: Users, label: "Leads that can be matched", value: (d.matchableLeads || 0).toLocaleString("en-IN") },
+        { icon: Radio, label: "Channels", value: [d.whatsappConnected && "WhatsApp ads", leadFormsSet && "Lead forms"].filter(Boolean).join(", ") || "None yet" },
+      ]}
+      tabs={[{ key: "overview", label: "Overview" }, { key: "settings", label: "Settings" }, { key: "activity", label: "Activity" }, { key: "help", label: "Setup help" }]}
+      tab={view} onTab={switchView}
+    >
+      {view === "overview" && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 items-start">
+          <div className="space-y-4">
+            <Panel title="Connection">
+              <KeyValues rows={[
+                ["Status", d.enabled ? "Sending events to Meta" : "Off"],
+                ["Click to WhatsApp Ads", d.whatsappConnected ? "Connected" : "Not connected"],
+                ["Instant Lead Forms", leadFormsSet ? "Dataset added" : "Not set up"],
+              ]} />
+              {!configured && <p className="text-xs text-app-soft">Open Settings to connect a dataset. The switch unlocks once Meta can be reached.</p>}
+            </Panel>
+            {d.lastError && (
+              <div className="rounded-2xl px-4 py-3 text-sm flex items-start gap-2" style={{ background: "rgba(220,38,38,0.07)", border: "1px solid rgba(220,38,38,0.2)", color: "#dc2626" }}>
+                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>Meta refused the last event: {d.lastError}</span>
+              </div>
+            )}
+          </div>
+          <Panel title="What we send">
+            <KeyValues rows={[
+              ["Who", "Only leads from your Meta lead forms and WhatsApp ads"],
+              ["When", "Once per lead, as it reaches each stage you pick"],
+              ["Matched by", "Meta's own lead or ad click ID"],
+              ["Never sent", "Website, manual and other leads"],
+            ]} />
+          </Panel>
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => setOpen("settings")} className="btn-primary rounded-full px-4 py-2 text-sm font-semibold flex items-center gap-2">
-          <Settings2 className="w-4 h-4" /> Settings
-        </button>
-        <button type="button" onClick={() => { load(); setOpen("events"); }} className="btn-primary rounded-full px-4 py-2 text-sm font-semibold flex items-center gap-2">
-          <ListChecks className="w-4 h-4" /> Recent events
-        </button>
-      </div>
+      {view === "settings" && <Panel>
 
-      <Modal open={open === "settings"} onClose={close} title="Conversion tracking settings" size="lg">
         <div className="space-y-5">
           <div role="tablist" aria-label="Kind of Meta ad" className="inline-flex flex-wrap gap-1 rounded-xl p-1"
             style={{ border: "1px solid var(--app-border-strong)", background: "var(--app-surface-low)" }}>
@@ -274,9 +275,10 @@ export default function MetaConversionsSection() {
             )}
           </div>
         </div>
-      </Modal>
+      </Panel>}
 
-      <Modal open={open === "events"} onClose={close} title="Recent conversion events" size="lg">
+      {view === "activity" && <Panel>
+
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-app-soft">
@@ -320,7 +322,27 @@ export default function MetaConversionsSection() {
             </div>
           )}
         </div>
-      </Modal>
-    </section>
+      </Panel>}
+
+      {view === "help" && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 items-start">
+          <Panel title="Click to WhatsApp Ads">
+            <Steps items={[
+              "Connect WhatsApp to Meta directly (WhatsApp Cloud API) under Integrations, WhatsApp Business.",
+              "On the Settings tab, choose Click to WhatsApp Ads and pick an event for each stage.",
+              "Save, then switch tracking on at the top of this page.",
+            ]} />
+          </Panel>
+          <Panel title="Instant Lead Forms">
+            <Steps items={[
+              "In Meta Events Manager, open your dataset, then Settings, then Conversions API, and generate an access token.",
+              "Paste the dataset ID and token on the Settings tab, under Instant Lead Forms.",
+              "Add a test event code and use Send a test event to check it arrives in Events Manager.",
+              "Meta needs the lead arriving plus at least two later stages before it learns from them.",
+            ]} />
+          </Panel>
+        </div>
+      )}
+    </IntegrationShell>
   );
 }

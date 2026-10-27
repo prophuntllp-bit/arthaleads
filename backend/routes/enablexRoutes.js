@@ -759,7 +759,8 @@ router.get("/settings", authorize("admin", "manager", "super_admin"), async (req
     // never send videoAppKey to the browser, only whether one is set.
     const { videoAppKey, ...webrtcSafe } = webrtc || {};
     // Inbound answer URL — admins paste this into EnableX portal → Phone Numbers → Answer URL
-    const inboundUrl = `${process.env.APP_URL || "https://api.arthaleads.com"}/api/calls/inbound/${orgId}`;
+    // The host this request came in on (staging shows staging's own URL).
+    const inboundUrl = `${require("../services/plivo").publicBase(req)}/api/calls/inbound/${orgId}`;
     res.json({
       enablex:    {
         ...safe,
