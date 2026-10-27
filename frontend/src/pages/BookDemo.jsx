@@ -8,7 +8,7 @@
 // Rendered by entry-prerender.jsx too, so nothing touches window during render.
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, CircleCheck, Clock3, IndianRupee, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CircleCheck, Clock3, IndianRupee, Play, Sparkles } from "lucide-react";
 import { SitePage, Section, Container, SiteButton, SiteImage, Card } from "../components/site/Site";
 import { WhatsAppLogo } from "../components/site/BrandLogos";
 import { useSEO } from "../utils/useSEO";
@@ -83,6 +83,44 @@ function Choice({ options, value, onChange, multi = false, name }) {
           {isOn(o) && <Check className="inline w-3.5 h-3.5 mr-1 -mt-0.5" aria-hidden="true" />}{o}
         </button>
       ))}
+    </div>
+  );
+}
+
+const INTRO_ID = "ZybPiXyK2vQ";
+const INTRO_CHAPTERS = [
+  ["0:00", "What is Arthaleads?"],
+  ["0:24", "The receptionist who never sleeps: the WhatsApp AI agent"],
+  ["0:46", "The register that never forgets: every lead in one place"],
+  ["1:08", "The manager who keeps everyone on track"],
+  ["1:35", "Start your 14-day free trial"],
+];
+
+/** The intro film: YouTube's thumbnail until clicked, then the privacy-enhanced player. */
+function IntroFilm() {
+  const [playing, setPlaying] = useState(false);
+  return (
+    <div className="relative min-w-0">
+      <div aria-hidden="true" className="hero-glass" />
+      <div className="relative overflow-hidden rounded-[24px] border aspect-video bg-black" style={{ borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
+        {playing ? (
+          <iframe className="absolute inset-0 w-full h-full" title="What is Arthaleads? The real estate CRM, explained in 2 minutes"
+            src={`https://www.youtube-nocookie.com/embed/${INTRO_ID}?autoplay=1&rel=0&modestbranding=1`}
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
+        ) : (
+          <button type="button" onClick={() => { setPlaying(true); track("video_play", { video: "intro" }); }}
+            className="group absolute inset-0 w-full h-full" aria-label="Play the 2-minute Arthaleads intro film">
+            <img src={`https://i.ytimg.com/vi/${INTRO_ID}/maxresdefault.jpg`} alt="" loading="lazy" decoding="async" width="1280" height="720"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
+            <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/5 to-transparent" />
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[72px] h-[72px] rounded-full flex items-center justify-center text-white transition-transform duration-300 group-hover:scale-110"
+              style={{ background: "var(--brand-btn)", boxShadow: "0 18px 40px -12px rgba(204,75,0,0.8), 0 0 0 10px rgba(255,255,255,0.18)" }}>
+              <Play className="w-7 h-7 ml-1" fill="currentColor" aria-hidden="true" />
+            </span>
+            <span className="absolute left-4 bottom-4 text-[12px] font-semibold text-white px-2.5 py-1 rounded-md" style={{ background: "rgba(0,0,0,0.55)" }}>1:47 · English</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -271,6 +309,34 @@ export default function BookDemo() {
               </form>
             )}
           </Card>
+        </Container>
+      </Section>
+
+      {/* Watch first: the 2-minute intro film ("What is Arthaleads?", YouTube
+          ZybPiXyK2vQ), different from the 1 AM tour film on the home page and
+          /product-tour. A thumbnail until clicked, then YouTube's
+          privacy-enhanced player, so nothing from YouTube loads by default. */}
+      <Section tone="tint">
+        <Container className="grid lg:grid-cols-[0.8fr_1.2fr] gap-8 lg:gap-14 items-center">
+          <div className="min-w-0">
+            <p className="site-eyebrow mb-4">Before your demo</p>
+            <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[28px] sm:text-[36px]">
+              What is Arthaleads? <span className="site-dim">Explained in 2 minutes.</span>
+            </h2>
+            <p className="mt-4 text-base sm:text-[17px] leading-relaxed max-w-lg">
+              A WhatsApp AI agent that answers every enquiry, one list for every lead, and a clear view of what your team should do next.
+            </p>
+            <ol className="mt-6 space-y-2.5">
+              {INTRO_CHAPTERS.map(([t, label]) => (
+                <li key={t} className="flex items-center gap-3 text-[15px]">
+                  <span className="font-mono text-xs font-semibold tabular-nums px-2 py-1 rounded-md shrink-0" style={{ background: "rgba(255,107,0,0.12)", color: "var(--site-brand-ink)" }}>{t}</span>
+                  <span className="site-ink">{label}</span>
+                </li>
+              ))}
+            </ol>
+            <SiteButton href="#demo-form" className="mt-8">Book your demo <ArrowRight className="w-4 h-4" /></SiteButton>
+          </div>
+          <IntroFilm />
         </Container>
       </Section>
     </SitePage>
