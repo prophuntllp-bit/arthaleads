@@ -1,18 +1,19 @@
-import { useState } from "react";
-import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
+// pages/Security.jsx - /security on the shared marketing theme (components/site/*).
+// Every point must stay true to how the product runs today; change the copy
+// when the infrastructure changes.
 import {
   Shield, Lock, KeyRound, Server, Eye, UserCheck, Database, Bell,
-  CheckCircle2, ArrowRight, Mail, FileCheck, RefreshCw, Globe,
+  CheckCircle2, Mail, FileCheck, RefreshCw, Globe,
 } from "lucide-react";
-import PublicNav from "../components/PublicNav";
-import PublicFooter from "../components/PublicFooter";
-import { usePublicTheme } from "../context/PublicThemeContext";
+import { SitePage, Section, Container, SectionHeader, Card, SiteButton } from "../components/site/Site";
+import { PageHero, ClosingCta } from "../components/site/Blocks";
+import { Reveal } from "../components/motion/Motion";
 import { useSEO } from "../utils/useSEO";
 
 const PILLARS = [
   {
     key: "data",
-    label: "Data Protection",
+    label: "Data protection",
     icon: Database,
     points: [
       ["Encryption in transit", "All traffic is served over HTTPS/TLS. Data moving between your browser and our servers is always encrypted."],
@@ -23,7 +24,7 @@ const PILLARS = [
   },
   {
     key: "access",
-    label: "Access Control",
+    label: "Access control",
     icon: UserCheck,
     points: [
       ["Role-based access", "Admin, Manager, and Agent roles each have precisely scoped permissions. Agents only see leads assigned to them."],
@@ -40,17 +41,17 @@ const PILLARS = [
       ["Hardened headers", "We apply Helmet security headers (CSP, HSTS, X-Frame-Options) on every response."],
       ["Rate limiting", "API endpoints are rate-limited to absorb abuse and keep the service stable for everyone."],
       ["Error monitoring", "Sentry tracks errors in real time so we catch and fix issues fast."],
-      ["Signed webhooks", "Incoming Facebook lead webhooks are verified with HMAC-SHA256 signatures — no spoofed leads."],
+      ["Signed webhooks", "Incoming Facebook lead webhooks are verified with HMAC-SHA256 signatures, so nobody can send in spoofed leads."],
     ],
   },
   {
     key: "privacy",
-    label: "Privacy & Compliance",
+    label: "Privacy and compliance",
     icon: Eye,
     points: [
       ["DPDP Act 2023", "Built to comply with India's Digital Personal Data Protection Act. Consent-first, data-minimal."],
       ["No data selling", "We never sell, rent, or share your leads. Your data is used only to run the CRM for you."],
-      ["Facebook reviewed", "Our Meta app is App-Review approved for lead retrieval — held to Meta's data-use standards."],
+      ["Facebook reviewed", "Our Meta app is App-Review approved for lead retrieval and held to Meta's data-use standards."],
       ["Full data export", "Export all your leads anytime in CSV/Excel. Your data belongs to you."],
     ],
   },
@@ -67,154 +68,96 @@ const TRUST_BADGES = [
   ["Real-time alerts", Bell],
 ];
 
-export default function Security() {
-  const { isDark } = usePublicTheme();
-  const [active, setActive] = useState("data");
+const iconTile = { background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" };
 
+export default function Security() {
   useSEO({
     title:       "Security & Trust | Arthaleads Real Estate CRM",
     description: "How Arthaleads keeps your real estate leads safe: encryption, role-based access, signed webhooks, daily backups, and DPDP Act 2023 compliance.",
     canonical:   "https://www.arthaleads.com/security",
   });
 
-  const bg         = isDark ? "#0d0d1a" : "#ffffff";
-  const altBg      = isDark ? "#080810" : "#f9fafb";
-  const textColor  = isDark ? "#ffffff" : "#111827";
-  const softText   = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const cardBg     = isDark ? "rgba(255,255,255,0.02)" : "#ffffff";
-  const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-
-  const activePillar = PILLARS.find((p) => p.key === active);
-
   return (
-    <div className="min-h-screen" style={{ background: bg, color: textColor, fontFamily: "Inter, sans-serif" }}>
-      <PublicNav />
+    <SitePage>
+      <PageHero
+        eyebrow="Security"
+        title={<>Your leads are <span className="site-dim">safe with us</span></>}
+        lede="Arthaleads is built security-first: encryption, strict access control, signed webhooks and compliance with India's data protection law, so your most valuable asset, your pipeline, stays protected."
+        actions={[
+          { label: "See how we protect data", href: "#pillars" },
+          { label: "Report an issue", href: "mailto:contact@arthaleads.com?subject=Security%20Disclosure", Icon: Mail },
+        ]}
+      >
+        <ul className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
+          {TRUST_BADGES.map(([label, Icon]) => (
+            <li key={label}>
+              <Card glow className="flex items-center gap-2.5 p-3 h-full">
+                <span className="site-icon w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={iconTile}>
+                  <Icon className="w-4 h-4" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
+                </span>
+                <span className="text-[13px] font-semibold site-ink leading-tight">{label}</span>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      </PageHero>
 
-      {/* Hero */}
-      <section className="relative pt-32 pb-16 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full blur-3xl" style={{ background: "rgba(255,107,0,0.06)" }} />
-        </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl font-black mb-5" style={{ color: textColor }}>
-            Your leads are{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">safe with us</span>
-          </h1>
-          <p className="text-lg max-w-2xl mx-auto" style={{ color: softText }}>
-            Arthaleads is built security-first. Encryption, strict access control, signed webhooks, and
-            compliance with India's data protection law — so your most valuable asset, your pipeline, stays
-            protected.
-          </p>
-        </div>
-      </section>
-
-      {/* Trust badges */}
-      <section className="pb-4">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {TRUST_BADGES.map(([label, Icon]) => (
-              <div key={label} className="flex items-center gap-2.5 p-3 rounded-xl" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,107,0,0.1)" }}>
-                  <Icon className="w-4 h-4 text-[#ff6b00]" />
-                </div>
-                <span className="text-xs font-medium" style={{ color: textColor }}>{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Interactive pillars */}
-      <section className="py-16" style={{ background: altBg }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl font-bold mb-3" style={{ color: textColor }}>How we protect your data</h2>
-            <p className="text-base max-w-lg mx-auto" style={{ color: softText }}>
-              Explore the four pillars of Arthaleads security.
-            </p>
-          </div>
-
-          {/* Tab buttons */}
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
-            {PILLARS.map((p) => {
-              const isActive = p.key === active;
-              return (
-                <button
-                  key={p.key}
-                  onClick={() => setActive(p.key)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer"
-                  style={{
-                    background: isActive ? "var(--brand-btn)" : cardBg,
-                    color: isActive ? "#fff" : softText,
-                    border: `1px solid ${isActive ? "#ff6b00" : cardBorder}`,
-                  }}
-                >
-                  <p.icon className="w-4 h-4" />
-                  {p.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Active pillar content */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
-            {activePillar.points.map(([title, desc]) => (
-              <div key={title} className="p-5 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-[#ff6b00] flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold text-sm mb-1.5" style={{ color: textColor }}>{title}</h3>
-                    <p className="text-xs leading-relaxed" style={{ color: softText }}>{desc}</p>
+      {/* The four pillars, all on the page (no tabs) so every point is readable and indexable */}
+      <Section tone="tint" id="pillars">
+        <Container>
+          <SectionHeader eyebrow="How we protect your data" title="Four pillars of Arthaleads security" />
+          <div className="grid md:grid-cols-2 gap-4">
+            {PILLARS.map((p, i) => (
+              <Reveal key={p.key} delay={(i % 2) * 100} className="min-w-0 flex">
+                <Card glow className="w-full p-6 sm:p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <span className="site-icon w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
+                      <p.icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
+                    </span>
+                    <h3 className="font-display text-xl font-bold site-ink">{p.label}</h3>
                   </div>
-                </div>
-              </div>
+                  <ul className="space-y-4">
+                    {p.points.map(([title, desc]) => (
+                      <li key={title} className="flex items-start gap-3">
+                        <CheckCircle2 className="w-[18px] h-[18px] shrink-0 mt-0.5" style={{ color: "#16a34a" }} aria-hidden="true" />
+                        <span className="min-w-0">
+                          <span className="block font-semibold site-ink text-[15px] mb-0.5">{title}</span>
+                          <span className="block text-[14px] leading-relaxed">{desc}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              </Reveal>
             ))}
           </div>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
       {/* Responsible disclosure */}
-      <section className="py-16" style={{ background: bg }}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="p-8 rounded-2xl text-center" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(255,107,0,0.1)" }}>
-              <Shield className="w-6 h-6 text-[#ff6b00]" />
-            </div>
-            <h2 className="text-xl font-bold mb-2" style={{ color: textColor }}>Found a security issue?</h2>
-            <p className="text-sm mb-5 max-w-md mx-auto" style={{ color: softText }}>
-              We take security seriously. If you believe you've found a vulnerability, please report it
-              privately and we'll respond quickly. We appreciate responsible disclosure.
-            </p>
-            <a
-              href="mailto:contact@arthaleads.com?subject=Security%20Disclosure"
-              className="inline-flex items-center gap-2 font-semibold px-6 py-3 rounded-xl transition-colors"
-              style={{ background: "rgba(255,107,0,0.10)", color: "var(--brand-text)", border: "1px solid rgba(255,107,0,0.40)" }}
-            >
-              <Mail className="w-4 h-4" />
-              Report to contact@arthaleads.com
-            </a>
-          </div>
-        </div>
-      </section>
+      <Section tone="white">
+        <Container narrow>
+          <Reveal>
+            <Card raised className="p-6 sm:p-10 flex flex-col sm:flex-row sm:items-center gap-6">
+              <span className="site-icon w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={iconTile}>
+                <Shield className="w-7 h-7" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="font-display text-xl sm:text-2xl font-bold site-ink mb-2">Found a security issue?</h2>
+                <p className="text-[15px] leading-relaxed">
+                  If you believe you've found a vulnerability, please report it privately and we'll respond quickly. We appreciate responsible disclosure.
+                </p>
+              </div>
+              <SiteButton href="mailto:contact@arthaleads.com?subject=Security%20Disclosure" variant="secondary" className="shrink-0">
+                <Mail className="w-4 h-4" /> Report an issue
+              </SiteButton>
+            </Card>
+          </Reveal>
+        </Container>
+      </Section>
 
-      {/* CTA */}
-      <section className="py-16" style={{ background: altBg }}>
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl font-bold mb-3" style={{ color: textColor }}>Ready to manage leads securely?</h2>
-          <p className="text-base mb-6" style={{ color: softText }}>
-            Join real estate teams across India who trust Arthaleads with their pipeline.
-          </p>
-          <a
-            href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-            className="inline-flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25"
-          >
-            Get Started Free
-            <ArrowRight className="w-4 h-4" />
-          </a>
-        </div>
-      </section>
-
-      <PublicFooter />
-    </div>
+      <ClosingCta title="Manage your leads" dim="securely, in one place."
+        body="Book a 30-minute demo and ask us anything about how your data is handled, or start the 14-day free trial yourself." tone="tint" />
+    </SitePage>
   );
 }

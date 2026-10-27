@@ -1,16 +1,18 @@
-import { useState, useEffect } from "react";
-import { Mail, Phone, MapPin, ArrowRight, Check } from "lucide-react";
+// pages/Contact.jsx - /contact on the shared marketing theme (components/site/*).
+// The form posts to /api/contact (reCAPTCHA); demo requests have their own page
+// (/book-demo), which this page points to.
+import { useState } from "react";
+import { Mail, Phone, MapPin, ArrowRight, Check, CalendarCheck2 } from "lucide-react";
 import WhatsAppLogo from "../components/WhatsAppLogo";
 import { waLink, WA_MESSAGES } from "../utils/crmLinks";
-import PublicNav from "../components/PublicNav";
-import PublicFooter from "../components/PublicFooter";
-import { usePublicTheme } from "../context/PublicThemeContext";
+import { SitePage, Section, Container, Card, SiteButton } from "../components/site/Site";
+import { PageHero, FaqSection } from "../components/site/Blocks";
 import { useSEO } from "../utils/useSEO";
 import { getRecaptchaToken } from "../utils/recaptcha";
 
 const FAQS = [
   ["How quickly do you respond?", "We reply within 24 hours on weekdays, usually much sooner."],
-  ["Can I get a free demo?", "Yes. Fill out the form and mention 'demo' in your message, or message us on WhatsApp."],
+  ["Can I get a free demo?", "Yes. Book a 30-minute demo on our Book a Demo page, or message us on WhatsApp."],
   ["Is there a free trial?", "Yes. New accounts get a 14-day free trial of the Growth plan, no credit card needed."],
 ];
 
@@ -19,11 +21,20 @@ const FAQ_JSONLD = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": FAQS.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
-}).replace(/</g, "\u003c");
+}).replace(/</g, "\\u003c");
+
+const inputCls = "w-full rounded-2xl px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-[color:var(--site-brand)]";
+const inputStyle = { background: "var(--site-bg)", border: "1px solid var(--site-line-strong)", color: "var(--site-ink)" };
+const EMPTY = { name: "", email: "", phone: "", company: "", message: "" };
+
+const INFO = [
+  { icon: Mail,   label: "Email us", val: "contact@arthaleads.com",   href: "mailto:contact@arthaleads.com" },
+  { icon: Phone,  label: "Call us",  val: "+91 90670 97779",          href: "tel:+919067097779", note: "Also on WhatsApp" },
+  { icon: MapPin, label: "Based in", val: "Pune, Maharashtra, India", href: null },
+];
 
 export default function Contact() {
-  const { isDark } = usePublicTheme();
-  const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", message: "" });
+  const [form, setForm] = useState(EMPTY);
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -59,153 +70,110 @@ export default function Contact() {
     }
   };
 
-  const bg        = isDark ? "#080810" : "#f9fafb";
-  const heading   = isDark ? "#ffffff" : "#111827";
-  const body      = isDark ? "rgba(255,255,255,0.55)" : "#4b5563";
-  const infoLabel = isDark ? "rgba(255,255,255,0.35)" : "#6b7280";
-  const infoVal   = isDark ? "#ffffff" : "#111827";
-  const cardBg    = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
-  const cardBdr   = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
-  const labelClr  = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
-  const inputBg   = isDark ? "rgba(255,255,255,0.05)" : "#f9fafb";
-  const inputBdr  = isDark ? "rgba(255,255,255,0.08)" : "#d1d5db";
-  const inputClr  = isDark ? "#ffffff" : "#111827";
-
-  const info = [
-    { icon: Mail,   label: "Email Us",  val: "contact@arthaleads.com",   href: "mailto:contact@arthaleads.com" },
-    { icon: Phone,  label: "Call Us",   val: "+91 90670 97779",          href: "tel:+919067097779", note: "Also on WhatsApp" },
-    { icon: MapPin, label: "Based In",  val: "Pune, Maharashtra, India", href: null },
-  ];
-
   return (
-    <>
+    <SitePage>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_JSONLD }} />
-      <PublicNav />
 
-      <main style={{ background: bg, minHeight: "100vh" }}>
-        {/* Hero */}
-        <section className="pt-24 pb-8 px-4" style={{ background: isDark ? "#0d0d1a" : "#fff7f0" }}>
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-3xl sm:text-4xl font-black mb-3" style={{ color: heading }}>
-              We'd love to{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
-                hear from you
-              </span>
-            </h1>
-            <p className="text-base leading-relaxed" style={{ color: body }}>
-              Whether you want a personalised demo, have questions about pricing, or need help getting started - our team is here for you.
-            </p>
-          </div>
-        </section>
+      <PageHero
+        eyebrow="Contact"
+        title={<>We'd love to <span className="site-dim">hear from you</span></>}
+        lede="Questions about pricing, integrations or getting started? Send us a message, call, or chat on WhatsApp. A real person from our Pune team replies."
+        actions={[
+          { label: "Call +91 90670 97779", href: "tel:+919067097779", Icon: Phone },
+          { label: "WhatsApp us", href: waLink(WA_MESSAGES.sales), external: true, variant: "whatsapp", Icon: WhatsAppLogo },
+          { label: "Email us", href: "mailto:contact@arthaleads.com", Icon: Mail, variant: "secondary" },
+        ]}
+        trust={["Replies within 24 hours on weekdays", "Real people in Pune"]}
+      />
 
-        {/* Main content */}
-        <section className="py-10 px-4">
-          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-
-            {/* Left - info */}
-            <div>
-              <h2 className="text-2xl font-black mb-8" style={{ color: heading }}>Contact Information</h2>
-
-              <div className="space-y-6 mb-10">
-                {info.map(({ icon: Icon, label, val, href }) => (
-                  <div key={label} className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-[#ff6b00]/10 flex items-center justify-center flex-shrink-0">
-                      <Icon className="w-5 h-5 text-[#ff6b00]" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium mb-0.5" style={{ color: infoLabel }}>{label}</div>
-                      {href ? (
-                        <a href={href} className="text-sm font-semibold hover:text-[color:var(--brand-text)] transition-colors" style={{ color: infoVal }}>{val}</a>
-                      ) : (
-                        <div className="text-sm font-semibold" style={{ color: infoVal }}>{val}</div>
-                      )}
-                    </div>
-                  </div>
+      <Section tone="tint" className="!pt-12 sm:!pt-16">
+        <Container className="grid lg:grid-cols-[0.9fr_1.1fr] gap-6 lg:gap-10 items-start">
+          {/* Left: ways to reach us */}
+          <div className="grid gap-4 min-w-0">
+            <Card raised className="p-6 sm:p-7">
+              <h2 className="font-display text-xl font-bold site-ink mb-6">Contact information</h2>
+              <ul className="space-y-5">
+                {INFO.map(({ icon: Icon, label, val, href, note }) => (
+                  <li key={label} className="flex items-center gap-4">
+                    <span className="site-icon w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
+                      <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-xs site-muted mb-0.5">{label}</span>
+                      {href
+                        ? <a href={href} className="block text-[15px] font-semibold site-ink hover:underline underline-offset-4 break-words">{val}</a>
+                        : <span className="block text-[15px] font-semibold site-ink">{val}</span>}
+                      {note && <span className="block text-xs site-muted mt-0.5">{note}</span>}
+                    </span>
+                  </li>
                 ))}
-              </div>
+              </ul>
+              <SiteButton href={waLink(WA_MESSAGES.sales)} external variant="whatsapp" className="mt-7 w-full sm:w-auto">
+                <WhatsAppLogo className="w-[18px] h-[18px]" color="#fff" /> Chat on WhatsApp
+              </SiteButton>
+            </Card>
 
-              <a href={waLink(WA_MESSAGES.sales)}
-                target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 bg-[#25D366]/10 border border-[#25D366]/20 hover:bg-[#25D366]/20 transition-colors px-5 py-3 rounded-xl">
-                <WhatsAppLogo className="w-5 h-5" />
-                <div>
-                  <div className="text-sm font-semibold" style={{ color: heading }}>Chat on WhatsApp</div>
-                  <div className="text-xs" style={{ color: body }}>Usually replies within minutes</div>
-                </div>
-              </a>
-
-              <div className="mt-10 p-6 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
-                <h3 className="font-bold text-base mb-4" style={{ color: heading }}>Frequently Asked</h3>
-                <div className="space-y-4">
-                  {FAQS.map(([q, a]) => (
-                    <div key={q}>
-                      <div className="text-sm font-semibold mb-0.5" style={{ color: heading }}>{q}</div>
-                      <div className="text-xs leading-relaxed" style={{ color: body }}>{a}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Right - form */}
-            <div className="p-8 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
-              {sent ? (
-                <div className="flex flex-col items-center justify-center text-center py-16">
-                  <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
-                    <Check className="w-8 h-8 text-green-400" />
-                  </div>
-                  <h3 className="font-black text-xl mb-2" style={{ color: heading }}>Message Sent!</h3>
-                  <p className="text-sm leading-relaxed" style={{ color: body }}>
-                    Thanks for reaching out. We'll get back to you at <strong>{form.email}</strong> within 24 hours.
-                  </p>
-                  <button onClick={() => { setSent(false); setForm({ name: "", email: "", phone: "", company: "", message: "" }); }}
-                    className="mt-6 text-[color:var(--brand-text)] text-sm font-medium hover:underline">
-                    Send another message
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <h3 className="font-black text-xl mb-6" style={{ color: heading }}>Send us a message</h3>
-                  {[
-                    { id: "name",    label: "Your Name",      type: "text",  ph: "Rajesh Patil",        req: true },
-                    { id: "email",   label: "Email Address",  type: "email", ph: "rajesh@example.com",  req: true },
-                    { id: "phone",   label: "Phone Number",   type: "tel",   ph: "+91 98765 43210",     req: false },
-                    { id: "company", label: "Company / Team", type: "text",  ph: "Milestone Properties", req: false },
-                  ].map(({ id, label, type, ph, req }) => (
-                    <div key={id}>
-                      <label className="block text-xs font-medium mb-1.5" style={{ color: labelClr }}>
-                        {label}{req && <span className="text-[color:var(--brand-text)] ml-0.5">*</span>}
-                      </label>
-                      <input
-                        type={type} placeholder={ph} required={req}
-                        value={form[id]} onChange={(e) => setForm({ ...form, [id]: e.target.value })}
-                        className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b00]/40 transition-all"
-                        style={{ background: inputBg, border: `1px solid ${inputBdr}`, color: inputClr }} />
-                    </div>
-                  ))}
-                  <div>
-                    <label className="block text-xs font-medium mb-1.5" style={{ color: labelClr }}>Message</label>
-                    <textarea rows={5}
-                      placeholder="Tell us about your team size, current lead volume, and what you're looking for..."
-                      value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
-                      className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b00]/40 transition-all resize-none"
-                      style={{ background: inputBg, border: `1px solid ${inputBdr}`, color: inputClr }} />
-                  </div>
-                  {error && <p className="text-sm text-red-400 text-center">{error}</p>}
-                  <button type="submit" disabled={loading}
-                    className="w-full bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2">
-                    {loading ? "Sending…" : "Send Message"}
-                    {!loading && <ArrowRight className="w-4 h-4" />}
-                  </button>
-                </form>
-              )}
-            </div>
-
+            <Card glow className="p-6 sm:p-7" style={{ borderColor: "rgba(255,107,0,0.35)" }}>
+              <span className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 text-white" style={{ background: "var(--brand-btn)" }}>
+                <CalendarCheck2 className="w-5 h-5" aria-hidden="true" />
+              </span>
+              <h2 className="font-display text-xl font-bold site-ink mb-2">Want to see it working?</h2>
+              <p className="text-[15px] leading-relaxed mb-5">Book a 30-minute demo. We set Arthaleads up on your own leads and answer every question live.</p>
+              <SiteButton to="/book-demo">Book a Demo <ArrowRight className="w-4 h-4" /></SiteButton>
+            </Card>
           </div>
-        </section>
-      </main>
 
-      <PublicFooter />
-    </>
+          {/* Right: the form */}
+          <Card raised className="p-6 sm:p-8 min-w-0">
+            {sent ? (
+              <div className="flex flex-col items-center justify-center text-center py-16" role="status">
+                <span className="w-16 h-16 rounded-full flex items-center justify-center mb-5" style={{ background: "rgba(22,163,74,0.12)" }}>
+                  <Check className="w-8 h-8" style={{ color: "#16a34a" }} aria-hidden="true" />
+                </span>
+                <h2 className="font-display font-extrabold text-2xl site-ink mb-2">Message sent</h2>
+                <p className="text-[15px] leading-relaxed max-w-sm">
+                  Thanks for reaching out. We'll get back to you at <strong className="site-ink">{form.email}</strong> within 24 hours.
+                </p>
+                <button type="button" onClick={() => { setSent(false); setForm(EMPTY); }} className="site-link mt-6">Send another message</button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <h2 className="font-display font-bold text-xl site-ink mb-2">Send us a message</h2>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {[
+                    { id: "name",    label: "Your name",      type: "text",  ph: "Rajesh Patil",         req: true,  ac: "name" },
+                    { id: "email",   label: "Email address",  type: "email", ph: "rajesh@example.com",   req: true,  ac: "email" },
+                    { id: "phone",   label: "Phone number",   type: "tel",   ph: "+91 98765 43210",      req: false, ac: "tel" },
+                    { id: "company", label: "Company or team", type: "text", ph: "Milestone Properties", req: false, ac: "organization" },
+                  ].map(({ id, label, type, ph, req, ac }) => (
+                    <div key={id} className="min-w-0">
+                      <label htmlFor={`ct-${id}`} className="block text-[13px] font-semibold site-ink mb-1.5">
+                        {label}{req && <span style={{ color: "var(--site-brand-ink)" }}> *</span>}
+                      </label>
+                      <input id={`ct-${id}`} type={type} placeholder={ph} required={req} autoComplete={ac}
+                        value={form[id]} onChange={(e) => setForm({ ...form, [id]: e.target.value })}
+                        className={inputCls} style={inputStyle} />
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <label htmlFor="ct-message" className="block text-[13px] font-semibold site-ink mb-1.5">Message</label>
+                  <textarea id="ct-message" rows={5}
+                    placeholder="Tell us about your team size, current lead volume, and what you're looking for..."
+                    value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
+                    className={`${inputCls} resize-none`} style={inputStyle} />
+                </div>
+                {error && <p className="text-sm text-center" style={{ color: "#dc2626" }} role="alert">{error}</p>}
+                <SiteButton type="submit" disabled={loading} className="w-full disabled:opacity-60">
+                  {loading ? "Sending…" : <>Send message <ArrowRight className="w-4 h-4" /></>}
+                </SiteButton>
+              </form>
+            )}
+          </Card>
+        </Container>
+      </Section>
+
+      <FaqSection title="Before you write" items={FAQS} tone="white" />
+    </SitePage>
   );
 }

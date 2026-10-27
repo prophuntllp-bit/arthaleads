@@ -16,7 +16,8 @@
 // In free-text chat the agent describes the location (no map pin) and offers a
 // visit; booking a slot is the Enterprise button flow.
 import { Bot, Sparkles, MessageSquareText, Gauge, Headphones, PhoneCall, Image as ImageIcon, Flame } from "lucide-react";
-import SolutionPage, { solutionJsonLd } from "../components/SolutionPage";
+import { WhatsAppLogo } from "../components/site/BrandLogos";
+import SolutionPage, { solutionJsonLd, MiniChat } from "../components/SolutionPage";
 import { useSEO } from "../utils/useSEO";
 import { PLAN_PRICING } from "../utils/plan";
 
@@ -50,9 +51,19 @@ export default function AiCrm() {
       hero={{
         lines: ["AI CRM for real estate", "built for Indian sales teams"],
         lede: "Arthaleads replies to every property enquiry in seconds with a WhatsApp AI agent, fills in the lead from the chat, scores it from what the buyer said and tells your team who to call first. Artha, the AI copilot, answers questions about your pipeline and updates leads when you ask.",
-        image: "/tour/lead.webp",
-        imageAlt: "A lead created from a WhatsApp chat in Arthaleads, with the buyer's requirements, budget and priority filled in",
-        chips: ["AI reply sent on WhatsApp", "Priority: Hot"],
+        eyebrow: "AI real estate CRM",
+        actions: [
+          { label: "Book an AI demo", to: "/book-demo" },
+          { label: "See every AI feature", href: "#features" },
+        ],
+        trust: ["Replies in English, Hindi and Marathi", "Answers 24/7", "AI agent from Growth"],
+        photo: "partner",
+        photoAlt: "Three colleagues in a small real estate office working together at a laptop",
+        cards: [
+          { Icon: WhatsAppLogo, iconBg: "rgba(37,211,102,0.14)", title: "AI agent replied in 4 sec", sub: "11:02 PM · in Hindi" },
+          { Icon: Flame, title: "Lead score 87 · Hot", sub: "Asked for a site visit Saturday" },
+          { Icon: Sparkles, title: "Artha: 3 follow-ups due today", sub: "Apply all in one tap" },
+        ],
       }}
       answer={{
         q: "What is an AI CRM for real estate?",
@@ -73,6 +84,11 @@ export default function AiCrm() {
         ],
       }}
       features={{
+        visual: <MiniChat messages={[
+          ["buyer", "Is the 2 BHK at Aurum Heights still available?"],
+          ["ai", "Yes, 2 BHK homes start at ₹82 L. Can you visit this Saturday, 11 AM or 4 PM?"],
+          ["buyer", "11 AM works"],
+        ]} />,
         title: "The AI features, and the plan each is on",
         intro: "Built on the official WhatsApp Business Platform. Nothing here is a demo-only feature.",
         items: [
@@ -108,8 +124,9 @@ export default function AiCrm() {
         { to: "/compare", label: "how Arthaleads compares with other real estate CRMs" },
       ]}
       close={{
-        title: "Let the AI take the first reply",
-        body: "Start the 14-day free trial, or message us on WhatsApp and watch the AI agent answer you.",
+        title: "Let the AI",
+        dim: "take the first reply.",
+        body: "Book a 30-minute demo and watch the AI agent answer a buyer, or start the 14-day free trial yourself.",
       }}
     />
   );

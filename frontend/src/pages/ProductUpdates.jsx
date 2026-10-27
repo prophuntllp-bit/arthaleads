@@ -1,9 +1,10 @@
-﻿import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
-import { ArrowRight } from "lucide-react";
-import PublicNav from "../components/PublicNav";
-import PublicFooter from "../components/PublicFooter";
-import { usePublicTheme } from "../context/PublicThemeContext";
+﻿// pages/ProductUpdates.jsx - /product-updates on the shared marketing theme
+// (components/site/*). Newest first; add new entries to the top of `updates`.
+import { SitePage, Section, Container, Card } from "../components/site/Site";
+import { PageHero, ClosingCta } from "../components/site/Blocks";
+import { Reveal } from "../components/motion/Motion";
 import { useSEO } from "../utils/useSEO";
+import { CRM_SIGNUP_URL } from "../utils/crmLinks";
 
 const updates = [
   {
@@ -141,99 +142,54 @@ const updates = [
 ];
 
 function ProductUpdatesInner() {
-  const { isDark } = usePublicTheme();
-
   useSEO({
     title: "Product Updates: New Arthaleads CRM Features",
     description: "See the latest features, improvements, and updates to Arthaleads CRM. Stay up to date with India’s top real estate lead management platform.",
     canonical: "https://www.arthaleads.com/product-updates",
   });
 
-  const bg         = isDark ? "#0d0d1a" : "#ffffff";
-  const altBg      = isDark ? "#080810" : "#f9fafb";
-  const textColor  = isDark ? "#ffffff" : "#111827";
-  const softText   = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const cardBg     = isDark ? "rgba(255,255,255,0.02)" : "#ffffff";
-  const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-  const tagBg      = isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6";
-  const tagText    = isDark ? "rgba(255,255,255,0.45)" : "#4b5563";
-  const tagBorder  = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-  const timelineLine = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-
   return (
-    <div className="min-h-screen" style={{ background: bg, color: textColor, fontFamily: "Inter, sans-serif" }}>
-      <PublicNav />
-
-      {/* Hero */}
-      <section className="relative pt-32 pb-16 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/3 w-80 h-80 rounded-full blur-3xl" style={{ background: "rgba(255,107,0,0.08)" }} />
-        </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl font-black mb-5" style={{ color: textColor }}>
-            What's New in{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
-              Arthaleads
-            </span>
-          </h1>
-          <p className="text-lg max-w-xl mx-auto" style={{ color: softText }}>
-            We ship improvements every week. Here's what's changed.
-          </p>
-        </div>
-      </section>
+    <SitePage>
+      <PageHero
+        eyebrow="Product updates"
+        title={<>What's New in <span className="site-dim">Arthaleads</span></>}
+        lede="We ship improvements every week. Here's what's changed."
+        actions={[
+          { label: "See the latest", href: "#updates" },
+          { label: "Try them free", href: CRM_SIGNUP_URL, external: true },
+        ]}
+      />
 
       {/* Timeline */}
-      <section className="py-12" style={{ background: altBg }}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      <Section tone="tint" id="updates" className="!pt-12 sm:!pt-16">
+        <Container narrow>
           <div className="relative">
-            <div className="absolute left-0 top-0 bottom-0 w-px ml-[7px] hidden sm:block" style={{ background: timelineLine }} />
-            <div className="space-y-10">
+            <div aria-hidden="true" className="absolute left-0 top-2 bottom-2 w-px ml-[7px] hidden sm:block" style={{ background: "var(--site-line-strong)" }} />
+            <ol className="space-y-8 sm:space-y-10">
               {updates.map(({ date, title, desc, tags }, i) => (
-                <div key={i} className="sm:pl-10 relative">
-                  <div
-                    className="hidden sm:block absolute left-0 top-1.5 w-3.5 h-3.5 rounded-full border-2 shadow-lg shadow-orange-500/30"
-                    style={{ background: "#ff6b00", borderColor: bg }}
-                  />
-                  <div className="text-[color:var(--brand-text)] text-xs font-semibold uppercase tracking-widest mb-2">{date}</div>
-                  <div className="p-6 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
-                    <h2 className="font-bold text-lg mb-3 leading-snug" style={{ color: textColor }}>{title}</h2>
-                    <p className="text-sm leading-relaxed mb-4" style={{ color: softText }}>{desc}</p>
-                    <div className="flex flex-wrap gap-2">
+                <Reveal as="li" key={i} delay={Math.min(i, 3) * 60} className="sm:pl-10 relative">
+                  <span aria-hidden="true" className="hidden sm:block absolute left-0 top-1 w-[15px] h-[15px] rounded-full"
+                    style={{ background: "var(--site-brand)", boxShadow: "0 0 0 3px var(--site-tint), 0 6px 14px -4px rgba(255,107,0,0.55)" }} />
+                  <p className="site-eyebrow !text-xs mb-2.5">{date}</p>
+                  <Card glow className="p-6 sm:p-7">
+                    <h2 className="font-display text-lg sm:text-xl font-bold site-ink mb-3 leading-snug">{title}</h2>
+                    <p className="text-[15px] leading-relaxed mb-5">{desc}</p>
+                    <ul className="flex flex-wrap gap-2" aria-label="Tags">
                       {tags.map((tag) => (
-                        <span key={tag} className="px-2.5 py-0.5 rounded-full text-xs" style={{ background: tagBg, border: `1px solid ${tagBorder}`, color: tagText }}>
-                          {tag}
-                        </span>
+                        <li key={tag} className="site-chip px-2.5 py-1 rounded-lg text-xs font-medium">{tag}</li>
                       ))}
-                    </div>
-                  </div>
-                </div>
+                    </ul>
+                  </Card>
+                </Reveal>
               ))}
-            </div>
+            </ol>
           </div>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
-      {/* CTA */}
-      <section className="py-20" style={{ background: bg }}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl font-black mb-4" style={{ color: textColor }}>
-            Try the latest features today
-          </h2>
-          <p className="text-base mb-8" style={{ color: softText }}>
-            Every update goes live for all users the day it ships. Start your free trial to access everything.
-          </p>
-          <a
-            href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-            className="inline-flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:-translate-y-0.5"
-          >
-            Get Started Free
-            <ArrowRight className="w-5 h-5" />
-          </a>
-        </div>
-      </section>
-
-      <PublicFooter />
-    </div>
+      <ClosingCta title="Try the latest features" dim="today"
+        body="Every update goes live for all users the day it ships. Book a demo to see them on your own leads, or start your free trial to access everything." />
+    </SitePage>
   );
 }
 

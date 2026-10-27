@@ -1,12 +1,16 @@
+// pages/ReferEarn.jsx - /refer on the shared marketing theme (components/site/*).
+// The referral link is built from the signed-in org (useAuth); logged-out
+// visitors see a log in / sign up card. Share buttons only touch window on click.
 import { useState, useMemo } from "react";
 import { CRM_LOGIN_URL, CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import {
-  Gift, Copy, Check, Share2, MessageCircle, Mail, ArrowRight,
+  Gift, Copy, Check, Share2, Mail,
   UserPlus, CreditCard, Sparkles, Users,
 } from "lucide-react";
-import PublicNav from "../components/PublicNav";
-import PublicFooter from "../components/PublicFooter";
-import { usePublicTheme } from "../context/PublicThemeContext";
+import { SitePage, Section, Container, SectionHeader, Card, SiteButton } from "../components/site/Site";
+import { PageHero, ClosingCta } from "../components/site/Blocks";
+import { WhatsAppLogo } from "../components/site/BrandLogos";
+import { Reveal } from "../components/motion/Motion";
 import { useAuth } from "../context/AuthContext";
 import { useSEO } from "../utils/useSEO";
 
@@ -17,9 +21,20 @@ const STEPS = [
   { icon: Gift,     title: "You both earn",    desc: "You get 1 free month added to your plan — and they get 1 free month too. Everybody wins." },
 ];
 
+const TERMS = [
+  "Both the referrer and the referred organisation receive 1 free month, credited after the referred org completes its first paid subscription.",
+  "Rewards are issued as account credit (free months) — they are not redeemable for cash.",
+  "The referred organisation must be a new Arthaleads account, not an existing or previously paid customer.",
+  "A maximum of 6 free months can be earned per organisation per calendar year. This resets every year.",
+  "Referral links must not be used in paid advertising (Google/Facebook ads) or spam.",
+  "Arthaleads reserves the right to withhold rewards for fraudulent or abusive referrals.",
+];
+
+const iconTile = { background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" };
+const brandInk = { color: "var(--site-brand-ink)" };
+
 // ── Interactive referral link box ─────────────────────────────────────────────
 function ReferralBox() {
-  const { isDark } = usePublicTheme();
   const { org, user } = useAuth();
   const [copied, setCopied] = useState(false);
 
@@ -30,11 +45,6 @@ function ReferralBox() {
   }, [org]);
 
   const link = code ? `https://app.arthaleads.com/signup?ref=${code}` : "";
-
-  const cardBg = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
-  const border = isDark ? "rgba(255,255,255,0.1)" : "#e5e7eb";
-  const text   = isDark ? "#fff" : "#111827";
-  const soft   = isDark ? "rgba(255,255,255,0.55)" : "#4b5563";
 
   const copy = () => {
     navigator.clipboard?.writeText(link);
@@ -52,205 +62,172 @@ function ReferralBox() {
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
 
-  // Logged-out state — invite them to sign in
+  // Logged-out state: invite them to sign in
   if (!code) {
     return (
-      <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: 16, padding: "2rem", textAlign: "center" }}>
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(255,107,0,0.1)" }}>
-          <Gift className="w-6 h-6 text-[#ff6b00]" />
-        </div>
-        <h3 style={{ fontSize: 18, fontWeight: 700, color: text, marginBottom: 8 }}>Get your referral link</h3>
-        <p style={{ fontSize: 14, color: soft, marginBottom: 20, maxWidth: 360, marginInline: "auto" }}>
+      <Card raised className="h-full p-6 sm:p-8 text-center flex flex-col items-center justify-center">
+        <span className="site-icon w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
+          <Gift className="w-[22px] h-[22px]" style={brandInk} aria-hidden="true" />
+        </span>
+        <h2 className="font-display text-xl font-bold site-ink mb-2">Get your referral link</h2>
+        <p className="text-[15px] leading-relaxed mb-6 max-w-sm">
           Log in to your Arthaleads account to generate your unique referral link and start earning free months.
         </p>
         <div className="flex items-center justify-center gap-3 flex-wrap">
-          <a href={CRM_LOGIN_URL} {...CRM_LINK_PROPS} className="px-5 py-2.5 rounded-xl text-sm font-semibold" style={{ border: `1px solid ${border}`, color: text }}>Log In</a>
-          <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] transition-colors">Create Account</a>
+          <SiteButton href={CRM_LOGIN_URL} {...CRM_LINK_PROPS} variant="secondary">Log In</SiteButton>
+          <SiteButton href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}>Create Account</SiteButton>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: 16, padding: "1.75rem" }}>
+    <Card raised className="h-full p-6 sm:p-7">
       <div className="flex items-center gap-2 mb-1.5">
-        <Sparkles className="w-4 h-4 text-[#ff6b00]" />
-        <span style={{ fontSize: 13, fontWeight: 700, color: text }}>Your referral link</span>
+        <Sparkles className="w-4 h-4" style={brandInk} aria-hidden="true" />
+        <h2 className="font-display text-[15px] font-bold site-ink">Your referral link</h2>
       </div>
-      <p style={{ fontSize: 13, color: soft, marginBottom: 14 }}>Share this link. You both get a free month when they subscribe.</p>
+      <p className="text-[14px] leading-relaxed mb-4">Share this link. You both get a free month when they subscribe.</p>
 
       <div className="flex items-stretch gap-2 mb-4">
-        <div style={{ flex: 1, minWidth: 0, padding: "12px 14px", borderRadius: 10, border: `1px solid ${border}`, background: isDark ? "rgba(255,255,255,0.05)" : "#f9fafb", color: text, fontSize: 13, display: "flex", alignItems: "center", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
-          {link}
+        <div className="flex-1 min-w-0 flex items-center rounded-2xl px-4 py-3 text-[13px]"
+          style={{ background: "var(--site-bg)", border: "1px solid var(--site-line-strong)", color: "var(--site-ink)" }}>
+          <span className="truncate">{link}</span>
         </div>
-        <button
-          onClick={copy}
-          className="flex items-center gap-2 px-4 rounded-xl text-sm font-semibold text-white cursor-pointer transition-colors"
-          style={{ background: copied ? "#22c55e" : "#ff6b00" }}
-        >
+        <SiteButton onClick={copy} className="shrink-0" style={copied ? { background: "#16a34a" } : undefined}>
           {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
           {copied ? "Copied" : "Copy"}
-        </button>
+        </SiteButton>
       </div>
 
-      <div className="flex items-center gap-2">
-        <button onClick={shareWhatsApp} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white cursor-pointer transition-opacity hover:opacity-90" style={{ background: "#25D366" }}>
-          <MessageCircle className="w-4 h-4" /> WhatsApp
-        </button>
-        <button onClick={shareEmail} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors" style={{ border: `1px solid ${border}`, color: text }}>
+      <div className="grid grid-cols-2 gap-2">
+        <SiteButton variant="whatsapp" onClick={shareWhatsApp}>
+          <WhatsAppLogo className="w-[18px] h-[18px]" color="#fff" /> WhatsApp
+        </SiteButton>
+        <SiteButton variant="secondary" onClick={shareEmail}>
           <Mail className="w-4 h-4" /> Email
-        </button>
+        </SiteButton>
       </div>
-    </div>
+    </Card>
   );
 }
 
 // ── Interactive earnings calculator ───────────────────────────────────────────
 function EarningsCalculator() {
-  const { isDark } = usePublicTheme();
   const [count, setCount] = useState(3);
-
-  const cardBg = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
-  const border = isDark ? "rgba(255,255,255,0.1)" : "#e5e7eb";
-  const text   = isDark ? "#fff" : "#111827";
-  const soft   = isDark ? "rgba(255,255,255,0.55)" : "#4b5563";
 
   const months = count; // 1 free month per converted referral
   const capped = Math.min(months, 6); // matches the 6-month annual cap
 
   return (
-    <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: 16, padding: "1.75rem" }}>
-      <h3 style={{ fontSize: 16, fontWeight: 700, color: text, marginBottom: 4 }}>How much can you earn?</h3>
-      <p style={{ fontSize: 13, color: soft, marginBottom: 20 }}>Drag to see your free months based on how many teams you refer.</p>
+    <Card raised className="h-full p-6 sm:p-7">
+      <h2 className="font-display text-[17px] font-bold site-ink mb-1">How much can you earn?</h2>
+      <p className="text-[14px] leading-relaxed mb-5">Drag to see your free months based on how many teams you refer.</p>
 
       <div className="flex items-center justify-between mb-2">
-        <span style={{ fontSize: 13, color: soft }}>Referrals who subscribe</span>
-        <span style={{ fontSize: 20, fontWeight: 800, color: "var(--brand-text)" }}>{count}</span>
+        <label htmlFor="ref-count" className="text-[13px] site-muted">Referrals who subscribe</label>
+        <span className="font-display text-xl font-extrabold" style={brandInk}>{count}</span>
       </div>
       <input
+        id="ref-count"
         type="range" min="1" max="12" value={count}
         onChange={(e) => setCount(Number(e.target.value))}
-        style={{ width: "100%", accentColor: "#ff6b00", cursor: "pointer" }}
+        className="w-full cursor-pointer"
+        style={{ accentColor: "#ff6b00" }}
       />
 
-      <div className="mt-6 p-5 rounded-xl text-center" style={{ background: "rgba(255,107,0,0.08)", border: "1px solid rgba(255,107,0,0.2)" }}>
-        <div style={{ fontSize: 13, color: soft, marginBottom: 4 }}>You could earn</div>
-        <div style={{ fontSize: 32, fontWeight: 900, color: "var(--brand-text)" }}>{capped} free month{capped !== 1 ? "s" : ""}</div>
+      <div className="mt-6 p-5 rounded-2xl text-center" style={{ background: "rgba(255,107,0,0.08)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
+        <p className="text-[13px] site-muted mb-1">You could earn</p>
+        <p className="font-display text-[30px] sm:text-[32px] font-extrabold leading-tight"><span className="site-dim">{capped} free month{capped !== 1 ? "s" : ""}</span></p>
         {months > 6 && (
-          <div style={{ fontSize: 12, color: soft, marginTop: 6 }}>
+          <p className="text-xs site-muted mt-1.5">
             (Capped at 6 free months per year — but keep referring, it resets annually!)
-          </div>
+          </p>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 
 export default function ReferEarn() {
-  const { isDark } = usePublicTheme();
-
   useSEO({
     title:       "Refer & Earn | Arthaleads Real Estate CRM",
     description: "Refer other real estate teams to Arthaleads and you both get a free month. Share your link, they subscribe, you earn. Simple, generous referral program.",
     canonical:   "https://www.arthaleads.com/refer",
   });
 
-  const bg         = isDark ? "#0d0d1a" : "#ffffff";
-  const altBg      = isDark ? "#080810" : "#f9fafb";
-  const textColor  = isDark ? "#ffffff" : "#111827";
-  const softText   = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const cardBg     = isDark ? "rgba(255,255,255,0.02)" : "#ffffff";
-  const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-
   return (
-    <div className="min-h-screen" style={{ background: bg, color: textColor, fontFamily: "Inter, sans-serif" }}>
-      <PublicNav />
-
-      {/* Hero */}
-      <section className="relative pt-32 pb-12 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full blur-3xl" style={{ background: "rgba(255,107,0,0.06)" }} />
-        </div>
-        <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl font-black mb-5" style={{ color: textColor }}>
-            Give a month,{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">get a month</span>
-          </h1>
-          <p className="text-lg max-w-xl mx-auto" style={{ color: softText }}>
-            Love Arthaleads? Refer another real estate team. When they subscribe, you both get a free month.
-            No limits on how many friends you invite.
-          </p>
-        </div>
-      </section>
+    <SitePage>
+      <PageHero
+        eyebrow="Refer and earn"
+        title={<>Give a month, <span className="site-dim">get a month</span></>}
+        lede="Love Arthaleads? Refer another real estate team. When they subscribe, you both get a free month. No limits on how many friends you invite."
+        actions={[
+          { label: "Get your referral link", href: "#refer" },
+          { label: "How it works", href: "#how-it-works" },
+        ]}
+        trust={["A free month for you", "A free month for them"]}
+      />
 
       {/* Referral box + calculator */}
-      <section className="pb-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 gap-5">
-          <ReferralBox />
-          <EarningsCalculator />
-        </div>
-      </section>
+      <Section tone="tint" id="refer" className="!pt-12 sm:!pt-16">
+        <Container className="!max-w-[960px] grid md:grid-cols-2 gap-4 sm:gap-5 items-stretch">
+          <Reveal className="min-w-0"><ReferralBox /></Reveal>
+          <Reveal delay={100} className="min-w-0"><EarningsCalculator /></Reveal>
+        </Container>
+      </Section>
 
       {/* How it works */}
-      <section className="py-16" style={{ background: altBg }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-3" style={{ color: textColor }}>How it works</h2>
-            <p className="text-base max-w-lg mx-auto" style={{ color: softText }}>Four simple steps from sharing to earning.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <Section tone="white" id="how-it-works">
+        <Container>
+          <SectionHeader eyebrow="Four steps" title="How it works" align="center"
+            lede="Four simple steps from sharing to earning." />
+          <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {STEPS.map((s, i) => (
-              <div key={s.title} className="p-6 rounded-2xl relative" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style={{ background: "rgba(255,107,0,0.1)" }}>
-                  <s.icon className="w-5 h-5 text-[#ff6b00]" />
-                </div>
-                <div className="absolute top-5 right-5 text-2xl font-black" style={{ color: isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6" }}>{i + 1}</div>
-                <h3 className="font-semibold text-sm mb-2" style={{ color: textColor }}>{s.title}</h3>
-                <p className="text-xs leading-relaxed" style={{ color: softText }}>{s.desc}</p>
-              </div>
+              <Reveal as="li" key={s.title} delay={i * 80} className="min-w-0 flex">
+                <Card glow className="w-full p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <span className="font-display w-10 h-10 rounded-full flex items-center justify-center text-base font-extrabold text-white"
+                      style={{ background: "var(--brand-btn)", boxShadow: "0 12px 26px -12px rgba(204,75,0,0.7)" }}>{i + 1}</span>
+                    <span className="site-icon w-10 h-10 rounded-xl flex items-center justify-center" style={iconTile}>
+                      <s.icon className="w-5 h-5" style={brandInk} aria-hidden="true" />
+                    </span>
+                  </div>
+                  <h3 className="font-display text-lg font-bold site-ink mb-2">{s.title}</h3>
+                  <p className="text-[15px] leading-relaxed">{s.desc}</p>
+                </Card>
+              </Reveal>
             ))}
-          </div>
-        </div>
-      </section>
+          </ol>
+        </Container>
+      </Section>
 
       {/* Terms */}
-      <section className="py-16" style={{ background: bg }}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 mb-6">
-            <Users className="w-5 h-5 text-[#ff6b00]" />
-            <h2 className="text-xl font-bold" style={{ color: textColor }}>Program terms</h2>
-          </div>
-          <ul className="space-y-3">
-            {[
-              "Both the referrer and the referred organisation receive 1 free month, credited after the referred org completes its first paid subscription.",
-              "Rewards are issued as account credit (free months) — they are not redeemable for cash.",
-              "The referred organisation must be a new Arthaleads account, not an existing or previously paid customer.",
-              "A maximum of 6 free months can be earned per organisation per calendar year. This resets every year.",
-              "Referral links must not be used in paid advertising (Google/Facebook ads) or spam.",
-              "Arthaleads reserves the right to withhold rewards for fraudulent or abusive referrals.",
-            ].map((t) => (
-              <li key={t} className="flex items-start gap-3">
-                <Check className="w-4 h-4 text-[#ff6b00] flex-shrink-0 mt-0.5" />
-                <span className="text-sm leading-relaxed" style={{ color: softText }}>{t}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+      <Section tone="tint">
+        <Container narrow>
+          <Reveal>
+            <Card raised className="p-6 sm:p-9">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="site-icon w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
+                  <Users className="w-5 h-5" style={brandInk} aria-hidden="true" />
+                </span>
+                <h2 className="font-display text-xl sm:text-2xl font-bold site-ink">Program terms</h2>
+              </div>
+              <ul className="space-y-3.5">
+                {TERMS.map((t) => (
+                  <li key={t} className="flex items-start gap-3">
+                    <Check className="w-4 h-4 shrink-0 mt-1" style={{ color: "#16a34a" }} aria-hidden="true" />
+                    <span className="text-[15px] leading-relaxed">{t}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </Reveal>
+        </Container>
+      </Section>
 
-      {/* CTA */}
-      <section className="py-16" style={{ background: altBg }}>
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl font-bold mb-3" style={{ color: textColor }}>Start earning today</h2>
-          <p className="text-base mb-6" style={{ color: softText }}>Log in to grab your link, or create an account to join the program.</p>
-          <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} className="inline-flex items-center gap-2 bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25">
-            Get Started Free
-            <ArrowRight className="w-4 h-4" />
-          </a>
-        </div>
-      </section>
-
-      <PublicFooter />
-    </div>
+      <ClosingCta title="Start earning" dim="today."
+        body="Log in to grab your link, or create an account to join the program." />
+    </SitePage>
   );
 }

@@ -4,7 +4,7 @@
 // its static copy showed placeholder cards and "0 articles". Crawlers that read
 // the HTML (and Google's first pass) found no links to any post. This function
 // takes that prerendered page and swaps in the live list: same card design as
-// components/BlogCard.jsx, in the light theme the static copy is drawn in.
+// SiteBlogCard in pages/PublicBlog.jsx, coloured by the site's --site-* tokens.
 // main.jsx then swaps in the live page as usual.
 //
 // vercel.json routes /blog here. Any failure falls back to the plain blog.html.
@@ -18,16 +18,16 @@ function card(p) {
   const author = p.byline || p.author?.name || "Arthaleads Team";
   const cover = p.featuredImage
     ? `<img src="${esc(sized(p.featuredImage, 720))}" alt="${esc(p.featuredImageAlt || p.title)}" loading="lazy" decoding="async" class="absolute inset-0 w-full h-full object-cover">`
-    : `<div class="absolute inset-0" style="background:linear-gradient(135deg,#fff3e8,#ffe0c4)"></div>`;
-  return `<a href="/blog/${esc(p.slug)}" class="group flex flex-col rounded-[26px] overflow-hidden border" style="background:#ffffff;border-color:#ebe5dd">`
+    : `<div class="absolute inset-0" style="background:linear-gradient(135deg, rgba(255,107,0,0.16), rgba(255,170,0,0.05)), var(--site-chip)"></div>`;
+  return `<a href="/blog/${esc(p.slug)}" class="site-card group h-full flex flex-col overflow-hidden">`
     + `<div class="relative overflow-hidden" style="aspect-ratio:16 / 10">${cover}</div>`
     + `<div class="flex flex-col flex-1 p-6">`
     + `<div class="flex items-center justify-between gap-3 mb-3">`
-    + (p.category?.name ? `<span class="text-[11px] font-bold uppercase tracking-[0.14em] text-[#ff6b00]">${esc(p.category.name)}</span>` : "<span></span>")
-    + `<span class="text-xs shrink-0" style="color:#9ca3af">${p.readingTime || 1} min read</span></div>`
-    + `<h2 class="font-extrabold text-[1.2rem] leading-snug tracking-tight mb-3" style="color:#111827">${esc(p.title)}</h2>`
-    + (p.excerpt ? `<p class="text-[15px] leading-relaxed mb-5" style="color:#5b6170">${esc(p.excerpt)}</p>` : "")
-    + `<div class="mt-auto pt-4 text-xs" style="border-top:1px solid #ece8e3;color:#9ca3af">${esc(date(p.publishedAt))} · ${esc(author)}</div>`
+    + (p.category?.name ? `<span class="text-[11px] font-bold uppercase tracking-[0.14em]" style="color:var(--site-brand-ink)">${esc(p.category.name)}</span>` : "<span></span>")
+    + `<span class="text-xs shrink-0 site-muted">${p.readingTime || 1} min read</span></div>`
+    + `<h3 class="font-display site-ink font-bold text-[1.15rem] leading-snug tracking-[-0.01em] mb-3">${esc(p.title)}</h3>`
+    + (p.excerpt ? `<p class="text-[15px] leading-relaxed mb-5">${esc(p.excerpt)}</p>` : "")
+    + `<div class="mt-auto pt-4 text-xs site-muted" style="border-top:1px solid var(--site-line)">${esc(date(p.publishedAt))} · ${esc(author)}</div>`
     + `</div></a>`;
 }
 
@@ -44,9 +44,11 @@ export default async function handler(req, res) {
     const r = await fetch(`${API}/blog/posts?page=1&limit=24`, { headers: { Accept: "application/json" } });
     const { posts = [], total = posts.length } = r.ok ? await r.json() : {};
     if (posts.length) {
-      const list = `<section aria-label="Articles"><div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">${posts.map(card).join("")}</div></section>`;
+      // PublicBlog's <section id="blog-articles"> holds only the loading skeleton
+      // in the prerendered copy (no nested sections), so the first </section> closes it.
+      const list = `<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">${posts.map(card).join("")}</div>`;
       html = html
-        .replace(/(<main class="max-w-7xl[^"]*">)[\s\S]*?(<\/main>)/, (_, open, close) => `${open}${list}${close}`)
+        .replace(/(<section id="blog-articles"[^>]*>)[\s\S]*?(<\/section>)/, (_, open, close) => `${open}${list}${close}`)
         .replace(/(<span class="font-semibold tabular-nums"[^>]*>)0(<\/span><span>)articles(<\/span>)/,
           (_, a, b, c) => `${a}${total}${b}${total === 1 ? "article" : "articles"}${c}`);
     }

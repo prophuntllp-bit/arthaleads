@@ -13,8 +13,10 @@
 // every plan; auto-assignment (round-robin, per pricing and the API since
 // 24 Oct 2026), routing rules, Hot Today, AI lead scoring, attendance and
 // source/team reports are Growth.
-import { Building2, QrCode, Facebook, FileSpreadsheet, Shuffle, MapPin, Camera, BarChart3 } from "lucide-react";
+import { Building2, QrCode, FileSpreadsheet, Shuffle, MapPin, Camera, BarChart3, CalendarCheck2 } from "lucide-react";
 import SolutionPage, { solutionJsonLd } from "../components/SolutionPage";
+import { ProjectViz } from "../components/site/HomeVisuals";
+import { FacebookLogo } from "../components/site/BrandLogos";
 import { useSEO } from "../utils/useSEO";
 import { PLAN_PRICING } from "../utils/plan";
 
@@ -46,9 +48,19 @@ export default function BuilderCrm() {
       hero={{
         lines: ["Builder CRM", "for real estate developers"],
         lede: "Run every project's sales in one place. Leads from Facebook and Google ads, WhatsApp, portals and the site office land in the right project, reach the right telecaller in seconds, and are tracked through site visit to booking.",
-        image: "/tour/project.webp",
-        imageAlt: "A project in Arthaleads with its RERA number, possession date, price range, configurations and assigned sales team",
-        chips: ["New lead · Facebook ad", "Site visit booked"],
+        eyebrow: "Builder CRM software",
+        actions: [
+          { label: "Book a builder demo", to: "/book-demo" },
+          { label: "How it works", href: "#how" },
+        ],
+        trust: ["Leads kept project by project", "Site visits tracked", `From ₹${PLAN_PRICING.starter.monthly} per user`],
+        photo: "builder",
+        photoAlt: "A sales head explaining a scale model of residential towers to a young couple in a sales gallery",
+        cards: [
+          { Icon: FacebookLogo, iconColor: "#1877F2", iconBg: "rgba(24,119,242,0.12)", title: "New lead · Aurum Heights", sub: "Facebook ad · sent to Neha" },
+          { Icon: Building2, title: "3 projects · 412 leads", sub: "Each with its own team" },
+          { Icon: CalendarCheck2, iconColor: "#16a34a", iconBg: "rgba(22,163,74,0.12)", title: "Site visit booked", sub: "Saturday · 11:00 AM" },
+        ],
       }}
       answer={{
         q: "What is a builder CRM?",
@@ -69,12 +81,13 @@ export default function BuilderCrm() {
         ],
       }}
       features={{
+        visual: <ProjectViz />,
         title: "Built for developer sales teams",
         intro: "The plan each feature starts on is shown on its card.",
         items: [
           { icon: Building2, title: "Project-wise leads", body: "Each project keeps its own leads, team and media. Two projects on Starter, unlimited on Growth. Move leads between projects with their history.", plan: "Starter" },
           { icon: QrCode, title: "QR codes for the site office", body: "Every project gets a QR code for hoardings, brochures and expo stalls. A visitor scans it, fills a short form and becomes a lead, tagged by source.", plan: "Starter" },
-          { icon: Facebook, title: "Facebook lead ads, automatic", body: "Leads from Facebook and Instagram lead forms arrive in seconds with the campaign attached. No downloading sheets from Ads Manager. Google Ads lead forms are on Enterprise.", plan: "Starter" },
+          { icon: FacebookLogo, title: "Facebook lead ads, automatic", body: "Leads from Facebook and Instagram lead forms arrive in seconds with the campaign attached. No downloading sheets from Ads Manager. Google Ads lead forms are on Enterprise.", plan: "Starter" },
           { icon: FileSpreadsheet, title: "Portal leads by import", body: "Bring in leads from 99acres, MagicBricks and Housing.com by importing the CSV or Excel export. Duplicate phone numbers are skipped.", plan: "Starter" },
           { icon: Shuffle, title: "Routing to telecallers", body: "Every new lead gets an owner the moment it arrives, shared out evenly across the team, so no lead waits and none is called twice. Add routing rules by campaign on top.", plan: "Growth" },
           { icon: MapPin, title: "Site visit tracking", body: "Site Visit is a stage in the pipeline, so visits are counted per project and per agent instead of being remembered at the weekly meeting.", plan: "Starter" },
@@ -104,8 +117,9 @@ export default function BuilderCrm() {
         { to: "/compare", label: "how Arthaleads compares with Sell.Do, Leadrat and Kylas" },
       ]}
       close={{
-        title: "Put every project's leads in one place",
-        body: "Start the 14-day free trial, or message us on WhatsApp and we will set up your first project with you.",
+        title: "Put every project's leads",
+        dim: "in one place.",
+        body: "Book a 30-minute demo and we will set up your first project with you, or start the 14-day free trial yourself.",
       }}
     />
   );
