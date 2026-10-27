@@ -37,6 +37,7 @@ global.fetch = async (url, opts = {}) => {
   return realFetch(url, opts);
 };
 let uploads = 0;
+require("../utils/storage").isConfigured = () => true;
 require("../utils/upload").uploadCallRecording = async () => `https://files.example.com/rec-${++uploads}.wav`;
 require("../utils/push").sendPushToUser = async () => {};
 
