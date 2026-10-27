@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { PageLoader, SmartImage } from "../components/UI";
 import api from "../services/api";
+import SegmentTabs from "../components/SegmentTabs";
 import {
   Heart, AlertTriangle, TrendingDown, RefreshCw,
   MessageCircle, Phone, Zap, FolderOpen, BookOpen,
@@ -226,28 +227,14 @@ export default function SuperAdminInsights() {
         <div className="flex items-center gap-3 px-4 py-3 border-b flex-wrap" style={{ borderColor: "var(--app-border)" }}>
           <h2 className="font-bold text-app text-sm">Org Health Scores</h2>
 
-          {/* Filter tabs */}
-          <div className="flex items-center gap-1 flex-wrap">
-            {[
-              { id: "all",     label: "All",        count: summary.totalOrgs },
-              { id: "healthy", label: "Healthy",    count: summary.healthyOrgs },
-              { id: "at-risk", label: "At Risk",    count: summary.atRiskOrgs },
-              { id: "churn",   label: "Churn Risk", count: summary.churnRiskOrgs },
-            ].map(tab => (
-              <button key={tab.id} onClick={() => setFilter(tab.id)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition border ${
-                  filter === tab.id
-                    ? "text-white border-transparent"
-                    : "text-app-soft border-transparent hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
-                }`}
-                style={filter === tab.id ? { background: "var(--app-primary)" } : {}}>
-                {tab.label}
-                <span className={`inline-flex items-center justify-center rounded-full min-w-[16px] h-4 px-1 text-[9px] font-black ${
-                  filter === tab.id ? "bg-white/20 text-white" : "bg-black/8 dark:bg-white/10 text-app-soft"
-                }`}>{tab.count}</span>
-              </button>
-            ))}
-          </div>
+          {/* Filter tabs (shared SegmentTabs strip) */}
+          <SegmentTabs ariaLabel="Company health" value={filter} onChange={setFilter}
+            tabs={[
+              { value: "all",     label: "All",        count: summary.totalOrgs },
+              { value: "healthy", label: "Healthy",    count: summary.healthyOrgs },
+              { value: "at-risk", label: "At Risk",    count: summary.atRiskOrgs },
+              { value: "churn",   label: "Churn Risk", count: summary.churnRiskOrgs },
+            ]} />
 
           <input
             className="ml-auto input text-xs px-3 py-1.5 w-44"

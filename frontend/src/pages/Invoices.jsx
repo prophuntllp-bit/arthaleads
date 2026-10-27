@@ -4,6 +4,7 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 import { AppSelect } from "../components/UI";
+import SegmentTabs from "../components/SegmentTabs";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -554,16 +555,10 @@ export default function Invoices() {
         ))}
       </div>
 
-      <div className="flex gap-2 mb-4 flex-wrap">
-        {[["all", "All"], ...Object.entries(STATUS).map(([k, v]) => [k, v.label])].map(([k, l]) => (
-          <button key={k} onClick={() => setFilter(k)}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition"
-            style={statusFilter === k
-              ? { background: "var(--app-primary)", color: "#fff" }
-              : { background: "var(--app-surface-low)", color: "var(--app-text-soft)", border: "1px solid var(--app-border)" }}>
-            {l}
-          </button>
-        ))}
+      {/* Status filter (shared SegmentTabs strip) */}
+      <div className="mb-4">
+        <SegmentTabs ariaLabel="Invoice status" value={statusFilter} onChange={setFilter}
+          tabs={[["all", "All"], ...Object.entries(STATUS).map(([k, v]) => [k, v.label])].map(([k, l]) => ({ value: k, label: l }))} />
       </div>
 
       {loading ? (

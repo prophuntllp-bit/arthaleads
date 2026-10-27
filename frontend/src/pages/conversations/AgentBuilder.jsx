@@ -12,6 +12,7 @@ import { STATUS_OPTIONS } from "../../utils/constants";
 import { useAuth } from "../../context/AuthContext";
 import { canAccess } from "../../utils/plan";
 import toast from "react-hot-toast";
+import SegmentTabs from "../../components/SegmentTabs";
 
 /**
  * Create or edit one WhatsApp assistant, and try it before it ever touches a
@@ -2042,13 +2043,8 @@ function FlowFunnel({ agentId }) {
           <p className="text-sm font-semibold text-app">Flow drop-off</p>
           <p className="text-xs text-app-soft">How many people reached each step, and how it ended.</p>
         </div>
-        <div className="flex gap-1">
-          {[7, 30, 90].map((d) => (
-            <button key={d} type="button" onClick={() => setDays(d)}
-              className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition ${days === d ? "bg-orange-500 text-white border-orange-500" : "text-app-soft"}`}
-              style={days === d ? undefined : { borderColor: "var(--app-border)" }}>{d}d</button>
-          ))}
-        </div>
+        <SegmentTabs ariaLabel="Funnel period" value={days} onChange={setDays}
+          tabs={[7, 30, 90].map((d) => ({ value: d, label: `${d}d` }))} />
       </div>
       {!data ? (
         <div className="h-16 rounded-xl animate-pulse" style={{ background: "var(--app-surface-low)" }} />
