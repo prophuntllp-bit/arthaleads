@@ -872,7 +872,7 @@ router.post("/initiate", protect, async (req, res, next) => {
       await lead.save();
       try {
         const requestUuid = await plivo.placeBridgeCall(org, {
-          agentPhone: req.user.phone, base: (process.env.APP_URL || "https://api.arthaleads.com").replace(/\/+$/, ""),
+          agentPhone: req.user.phone, base: plivo.publicBase(req),
           orgId: String(req.user.orgId), ref: ownerRef,
         });
         await found.Model.updateOne({ _id: lead._id, "activities.meta.ownerRef": ownerRef }, { $set: { "activities.$.meta.requestUuid": requestUuid } });

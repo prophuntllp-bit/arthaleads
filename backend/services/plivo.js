@@ -92,6 +92,17 @@ async function placeBridgeCall(org, { agentPhone, base, orgId, ref }) {
   return String(Array.isArray(out.request_uuid) ? out.request_uuid[0] : out.request_uuid || "");
 }
 
+/**
+ * Our public API address for Plivo to call back: the host this request came in
+ * on when it is one of ours (so staging calls back staging, not production,
+ * whatever APP_URL says), else APP_URL.
+ */
+function publicBase(req) {
+  const host = String(req?.get?.("x-forwarded-host") || req?.get?.("host") || "").split(",")[0].trim().toLowerCase();
+  if (/^[a-z0-9-]+(\.[a-z0-9-]+)*\.arthaleads\.com$/.test(host)) return `https://${host}`;
+  return (process.env.APP_URL || "https://api.arthaleads.com").replace(/\/+$/, "");
+}
+
 const xmlEscape = (s) => String(s ?? "").replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" }[c]));
 
 /** What Plivo does once the agent answers: record both sides in stereo, dial the customer. */
@@ -162,6 +173,6 @@ async function hangup(org, callUuid) {
 }
 
 module.exports = {
-  credentials, isReady, e164, testConnection, placeBridgeCall, answerXml, hangupXml,
+  credentials, isReady, e164, publicBase, testConnection, placeBridgeCall, answerXml, hangupXml,
   checkSignature, downloadRecording, hangup, encryptField, decryptField,
 };
