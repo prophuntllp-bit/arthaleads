@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   CheckCircle2, ChevronRight, Copy, ExternalLink, Globe2,
-  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook, Download, RefreshCw, ShieldCheck, AlertTriangle, Mic, Phone, Lock,
+  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook, Download, RefreshCw, ShieldCheck, AlertTriangle, Mic, Phone, Lock, LayoutGrid, Plug,
 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -11,8 +11,10 @@ import { canAccess } from "../utils/plan";
 import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 import WhatsAppIcon from "../components/WhatsAppIcon";
-import MetaConversionsSection from "../components/MetaConversionsSection";
-import PortalLeadsSection from "../components/PortalLeadsSection";
+import { IntegrationCard, LogoTile, SectionTitle, StatTile, ago } from "../components/integrations/IntegrationUI";
+import { PortalLogo } from "./integrations/PortalsPage";
+import { RoutingLogo } from "./integrations/RoutingRulesPage";
+import { FacebookLogo as MetaFacebookLogo } from "./integrations/ConversionTrackingPage";
 import { VistrowVoiceIcon } from "../components/VistrowVoiceSettings";
 import ConnectionCard, { ConnectionGroups } from "../components/ConnectionCard";
 
@@ -1669,6 +1671,18 @@ export default function Automation() {
     api.get("/whatsapp/status").then((r) => setWaStatus(r.data)).catch(() => setWaStatus({ connected: false }));
   }, []);
 
+  // Status for the telephony, portal, routing and conversion cards. Each call
+  // may be refused (plan or role); the card then just shows "Not set up yet".
+  const [extra, setExtra] = useState({});
+  useEffect(() => {
+    const put = (k) => (r) => setExtra((e) => ({ ...e, [k]: r.data }));
+    api.get("/plivo/settings").then(put("telephony")).catch(() => {});
+    api.get("/calls/settings").then(put("enablex")).catch(() => {});
+    api.get("/portal-leads/settings").then(put("portals")).catch(() => {});
+    api.get("/meta-conversions").then(put("capi")).catch(() => {});
+    api.get("/routing-rules").then((r) => setExtra((e) => ({ ...e, rules: r.data.rules || [] }))).catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!location.state?.presetPlatform) return;
     const platform = location.state.presetPlatform;
@@ -1782,162 +1796,120 @@ export default function Automation() {
 
   const serverBase = (apiBase || "").replace(/\/api\/?$/, "");
 
+  // ── The cards on this page (owner, 27 Oct 2026: modelled on the Vistrow
+  // Voice dashboard). Each one: logo, name, category, status, one line, and a
+  // footer with what's live plus Set up / Manage.
+  const byPlatform = (p) => items.filter((i) => i.platform === p);
+  const liveOf = (p) => byPlatform(p).filter((i) => i.status === "connected" && i.isActive !== false);
+  const lastSync = (p) => byPlatform(p).map((i) => i.lastSyncAt).filter(Boolean).sort().pop();
+  const footerFor = (p, noun) => {
+    const n = byPlatform(p).length;
+    if (!n) return "Not set up yet";
+    const last = lastSync(p);
+    return `${n} ${noun}${n === 1 ? "" : "s"}${last ? ` · last lead ${ago(last)}` : ""}`;
+  };
+  const conn = (live) => (live ? { status: "Connected", statusTone: "on", action: "Manage" } : { status: "Not connected", statusTone: "off", action: "Set up" });
+  const openLocked = (plan) => { toast(`This is part of the ${plan} plan.`); navigate("/plans"); };
+  const growthOk = authUser?.role === "super_admin" || canAccess(org, "growth");
+
+  const portalsLive = (extra.portals?.portals || []).filter((p) => p.lastLeadAt);
+  const portalsLast = portalsLive.map((p) => p.lastLeadAt).sort().pop();
+  const rulesActive = (extra.rules || []).filter((r) => r.isActive !== false).length;
+  const telProvider = extra.telephony?.provider;
+  const telReady = telProvider === "plivo" ? !!(extra.telephony?.plivo?.hasAuthToken && extra.telephony?.plivo?.number) : !!extra.enablex?.connected;
+
+  const SECTIONS = [
+    {
+      title: "Lead sources",
+      note: "Where your leads come from. Each one drops new leads straight into Leads.",
+      cards: [
+        { key: "fb", logo: <LogoTile bg="#1877F2"><FacebookIcon /></LogoTile>, name: "Facebook & Instagram Lead Ads", category: "Lead sources",
+          description: "Every Instant Form lead from your Facebook and Instagram ads, in one click. No technical setup.",
+          ...conn(liveOf("Facebook").length), footer: footerFor("Facebook", "page"),
+          onOpen: () => { setFbEditingItem(null); setFbWizardOpen(true); } },
+        { key: "wa", logo: <LogoTile bg="rgba(37,211,102,0.12)"><WhatsAppIcon className="h-5 w-5" style={{ color: "#25D366" }} /></LogoTile>, name: "WhatsApp Business", category: "Messaging",
+          description: "Your own number for WhatsApp chats, templates, campaigns and the AI agent. Chats become leads.",
+          ...conn(waStatus?.connected), footer: waStatus?.connected ? "Number connected" : "Not set up yet",
+          onOpen: () => navigate("/integrations/whatsapp") },
+        { key: "web", logo: <LogoTile bg="#21759b"><WordPressIcon /></LogoTile>, name: "Website forms", category: "Lead sources",
+          description: "Capture enquiries from WordPress contact forms with our plugin, or any site form.",
+          ...conn(liveOf("Website Form").length), footer: footerFor("Website Form", "site"),
+          onOpen: () => setWpWizardOpen(true) },
+        { key: "portals", logo: <PortalLogo />, name: "Property portals", category: "99acres · Housing.com · MagicBricks",
+          description: "Portal enquiries arrive in Leads by themselves, tagged with the portal and project.",
+          ...conn(portalsLive.length || extra.portals?.housing?.enabled),
+          footer: portalsLive.length ? `${portalsLive.length} of 3 sending · last ${ago(portalsLast)}` : "Not set up yet",
+          locked: !growthOk, lockLabel: "Growth", onOpen: () => (growthOk ? navigate("/integrations/portals") : openLocked("Growth")) },
+        { key: "google", logo: <LogoTile><GoogleGIcon /></LogoTile>, name: "Google Ads lead forms", category: "Lead sources",
+          description: "Leads from Google Ads lead form assets, sent in as they are submitted.",
+          ...conn(liveOf("Google").length), footer: footerFor("Google", "connection"),
+          locked: !enterpriseOk, lockLabel: "Enterprise", onOpen: () => (enterpriseOk ? setGoogleWizardOpen(true) : openLocked("Enterprise")) },
+        { key: "custom", logo: <LogoTile bg="rgba(249,115,22,0.10)"><Link2 className="h-5 w-5" style={{ color: "#f97316" }} /></LogoTile>, name: "Custom / API", category: "Developer",
+          description: "Any partner, broker or vendor that can post a lead to a link: send it straight into your CRM.",
+          ...conn(liveOf("Custom").length), footer: footerFor("Custom", "connection"),
+          locked: !enterpriseOk, lockLabel: "Enterprise", onOpen: () => { if (!enterpriseOk) return openLocked("Enterprise"); setSourceEditingItem(null); setSourceModalOpen(true); } },
+        { key: "vistrow", logo: <LogoTile><VistrowVoiceIcon size={40} /></LogoTile>, name: "Vistrow Voice", category: "AI calling",
+          description: "AI calls your new leads in seconds and sends back qualified leads with the full transcript.",
+          ...conn(liveOf("Vistrow Voice").length), footer: liveOf("Vistrow Voice").length ? "Connected" : "Not set up yet",
+          locked: !enterpriseOk, lockLabel: "Enterprise", onOpen: () => (enterpriseOk ? navigate("/integrations/vistrow-calling") : openLocked("Enterprise")) },
+      ],
+    },
+    {
+      title: "Calling",
+      note: "Click-to-call, recordings and AI call summaries.",
+      cards: [
+        { key: "tel", logo: <LogoTile bg="rgba(249,115,22,0.10)"><Phone className="h-5 w-5" style={{ color: "#f97316" }} /></LogoTile>, name: "Telephony", category: "Plivo · EnableX",
+          description: "Call leads from the CRM and the app; every call is logged, recorded and summarised.",
+          ...(telReady ? { status: "Connected", statusTone: "on", action: "Manage" } : { status: "Not connected", statusTone: "off", action: "Set up" }),
+          footer: telProvider ? `Calls through ${telProvider === "plivo" ? "Plivo" : "EnableX"}` : "Not set up yet",
+          onOpen: () => navigate("/integrations/telephony") },
+      ],
+    },
+    {
+      title: "Ads and routing",
+      note: "Send leads to the right person, and tell Meta which leads turn into buyers.",
+      cards: [
+        { key: "routing", logo: <RoutingLogo />, name: "Lead routing rules", category: "Routing",
+          description: "Leads from a chosen campaign, WhatsApp ad or website page go straight to a team member or project.",
+          ...(rulesActive ? { status: `${rulesActive} active`, statusTone: "on", action: "Manage" } : { status: "No rules", statusTone: "off", action: "Set up" }),
+          footer: rulesActive ? "Everything else follows the rotation" : "Not set up yet",
+          locked: !growthOk, lockLabel: "Growth", onOpen: () => (growthOk ? navigate("/integrations/routing") : openLocked("Growth")) },
+        { key: "capi", logo: <LogoTile bg="rgba(24,119,242,0.08)"><MetaFacebookLogo className="w-5 h-5" /></LogoTile>, name: "Meta conversion tracking", category: "Ads",
+          description: "Tells Meta which ad leads become serious buyers, so your ads find more people like them.",
+          ...(extra.capi?.enabled ? { status: "On", statusTone: "on", action: "Manage" } : { status: "Off", statusTone: "off", action: "Set up" }),
+          footer: extra.capi ? `${(extra.capi.stats?.sent || 0).toLocaleString("en-IN")} events sent` : "Not set up yet",
+          locked: !growthOk, lockLabel: "Growth", onOpen: () => (growthOk ? navigate("/integrations/conversion-tracking") : openLocked("Growth")) },
+      ],
+    },
+  ];
+  const allCards = SECTIONS.flatMap((s) => s.cards);
+  const liveCards = allCards.filter((c) => !c.locked && c.statusTone === "on").length;
+
   return (
-    <div className="stitch-page space-y-6">
-      {/* Header */}
-      <section className="card p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="stitch-kicker mb-2">Lead Sources</p>
-            <h1 className="text-3xl font-black tracking-tight text-app">Connect Your Accounts</h1>
-            <p className="mt-2 max-w-2xl text-sm text-app-soft">
-              Connect Facebook Lead Ads, Google, WhatsApp, and more. Leads flow directly into your CRM automatically.
-            </p>
+    <div className="stitch-page space-y-5">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold tracking-tight text-app">Integrations</h1>
+        <p className="text-sm text-app-soft">Connect where your leads come from, how you call them, and how your ads learn from them.</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <StatTile icon={Link2} label="Connected" value={liveCards} note="live and sending" />
+        <StatTile icon={LayoutGrid} label="Available" value={allCards.length} note="open one to set it up" />
+        <StatTile icon={Plug} label="Your connections" value={items.length} note="pages, sites and links below" />
+      </div>
+
+      {SECTIONS.map((s) => (
+        <section key={s.title} className="space-y-3">
+          <SectionTitle title={s.title} note={s.note} />
+          <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+            {s.cards.map(({ key, ...c }) => <IntegrationCard key={key} {...c} />)}
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              className="btn-primary rounded-xl"
-              onClick={() => { setFbEditingItem(null); setFbWizardOpen(true); }}
-            >
-              <FacebookIcon2 /> Connect Facebook
-            </button>
-            <button
-              className="btn-secondary rounded-xl"
-              onClick={() => { setSourceEditingItem(null); setSourceModalOpen(true); }}
-            >
-              <Plus className="h-4 w-4" /> Other Source
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <MetricCard label="Connected" value={summary.connected} note="Live channels" accent="text-emerald-400" />
-        <MetricCard label="Total Sources" value={summary.total} note="All connections" />
-        <MetricCard label="Facebook" value={items.filter((i) => i.platform === "Facebook").length} note="Meta Lead Ads" accent="text-blue-400" />
-        <MetricCard label="Other" value={items.filter((i) => i.platform !== "Facebook").length} note="Google · WhatsApp · Web" />
-      </section>
-
-      {/* Quick connect tiles */}
-      <section>
-        <p className="mb-3 text-sm font-semibold text-app-soft">Quick connect</p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 min-[1500px]:grid-cols-7">
-          {/* Facebook tile - special styling */}
-          <button
-            type="button"
-            data-tour="fb-connect"
-            className="card flex flex-col items-center justify-start p-4 text-center transition hover:-translate-y-1 hover:border-blue-500/30 relative overflow-hidden"
-            onClick={() => { setFbEditingItem(null); setFbWizardOpen(true); }}
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#1877F2]">
-              <FacebookIcon />
-            </div>
-            <h3 className="mt-3 text-sm font-semibold text-app">Facebook</h3>
-            <p className="mt-1 text-xs text-app-soft">Lead Ads · One click</p>
-          </button>
-
-          {/* WhatsApp Business tile - connects your own number for the Inbox/AI
-              agent. Opens its own page under Integrations (same pattern as
-              Telephony below) rather than navigating out to /conversations. */}
-          <button
-            type="button"
-            className="card flex flex-col items-center justify-start p-4 text-center transition hover:-translate-y-1 hover:border-emerald-500/30 relative overflow-hidden"
-            onClick={() => navigate("/integrations/whatsapp")}
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl" style={{ background: "rgba(37,211,102,0.12)" }}>
-              <WhatsAppIcon className="h-5 w-5" style={{ color: "#25D366" }} />
-            </div>
-            <h3 className="mt-3 text-sm font-semibold text-app">WhatsApp Business</h3>
-            <p className="mt-1 text-xs text-app-soft">
-              {waStatus?.connected ? "Connected · manage provider & profile" : "Connect your number for WhatsApp chats, templates & the AI agent"}
-            </p>
-          </button>
-
-          {Object.entries(PLATFORM_PRESETS)
-            // Facebook has its own special tile above. WhatsApp's quick-connect
-            // tile was dead (nobody used a 3rd-party bot webhook this way) and
-            // is replaced by the WhatsApp Business tile above — the preset
-            // itself stays defined so an existing connection still renders
-            // correctly in "Your connections" below.
-            .filter(([p]) => p !== "Facebook" && p !== "WhatsApp")
-            .map(([platform, preset]) => {
-              const Icon = preset.icon;
-              const isWebsiteForm = platform === "Website Form";
-              const isVistrowVoice = platform === "Vistrow Voice";
-              const locked = ENTERPRISE_SOURCES.includes(platform) && !enterpriseOk;
-              return (
-                <button
-                  key={platform}
-                  type="button"
-                  className="card flex flex-col items-center justify-start p-4 text-center transition hover:-translate-y-1 hover:border-orange-500/30"
-                  onClick={() => {
-                    if (locked) {
-                      toast(`${preset.label || platform} is part of the Enterprise plan.`, { icon: "🔒" });
-                      navigate("/plans");
-                    } else if (isWebsiteForm) {
-                      setWpWizardOpen(true);
-                    } else if (platform === "Vistrow Voice") {
-                      // The tile opens the guided "Auto-call new leads" page. The connection
-                      // token is still managed from the connection row below (and from a link on that page).
-                      navigate("/integrations/vistrow-calling");
-                    } else if (platform === "Google") {
-                      setGoogleWizardOpen(true);
-                    } else {
-                      setSourceEditingItem(null);
-                      setSourceModalOpen(true);
-                    }
-                  }}
-                >
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-2xl overflow-hidden ${isWebsiteForm ? "bg-[#21759b]" : isVistrowVoice ? "" : preset.tone}`}>
-                    {isWebsiteForm ? <WordPressIcon /> : isVistrowVoice ? <VistrowVoiceIcon size={48} /> : <Icon className="h-5 w-5" />}
-                  </div>
-                  <h3 className="mt-4 flex items-center gap-2 text-base font-semibold text-app">
-                    {preset.label || platform}
-                    {locked && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
-                        style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>
-                        <Lock className="h-2.5 w-2.5" /> Enterprise
-                      </span>
-                    )}
-                  </h3>
-                  <p className="mt-1 text-xs text-app-soft">{preset.description.split(".")[0]}</p>
-                </button>
-              );
-            })}
-
-          {/* Telephony (EnableX) - not a lead source, so it links out to its own page
-              instead of opening one of the wizard modals above. */}
-          <button
-            type="button"
-            className="card flex flex-col items-center justify-start p-4 text-center transition hover:-translate-y-1 hover:border-orange-500/30"
-            onClick={() => navigate("/automation/telephony")}
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl" style={{ background: "rgba(249,115,22,0.12)" }}>
-              <Phone className="h-5 w-5 text-orange-500" />
-            </div>
-            <h3 className="mt-3 text-sm font-semibold text-app">Telephony</h3>
-            <p className="mt-1 text-xs text-app-soft">EnableX · Click-to-call & recordings</p>
-          </button>
-        </div>
-      </section>
-
-      {/* Connected sources list */}
-      {items.length === 0 ? (
-        <section className="card">
-          <EmptyState
-            title="No connections yet"
-            desc="Connect Facebook Lead Ads in one click - no technical setup needed."
-            action={
-              <button className="btn-primary" onClick={() => { setFbEditingItem(null); setFbWizardOpen(true); }}>
-                <FacebookIcon2 /> Connect Facebook
-              </button>
-            }
-          />
         </section>
-      ) : (
+      ))}
+
+      {items.length > 0 && (
         <section className="space-y-3">
-          <p className="text-sm font-semibold text-app-soft">Your connections ({items.length})</p>
+          <SectionTitle title="Your connections" note="Every Facebook page, website and link sending you leads. Pause or edit one here." />
           <ConnectionGroups
             items={items}
             renderCard={(item) => {
@@ -2085,499 +2057,6 @@ export default function Automation() {
         message={deleting ? `Remove "${deleting.name}" from your connections?` : ""}
       />
 
-      {/* Campaign Routing Rules */}
-      {/* Routing rules and the Meta Conversions API are Growth (pricing, API). */}
-      {(authUser?.role === "super_admin" || canAccess(org, "growth")) ? (
-        <div className="grid grid-cols-1 items-start gap-4 min-[1500px]:grid-cols-2">
-          <LeadRoutingSection />
-          {/* Meta Conversions API */}
-          <MetaConversionsSection />
-          {/* 99acres, Housing.com, MagicBricks */}
-          <PortalLeadsSection />
-        </div>
-      ) : (
-        <section className="card p-5">
-          <p className="text-sm font-bold text-app">Campaign routing rules, Meta Conversions API and property portals</p>
-          <p className="text-xs text-app-soft mt-1">Part of the Growth plan: send each campaign's leads to the right person or project automatically, report results back to Meta, and get 99acres, Housing.com and MagicBricks enquiries straight into your leads.</p>
-        </section>
-      )}
-
-    </div>
-  );
-}
-
-/* ─── Lead Routing Rules ───────────────────────────────────────────────────── */
-const SOURCE_LABELS = {
-  facebook: "Facebook Lead Ads",
-  whatsapp: "WhatsApp (Click-to-WhatsApp Ads)",
-  google:   "Google Ads",
-  website:  "Website",
-};
-
-// Mirrors backend/models/RoutingRule.js MATCH_FIELDS_BY_SOURCE — keep in sync.
-const MATCH_FIELDS_BY_SOURCE = {
-  facebook: ["form_id", "campaign_id", "adset_id", "ad_id"],
-  whatsapp: ["ad_id"],
-  google:   ["campaign_id"],
-  website:  ["domain", "page_path"],
-};
-
-const MATCH_FIELD_LABELS = {
-  form_id:     "Form ID",
-  campaign_id: "Campaign ID",
-  adset_id:    "Ad Set ID",
-  ad_id:       "Ad ID",
-  domain:      "Website Domain",
-  page_path:   "Page URL Contains",
-};
-
-const MATCH_FIELD_PLACEHOLDERS = {
-  form_id:     "e.g. 9655855458173381",
-  campaign_id: "e.g. 9655855458173381",
-  adset_id:    "e.g. 9655855458173381",
-  ad_id:       "e.g. 9655855458173381",
-  domain:      "e.g. greenvalleyhomes.com",
-  page_path:   "e.g. /projects/green-valley-villas",
-};
-
-function matchFieldHint(source, matchField) {
-  if (source === "website") {
-    return matchField === "domain"
-      ? "Exact match against the domain the form was submitted from (no \"www.\", no https://)."
-      : "Matches when the page URL contains this text — e.g. one project's landing page.";
-  }
-  if (source === "whatsapp") {
-    return "Find this in Facebook Ads Manager → your Click-to-WhatsApp ad → Ad ID.";
-  }
-  if (source === "google") {
-    return "Find this in Google Ads → Campaigns → Campaign ID column.";
-  }
-  return `Find this in Facebook Ads Manager → Campaign → ${MATCH_FIELD_LABELS[matchField]}.`;
-}
-
-function LeadRoutingSection() {
-  const [rules, setRules] = useState([]);
-  const [agents, setAgents] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [domains, setDomains] = useState([]);
-  const [sitePages, setSitePages] = useState([]);
-  // Real form/campaign/ad-set/ad IDs already seen on this org's leads, keyed
-  // by source then matchField — e.g. campaignOptions.facebook.form_id — so
-  // the rule form can offer a pick-from-real-leads dropdown instead of
-  // making you dig the raw ID out of Ads Manager by hand.
-  const [campaignOptions, setCampaignOptions] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ label: "", source: "facebook", matchField: "form_id", matchValue: "", assignTo: "", assignToProject: "" });
-  // Multiple real-lead values ticked in the quick-pick (e.g. several WhatsApp
-  // ads that should all route the same way) — when non-empty this creates one
-  // rule per ticked value instead of the single `form.matchValue`. Cleared
-  // whenever Source or Match By changes, since the ticked values belong to
-  // that specific field.
-  const [matchValues, setMatchValues] = useState([]);
-  // Editing an existing rule: only its name, agent and project can change.
-  const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ label: "", assignTo: "", assignToProject: "" });
-  const [savingEdit, setSavingEdit] = useState(false);
-
-  useEffect(() => {
-    Promise.all([
-      api.get("/routing-rules"),
-      api.get("/auth/agents"),
-      // Same endpoint the Leads page filter uses — real domains/pages leads
-      // have already come in from, so a rule can be picked instead of typed.
-      api.get("/leads/domains"),
-      api.get("/projects"),
-      api.get("/leads/campaign-options"),
-    ])
-      .then(([rulesRes, agentsRes, domainsRes, projectsRes, campaignRes]) => {
-        const agentList = agentsRes.data.agents || [];
-        setRules(rulesRes.data.rules || []);
-        setAgents(agentList);
-        setDomains(domainsRes.data.domains || []);
-        setSitePages(domainsRes.data.pages || []);
-        setProjects(projectsRes.data.data || []);
-        setCampaignOptions(campaignRes.data.options || {});
-        if (agentList.length > 0) {
-          setForm((f) => ({ ...f, assignTo: f.assignTo || agentList[0]._id }));
-        }
-      })
-      .catch(() => { toast.error("Failed to load routing data"); })
-      .finally(() => setLoading(false));
-  }, []);
-
-  // Flat, indented option list for the website quick-pick: one row per known
-  // domain, one indented row per page under it (from real lead traffic).
-  // Picking a domain fills matchField "domain"; picking a page fills
-  // matchField "page_path" with just the path (works regardless of www./
-  // protocol, since matching is a substring check against the full URL).
-  const websiteQuickPickOptions = useMemo(() => {
-    const opts = [{ value: "", label: "— Type manually below —" }];
-    for (const d of domains) {
-      const pagesOfD = sitePages.filter((p) => p.domain === d);
-      const total = pagesOfD.reduce((n, p) => n + p.count, 0);
-      opts.push({ value: `domain:${d}`, label: `🌐 ${d}${total ? ` (${total})` : ""}` });
-      for (const p of pagesOfD) {
-        if (p.path === "/") continue; // the bare domain row above already covers this
-        opts.push({ value: `page:${p.path}`, label: `　↳ ${p.path} (${p.count})` });
-      }
-    }
-    return opts;
-  }, [domains, sitePages]);
-
-  // Facebook/WhatsApp/Google quick-pick: the real form/campaign/ad-set/ad
-  // IDs already seen on this org's leads for whichever source+matchField is
-  // currently selected — picking one fills Value directly, no copy-pasting
-  // out of Ads Manager. null when there's nothing to offer yet (brand-new
-  // org, or a matchField that hasn't appeared on a lead yet), in which case
-  // the form falls back to the plain manual input below it.
-  const campaignQuickPickOptions = useMemo(() => {
-    if (form.source === "website") return null;
-    const list = campaignOptions[form.source]?.[form.matchField];
-    if (!list?.length) return null;
-    return list.map((o) => ({ value: o.value, label: o.label, count: o.count }));
-  }, [form.source, form.matchField, campaignOptions]);
-
-  // Ticked values belong to one specific source+matchField — switching
-  // either one invalidates whatever was ticked for the previous field.
-  useEffect(() => { setMatchValues([]); }, [form.source, form.matchField]);
-
-  const toggleMatchValue = (value) => {
-    setMatchValues((prev) => prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]);
-  };
-
-  const handleAdd = async (e) => {
-    e.preventDefault();
-    if (!form.label.trim() || (matchValues.length === 0 && !form.matchValue.trim())) {
-      toast.error("Please fill in all fields"); return;
-    }
-    if (!form.assignTo) {
-      toast.error("No agents available to assign to"); return;
-    }
-    setSaving(true);
-    try {
-      if (matchValues.length > 0) {
-        // One rule per ticked value, same label/source/matchField/agent/
-        // project — each matched value gets a distinct rule row (so any one
-        // of them can later be paused/deleted/reassigned on its own) rather
-        // than one rule holding an array of values.
-        const results = await Promise.allSettled(matchValues.map((value) => {
-          const pick = campaignQuickPickOptions?.find((o) => o.value === value);
-          const label = pick?.label && pick.label !== value ? `${form.label} — ${pick.label}` : form.label;
-          return api.post("/routing-rules", { ...form, label, matchValue: value });
-        }));
-        const created = results.filter((r) => r.status === "fulfilled").map((r) => r.value.data.rule);
-        const failed = results.length - created.length;
-        if (created.length) setRules((prev) => [...created, ...prev]);
-        if (failed) toast.error(`${created.length} of ${results.length} rules saved — ${failed} failed`);
-        else toast.success(`${created.length} routing rule${created.length > 1 ? "s" : ""} added`);
-      } else {
-        const { data } = await api.post("/routing-rules", form);
-        setRules((prev) => [data.rule, ...prev]);
-        toast.success("Routing rule added");
-      }
-      setForm({ label: "", source: "facebook", matchField: "form_id", matchValue: "", assignTo: agents[0]?._id || "", assignToProject: "" });
-      setMatchValues([]);
-      setShowForm(false);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to save rule");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const toggleRule = async (rule) => {
-    try {
-      const { data } = await api.patch(`/routing-rules/${rule._id}`, { isActive: !rule.isActive });
-      setRules((prev) => prev.map((r) => r._id === rule._id ? data.rule : r));
-    } catch { toast.error("Failed to update rule"); }
-  };
-
-  const startEdit = (rule) => {
-    setEditingId(rule._id);
-    setEditForm({ label: rule.label || "", assignTo: String(rule.assignTo || ""), assignToProject: String(rule.assignToProject || "") });
-  };
-
-  const saveEdit = async (rule) => {
-    if (!editForm.label.trim()) { toast.error("Give the rule a name"); return; }
-    if (!editForm.assignTo) { toast.error("Pick who it should be assigned to"); return; }
-    setSavingEdit(true);
-    try {
-      const { data } = await api.patch(`/routing-rules/${rule._id}`, {
-        label: editForm.label.trim(),
-        assignTo: editForm.assignTo,
-        assignToProject: editForm.assignToProject || null,
-      });
-      setRules((prev) => prev.map((r) => r._id === rule._id ? data.rule : r));
-      setEditingId(null);
-      toast.success("Rule updated. New leads will follow it.");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Could not update the rule");
-    } finally { setSavingEdit(false); }
-  };
-
-  const deleteRule = async (id) => {
-    if (!confirm("Delete this routing rule?")) return;
-    try {
-      await api.delete(`/routing-rules/${id}`);
-      setRules((prev) => prev.filter((r) => r._id !== id));
-      toast.success("Rule deleted");
-    } catch { toast.error("Failed to delete rule"); }
-  };
-
-  return (
-    <section className="card p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-app">Lead Routing Rules</h2>
-          <p className="text-sm text-app-soft mt-0.5">
-            Route leads from specific Facebook/Google campaigns, WhatsApp ads, or website domains and pages directly to a team member. All other leads follow the round-robin rotation.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowForm((v) => !v)}
-          className="btn-primary rounded-xl shrink-0"
-        >
-          <Plus className="h-4 w-4" /> Add Rule
-        </button>
-      </div>
-
-      {/* Add rule form */}
-      {showForm && (
-        <form onSubmit={handleAdd} className="rounded-2xl border p-5 space-y-4" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
-          <p className="text-sm font-semibold text-app">New Routing Rule</p>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <label className="label">Rule Name</label>
-              <input
-                className="input"
-                placeholder="e.g. Green Valley Villas Campaign"
-                value={form.label}
-                onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="label">Source</label>
-              <CustomSelect
-                value={form.source}
-                onChange={(v) => setForm((f) => ({ ...f, source: v, matchField: MATCH_FIELDS_BY_SOURCE[v][0] }))}
-                options={Object.entries(SOURCE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
-                style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="label">Assign To</label>
-              <CustomSelect
-                value={form.assignTo}
-                onChange={(v) => setForm((f) => ({ ...f, assignTo: v }))}
-                options={agents.map((a) => ({ value: a._id, label: a.name }))}
-                style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="label">Match By</label>
-              <CustomSelect
-                value={form.matchField}
-                onChange={(v) => setForm((f) => ({ ...f, matchField: v }))}
-                options={MATCH_FIELDS_BY_SOURCE[form.source].map((k) => ({ value: k, label: MATCH_FIELD_LABELS[k] }))}
-                style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
-              />
-            </div>
-
-            {form.source === "website" && websiteQuickPickOptions.length > 1 && (
-              <div className="space-y-1 sm:col-span-2">
-                <label className="label">Pick from your website's actual traffic</label>
-                <CustomSelect
-                  value=""
-                  onChange={(v) => {
-                    if (!v) return;
-                    const [kind, ...rest] = v.split(":");
-                    const val = rest.join(":");
-                    setForm((f) => ({ ...f, matchField: kind === "domain" ? "domain" : "page_path", matchValue: val }));
-                  }}
-                  options={websiteQuickPickOptions}
-                  placeholder="— Type manually below —"
-                  style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
-                />
-                <p className="text-xs text-app-soft">Only shows domains/pages that have already sent at least one lead — a brand-new page won't be listed yet, so type it in manually below.</p>
-              </div>
-            )}
-
-            {campaignQuickPickOptions && (
-              <div className="space-y-1 sm:col-span-2">
-                <label className="label">
-                  Pick from your real leads{matchValues.length > 0 ? ` (${matchValues.length} selected)` : ""}
-                </label>
-                <div className="rounded-xl divide-y max-h-56 overflow-y-auto" style={{ border: "1px solid var(--app-border)" }}>
-                  {campaignQuickPickOptions.map((o) => (
-                    <label key={o.value} className="flex items-center gap-2.5 px-3 py-2 text-sm cursor-pointer hover:bg-[var(--app-surface-low)]">
-                      <input type="checkbox" className="shrink-0"
-                        checked={matchValues.includes(o.value)} onChange={() => toggleMatchValue(o.value)} />
-                      <span className="flex-1 min-w-0 truncate text-app">{o.label}</span>
-                      {o.count > 0 && <span className="text-xs text-app-soft shrink-0">{o.count} lead{o.count === 1 ? "" : "s"}</span>}
-                    </label>
-                  ))}
-                </div>
-                <p className="text-xs text-app-soft">
-                  {matchValues.length > 0
-                    ? `Tick as many as you need — Save will create ${matchValues.length} rule${matchValues.length > 1 ? "s" : ""}, all assigned to the same agent${form.assignToProject ? " and project" : ""}.`
-                    : "Tick one or more to route them all the same way — leave everything unticked to type a single value manually below instead."}
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-1">
-              <label className="label">{MATCH_FIELD_LABELS[form.matchField]} Value</label>
-              <input
-                className="input font-mono text-sm"
-                placeholder={matchValues.length > 0 ? "Using ticked selections above" : MATCH_FIELD_PLACEHOLDERS[form.matchField]}
-                value={form.matchValue}
-                disabled={matchValues.length > 0}
-                onChange={(e) => {
-                  const raw = e.target.value.trim();
-                  setForm((f) => ({ ...f, matchValue: f.matchField === "domain" ? raw.toLowerCase() : raw }));
-                }}
-              />
-              <p className="text-xs text-app-soft">
-                {matchValues.length > 0 ? "Clear your ticked selections above to type a single value here instead." : matchFieldHint(form.source, form.matchField)}
-              </p>
-            </div>
-
-            <div className="space-y-1 sm:col-span-2">
-              <label className="label">Also file into project (optional)</label>
-              <CustomSelect
-                value={form.assignToProject}
-                onChange={(v) => setForm((f) => ({ ...f, assignToProject: v }))}
-                options={[{ value: "", label: "— Don't file into a project —" }, ...projects.map((p) => ({ value: p._id, label: p.name }))]}
-                placeholder="— Don't file into a project —"
-                style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
-              />
-              <p className="text-xs text-app-soft">
-                Besides assigning the agent, also drop a copy of the lead straight into this project's Leads tab — skips the manual "Transfer to Project" step. The lead still stays in the main pipeline too.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-3 justify-end">
-            <button type="button" className="btn-secondary rounded-xl" onClick={() => setShowForm(false)}>Cancel</button>
-            <button type="submit" className="btn-primary rounded-xl" disabled={saving}>
-              {saving ? <><Spinner size="sm" /> Saving…</> : "Save Rule"}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Rules list */}
-      {loading ? (
-        <div className="flex justify-center py-6"><Spinner /></div>
-      ) : rules.length === 0 ? (
-        <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-app-soft" style={{ borderColor: "var(--app-border)" }}>
-          No routing rules yet. Add one above to route specific campaigns, ads, or website pages to a team member.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {rules.map((rule) => editingId === rule._id ? (
-            <div key={rule._id} className="rounded-2xl border p-4 space-y-3" style={{ borderColor: "var(--app-primary)", background: "var(--app-surface-low)" }}>
-              <p className="text-xs text-app-soft">
-                {SOURCE_LABELS[rule.source || "facebook"]} · {MATCH_FIELD_LABELS[rule.matchField]} <code className="text-orange-400 font-mono">{rule.matchValue}</code>
-                {" "}(what it matches can't be changed here; add a new rule to match something else)
-              </p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="label">Rule Name</label>
-                  <input className="input" value={editForm.label} onChange={(e) => setEditForm((f) => ({ ...f, label: e.target.value }))} />
-                </div>
-                <div className="space-y-1">
-                  <label className="label">Assign To</label>
-                  <CustomSelect
-                    value={editForm.assignTo}
-                    onChange={(v) => setEditForm((f) => ({ ...f, assignTo: v }))}
-                    options={agents.map((a) => ({ value: a._id, label: a.name }))}
-                    style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="label">Also file into project</label>
-                  <CustomSelect
-                    value={editForm.assignToProject}
-                    onChange={(v) => setEditForm((f) => ({ ...f, assignToProject: v }))}
-                    options={[{ value: "", label: "— Don't file into a project —" }, ...projects.map((p) => ({ value: p._id, label: p.name }))]}
-                    placeholder="— Don't file into a project —"
-                    style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-app-soft">Applies to leads that arrive from now on. Leads already routed keep the agent they were given.</p>
-              <div className="flex gap-3 justify-end">
-                <button type="button" className="btn-secondary rounded-xl" onClick={() => setEditingId(null)}>Cancel</button>
-                <button type="button" className="btn-primary rounded-xl" disabled={savingEdit} onClick={() => saveEdit(rule)}>
-                  {savingEdit ? <><Spinner size="sm" /> Saving…</> : "Save changes"}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div key={rule._id} className={`flex items-center gap-4 rounded-2xl border px-4 py-3 transition ${rule.isActive ? "border-[var(--app-border)]" : "border-dashed border-[var(--app-border)] opacity-50"}`}>
-              {/* Toggle */}
-              <button
-                type="button"
-                onClick={() => toggleRule(rule)}
-                className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${rule.isActive ? "bg-emerald-500" : "bg-white/10"}`}
-              >
-                <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform mt-0.5 ${rule.isActive ? "translate-x-4" : "translate-x-0.5"}`} />
-              </button>
-
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-app truncate">
-                  {rule.label}
-                  <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-app-soft align-middle">
-                    {SOURCE_LABELS[rule.source || "facebook"]}
-                  </span>
-                </p>
-                <p className="text-xs text-app-soft">
-                  {MATCH_FIELD_LABELS[rule.matchField]} <code className="text-orange-400 font-mono">{rule.matchValue}</code>
-                  {" → "}
-                  <span className="text-emerald-400 font-medium">{rule.assignToName}</span>
-                  {rule.assignToProject && (
-                    <> {" + filed into "}<span className="text-emerald-400 font-medium">{rule.assignToProjectName}</span></>
-                  )}
-                </p>
-              </div>
-
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${rule.isActive ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-app-soft"}`}>
-                {rule.isActive ? "Active" : "Paused"}
-              </span>
-
-              <button type="button" onClick={() => startEdit(rule)} title="Edit rule" aria-label="Edit rule" className="text-app-soft hover:text-app transition shrink-0">
-                <Pencil className="h-4 w-4" />
-              </button>
-
-              <button onClick={() => deleteRule(rule._id)} className="text-app-soft hover:text-red-400 transition shrink-0">
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
-
-          <p className="text-xs text-app-soft text-center pt-1">
-            All other leads (no match) → assigned via round-robin to your team
-          </p>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function MetricCard({ label, value, note, accent = "text-app" }) {
-  return (
-    <div className="card p-4 text-center">
-      <p className="stitch-kicker mb-1.5">{label}</p>
-      <p className={`text-2xl font-black tracking-tight ${accent}`}>{value}</p>
-      <p className="mt-1 text-xs text-app-soft">{note}</p>
     </div>
   );
 }

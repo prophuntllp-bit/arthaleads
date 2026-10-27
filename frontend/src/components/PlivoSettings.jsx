@@ -11,7 +11,7 @@ import CustomSelect from "./CustomSelect";
 // "918065492852" reads as "+91 80 6549 2852".
 const showNumber = (n) => (/^91\d{10}$/.test(n) ? `+91 ${n.slice(2, 4)} ${n.slice(4, 8)} ${n.slice(8)}` : `+${n}`);
 
-export default function PlivoSettings({ onSaved }) {
+export default function PlivoSettings({ onSaved, bare = false }) {
   const [d, setD] = useState(null);
   const [form, setForm] = useState({ authId: "", authToken: "" });
   const [showToken, setShowToken] = useState(false);
@@ -74,15 +74,15 @@ export default function PlivoSettings({ onSaved }) {
   };
 
   return (
-    <section className="card p-6 space-y-5">
-      <div>
+    <section className="card p-6 space-y-5" style={bare ? { boxShadow: "none" } : undefined}>
+      {!bare && <div>
         <p className="stitch-kicker mb-1">Plivo</p>
         <h3 className="text-base font-bold text-app">Plivo click-to-call</h3>
         <p className="text-sm text-app-soft mt-1 max-w-2xl">
           Your phone rings first; when you answer, the lead is dialled from your Plivo number and both sides are recorded on separate
           channels, so the transcript shows exactly who said what.
         </p>
-      </div>
+      </div>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>

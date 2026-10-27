@@ -57,6 +57,29 @@ router.get("/settings", protect, authorize("admin", "manager", "super_admin"), a
   } catch (err) { next(err); }
 });
 
+// Calls through one phone service in the last 7 days, for the stat tiles on
+// its settings page. EnableX calls carry no provider (or "enablex").
+router.get("/call-stats", protect, authorize("admin", "manager", "super_admin"), async (req, res, next) => {
+  try {
+    const provider = req.query.provider === "enablex" ? "enablex" : "plivo";
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const prov = provider === "plivo" ? "plivo" : { $in: [null, "", "enablex"] };
+    const Lead = require("../models/Lead");
+    const [row] = await Lead.aggregate([
+      { $match: { orgId: req.user.orgId, activities: { $elemMatch: { type: "called", createdAt: { $gte: since } } } } },
+      { $unwind: "$activities" },
+      { $match: { "activities.type": "called", "activities.createdAt": { $gte: since }, "activities.meta.provider": prov } },
+      { $group: {
+        _id: null, total: { $sum: 1 },
+        answered: { $sum: { $cond: [{ $eq: ["$activities.meta.status", "answered"] }, 1, 0] } },
+        inbound: { $sum: { $cond: [{ $eq: ["$activities.meta.direction", "inbound"] }, 1, 0] } },
+        lastAt: { $max: "$activities.createdAt" },
+      } },
+    ]);
+    res.json({ provider, total: row?.total || 0, answered: row?.answered || 0, inbound: row?.inbound || 0, lastAt: row?.lastAt || null });
+  } catch (err) { next(err); }
+});
+
 router.patch("/settings", protect, authorize("admin", "super_admin"), async (req, res, next) => {
   try {
     const { authId, authToken, number, provider } = req.body || {};
