@@ -4,6 +4,7 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { AppSelect, AppDatePicker } from "../components/UI";
 import { useNavigate } from "react-router-dom";
+import SegmentTabs from "../components/SegmentTabs";
 
 const UNIT_TYPES = ["Flat", "Plot", "Villa", "Shop", "Office", "Other"];
 const STATUS_LABELS = { new: "New", invoiced: "Invoiced", payment_received: "Paid" };
@@ -284,18 +285,8 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
               </div>
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block">GST Type</label>
-                <div className="flex gap-2">
-                  {["CGST_SGST", "IGST"].map(t => (
-                    <button key={t} type="button"
-                      onClick={() => set("gstType", t)}
-                      className={`flex-1 py-2 rounded-xl text-xs font-semibold border cursor-pointer transition ${form.gstType === t ? "text-white" : "text-app-soft"}`}
-                      style={form.gstType === t
-                        ? { background: "var(--app-primary)", borderColor: "var(--app-primary)" }
-                        : { background: "var(--app-surface-low)", borderColor: "var(--app-border)" }}>
-                      {t === "CGST_SGST" ? "CGST + SGST" : "IGST (Interstate)"}
-                    </button>
-                  ))}
-                </div>
+                <SegmentTabs ariaLabel="GST type" value={form.gstType} onChange={(t) => set("gstType", t)} stretch
+                  tabs={[{ value: "CGST_SGST", label: "CGST + SGST" }, { value: "IGST", label: "IGST (Interstate)" }]} />
               </div>
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block">Notes (internal)</label>
@@ -419,17 +410,10 @@ export default function Bookings() {
         ))}
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-2 mb-4">
-        {[["all", "All"], ["new", "New"], ["invoiced", "Invoiced"], ["payment_received", "Paid"]].map(([k, l]) => (
-          <button key={k} onClick={() => setFilter(k)}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition"
-            style={filter === k
-              ? { background: "var(--app-primary)", color: "#fff" }
-              : { background: "var(--app-surface-low)", color: "var(--app-text-soft)", border: "1px solid var(--app-border)" }}>
-            {l}
-          </button>
-        ))}
+      {/* Filter tabs (shared SegmentTabs strip) */}
+      <div className="mb-4">
+        <SegmentTabs ariaLabel="Booking status" value={filter} onChange={setFilter}
+          tabs={[["all", "All"], ["new", "New"], ["invoiced", "Invoiced"], ["payment_received", "Paid"]].map(([k, l]) => ({ value: k, label: l }))} />
       </div>
 
       {loading ? (
