@@ -274,7 +274,7 @@ RULES
 - Be concise — 2-4 sentences unless a plan comparison genuinely needs a short list. No markdown bold/headers, plain text, hyphen not em dash.
 - For serious buying signals, suggest booking a demo (/book-demo) first and the 14-day free trial second.
 - If truly unsure or the question needs a human, say so plainly and give contact@arthaleads.com or the WhatsApp number +91 90670 97779.
-- Respond with strict JSON: {"answer": string, "cta": "demo"|"signup"|"pricing"|"contact"|null}. Set cta to "demo" when the visitor is evaluating or asks to see the product, "signup" when a free trial nudge fits, "pricing" when plan/cost details would help, "contact" when they need a human (enterprise, complex, or unresolved), otherwise null.`;
+- Respond with strict JSON: {"answer": string, "cta": "demo"|"signup"|"pricing"|"contact"|null}. Set cta to "demo" when the visitor is evaluating or asks to see the product, "signup" when a free trial nudge fits, "pricing" when plan/cost details would help, "contact" when they need a human (enterprise, complex, or unresolved). When none of those fits better, use "demo": every answer should end with a next step. Use null only for greetings and off-topic replies.`;
 
 async function answerMarketingQuestion(question, conversationHistory = []) {
   const client = getClient();
