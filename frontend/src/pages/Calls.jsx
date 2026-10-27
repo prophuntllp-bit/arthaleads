@@ -12,6 +12,7 @@ import api from "../services/api";
 import fetchLeadToOpen from "../utils/fetchLeadToOpen";
 import { fmtDateTime } from "../utils/constants";
 import CustomSelect from "../components/CustomSelect";
+import CallTranscript from "../components/CallTranscript";
 import { useAuth } from "../context/AuthContext";
 
 const STATUS_TABS = [
@@ -327,10 +328,7 @@ function CallDetailPanel({ call, leadId, leadName, isProjectLead, onBack }) {
             <AlignLeft className="w-3.5 h-3.5 text-app-soft" />
             <span className="text-xs font-bold uppercase tracking-wider text-app">Transcript</span>
           </div>
-          <div className="rounded-xl p-4 text-sm text-app leading-relaxed whitespace-pre-wrap overflow-y-auto"
-            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", maxHeight: 180 }}>
-            {meta.transcript}
-          </div>
+          <CallTranscript meta={meta} agentName={call.performedBy} />
         </section>
       )}
 

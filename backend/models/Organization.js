@@ -313,6 +313,20 @@ const orgSchema = new mongoose.Schema(
     },
 
     // ── EnableX Telephony Integration ─────────────────────────────────────────
+    // Which phone service click-to-call goes through (27 Oct 2026). EnableX
+    // stays the default; Plivo records each side on its own channel.
+    telephony: {
+      provider: { type: String, enum: ["enablex", "plivo"], default: "enablex" },
+    },
+    plivo: {
+      enabled:   { type: Boolean, default: false },
+      authId:    { type: String, trim: true, default: "" },
+      authToken: { type: String, default: "" },        // stored encrypted (utils/fieldCrypto)
+      number:    { type: String, trim: true, default: "" }, // Plivo Indian number, the caller ID
+      // Which stereo channel is the agent. Plivo doesn't document it; set after
+      // the first real recording, empty = worked out from what each side says.
+      agentChannel: { type: String, enum: ["", "left", "right"], default: "" },
+    },
     enablex: {
       enabled:       { type: Boolean, default: false },
       appId:         { type: String,  default: "" },

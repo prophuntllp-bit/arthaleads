@@ -839,12 +839,51 @@ router.post("/initiate", protect, async (req, res, next) => {
     const targetId = projectLeadId || leadId;
 
     const [org, found] = await Promise.all([
-      Organization.findById(req.user.orgId).select("enablex name").lean(),
+      Organization.findById(req.user.orgId).select("enablex name telephony plivo").lean(),
       findLeadOrProjectLead(targetId, req.user.orgId, { user: req.user }),
     ]);
 
     const lead = found.doc;
     const isProjectLead = found.Model === ProjectLead;
+
+    // Companies switched to Plivo (27 Oct 2026) ring the agent through Plivo;
+    // routes/plivoRoutes.js bridges the customer and records each side.
+    if (org?.telephony?.provider === "plivo") {
+      const plivo = require("../services/plivo");
+      if (!plivo.isReady(org)) return res.status(400).json({ success: false, message: "Plivo calling is not set up. Go to Integrations → Telephony." });
+      if (!lead)       return res.status(404).json({ success: false, message: "Lead not found." });
+      if (!lead.phone) return res.status(400).json({ success: false, message: "This lead has no phone number." });
+      if (!req.user.phone) return res.status(400).json({ success: false, message: "Add your phone number in Settings → My Profile before making calls." });
+      const ownerRef = `${isProjectLead ? "projectlead" : "lead"}_${targetId}_${Date.now()}`;
+      lead.activities.push({
+        type:            "called",
+        description:     `Call initiated to ${lead.name}`,
+        performedBy:     req.user._id,
+        performedByName: req.user.name,
+        meta: {
+          ownerRef, provider: "plivo",
+          direction:  "outbound",
+          status:     "initiated",
+          phone:      lead.phone,
+          leadPhone:  plivo.e164(lead.phone),
+          agentPhone: req.user.phone,
+        },
+      });
+      await lead.save();
+      try {
+        const requestUuid = await plivo.placeBridgeCall(org, {
+          agentPhone: req.user.phone, base: (process.env.APP_URL || "https://api.arthaleads.com").replace(/\/+$/, ""),
+          orgId: String(req.user.orgId), ref: ownerRef,
+        });
+        await found.Model.updateOne({ _id: lead._id, "activities.meta.ownerRef": ownerRef }, { $set: { "activities.$.meta.requestUuid": requestUuid } });
+      } catch (plivoErr) {
+        await found.Model.updateOne({ _id: lead._id, "activities.meta.ownerRef": ownerRef },
+          { $set: { "activities.$.meta.status": "failed", "activities.$.description": `Call to ${lead.name} could not start` } });
+        console.error("[plivo /initiate] Plivo rejected:", plivoErr.status, JSON.stringify(plivoErr.body || plivoErr.message).slice(0, 300));
+        return res.status(502).json({ success: false, message: `Call failed: ${plivoErr.message}` });
+      }
+      return res.json({ success: true, message: `Calling ${lead.name}… Your phone (${req.user.phone}) will ring shortly.` });
+    }
 
     if (!org?.enablex?.enabled || !org.enablex.appId || !org.enablex.apiKey) {
       return res.status(400).json({ success: false, message: "EnableX telephony is not configured. Go to Settings → Organization → Telephony." });
@@ -1255,32 +1294,28 @@ async function transcribeAndSummarize(leadId, match, recordingUrl, Model = Lead)
   const audioResp = await axios.get(recordingUrl, { responseType: "arraybuffer" });
   const buf       = Buffer.from(audioResp.data);
 
-  // The saved file is mp3 when Cloudinary's transcode succeeded, but falls back
-  // to the original wav when it didn't (see saveRecordingFromEnablexUrl). The
-  // filename told to Whisper was always hardcoded to "recording.mp3" regardless
-  // of which one this actually is - telling the API a wav file is an mp3 is a
-  // real format mismatch, not just cosmetic, and a plausible cause of garbled
-  // transcriptions. Derive the real extension from the URL instead.
-  const ext    = /\.wav(\?|$)/i.test(recordingUrl) ? "wav" : "mp3";
-  const stream = Readable.from(buf);
-  stream.name  = `recording.${ext}`;
-
-  const transcription = await openai.audio.transcriptions.create({
-    file:        stream,
-    model:       "whisper-1",
-    temperature: 0,   // deterministic — Whisper invents far less on silence/ringback
-    prompt:      "This is a real estate sales phone call between an agent and a customer, in English, Hindi or Marathi.",
+  // Who said what (utils/callTranscript.js, 27 Oct 2026): stereo recordings
+  // (Plivo) are split by channel for exact speakers and times; mono ones
+  // (EnableX) get an AI split of an accurate gpt-transcribe text. Whisper's
+  // loops, echoed prompt and wrong scripts are gone with it.
+  const ownerDoc = await Model.findOne({ _id: leadId, activities: { $elemMatch: match } }, { "activities.$": 1, orgId: 1 }).lean();
+  const callAct  = ownerDoc?.activities?.[0];
+  const orgInfo  = ownerDoc?.orgId ? await Organization.findById(ownerDoc.orgId).select("name plivo.agentChannel").lean() : null;
+  const result = await require("../utils/callTranscript").transcribeCall(buf, {
+    filename:     /\.wav(\?|$)/i.test(recordingUrl) ? "recording.wav" : "recording.mp3",
+    agentName:    callAct?.performedByName || "",
+    company:      orgInfo?.name || "",
+    agentChannel: callAct?.meta?.provider === "plivo" ? (orgInfo?.plivo?.agentChannel || "") : "",
   });
+  const transcript = (result.text || "").trim();
 
-  const transcript = (transcription.text || "").trim();
-
-  // Guard: a call with no real speech (silence, ringback, a quick test) makes
-  // Whisper hallucinate a few garbage words. Don't fabricate a summary from it —
-  // mark it clearly instead. Count only tokens that contain actual letters.
-  const realWords = transcript.split(/\s+/).filter(t => /[\p{L}]{2,}/u.test(t));
-  if (realWords.length < 6) {
+  // No real conversation (ringing, voicemail, silence): say so instead of
+  // summarising noise.
+  if (result.noSpeech || !transcript) {
     await updateCallActivity(Model, leadId, match, { set: {
-      "meta.transcript": transcript,
+      "meta.transcript":       transcript,
+      "meta.transcriptTurns":  [],
+      "meta.transcriptMethod": result.method,
       "meta.summary":    "No clear conversation was captured on this call.",
       "meta.keyPoints":  [],
       "meta.nextAction": null,
@@ -1335,6 +1370,8 @@ ${transcript.slice(0, 3000)}`,
 
   await updateCallActivity(Model, leadId, match, { set: {
     "meta.transcript": transcript,
+    "meta.transcriptTurns":  result.turns || [],
+    "meta.transcriptMethod": result.method,
     "meta.summary":    summary,
     "meta.keyPoints":  keyPoints,
     "meta.nextAction": nextAction,
@@ -1424,6 +1461,6 @@ async function saveRecordingFromEnablexUrl(orgId, Model, leadId, match, enablexR
 }
 
 // Exposed for tests/enablexConcurrency.db.test.js.
-router._callEvents = { processCallStateEvent, finalizeCallActivity };
+router._callEvents = { processCallStateEvent, finalizeCallActivity, transcribeAndSummarize, changeLeadStatus, normalizePhone, findLeadOrProjectLead };
 
 module.exports = router;
