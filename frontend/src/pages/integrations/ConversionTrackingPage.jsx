@@ -10,7 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 import { canAccess } from "../../utils/plan";
 import CustomSelect from "../../components/CustomSelect";
 import WhatsAppLogo from "../../components/WhatsAppLogo";
-import { IntegrationShell, LogoTile, Panel, KeyValues, Steps, PlanLocked } from "../../components/integrations/IntegrationUI";
+import { IntegrationShell, BrandLogo, Panel, KeyValues, Steps, PlanLocked } from "../../components/integrations/IntegrationUI";
 
 const CHANNEL = { lead_ads: "Lead form", whatsapp_ctwa: "WhatsApp ad" };
 // The official Facebook glyph (same as components/site/BrandLogos.jsx, which is
@@ -58,7 +58,7 @@ export default function ConversionTrackingPage() {
   const switchView = (v) => { if (view === "settings" && v !== "settings") { setTestNote(null); load(); } setView(v); };
 
   const shell = {
-    logo: <LogoTile size={52} bg="rgba(24,119,242,0.08)"><FacebookLogo className="w-6 h-6" /></LogoTile>,
+    logo: <BrandLogo brand="meta" alt="Meta" size={52} />,
     name: "Meta conversion tracking",
     description: "Tells Meta which of your ad leads become serious buyers, so it shows your ads to more people like them.",
   };

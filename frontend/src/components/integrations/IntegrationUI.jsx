@@ -167,7 +167,7 @@ export function IntegrationShell({ logo, name, status, statusTone = "off", descr
       )}
 
       {tabs.length > 1 && (
-        <div role="tablist" className="flex gap-1 overflow-x-auto" style={{ borderBottom: "1px solid var(--app-border)" }}>
+        <div role="tablist" className="flex gap-1 overflow-x-auto" style={{ borderBottom: "1px solid var(--app-border)", scrollbarWidth: "none" }}>
           {tabs.map((t) => {
             const on = tab === t.key;
             return (
@@ -209,4 +209,37 @@ export function ago(d) {
   if (s < 3600) return `${Math.floor(s / 60)}m ago`;
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   return `${Math.floor(s / 86400)}d ago`;
+}
+
+// Real brand marks (owner, 27 Oct 2026), each company's own site icon, in public/logos.
+export const LOGOS = {
+  plivo: "/logos/plivo.png", enablex: "/logos/enablex.png", meta: "/logos/meta.jpg",
+  "99acres": "/logos/99acres.png", housing: "/logos/housing.png", magicbricks: "/logos/magicbricks.png",
+};
+
+/** A brand's own logo in the standard tile. */
+export function BrandLogo({ brand, alt, size = 40 }) {
+  return (
+    <LogoTile size={size} bg="#fff">
+      <img src={LOGOS[brand]} alt={alt || brand} className="object-contain" style={{ width: size * 0.62, height: size * 0.62 }} loading="lazy" />
+    </LogoTile>
+  );
+}
+
+/** A small inline logo, for lists and tabs. */
+export function MiniLogo({ brand, size = 18, alt = "" }) {
+  return <img src={LOGOS[brand]} alt={alt} width={size} height={size} className="rounded-[5px] object-contain shrink-0" loading="lazy" />;
+}
+
+/** The three portals' logos side by side in one tile. */
+export function PortalsLogo({ size = 40 }) {
+  const s = Math.round(size * 0.42);
+  return (
+    <LogoTile size={size} bg="#fff">
+      <div className="grid grid-cols-2 gap-0.5 place-items-center">
+        <MiniLogo brand="99acres" size={s} /><MiniLogo brand="housing" size={s} />
+        <div className="col-span-2"><MiniLogo brand="magicbricks" size={s} /></div>
+      </div>
+    </LogoTile>
+  );
 }

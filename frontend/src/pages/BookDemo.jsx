@@ -15,6 +15,7 @@ import { useSEO } from "../utils/useSEO";
 import { getRecaptchaToken } from "../utils/recaptcha";
 import { waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { track } from "../utils/analytics";
+import YouTubePlayer from "../components/site/YouTubePlayer";
 
 // Must match the allowed values in backend/controllers/demoRequestController.js.
 const ROLES = ["Owner / Director", "Sales head", "Marketing", "Broker", "Other"];
@@ -96,30 +97,15 @@ const INTRO_CHAPTERS = [
   ["1:35", "Start your 14-day free trial"],
 ];
 
-/** The intro film: YouTube's thumbnail until clicked, then the privacy-enhanced player. */
+/** The intro film, on the shared YouTube player (components/site/YouTubePlayer.jsx). */
 function IntroFilm() {
-  const [playing, setPlaying] = useState(false);
   return (
     <div className="relative min-w-0">
       <div aria-hidden="true" className="hero-glass" />
-      <div className="relative overflow-hidden rounded-[24px] border aspect-video bg-black" style={{ borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
-        {playing ? (
-          <iframe className="absolute inset-0 w-full h-full" title="What is Arthaleads? The real estate CRM, explained in 2 minutes"
-            src={`https://www.youtube-nocookie.com/embed/${INTRO_ID}?autoplay=1&rel=0&modestbranding=1`}
-            allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
-        ) : (
-          <button type="button" onClick={() => { setPlaying(true); track("video_play", { video: "intro" }); }}
-            className="group absolute inset-0 w-full h-full" aria-label="Play the 2-minute Arthaleads intro film">
-            <img src={`https://i.ytimg.com/vi/${INTRO_ID}/maxresdefault.jpg`} alt="" loading="lazy" decoding="async" width="1280" height="720"
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
-            <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/5 to-transparent" />
-            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[72px] h-[72px] rounded-full flex items-center justify-center text-white transition-transform duration-300 group-hover:scale-110"
-              style={{ background: "var(--brand-btn)", boxShadow: "0 18px 40px -12px rgba(204,75,0,0.8), 0 0 0 10px rgba(255,255,255,0.18)" }}>
-              <Play className="w-7 h-7 ml-1" fill="currentColor" aria-hidden="true" />
-            </span>
-            <span className="absolute left-4 bottom-4 text-[12px] font-semibold text-white px-2.5 py-1 rounded-md" style={{ background: "rgba(0,0,0,0.55)" }}>1:47 · English</span>
-          </button>
-        )}
+      <div className="relative rounded-[22px] sm:rounded-[26px] p-1.5 sm:p-2" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
+        <YouTubePlayer videoId={INTRO_ID} poster={`https://i.ytimg.com/vi/${INTRO_ID}/maxresdefault.jpg`} name="intro"
+          title="What is Arthaleads? The real estate CRM, explained in 2 minutes" badge="1:47 · English"
+          className="rounded-[17px] sm:rounded-[20px]" />
       </div>
     </div>
   );

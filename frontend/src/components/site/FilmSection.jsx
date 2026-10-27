@@ -1,15 +1,16 @@
 // components/site/FilmSection.jsx - the 2-minute product film on the home page.
 //
-// Poster first, video only on tap: nothing but the ~40 KB poster loads until
-// the visitor presses play, so the home page stays light on phones. A tap is
-// a gesture, so the film plays with sound. English/Hindi toggle and chapter
+// Poster first: nothing but the ~40 KB poster loads until the visitor presses
+// play, then the film plays from the Arthaleads YouTube channel (YouTubePlayer),
+// so every play counts as a YouTube view. English/Hindi toggle and chapter
 // chips (times from data/introFilm). No VideoObject structured data here on
 // purpose: Google indexes the film on its watch page, /product-tour.
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Play, ArrowRight, Youtube } from "lucide-react";
+import { ArrowRight, Youtube } from "lucide-react";
 import { Section, Container, SectionHeader } from "./Site";
 import { INTRO_VIDEOS } from "../IntroVideo";
+import YouTubePlayer from "./YouTubePlayer";
 import { YOUTUBE_FILM } from "../../utils/crmLinks";
 
 const CHIPS = [
@@ -22,24 +23,11 @@ const CHIPS = [
 
 export default function FilmSection() {
   const [lang, setLang] = useState("en");
-  const [playing, setPlaying] = useState(false);   // the <video> is mounted once play is pressed
-  const videoRef = useRef(null);
-  const pending = useRef(0);
+  const [jump, setJump] = useState(null);   // { t, n }: a chapter chip was pressed
   const v = INTRO_VIDEOS[lang];
 
-  const play = (t = 0) => {
-    pending.current = t;
-    if (!playing) { setPlaying(true); return; }   // onLoadedMetadata picks up `pending`
-    const el = videoRef.current;
-    if (!el) return;
-    el.currentTime = t;
-    el.play().catch(() => {});
-  };
-  const switchLang = (k) => {
-    if (k === lang) return;
-    pending.current = 0;
-    setLang(k);
-  };
+  const play = (t = 0) => setJump({ t, n: Date.now() });
+  const switchLang = (k) => { if (k !== lang) setLang(k); };
 
   return (
     <Section id="tour" tone="tint">
@@ -59,27 +47,9 @@ export default function FilmSection() {
           } />
 
         <div className="relative rounded-[22px] sm:rounded-[30px] p-1.5 sm:p-2" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
-          <div className="relative overflow-hidden rounded-[17px] sm:rounded-[23px] bg-black" style={{ aspectRatio: "16 / 9" }}>
-            {playing ? (
-              <video key={v.src} ref={videoRef} src={v.src} poster={v.poster} controls playsInline autoPlay preload="auto"
-                className="absolute inset-0 w-full h-full object-cover" aria-label={`Arthaleads product tour (${v.label})`}
-                onLoadedMetadata={(e) => { if (pending.current) e.currentTarget.currentTime = pending.current; e.currentTarget.play().catch(() => {}); }} />
-            ) : (
-              <button type="button" onClick={() => play(0)} className="group absolute inset-0 w-full h-full" aria-label={`Play the 2-minute product tour (${v.label})`}>
-                <img src={v.poster} alt="" width="1280" height="720" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
-                <span aria-hidden="true" className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.55) 100%)" }} />
-                <span className="absolute inset-0 flex items-center justify-center">
-                  <span className="relative flex items-center justify-center w-16 h-16 sm:w-24 sm:h-24 rounded-full text-white transition-transform duration-300 group-hover:scale-105"
-                    style={{ background: "var(--brand-btn)", boxShadow: "0 0 0 10px rgba(255,107,0,0.22), 0 20px 50px -10px rgba(204,75,0,0.7)" }}>
-                    <Play className="w-7 h-7 sm:w-10 sm:h-10 ml-1" fill="currentColor" aria-hidden="true" />
-                  </span>
-                </span>
-                <span className="absolute left-4 bottom-4 sm:left-6 sm:bottom-5 flex items-center gap-2 rounded-full px-3 py-1.5 text-[12px] sm:text-sm font-semibold text-white" style={{ background: "rgba(0,0,0,0.55)" }}>
-                  2:17 · {v.label}
-                </span>
-              </button>
-            )}
-          </div>
+          <YouTubePlayer videoId={v.youtubeId} poster={v.poster} name={`home-${lang}`} seek={jump}
+            title={`Arthaleads product tour (${v.label})`} badge={`${v.length} · ${v.label}`}
+            className="rounded-[17px] sm:rounded-[23px]" />
         </div>
 
         <div className="mt-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">

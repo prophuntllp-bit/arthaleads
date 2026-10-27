@@ -2,12 +2,12 @@
 // its own page (owner, 27 Oct 2026). Overview, Settings (the existing form),
 // Setup help. Backend: /api/calls/settings.
 import { useCallback, useEffect, useState } from "react";
-import { Phone, PhoneIncoming, PhoneCall, Clock, Link2, CheckCircle2, Loader2 } from "lucide-react";
+import { PhoneIncoming, PhoneCall, Clock, Link2, CheckCircle2, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import EnableXSettings from "../../components/EnableXSettings";
-import { IntegrationShell, LogoTile, Panel, KeyValues, Steps, ago, istWhen } from "../../components/integrations/IntegrationUI";
+import { IntegrationShell, BrandLogo, Panel, KeyValues, Steps, ago, istWhen } from "../../components/integrations/IntegrationUI";
 
 export default function EnableXPage() {
   const { user } = useAuth();
@@ -39,7 +39,7 @@ export default function EnableXPage() {
   return (
     <IntegrationShell
       back="/integrations/telephony" backLabel="Telephony"
-      logo={<LogoTile size={52} bg="rgba(249,115,22,0.10)"><Phone className="h-6 w-6" style={{ color: "#f97316" }} /></LogoTile>}
+      logo={<BrandLogo brand="enablex" alt="EnableX" size={52} />}
       name="EnableX"
       status={!d ? undefined : inUse ? "In use" : ready ? "Connected" : "Not connected"}
       statusTone={inUse ? "on" : "off"}

@@ -2,12 +2,12 @@
 // own page (owner, 27 Oct 2026). Overview, Settings (the credentials form),
 // Setup help. Backend: /api/plivo.
 import { useCallback, useEffect, useState } from "react";
-import { Phone, PhoneIncoming, PhoneCall, Clock, Link2, Mic, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
+import { PhoneIncoming, PhoneCall, Clock, Link2, Mic, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import PlivoSettings from "../../components/PlivoSettings";
-import { IntegrationShell, LogoTile, Panel, KeyValues, Steps, ago, istWhen } from "../../components/integrations/IntegrationUI";
+import { IntegrationShell, BrandLogo, Panel, KeyValues, Steps, ago, istWhen } from "../../components/integrations/IntegrationUI";
 
 const showNumber = (n) => (/^91\d{10}$/.test(n || "") ? `+91 ${n.slice(2, 4)} ${n.slice(4, 8)} ${n.slice(8)}` : n ? `+${n}` : "-");
 
@@ -50,7 +50,7 @@ export default function PlivoPage() {
   return (
     <IntegrationShell
       back="/integrations/telephony" backLabel="Telephony"
-      logo={<LogoTile size={52} bg="rgba(249,115,22,0.10)"><Phone className="h-6 w-6" style={{ color: "#f97316" }} /></LogoTile>}
+      logo={<BrandLogo brand="plivo" alt="Plivo" size={52} />}
       name="Plivo"
       status={!d ? undefined : inUse ? "In use" : ready ? "Connected" : "Not connected"}
       statusTone={inUse ? "on" : "off"}
@@ -106,7 +106,7 @@ export default function PlivoPage() {
               ["Recording", "Both sides, on separate channels"],
               ["Transcript", "Each line labelled agent or lead"],
               ["Summary", "AI summary after every answered call"],
-              ["Kept for", "Plivo stores it; we keep a copy where storage is set up"],
+              ["Stored", "On Plivo, with a copy in your file space where it is set up"],
             ]} />
           </Panel>
         </div>

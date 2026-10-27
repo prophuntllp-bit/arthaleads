@@ -11,10 +11,9 @@ import { canAccess } from "../utils/plan";
 import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 import WhatsAppIcon from "../components/WhatsAppIcon";
-import { IntegrationCard, LogoTile, SectionTitle, StatTile, ago } from "../components/integrations/IntegrationUI";
+import { IntegrationCard, LogoTile, SectionTitle, StatTile, BrandLogo, ago } from "../components/integrations/IntegrationUI";
 import { PortalLogo } from "./integrations/PortalsPage";
 import { RoutingLogo } from "./integrations/RoutingRulesPage";
-import { FacebookLogo as MetaFacebookLogo } from "./integrations/ConversionTrackingPage";
 import { VistrowVoiceIcon } from "../components/VistrowVoiceSettings";
 import ConnectionCard, { ConnectionGroups } from "../components/ConnectionCard";
 
@@ -1823,7 +1822,7 @@ export default function Automation() {
       title: "Lead sources",
       note: "Where your leads come from. Each one drops new leads straight into Leads.",
       cards: [
-        { key: "fb", logo: <LogoTile bg="#1877F2"><FacebookIcon /></LogoTile>, name: "Facebook & Instagram Lead Ads", category: "Lead sources",
+        { key: "fb", logo: <LogoTile bg="#1877F2"><FacebookIcon /></LogoTile>, name: "Facebook Lead Ads", category: "Facebook & Instagram",
           description: "Every Instant Form lead from your Facebook and Instagram ads, in one click. No technical setup.",
           ...conn(liveOf("Facebook").length), footer: footerFor("Facebook", "page"),
           onOpen: () => { setFbEditingItem(null); setFbWizardOpen(true); } },
@@ -1848,21 +1847,21 @@ export default function Automation() {
           description: "Any partner, broker or vendor that can post a lead to a link: send it straight into your CRM.",
           ...conn(liveOf("Custom").length), footer: footerFor("Custom", "connection"),
           locked: !enterpriseOk, lockLabel: "Enterprise", onOpen: () => { if (!enterpriseOk) return openLocked("Enterprise"); setSourceEditingItem(null); setSourceModalOpen(true); } },
-        { key: "vistrow", logo: <LogoTile><VistrowVoiceIcon size={40} /></LogoTile>, name: "Vistrow Voice", category: "AI calling",
-          description: "AI calls your new leads in seconds and sends back qualified leads with the full transcript.",
-          ...conn(liveOf("Vistrow Voice").length), footer: liveOf("Vistrow Voice").length ? "Connected" : "Not set up yet",
-          locked: !enterpriseOk, lockLabel: "Enterprise", onOpen: () => (enterpriseOk ? navigate("/integrations/vistrow-calling") : openLocked("Enterprise")) },
       ],
     },
     {
       title: "Calling",
-      note: "Click-to-call, recordings and AI call summaries.",
+      note: "Click-to-call, recordings, AI call summaries and AI calling.",
       cards: [
-        { key: "tel", logo: <LogoTile bg="rgba(249,115,22,0.10)"><Phone className="h-5 w-5" style={{ color: "#f97316" }} /></LogoTile>, name: "Telephony", category: "Plivo · EnableX",
+        { key: "tel", logo: telProvider ? <BrandLogo brand={telProvider} alt={telProvider} /> : <LogoTile bg="rgba(249,115,22,0.10)"><Phone className="h-5 w-5" style={{ color: "#f97316" }} /></LogoTile>, name: "Telephony", category: "Plivo · EnableX",
           description: "Call leads from the CRM and the app; every call is logged, recorded and summarised.",
           ...(telReady ? { status: "Connected", statusTone: "on", action: "Manage" } : { status: "Not connected", statusTone: "off", action: "Set up" }),
           footer: telProvider ? `Calls through ${telProvider === "plivo" ? "Plivo" : "EnableX"}` : "Not set up yet",
           onOpen: () => navigate("/integrations/telephony") },
+        { key: "vistrow", logo: <LogoTile><VistrowVoiceIcon size={40} /></LogoTile>, name: "Vistrow Voice", category: "AI calling",
+          description: "AI calls your new leads in seconds and sends back qualified leads with the full transcript.",
+          ...conn(liveOf("Vistrow Voice").length), footer: liveOf("Vistrow Voice").length ? "Connected" : "Not set up yet",
+          locked: !enterpriseOk, lockLabel: "Enterprise", onOpen: () => (enterpriseOk ? navigate("/integrations/vistrow-calling") : openLocked("Enterprise")) },
       ],
     },
     {
@@ -1874,7 +1873,7 @@ export default function Automation() {
           ...(rulesActive ? { status: `${rulesActive} active`, statusTone: "on", action: "Manage" } : { status: "No rules", statusTone: "off", action: "Set up" }),
           footer: rulesActive ? "Everything else follows the rotation" : "Not set up yet",
           locked: !growthOk, lockLabel: "Growth", onOpen: () => (growthOk ? navigate("/integrations/routing") : openLocked("Growth")) },
-        { key: "capi", logo: <LogoTile bg="rgba(24,119,242,0.08)"><MetaFacebookLogo className="w-5 h-5" /></LogoTile>, name: "Meta conversion tracking", category: "Ads",
+        { key: "capi", logo: <BrandLogo brand="meta" alt="Meta" />, name: "Meta conversion tracking", category: "Ads",
           description: "Tells Meta which ad leads become serious buyers, so your ads find more people like them.",
           ...(extra.capi?.enabled ? { status: "On", statusTone: "on", action: "Manage" } : { status: "Off", statusTone: "off", action: "Set up" }),
           footer: extra.capi ? `${(extra.capi.stats?.sent || 0).toLocaleString("en-IN")} events sent` : "Not set up yet",
