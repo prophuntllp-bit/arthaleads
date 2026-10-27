@@ -1818,7 +1818,7 @@ export default function Automation() {
   const portalsLast = portalsLive.map((p) => p.lastLeadAt).sort().pop();
   const rulesActive = (extra.rules || []).filter((r) => r.isActive !== false).length;
   const telProvider = extra.telephony?.provider;
-  const telReady = telProvider === "plivo" ? !!(extra.telephony?.plivo?.hasAuthToken && extra.telephony?.plivo?.number) : !!extra.enablex?.connected;
+  const telReady = telProvider === "none" ? false : telProvider === "plivo" ? !!(extra.telephony?.plivo?.hasAuthToken && extra.telephony?.plivo?.number) : !!extra.enablex?.connected;
 
   const SECTIONS = [
     {
@@ -1860,10 +1860,10 @@ export default function Automation() {
       title: "Calling",
       note: "Click-to-call, recordings, AI call summaries and AI calling.",
       cards: [
-        { key: "tel", logo: telProvider ? <BrandLogo brand={telProvider} alt={telProvider} /> : <LogoTile bg="rgba(249,115,22,0.10)"><Phone className="h-5 w-5" style={{ color: "#f97316" }} /></LogoTile>, name: "Telephony", category: "Plivo · EnableX",
+        { key: "tel", logo: telProvider && telProvider !== "none" ? <BrandLogo brand={telProvider} alt={telProvider} /> : <LogoTile bg="rgba(249,115,22,0.10)"><Phone className="h-5 w-5" style={{ color: "#f97316" }} /></LogoTile>, name: "Telephony", category: "Plivo · EnableX",
           description: "Call leads from the CRM and the app; every call is logged, recorded and summarised.",
           ...(telReady ? { status: "Connected", statusTone: "on", action: "Manage" } : { status: "Not connected", statusTone: "off", action: "Set up" }),
-          footer: telProvider ? `Calls through ${telProvider === "plivo" ? "Plivo" : "EnableX"}` : "Not set up yet",
+          footer: telProvider === "none" ? "Calling switched off" : telProvider ? `Calls through ${telProvider === "plivo" ? "Plivo" : "EnableX"}` : "Not set up yet",
           onOpen: () => navigate("/integrations/telephony") },
         { key: "vistrow", logo: <LogoTile><VistrowVoiceIcon size={40} /></LogoTile>, name: "Vistrow Voice", category: "AI calling",
           description: "AI calls your new leads in seconds and sends back qualified leads with the full transcript.",

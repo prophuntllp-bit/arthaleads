@@ -113,7 +113,7 @@ router.patch("/settings", protect, authorize("admin", "super_admin"), async (req
       }
     }
     if (provider !== undefined) {
-      if (!["enablex", "plivo"].includes(provider)) return res.status(400).json({ message: "Unknown phone service." });
+      if (!["enablex", "plivo", "none"].includes(provider)) return res.status(400).json({ message: "Unknown phone service." });
       if (provider === "plivo") {
         const merged = { plivo: { ...(cur?.plivo || {}), ...Object.fromEntries(Object.entries(set).map(([k, v]) => [k.replace("plivo.", ""), v])), enabled: true } };
         if (!plivo.isReady(merged)) return res.status(400).json({ message: "Save the Plivo Auth ID and Auth Token before switching calls to Plivo." });
@@ -167,7 +167,7 @@ router.post("/settings/test", protect, authorize("admin", "super_admin"), async 
 
 // ── Callbacks from Plivo ──────────────────────────────────────────────────────
 async function verify(req, orgId, label) {
-  const org = await Organization.findById(orgId).select("name plivo").lean();
+  const org = await Organization.findById(orgId).select("name plivo telephony").lean();
   const creds = plivo.credentials(org);
   const check = (params) => plivo.checkSignature({
     url: `${plivo.publicBase(req)}${req.originalUrl}`,
@@ -383,6 +383,13 @@ router.post("/inbound/:orgId", form, async (req, res) => {
     if (!ok || !plivo.credentials(org) || !org.plivo?.number) return xml(res, plivo.hangupXml());
     const b = req.body || {};
     const from = String(b.From || "");
+    // Calling switched off by an admin: the caller hears "we'll call you back"
+    // and the team is told, rather than a phone ringing.
+    if (org.telephony?.provider === "none") {
+      const found = await findLeadByPhone(orgId, from).catch(() => null);
+      sendPushToAll({ title: "Missed Inbound Call", body: `${found ? found.lead.name : from} called while calling is switched off in Telephony.`, data: { type: "missed_call", leadId: found ? String(found.lead._id) : null } }, orgId).catch(() => {});
+      return xml(res, plivo.hangupXml(plivo.NOBODY));
+    }
     const found = await findLeadByPhone(orgId, from);
     const agent = await pickAgent(orgId, found?.lead);
     if (!agent) {
