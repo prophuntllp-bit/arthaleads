@@ -296,6 +296,18 @@ const contactLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// The marketing site's Artha chat (POST /api/public/chat) has its own budget:
+// on the shared submissions limiter, a visitor's tenth question blocked the
+// chat AND the contact / Book a Demo forms for 15 minutes. Still capped,
+// because every message costs an AI call.
+const chatLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { success: false, message: "You've asked a lot of questions in a short time. Please try again in a few minutes, or WhatsApp us on +91 90670 97779." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const blogLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 60, // 60 blog reads per minute per IP
@@ -391,7 +403,8 @@ app.use("/api/media",      require("./routes/mediaRoutes"));
 // this, ten page loads from one office in 15 minutes hit the submissions
 // limit and every page showed "Too many submissions" (audit FE30).
 // QR form posts (/form/:token) have their own per-QR limiter in publicRoutes.js.
-const submissionsOnly = (req, res, next) => (req.method === "GET" || req.method === "HEAD" || req.path.startsWith("/form/") ? next() : contactLimiter(req, res, next));
+const submissionsOnly = (req, res, next) => (req.method === "GET" || req.method === "HEAD" || req.path.startsWith("/form/") ? next()
+  : req.path === "/chat" ? chatLimiter(req, res, next) : contactLimiter(req, res, next));
 app.use("/api/public",     submissionsOnly, require("./routes/publicRoutes"));
 
 // ── Dynamic Sitemap (served at /sitemap.xml) ──────────────────────────────────

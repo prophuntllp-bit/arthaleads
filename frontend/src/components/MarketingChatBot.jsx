@@ -32,9 +32,18 @@ const QUICK_QUESTIONS = [
   "How do I contact support?",
 ];
 
-const GREETING = "Hi! I'm Artha 👋 Ask me anything about Arthaleads - features, pricing, or how it works for your team.";
+const GREETING = "Hi, I'm Artha. Ask me anything about Arthaleads - features, pricing, or how it works for your team.";
 
 function CtaChip({ cta }) {
+  if (cta === "demo") {
+    return (
+      <Link to="/book-demo"
+        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer"
+        style={{ background: PRIMARY, color: "#fff", border: "1px solid " + PRIMARY }}>
+        Book a Demo <ArrowRight className="h-3 w-3" />
+      </Link>
+    );
+  }
   if (cta === "signup") {
     return (
       <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}

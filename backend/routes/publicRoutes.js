@@ -38,10 +38,9 @@ router.get("/whatsapp-es-config", (req, res) => {
 
 // ── Marketing site chatbot ───────────────────────────────────────────────────
 // POST /api/public/chat — Body: { question, history? }
-// No auth, no access to any customer data — pre-sales Q&A only. Inherits the
-// contactLimiter rate limit already applied to this whole router in server.js
-// (10 req / 15 min / IP), which is the abuse guard for this AI-cost-incurring
-// endpoint since it's reachable by anyone.
+// No auth, no access to any customer data — pre-sales Q&A only. Rate limited
+// by its own chatLimiter in server.js (30 req / 15 min / IP), the abuse guard
+// for this AI-cost-incurring endpoint since it's reachable by anyone.
 router.post("/chat", async (req, res, next) => {
   try {
     const question = (req.body.question || "").toString().trim().slice(0, 500);
