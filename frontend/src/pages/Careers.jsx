@@ -79,7 +79,7 @@ const JOBS = [
 const PERKS = [
   { icon: TrendingUp, title: "Growth-first culture",  desc: "Direct access to founders. Your ideas ship, not sit in queues." },
   { icon: Zap,        title: "Fast-moving team",      desc: "Small team, big impact. No bureaucracy, no endless meetings." },
-  { icon: Users,      title: "Real estate exposure",  desc: "Work with top developers and channel partners across Maharashtra." },
+  { icon: Users,      title: "Real estate exposure",  desc: "Work closely with the developers and channel partners who use the product." },
   { icon: Heart,      title: "Competitive pay",       desc: "Market-rate salary + performance incentives + growth track." },
 ];
 
@@ -94,8 +94,8 @@ const EXP_OPTIONS = [
 const STATS = [
   { label: "Open Positions",   value: "2" },
   { label: "Minutes to Apply", value: "5 min" },
-  { label: "Response Time",    value: "48h" },
-  { label: "Team Size",        value: "10+" },
+  { label: "Full-time Roles",  value: "2" },
+  { label: "Based In",         value: "Pune" },
 ];
 
 const CULTURE = [
@@ -103,7 +103,7 @@ const CULTURE = [
   { icon: Target,     title: "Direct ownership",            desc: "You own your work end-to-end. No hand-offs, no waiting for approvals." },
   { icon: Eye,        title: "Transparent by default",     desc: "All company metrics, decisions, and direction shared with the full team." },
   { icon: Lightbulb,  title: "Build from first principles", desc: "We question everything. If there's a better way, we do it that way." },
-  { icon: TrendingUp, title: "Grow with us",                desc: "Early team members have grown faster here than anywhere before." },
+  { icon: TrendingUp, title: "Grow with us",                desc: "Take on more as the company grows. Early team members shape how it is built." },
   { icon: Handshake,  title: "Customer-obsessed",           desc: "Our best ideas come from spending time with real estate teams in Pune." },
 ];
 
@@ -459,7 +459,7 @@ export default function Careers() {
 
   useSEO({
     title:       "Careers at Arthaleads | Join India's Real Estate CRM Team",
-    description: "Build the future of real estate technology at Arthaleads. We’re hiring engineers, designers and growth talent for our real estate lead management CRM.",
+    description: "Build the future of real estate technology at Arthaleads. We’re hiring for marketing and sales roles on our real estate lead management CRM.",
     canonical:   "https://www.arthaleads.com/careers",
   });
 
@@ -591,9 +591,9 @@ export default function Careers() {
               <ul className="hidden sm:flex flex-col items-center justify-center gap-5 p-6 border-l"
                 style={{ background: "rgba(255,107,0,0.06)", borderColor: "var(--site-line)" }}>
                 {[
-                  { val: "< 48h", label: "Response time" },
-                  { val: "100%", label: "Read by founders" },
-                  { val: "Remote", label: "Friendly" },
+                  { val: "Every", label: "Note gets a reply" },
+                  { val: "Pune", label: "Office" },
+                  { val: "Full-time", label: "Roles" },
                 ].map(({ val, label }) => (
                   <li key={label} className="text-center">
                     <p className="font-display text-[22px] font-extrabold leading-none" style={brandInk}>{val}</p>
