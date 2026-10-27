@@ -1307,7 +1307,10 @@ async function transcribeAndSummarize(leadId, match, recordingUrl, Model = Lead)
     company:      orgInfo?.name || "",
     // Plivo records the first leg (the agent's phone, rung first) on the left:
     // confirmed on the first real test call, 27 Oct 2026.
-    agentChannel: callAct?.meta?.provider === "plivo" ? (orgInfo?.plivo?.agentChannel || "left") : "",
+    // On an incoming call the caller is the first leg, so the agent is on the other side.
+    agentChannel: callAct?.meta?.provider === "plivo"
+      ? (() => { const out = orgInfo?.plivo?.agentChannel || "left"; return callAct?.meta?.direction === "inbound" ? (out === "left" ? "right" : "left") : out; })()
+      : "",
   });
   const transcript = (result.text || "").trim();
 

@@ -122,6 +122,25 @@ function answerXml({ number, leadPhone, base, orgId, ref }) {
   ].join("");
 }
 
+/**
+ * Incoming call (27 Oct 2026): ring the chosen agent from the company number
+ * (India rule: the caller ID is the Plivo number), recording both sides in
+ * stereo once the agent answers. When the dial ends, Plivo asks the action URL
+ * what next (inboundDialedXml): a sorry message if nobody picked up.
+ */
+function inboundXml({ number, agentPhone, base, orgId, ref }) {
+  const q = `ref=${encodeURIComponent(ref)}`;
+  return [
+    "<Response>",
+    `<Record startOnDialAnswer="true" redirect="false" recordChannelType="stereo" fileFormat="wav" maxLength="7200" callbackUrl="${xmlEscape(`${base}/api/plivo/recording/${orgId}?${q}`)}" callbackMethod="POST" />`,
+    `<Dial callerId="${xmlEscape(e164(number))}" timeout="30" timeLimit="7200" dialMusic="real" action="${xmlEscape(`${base}/api/plivo/inbound-dialed/${orgId}?${q}`)}" method="POST" callbackUrl="${xmlEscape(`${base}/api/plivo/dial/${orgId}?${q}`)}" callbackMethod="POST">`,
+    `<Number>${xmlEscape(e164(agentPhone))}</Number>`,
+    "</Dial>",
+    "</Response>",
+  ].join("");
+}
+const NOBODY = "Sorry, we could not connect your call right now. We will call you back shortly.";
+
 const hangupXml = (say) => `<Response>${say ? `<Speak language="en-IN" voice="WOMAN">${xmlEscape(say)}</Speak>` : ""}<Hangup/></Response>`;
 
 /**
@@ -165,6 +184,33 @@ async function downloadRecording(org, url) {
   return Buffer.from(await res.arrayBuffer());
 }
 
+/**
+ * Points the company number's incoming calls at us: creates (or updates) a
+ * Plivo Application with our answer and hangup URLs, then attaches the number
+ * to it. Returns the app id.
+ */
+async function connectInbound(org, { base, orgId }) {
+  const creds = credentials(org);
+  if (!creds) throw new Error("Add the Plivo Auth ID and Auth Token first.");
+  if (!org.plivo?.number) throw new Error("Add the Plivo number first.");
+  const urls = {
+    answer_url: `${base}/api/plivo/inbound/${orgId}`, answer_method: "POST",
+    hangup_url: `${base}/api/plivo/inbound-hangup/${orgId}`, hangup_method: "POST",
+  };
+  let appId = org.plivo.appId || "";
+  if (appId) {
+    try { await api(creds, "POST", `/Application/${encodeURIComponent(appId)}/`, urls); }
+    catch (err) { if (err.status === 404) appId = ""; else throw err; }
+  }
+  if (!appId) {
+    const made = await api(creds, "POST", "/Application/", { app_name: `arthaleads_${orgId}`, ...urls });
+    appId = String(made.app_id || "");
+  }
+  if (!appId) throw new Error("Plivo did not return an application id.");
+  await api(creds, "POST", `/Number/${e164(org.plivo.number)}/`, { app_id: appId });
+  return appId;
+}
+
 /** Ends a live call (used if a call must be cut). */
 async function hangup(org, callUuid) {
   const creds = credentials(org);
@@ -173,6 +219,6 @@ async function hangup(org, callUuid) {
 }
 
 module.exports = {
-  credentials, isReady, e164, publicBase, testConnection, placeBridgeCall, answerXml, hangupXml,
+  credentials, isReady, e164, publicBase, inboundXml, connectInbound, NOBODY, testConnection, placeBridgeCall, answerXml, hangupXml,
   checkSignature, downloadRecording, hangup, encryptField, decryptField,
 };

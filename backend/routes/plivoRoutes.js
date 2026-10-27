@@ -5,6 +5,9 @@
 //   POST /api/plivo/dial/:orgId       customer leg events (answer / connected / hangup)
 //   POST /api/plivo/hangup/:orgId     agent leg ended (also when it was never answered)
 //   POST /api/plivo/recording/:orgId  stereo recording ready
+//   POST /api/plivo/inbound/:orgId        someone called the company number: ring their agent
+//   POST /api/plivo/inbound-dialed/:orgId the agent leg ended (sorry message if nobody answered)
+//   POST /api/plivo/inbound-hangup/:orgId the caller's leg ended
 //
 // Every callback carries ?ref=<ownerRef>, the same key EnableX calls use, so the
 // call shows in the Calls page and the lead's timeline exactly like before.
@@ -16,11 +19,12 @@ const router = express.Router();
 const Organization = require("../models/Organization");
 const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
+const User = require("../models/User");
 const { protect, authorize } = require("../middlewares/auth");
 const plivo = require("../services/plivo");
-const { activityMatch, updateCallActivity } = require("../services/callActivityStore");
+const { activityMatch, updateCallActivity, pushActivity } = require("../services/callActivityStore");
 const { uploadCallRecording } = require("../utils/upload");
-const { sendPushToUser } = require("../utils/push");
+const { sendPushToUser, sendPushToAll } = require("../utils/push");
 
 const form = express.urlencoded({ extended: false });
 const callEvents = () => require("./enablexRoutes")._callEvents;
@@ -32,7 +36,8 @@ router.get("/settings", protect, authorize("admin", "manager", "super_admin"), a
     const p = org?.plivo || {};
     res.json({
       provider: org?.telephony?.provider || "enablex",
-      plivo: { enabled: !!p.enabled, authId: p.authId || "", hasAuthToken: !!p.authToken, number: p.number || "", agentChannel: p.agentChannel || "" },
+      plivo: { enabled: !!p.enabled, authId: p.authId || "", hasAuthToken: !!p.authToken, number: p.number || "", agentChannel: p.agentChannel || "",
+        inboundConnected: !!(p.appId && p.inboundConnectedAt), inboundConnectedAt: p.inboundConnectedAt || null },
     });
   } catch (err) { next(err); }
 });
@@ -68,8 +73,29 @@ router.patch("/settings", protect, authorize("admin", "super_admin"), async (req
       set["telephony.provider"] = provider;
     }
     await Organization.updateOne({ _id: req.user.orgId }, { $set: set });
-    res.json({ success: true });
+    // Moving calls to Plivo also points the number's incoming calls at us.
+    let inbound = null;
+    if (provider === "plivo") {
+      inbound = await connectIncoming(req).then(() => "connected").catch((err) => `not connected: ${err.message}`);
+    }
+    res.json({ success: true, ...(inbound ? { inbound } : {}) });
   } catch (err) { next(err); }
+});
+
+async function connectIncoming(req) {
+  const org = await Organization.findById(req.user.orgId).select("plivo").lean();
+  const appId = await plivo.connectInbound(org, { base: plivo.publicBase(req), orgId: String(req.user.orgId) });
+  await Organization.updateOne({ _id: req.user.orgId }, { $set: { "plivo.appId": appId, "plivo.inboundConnectedAt": new Date() } });
+  return appId;
+}
+
+router.post("/settings/inbound", protect, authorize("admin", "super_admin"), async (req, res) => {
+  try {
+    await connectIncoming(req);
+    res.json({ success: true, message: "Incoming calls to your Plivo number now ring your team." });
+  } catch (err) {
+    res.status(400).json({ success: false, message: `Plivo said: ${err.message}` });
+  }
 });
 
 router.post("/settings/test", protect, authorize("admin", "super_admin"), async (req, res) => {
@@ -199,7 +225,8 @@ async function finish(orgId, Model, lead, act, talkSeconds) {
     });
   }
   if (status === "missed" && act.performedBy) {
-    const who = act.meta?.agentAnswered ? `${lead.name} didn't answer` : "You didn't pick up";
+    const who = act.meta?.direction === "inbound" ? `Missed call from ${lead.name}`
+      : act.meta?.agentAnswered ? `${lead.name} didn't answer` : "You didn't pick up";
     sendPushToUser(String(act.performedBy), {
       title: "Missed Call",
       body: `${who} (${lead.phone})`,
@@ -256,5 +283,106 @@ router.post("/recording/:orgId", form, async (req, res) => {
   }
 });
 
-router._internals = { findCall, finish };
+// ── Incoming calls ────────────────────────────────────────────────────────────
+/** The lead (or project lead) with this phone, newest first. */
+async function findLeadByPhone(orgId, phone) {
+  const last10 = String(phone || "").replace(/\D/g, "").slice(-10);
+  if (last10.length < 8) return null;
+  const q = { orgId, phone: { $regex: `${last10}$` }, isDeleted: { $ne: true } };
+  for (const Model of [Lead, ProjectLead]) {
+    const lead = await Model.findOne(q).sort({ updatedAt: -1 }).select("name phone activities").lean();
+    if (lead) return { Model, lead };
+  }
+  return null;
+}
+
+/**
+ * Who takes the call, as with EnableX: the agent who last called this lead;
+ * else the first agent with a phone; else a manager or admin.
+ */
+async function pickAgent(orgId, lead) {
+  const last = [...(lead?.activities || [])]
+    .filter((a) => a.type === "called" && a.meta?.direction === "outbound" && a.performedBy)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+  if (last) {
+    const u = await User.findOne({ _id: last.performedBy, orgId, isActive: true, phone: { $nin: ["", null] } }).select("name phone").lean();
+    if (u) return u;
+  }
+  const base = { orgId, isActive: true, phone: { $exists: true, $nin: ["", null] } };
+  return (await User.findOne({ ...base, role: "agent" }).sort({ createdAt: 1 }).select("name phone").lean())
+    || (await User.findOne({ ...base, role: { $in: ["manager", "admin"] } }).sort({ createdAt: 1 }).select("name phone").lean());
+}
+
+router.post("/inbound/:orgId", form, async (req, res) => {
+  const { orgId } = req.params;
+  try {
+    const { org, ok } = await verify(req, orgId, "inbound");
+    if (!ok || !plivo.credentials(org) || !org.plivo?.number) return xml(res, plivo.hangupXml());
+    const b = req.body || {};
+    const from = String(b.From || "");
+    const found = await findLeadByPhone(orgId, from);
+    const agent = await pickAgent(orgId, found?.lead);
+    if (!agent) {
+      sendPushToAll({ title: "Missed Inbound Call", body: `A call came in${found ? ` from ${found.lead.name}` : ` from ${from}`} but no team member has a phone number set.`, data: { type: "missed_call", leadId: found ? String(found.lead._id) : null } }, orgId).catch(() => {});
+      return xml(res, plivo.hangupXml(plivo.NOBODY));
+    }
+    const ref = `${found?.Model === ProjectLead ? "projectlead" : "lead"}_${found?.lead?._id || "unknown"}_${Date.now()}`;
+    if (found) {
+      await pushActivity(found.Model, found.lead._id, {
+        type: "called",
+        description: `Inbound call from ${found.lead.name}`,
+        performedBy: agent._id,
+        performedByName: agent.name,
+        meta: {
+          ownerRef: ref, provider: "plivo", direction: "inbound", status: "initiated",
+          callUuid: String(b.CallUUID || ""), phone: from,
+          agentPhone: agent.phone, routedToPhone: plivo.e164(agent.phone), routedToAgent: agent.name,
+        },
+      });
+    }
+    sendPushToUser(String(agent._id), {
+      title: "Incoming Call",
+      body: found ? `${found.lead.name} is calling. Pick up your phone.` : `Call from ${from}. Pick up your phone.`,
+      data: { type: "inbound_call", leadId: found ? String(found.lead._id) : null },
+    }).catch(() => {});
+    xml(res, plivo.inboundXml({ number: org.plivo.number, agentPhone: agent.phone, base: plivo.publicBase(req), orgId, ref }));
+  } catch (err) {
+    console.error("[plivo inbound] error:", err.message);
+    xml(res, plivo.hangupXml(plivo.NOBODY));
+  }
+});
+
+// The agent leg ended: if nobody picked up, tell the caller instead of silence.
+router.post("/inbound-dialed/:orgId", form, async (req, res) => {
+  try {
+    const { ok } = await verify(req, req.params.orgId, "inbound-dialed");
+    const status = String(req.body?.DialStatus || "").toLowerCase();
+    if (!ok || status === "completed") return xml(res, plivo.hangupXml());
+    xml(res, plivo.hangupXml(plivo.NOBODY));
+  } catch (err) {
+    console.error("[plivo inbound-dialed] error:", err.message);
+    xml(res, plivo.hangupXml());
+  }
+});
+
+// The caller's leg ended. Talk time comes from the agent leg's dial hangup.
+router.post("/inbound-hangup/:orgId", form, async (req, res) => {
+  res.sendStatus(200);
+  try {
+    const { ok } = await verify(req, req.params.orgId, "inbound-hangup");
+    const uuid = String(req.body?.CallUUID || "");
+    if (!ok || !uuid) return;
+    setTimeout(async () => {
+      for (const Model of [Lead, ProjectLead]) {
+        const lead = await Model.findOne({ orgId: req.params.orgId, "activities.meta.callUuid": uuid }).lean();
+        const act = lead?.activities?.find((a) => a.meta?.callUuid === uuid);
+        if (act) { await finish(req.params.orgId, Model, lead, act, Number(act.meta?.bLegDuration || 0)); return; }
+      }
+    }, Number(process.env.PLIVO_HANGUP_WAIT_MS || 6000));
+  } catch (err) {
+    console.error("[plivo inbound-hangup] error:", err.message);
+  }
+});
+
+router._internals = { findCall, finish, pickAgent };
 module.exports = router;
