@@ -103,6 +103,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-27 IST (staging 3aa3c55c, NOT on main yet): 17 new closing-card photos public/img/site/cta-*.webp (brief + PNGs in main checkout outputs/site-images/cta/, generated with Codex); Blocks.jsx CTA_BY_PAGE maps every inner page to its own photo.
 - [claude] 2026-10-27 IST (staging c0fb168b, NOT on main yet): hero cards: removed fc-bob idle float (owner: stepping/stuck); <Cycle> is now a stacked grid crossfade (.cycle/.cycle-item in styles.css), interval 4.2 s.
 - [claude] 2026-10-27 IST 70fdf0bb (staging only): Plivo settings ask only Auth ID + Token; the caller ID is fetched from the account (picker only if several numbers, Test connection refreshes), no recording-side choice (agent always left). services/plivo.js listNumbers, routes/plivoRoutes.js, models/Organization.js plivo.numbers, components/PlivoSettings.jsx.
 - [claude] 2026-10-27 IST 7773eeb6 (staging only): portal leads listed in tests/vistrowOutbound.paths.test.js guard (origins portal-*, recorded, never auto-called); CI was red on e81e9203 without it.
