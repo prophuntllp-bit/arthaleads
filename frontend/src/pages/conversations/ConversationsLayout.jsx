@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Outlet, NavLink, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Mail, FileText, Megaphone, Wallet, Settings as SettingsIcon, ShieldCheck, Sparkles, Lock } from "lucide-react";
 import { canAccess } from "../../utils/plan";
 import api from "../../services/api";
@@ -7,6 +7,7 @@ import WhatsAppSettings from "../../components/WhatsAppSettings";
 import WhatsAppIcon from "../../components/WhatsAppIcon";
 import { Spinner } from "../../components/UI";
 import { useAuth } from "../../context/AuthContext";
+import SegmentTabs from "../../components/SegmentTabs";
 
 /**
  * Shell for everything under /conversations.
@@ -47,6 +48,7 @@ const PROVIDER_NAME = { meta: "Arthaleads", aisensy: "AiSensy", wati: "Wati", in
 export default function ConversationsLayout() {
   const { user, org } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
 
   const [connected, setConnected] = useState(null); // null = still checking
@@ -81,6 +83,9 @@ export default function ConversationsLayout() {
   }, [connected]);
 
   const tabs = TABS.filter((t) => !t.roles || t.roles.includes(user?.role));
+  // The tab NavLink would mark active: exact path for `end` tabs, else the path or anything under it.
+  const path = location.pathname.replace(/\/+$/, "").toLowerCase() || "/";
+  const activeTab = tabs.find(({ to, end }) => path === to || (!end && path.startsWith(`${to}/`)))?.to ?? null;
 
   // Builder routes own the full width and bring their own back button. Named
   // explicitly rather than by a generic "/new or /<id>$" pattern — an open
@@ -146,29 +151,31 @@ export default function ConversationsLayout() {
           chat below. It scrolls sideways on narrow screens instead. */}
       <div className="shrink-0 px-4 sm:px-6 lg:px-8 pt-4" style={{ borderBottom: "1px solid var(--app-border)" }}>
         <div className="flex items-center gap-3">
-          <div className="flex gap-1 overflow-x-auto pb-3 flex-1 min-w-0" style={{ scrollbarWidth: "none" }}>
-            {tabs.map(({ to, label, icon: Icon, end, minPlan }) => (
-              <NavLink key={to} to={to} end={end}
-                className="shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-semibold transition"
-                style={({ isActive }) => (isActive
-                  ? { background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }
-                  : { color: "var(--app-text-soft)" })}>
-                <Icon className="w-4 h-4 shrink-0" />
-                {label}
-                {minPlan && user?.role !== "super_admin" && !canAccess(org, minPlan) && (
-                  <Lock className="w-3 h-3 shrink-0 opacity-70" />
-                )}
-                {to === "/conversations" && unread > 0 && (
-                  <span className="text-[10px] font-bold min-w-[20px] px-1.5 py-px rounded-full text-center"
-                    style={{ background: "rgba(var(--app-primary-rgb),0.16)", color: "var(--app-primary)" }}>
-                    {unread > 99 ? "99+" : unread}
+          {/* Shared tab strip (SegmentTabs), same look as the Leads status tabs. */}
+          <div className="pb-3 flex-1 min-w-0">
+            <SegmentTabs ariaLabel="WhatsApp sections" value={activeTab} onChange={(to) => navigate(to)}
+              tabs={tabs.map(({ to, label, icon: Icon, minPlan }) => ({
+                value: to,
+                href: to,
+                label: (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Icon className="w-4 h-4 shrink-0" />
+                    {label}
+                    {minPlan && user?.role !== "super_admin" && !canAccess(org, minPlan) && (
+                      <Lock className="w-3 h-3 shrink-0 opacity-70" />
+                    )}
+                    {to === "/conversations" && unread > 0 && (
+                      <span className="text-[10px] font-bold min-w-[20px] px-1.5 py-px rounded-full text-center"
+                        style={{ background: "rgba(var(--app-primary-rgb),0.16)", color: "var(--app-primary)" }}>
+                        {unread > 99 ? "99+" : unread}
+                      </span>
+                    )}
+                    {to === "/conversations/credits" && credits && credits.availablePaise <= 0 && (
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#b91c1c" }} />
+                    )}
                   </span>
-                )}
-                {to === "/conversations/credits" && credits && credits.availablePaise <= 0 && (
-                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#b91c1c" }} />
-                )}
-              </NavLink>
-            ))}
+                ),
+              }))} />
           </div>
 
           {channel?.provider && (

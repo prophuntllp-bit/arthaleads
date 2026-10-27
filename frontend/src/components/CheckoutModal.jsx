@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { X, Loader2, ShieldCheck, Minus, Plus } from "lucide-react";
 import api from "../services/api";
+import SegmentTabs from "./SegmentTabs";
 import { formatINR, freeMonths } from "../utils/plan";
 import toast from "react-hot-toast";
 import { loadRazorpay, RZP_LOAD_ERROR } from "../utils/razorpay";
@@ -179,24 +180,19 @@ export default function CheckoutModal({ open, planId, onClose, onSuccess, org, i
             {/* Billing cycle */}
             <div>
               <p className="text-[11px] font-bold uppercase tracking-widest text-app-soft mb-2">Billing</p>
-              <div className="grid grid-cols-2 gap-2">
-                {["monthly", "annual"].map((c) => (
-                  <button key={c} onClick={() => setCycle(c)}
-                    className="px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all text-left"
-                    style={{
-                      borderColor: cycle === c ? "#ff6b00" : "var(--border)",
-                      background: cycle === c ? "rgba(255,107,0,0.08)" : "transparent",
-                      color: cycle === c ? "#ff6b00" : "var(--text-soft)",
-                    }}>
-                    {c === "monthly" ? "Monthly" : "Annual"}
-                    {c === "annual" && free ? (
-                      <span className="block text-[10px] font-medium opacity-80">{free} months free</span>
-                    ) : (
-                      <span className="block text-[10px] font-medium opacity-80">Pay as you go</span>
-                    )}
-                  </button>
-                ))}
-              </div>
+              {/* shared SegmentTabs strip */}
+              <SegmentTabs ariaLabel="Billing cycle" value={cycle} onChange={setCycle} stretch
+                tabs={["monthly", "annual"].map((c) => ({
+                  value: c,
+                  label: (
+                    <span className="flex flex-col items-start text-left leading-tight">
+                      {c === "monthly" ? "Monthly" : "Annual"}
+                      <span className="text-[10px] font-medium opacity-80">
+                        {c === "annual" && free ? `${free} months free` : "Pay as you go"}
+                      </span>
+                    </span>
+                  ),
+                }))} />
             </div>
 
             {/* Seats */}

@@ -12,6 +12,7 @@ import { ConfirmDialog, Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge,
 import { useSoftPhone } from "../context/SoftPhoneContext";
 import CustomSelect from "./CustomSelect";
 import CopyButton from "./CopyButton";
+import SegmentTabs from "./SegmentTabs";
 import { fmtCurrency, fmtDate, fmtDateTime, STATUS_OPTIONS } from "../utils/constants";
 import WaMessageMedia, { messageText } from "./WaMessageMedia";
 
@@ -639,34 +640,22 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
         {/* Vistrow AI calls: last AI call, tries, next scheduled AI call. Pipeline leads only (project copies have no delivery of their own). */}
         {!isProjectLead && <VistrowVoicePanel lead={lead} vistrow={vistrow} />}
 
-        <div className="flex flex-wrap gap-2 border-b pb-3" style={{ borderColor: "var(--app-border)" }}>
-          {tabList.map((item) => (
-            <button
-              key={item}
-              className={
-                item === tab && item === "transcript" ? "btn-secondary rounded-xl !text-white !border-transparent"
-                : item === tab && item === "chat" ? "btn-secondary rounded-xl !text-white !border-transparent"
-                : item === tab ? "btn-primary rounded-xl" : "btn-secondary rounded-xl"
-              }
-              style={
-                item === tab && item === "transcript" ? { background: VISTROW_GRADIENT }
-                : item === tab && item === "chat" ? { background: "#2AB540" }
-                : undefined
-              }
-              onClick={() => setTab(item)}
-              type="button"
-            >
-              {item === "notes"
-                ? `Notes (${lead.notes?.length || 0})`
-                : item === "calls"
-                ? `Calls${callHistory.length ? ` (${callHistory.length})` : ""}`
-                : item === "transcript"
-                ? <span className="inline-flex items-center gap-1.5"><Mic className="h-3.5 w-3.5" style={item === tab ? undefined : { color: VISTROW_PURPLE }} />Vistrow Voice</span>
+        <div className="flex flex-wrap items-center gap-2 border-b pb-3" style={{ borderColor: "var(--app-border)" }}>
+          {/* Shared tab strip (SegmentTabs), same look as the Leads status tabs */}
+          <SegmentTabs
+            ariaLabel="Lead details"
+            value={tab}
+            onChange={setTab}
+            tabs={tabList.map((item) => ({
+              value: item,
+              label: item === "transcript"
+                ? <span className="inline-flex items-center gap-1.5"><Mic className="h-3.5 w-3.5" style={{ color: VISTROW_PURPLE }} />Vistrow Voice</span>
                 : item === "chat"
-                ? <span className="inline-flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5" style={item === tab ? undefined : { color: "#2AB540" }} />WhatsApp</span>
-                : item[0].toUpperCase() + item.slice(1)}
-            </button>
-          ))}
+                ? <span className="inline-flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5" style={{ color: "#2AB540" }} />WhatsApp</span>
+                : item[0].toUpperCase() + item.slice(1),
+              count: item === "notes" ? lead.notes?.length || 0 : item === "calls" && callHistory.length ? callHistory.length : undefined,
+            }))}
+          />
           <CustomSelect
             value={status}
             onChange={handleStatus}

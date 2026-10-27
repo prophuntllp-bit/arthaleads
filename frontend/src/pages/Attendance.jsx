@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Spinner, EmptyState, AppSelect, AppDatePicker } from "../components/UI";
 import UpgradeWall from "../components/UpgradeWall";
+import SegmentTabs from "../components/SegmentTabs";
 import AttendanceCapture from "../components/AttendanceCapture";
 import { canAccess } from "../utils/plan";
 import api from "../services/api";
@@ -446,20 +447,12 @@ export default function Attendance() {
 
       {/* ── Tabs ── */}
       <div className="pt-4">
-        <div className="flex gap-1 p-1 rounded-2xl w-fit" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-          {isAdmin && (
-            <button onClick={() => setTab("team")}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${tab === "team" ? "text-white shadow-sm" : "text-app-soft hover:text-app"}`}
-              style={tab === "team" ? { background: "var(--app-primary)" } : {}}>
-              <Users className="w-3.5 h-3.5" /> Team Today
-            </button>
-          )}
-          <button onClick={() => setTab("records")}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${tab === "records" ? "text-white shadow-sm" : "text-app-soft hover:text-app"}`}
-            style={tab === "records" ? { background: "var(--app-primary)" } : {}}>
-            <CalendarDays className="w-3.5 h-3.5" /> {isAdmin ? "All Records" : "My Records"}
-          </button>
-        </div>
+        {/* shared SegmentTabs strip */}
+        <SegmentTabs ariaLabel="Attendance views" value={tab} onChange={setTab}
+          tabs={[
+            ...(isAdmin ? [{ value: "team", label: <span className="inline-flex items-center gap-1.5"><Users className="h-4 w-4" /> Team Today</span> }] : []),
+            { value: "records", label: <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-4 w-4" /> {isAdmin ? "All Records" : "My Records"}</span> },
+          ]} />
       </div>
 
       {/* ── Team Today tab ── */}

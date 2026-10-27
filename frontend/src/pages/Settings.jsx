@@ -9,6 +9,7 @@ import api from "../services/api";
 import { canAccess } from "../utils/plan";
 import DeleteAccountSection from "../components/DeleteAccountSection";
 import CustomSelect from "../components/CustomSelect";
+import SegmentTabs from "../components/SegmentTabs";
 
 // ── Indian Banks list ─────────────────────────────────────────────────────────
 const INDIAN_BANKS = [
@@ -564,23 +565,12 @@ export default function Settings() {
         <h1 className="text-3xl font-black tracking-tight text-app">Settings</h1>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 rounded-2xl p-1 w-fit"
-        style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-            style={tab === id
-              ? { background: "var(--app-surface)", color: "var(--app-text)", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }
-              : { color: "var(--app-text-soft)" }}
-          >
-            <Icon className="w-4 h-4" />
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* Tab bar — shared SegmentTabs strip */}
+      <SegmentTabs ariaLabel="Settings sections" value={tab} onChange={setTab}
+        tabs={TABS.map(({ id, label, icon: Icon }) => ({
+          value: id,
+          label: <span className="inline-flex items-center gap-1.5"><Icon className="h-4 w-4" /> {label}</span>,
+        }))} />
 
       {/* ── My Profile tab ── */}
       {tab === "profile" && (<>

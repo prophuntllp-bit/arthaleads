@@ -15,6 +15,7 @@ import {
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { AppSelect } from "../components/UI";
+import SegmentTabs from "../components/SegmentTabs";
 import { useAuth } from "../context/AuthContext";
 
 // ── Static data ──────────────────────────────────────────────────────────────
@@ -1027,28 +1028,10 @@ export default function HelpSupport() {
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 mt-5 border-b overflow-x-auto no-scrollbar -mx-1 px-1" style={{ borderColor: "var(--app-border)" }}>
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className="relative shrink-0 whitespace-nowrap px-3 sm:px-4 py-2.5 text-sm font-semibold transition-colors rounded-t-xl"
-              style={{
-                color: activeTab === tab.id ? "var(--app-primary)" : "var(--app-text-soft)",
-                background: activeTab === tab.id ? "rgba(var(--app-primary-rgb),0.06)" : "transparent",
-              }}
-            >
-              {tab.label}
-              {activeTab === tab.id && (
-                <span
-                  className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
-                  style={{ background: "var(--app-primary)" }}
-                />
-              )}
-            </button>
-          ))}
+        {/* Tabs — shared SegmentTabs strip */}
+        <div className="mt-5">
+          <SegmentTabs ariaLabel="Help sections" value={activeTab} onChange={setActiveTab}
+            tabs={TABS.map((tab) => ({ value: tab.id, label: tab.label }))} />
         </div>
       </section>
 
