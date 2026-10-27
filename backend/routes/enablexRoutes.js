@@ -1305,7 +1305,9 @@ async function transcribeAndSummarize(leadId, match, recordingUrl, Model = Lead)
     filename:     /\.wav(\?|$)/i.test(recordingUrl) ? "recording.wav" : "recording.mp3",
     agentName:    callAct?.performedByName || "",
     company:      orgInfo?.name || "",
-    agentChannel: callAct?.meta?.provider === "plivo" ? (orgInfo?.plivo?.agentChannel || "") : "",
+    // Plivo records the first leg (the agent's phone, rung first) on the left:
+    // confirmed on the first real test call, 27 Oct 2026.
+    agentChannel: callAct?.meta?.provider === "plivo" ? (orgInfo?.plivo?.agentChannel || "left") : "",
   });
   const transcript = (result.text || "").trim();
 
