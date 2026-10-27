@@ -12,6 +12,7 @@ import api from "../services/api";
 import fetchLeadToOpen from "../utils/fetchLeadToOpen";
 import { fmtDateTime } from "../utils/constants";
 import CustomSelect from "../components/CustomSelect";
+import SegmentTabs from "../components/SegmentTabs";
 import CallTranscript from "../components/CallTranscript";
 import { useAuth } from "../context/AuthContext";
 
@@ -954,18 +955,9 @@ export default function Calls() {
 
         {/* Filters row */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex gap-1 rounded-2xl p-1"
-            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-            {STATUS_TABS.map(({ id, label }) => (
-              <button key={id} onClick={() => switchTab(id)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-                style={tab === id
-                  ? { background: "var(--app-surface)", color: "var(--app-text)", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }
-                  : { color: "var(--app-text-soft)" }}>
-                {label}
-              </button>
-            ))}
-          </div>
+          {/* Status tabs (shared SegmentTabs strip) */}
+          <SegmentTabs ariaLabel="Call status" value={tab} onChange={switchTab}
+            tabs={STATUS_TABS.map(({ id, label }) => ({ value: id, label }))} />
 
           {/* Search by lead name / phone */}
           <div className="relative flex-shrink-0" style={{ width: 220 }}>

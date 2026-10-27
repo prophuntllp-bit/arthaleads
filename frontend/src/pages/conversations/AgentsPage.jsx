@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import SegmentTabs from "../../components/SegmentTabs";
 
 /**
  * Every WhatsApp assistant in the org.
@@ -332,18 +333,9 @@ export default function AgentsPage() {
             placeholder="Search assistants, description or project"
             className="input w-full" style={{ paddingLeft: 36 }} />
         </div>
-        <div className="flex gap-1 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-          {FILTERS.map(([key, label]) => (
-            <button key={key} onClick={() => setFilter(key)}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition"
-              style={filter === key
-                ? { background: "var(--app-primary)", color: "#fff" }
-                : { background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}>
-              {label}
-              <span className="tabular-nums opacity-70">{counts[key] ?? 0}</span>
-            </button>
-          ))}
-        </div>
+        {/* Shared tab strip (SegmentTabs), same look as the Leads status tabs. */}
+        <SegmentTabs ariaLabel="Assistant status" value={filter} onChange={setFilter}
+          tabs={FILTERS.map(([key, label]) => ({ value: key, label, count: counts[key] ?? 0 }))} />
       </div>
 
       {agents === null ? (

@@ -7,6 +7,7 @@ import api from "../../services/api";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 import { STAGES, byStage, VAR_LABELS, PER_LEAD_FIELDS } from "../../data/templateGallery";
+import SegmentTabs from "../../components/SegmentTabs";
 
 const STATUS_STYLE = {
   APPROVED: { bg: "rgba(34,197,94,0.12)",   fg: "#15803d", label: "Approved" },
@@ -157,18 +158,14 @@ export default function TemplatesPage() {
         </div>
       </div>
 
-      <div className="flex gap-1.5 mb-5 flex-wrap">
-        {VIEWS.map(({ key, label, icon: Icon, count }) => (
-          <button key={key} onClick={() => setView(key)}
-            className="px-3.5 py-2 rounded-full text-sm font-semibold transition flex items-center gap-1.5"
-            style={view === key
-              ? { background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }
-              : { color: "var(--app-text-soft)", border: "1px solid var(--app-border)" }}>
-            <Icon className="w-3.5 h-3.5" />
-            {label}
-            {count > 0 && <span className="opacity-60 tabular-nums">{count}</span>}
-          </button>
-        ))}
+      {/* Shared tab strip (SegmentTabs), same look as the Leads status tabs. */}
+      <div className="mb-5">
+        <SegmentTabs ariaLabel="Templates view" value={view} onChange={setView}
+          tabs={VIEWS.map(({ key, label, icon: Icon, count }) => ({
+            value: key,
+            label: <span className="inline-flex items-center gap-1.5"><Icon className="h-4 w-4" /> {label}</span>,
+            count: count > 0 ? count : undefined,
+          }))} />
       </div>
 
       {view === "explore" ? (
@@ -287,19 +284,13 @@ export default function TemplatesPage() {
           )}
 
           {!loading && rows.length > 0 && (
-            <div className="flex gap-1.5 mb-4 flex-wrap">
-              {FILTERS.map(({ key, label }) => {
-                const n = key === "ALL" ? rows.length : (counts[key] || 0);
-                return (
-                  <button key={key} onClick={() => setFilter(key)}
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold transition"
-                    style={filter === key
-                      ? { background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }
-                      : { color: "var(--app-text-soft)", border: "1px solid var(--app-border)" }}>
-                    {label} <span className="opacity-60">{n}</span>
-                  </button>
-                );
-              })}
+            <div className="mb-4">
+              <SegmentTabs ariaLabel="Template status" value={filter} onChange={setFilter}
+                tabs={FILTERS.map(({ key, label }) => ({
+                  value: key,
+                  label,
+                  count: key === "ALL" ? rows.length : (counts[key] || 0),
+                }))} />
             </div>
           )}
 

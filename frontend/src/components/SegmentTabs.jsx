@@ -7,7 +7,10 @@
 //     tabs={[{ value: "all", label: "All", count: 8 }, ...]} />
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-export default function SegmentTabs({ tabs, value, onChange, ariaLabel, fullWidth = false }) {
+// Optional per tab: count, testId, href (renders a real link, so ctrl/middle-click
+// opens a new tab; a plain click still goes through onChange). stretch makes the
+// tabs share the strip's width equally (e.g. a two-option toggle).
+export default function SegmentTabs({ tabs, value, onChange, ariaLabel, fullWidth = false, stretch = false }) {
   const stripRef = useRef(null);
   const tabRefs = useRef({});
   const [pill, setPill] = useState(null); // { left, width }
@@ -16,7 +19,7 @@ export default function SegmentTabs({ tabs, value, onChange, ariaLabel, fullWidt
   useLayoutEffect(() => {
     const measure = () => {
       const el = tabRefs.current[value];
-      if (el) setPill({ left: el.offsetLeft, width: el.offsetWidth });
+      setPill(el ? { left: el.offsetLeft, width: el.offsetWidth } : null); // nothing selected: no highlight
     };
     measure();
     const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
@@ -27,7 +30,7 @@ export default function SegmentTabs({ tabs, value, onChange, ariaLabel, fullWidt
 
   return (
     <div className={`overflow-x-auto ${fullWidth ? "w-full" : "max-w-full"}`} style={{ scrollbarWidth: "none" }}>
-      <div ref={stripRef} role="tablist" aria-label={ariaLabel} className={`relative flex min-w-max gap-1 rounded-xl p-1 ${fullWidth ? "w-full" : "w-max"}`}
+      <div ref={stripRef} role="tablist" aria-label={ariaLabel} className={`relative flex min-w-max gap-1 rounded-xl p-1 ${fullWidth || stretch ? "w-full" : "w-max"}`}
         style={{ border: "1px solid var(--app-border-strong)", background: "var(--app-surface-low)" }}>
         {pill && (
           <span aria-hidden="true" className={`tab-pill pointer-events-none absolute bottom-1 top-1 rounded-lg ${pillReady ? "tab-pill-animate" : ""}`}
@@ -36,9 +39,13 @@ export default function SegmentTabs({ tabs, value, onChange, ariaLabel, fullWidt
         )}
         {tabs.map((t) => {
           const on = value === t.value;
+          const Tag = t.href ? "a" : "button";
           return (
-            <button key={t.value} ref={(el) => { tabRefs.current[t.value] = el; }} type="button" role="tab" aria-selected={on} onClick={() => onChange(t.value)}
-              className={`relative z-[1] inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors duration-200 ${on ? "" : "hover:text-app"}`}
+            <Tag key={t.value} ref={(el) => { tabRefs.current[t.value] = el; }} role="tab" aria-selected={on} data-testid={t.testId}
+              {...(t.href
+                ? { href: t.href, onClick: (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); onChange(t.value); } }
+                : { type: "button", onClick: () => onChange(t.value) })}
+              className={`relative z-[1] inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors duration-200 ${stretch ? "flex-1 justify-center" : ""} ${on ? "" : "hover:text-app"}`}
               style={{ color: on ? "var(--app-text)" : "var(--app-text-soft)" }}>
               {t.label}
               {t.count != null && (
@@ -49,7 +56,7 @@ export default function SegmentTabs({ tabs, value, onChange, ariaLabel, fullWidt
                   {Number(t.count).toLocaleString("en-IN")}
                 </span>
               )}
-            </button>
+            </Tag>
           );
         })}
       </div>

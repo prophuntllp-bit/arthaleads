@@ -7,6 +7,7 @@ import {
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import WhatsAppIcon from "../components/WhatsAppIcon";
+import SegmentTabs from "../components/SegmentTabs";
 import CreditTopUpModal from "../components/CreditTopUpModal";
 import TemplateSendModal from "../components/TemplateSendModal";
 import ProjectMediaSendModal from "../components/ProjectMediaSendModal";
@@ -673,17 +674,15 @@ export default function Inbox() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 px-4 py-2.5" style={{ borderBottom: "1px solid var(--app-border)" }}>
-          {FILTERS.map(([val, label]) => (
-            <button key={val} onClick={() => setFilter(val)}
-              className="flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold transition"
-              style={filter === val
-                ? { background: "var(--app-primary)", color: "#fff" }
-                : { color: "var(--app-text-soft)" }}>
-              {label}
-              {val === "bot" && <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#22c55e" }} />}
-            </button>
-          ))}
+        {/* Shared tab strip (SegmentTabs), same look as the Leads status tabs. */}
+        <div className="px-4 py-2.5" style={{ borderBottom: "1px solid var(--app-border)" }}>
+          <SegmentTabs ariaLabel="Conversation filter" value={filter} onChange={setFilter}
+            tabs={FILTERS.map(([val, label]) => ({
+              value: val,
+              label: val === "bot"
+                ? <span className="inline-flex items-center gap-1.5">{label}<span className="w-1.5 h-1.5 rounded-full" style={{ background: "#22c55e" }} /></span>
+                : label,
+            }))} />
         </div>
 
         <div className="flex-1 overflow-y-auto">

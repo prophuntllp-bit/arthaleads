@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { PageLoader, Spinner, AppSelect, SmartImage, RoleBadge } from "../components/UI";
+import SegmentTabs from "../components/SegmentTabs";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import {
@@ -265,23 +266,17 @@ export default function SuperAdminOrgDetail() {
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-2xl mb-4 w-fit" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-        {[
-          { key: "overview",      label: "Overview" },
-          { key: "usage",         label: "Storage & Usage" },
-          { key: "billing",       label: "Billing" },
-          { key: "users",         label: `Users (${users.length})` },
-          { key: "integrations",  label: "Integrations" },
-          { key: "activity",      label: `Activity (${actTotal > 0 ? actTotal : "…"})` },
-        ].map(({ key, label }) => (
-          <button key={key} onClick={() => setTab(key)}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
-              tab === key ? "text-white" : "text-app-soft hover:text-app"}`}
-            style={tab === key ? { background: "var(--app-primary)" } : {}}>
-            {label}
-          </button>
-        ))}
+      {/* Tabs — shared SegmentTabs strip */}
+      <div className="mb-4">
+        <SegmentTabs ariaLabel="Organisation sections" value={tab} onChange={setTab}
+          tabs={[
+            { value: "overview",      label: "Overview" },
+            { value: "usage",         label: "Storage & Usage" },
+            { value: "billing",       label: "Billing" },
+            { value: "users",         label: "Users", count: users.length },
+            { value: "integrations",  label: "Integrations" },
+            { value: "activity",      label: "Activity", count: actTotal > 0 ? actTotal : undefined },
+          ]} />
       </div>
 
       {/* Overview tab */}

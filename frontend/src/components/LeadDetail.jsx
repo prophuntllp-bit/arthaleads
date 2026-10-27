@@ -12,6 +12,7 @@ import { ConfirmDialog, Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge,
 import { useSoftPhone } from "../context/SoftPhoneContext";
 import CustomSelect from "./CustomSelect";
 import CopyButton from "./CopyButton";
+import SegmentTabs from "./SegmentTabs";
 import { fmtCurrency, fmtDate, fmtDateTime, STATUS_OPTIONS } from "../utils/constants";
 import WaMessageMedia, { messageText } from "./WaMessageMedia";
 
@@ -626,21 +627,18 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
         {/* Vistrow AI calls: last AI call, tries, next scheduled AI call. Pipeline leads only (project copies have no delivery of their own). */}
         {!isProjectLead && <VistrowVoicePanel lead={lead} vistrow={vistrow} />}
 
-        <div className="flex flex-wrap gap-2 border-b pb-3" style={{ borderColor: "var(--app-border)" }}>
-          {tabList.map((item) => (
-            <button
-              key={item}
-              className={item === tab ? "btn-primary rounded-xl" : "btn-secondary rounded-xl"}
-              onClick={() => setTab(item)}
-              type="button"
-            >
-              {item === "notes"
-                ? `Notes (${lead.notes?.length || 0})`
-                : item === "calls"
-                ? `Calls${callHistory.length ? ` (${callHistory.length})` : ""}`
-                : item[0].toUpperCase() + item.slice(1)}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2 border-b pb-3" style={{ borderColor: "var(--app-border)" }}>
+          {/* Shared tab strip (SegmentTabs), same look as the Leads status tabs */}
+          <SegmentTabs
+            ariaLabel="Lead details"
+            value={tab}
+            onChange={setTab}
+            tabs={tabList.map((item) => ({
+              value: item,
+              label: item[0].toUpperCase() + item.slice(1),
+              count: item === "notes" ? lead.notes?.length || 0 : item === "calls" && callHistory.length ? callHistory.length : undefined,
+            }))}
+          />
           <CustomSelect
             value={status}
             onChange={handleStatus}

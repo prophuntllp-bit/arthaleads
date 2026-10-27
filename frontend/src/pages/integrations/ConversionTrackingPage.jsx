@@ -10,6 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 import { canAccess } from "../../utils/plan";
 import CustomSelect from "../../components/CustomSelect";
 import WhatsAppLogo from "../../components/WhatsAppLogo";
+import SegmentTabs from "../../components/SegmentTabs";
 import { IntegrationShell, BrandLogo, Panel, KeyValues, Steps, PlanLocked } from "../../components/integrations/IntegrationUI";
 
 const CHANNEL = { lead_ads: "Lead form", whatsapp_ctwa: "WhatsApp ad" };
@@ -160,21 +161,12 @@ export default function ConversionTrackingPage() {
       {view === "settings" && <Panel>
 
         <div className="space-y-5">
-          <div role="tablist" aria-label="Kind of Meta ad" className="inline-flex flex-wrap gap-1 rounded-xl p-1"
-            style={{ border: "1px solid var(--app-border-strong)", background: "var(--app-surface-low)" }}>
-            {[{ key: "lead_ads", label: "Instant Lead Forms", Logo: FacebookLogo }, { key: "whatsapp_ctwa", label: "Click to WhatsApp Ads", Logo: WhatsAppLogo }].map(({ key, label, Logo }) => {
-              const on = tab === key;
-              return (
-                <button key={key} type="button" role="tab" aria-selected={on} onClick={() => setTab(key)}
-                  className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors"
-                  style={on
-                    ? { color: "var(--app-text)", background: "var(--app-surface-solid)", boxShadow: "0 0 0 1px rgba(var(--app-primary-rgb),0.45), 0 1px 2px rgba(16,24,40,0.06)" }
-                    : { color: "var(--app-text-soft)" }}>
-                  <Logo className="w-4 h-4" /> {label}
-                </button>
-              );
-            })}
-          </div>
+          {/* Shared tab strip (SegmentTabs), same look as the Leads status tabs. */}
+          <SegmentTabs ariaLabel="Kind of Meta ad" value={tab} onChange={setTab}
+            tabs={[{ key: "lead_ads", label: "Instant Lead Forms", Logo: FacebookLogo }, { key: "whatsapp_ctwa", label: "Click to WhatsApp Ads", Logo: WhatsAppLogo }].map(({ key, label, Logo }) => ({
+              value: key,
+              label: <span className="inline-flex items-center gap-2"><Logo className="w-4 h-4" /> {label}</span>,
+            }))} />
 
           {tab === "lead_ads" ? (
             <div className="space-y-4">

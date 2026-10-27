@@ -22,6 +22,7 @@ import { read as xlsxRead, utils as xlsxUtils } from "xlsx";
 import { downloadXlsx } from "../utils/sheetExport";
 import DateTimePicker from "../components/DateTimePicker";
 import CustomSelect from "../components/CustomSelect";
+import SegmentTabs from "../components/SegmentTabs";
 import {
   ArrowLeft, ArrowRightLeft, Building2, Calendar, ChevronDown, ChevronLeft, ChevronRight,
   Archive, Download, FileSpreadsheet, FileText, ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users, X as XIcon,
@@ -912,27 +913,17 @@ export default function ProjectDetail() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="grid grid-cols-2 gap-1 rounded-2xl p-1 stitch-surface-muted sm:flex sm:w-fit">
-        {[
-          { key: "info",          label: "Info",                                                                    activeClass: "",                     activeBg: "var(--app-primary)" },
-          { key: "leads",         label: `Leads (${leadsTotal})`,                                                  activeClass: "",                     activeBg: "var(--app-primary)" },
-          { key: "prospective",   label: `Prospective${prospTotal > 0 ? ` (${prospTotal})` : ""}`,                activeClass: "bg-green-600",         activeBg: "" },
-        ].map(({ key, label, activeClass, activeBg }) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition text-center sm:px-5 sm:py-2 ${
-              tab === key
-                ? activeClass ? `${activeClass} text-white shadow-sm` : "text-white shadow-sm"
-                : "text-app-soft hover:text-app"
-            }`}
-            style={tab === key && activeBg ? { background: activeBg } : {}}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* Tabs (shared SegmentTabs strip) */}
+      <SegmentTabs
+        ariaLabel="Project sections"
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { value: "info",        label: "Info" },
+          { value: "leads",       label: "Leads",       count: leadsTotal },
+          { value: "prospective", label: "Prospective", count: prospTotal > 0 ? prospTotal : undefined },
+        ]}
+      />
 
       {/* ── INFO TAB ── */}
       {tab === "info" && (
@@ -1095,24 +1086,14 @@ export default function ProjectDetail() {
             )}
           </div>
 
-          {/* Status filter pills */}
-          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-1.5">
-            {STATUS_FILTERS.map((f) => {
-              const active = bookingFilter === f.value;
-              return (
-                <button
-                  key={f.value}
-                  onClick={() => { setBookingFilter(f.value); setLeadsPage(1); }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all text-center sm:rounded-full sm:py-1 ${
-                    active
-                      ? `${f.bg} ${f.text} ring-2 ring-current ring-offset-1`
-                      : "bg-gray-100 dark:bg-white/5 text-app-soft border border-orange-400/50 hover:text-app hover:bg-black/5 dark:hover:bg-white/10"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              );
-            })}
+          {/* Status filter (shared SegmentTabs strip) */}
+          <div className="flex flex-wrap items-center gap-2">
+            <SegmentTabs
+              ariaLabel="Lead status filter"
+              value={bookingFilter}
+              onChange={(v) => { setBookingFilter(v); setLeadsPage(1); }}
+              tabs={STATUS_FILTERS.map((f) => ({ value: f.value, label: f.label }))}
+            />
             {/* Leads deleted from this project, with their remarks. Opens a panel
                 rather than filtering the table: they are no longer project leads. */}
             <button
@@ -1468,9 +1449,12 @@ export default function ProjectDetail() {
             </div>
           </div>
 
-          {/* Status filter pills - all scoped to isProspective leads only */}
-          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
-            {[
+          {/* Status filter - all scoped to isProspective leads only (shared SegmentTabs strip) */}
+          <SegmentTabs
+            ariaLabel="Prospective status filter"
+            value={prospBookingFilter}
+            onChange={(v) => { setProspBookingFilter(v); setProspPage(1); }}
+            tabs={[
               { value: "",                  label: "All Prospective",   bg: "bg-gray-100 dark:bg-white/10",           text: "text-app-soft" },
               { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",         text: "text-blue-600 dark:text-blue-400" },
               { value: "Site Visit Booked", label: "Site Visit Booked", bg: "bg-violet-100 dark:bg-violet-500/20",     text: "text-violet-600 dark:text-violet-400" },
@@ -1479,23 +1463,8 @@ export default function ProjectDetail() {
               { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",           text: "text-red-500 dark:text-red-400" },
               { value: "Not Reachable",     label: "Not Reachable",     bg: "bg-gray-100 dark:bg-white/10",            text: "text-gray-500 dark:text-gray-400" },
               { value: "Low Budget",        label: "Low Budget",        bg: "bg-pink-100 dark:bg-pink-500/20",         text: "text-pink-600 dark:text-pink-400" },
-            ].map((f) => {
-              const active = prospBookingFilter === f.value;
-              return (
-                <button
-                  key={f.value}
-                  onClick={() => { setProspBookingFilter(f.value); setProspPage(1); }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all text-center sm:rounded-full sm:py-1 ${
-                    active
-                      ? `${f.bg} ${f.text} ring-2 ring-current ring-offset-1`
-                      : "bg-gray-100 dark:bg-white/5 text-app-soft border border-orange-400/50 hover:text-app hover:bg-black/5 dark:hover:bg-white/10"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              );
-            })}
-          </div>
+            ].map((f) => ({ value: f.value, label: f.label }))}
+          />
 
           {/* Date window filter */}
           <div className="flex flex-wrap items-center gap-3">

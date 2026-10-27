@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import SegmentTabs from "../components/SegmentTabs";
 import VistrowOutboundSection from "../components/VistrowOutboundSection";
 import { VistrowVoiceIcon, VoiceConnectionPanel } from "../components/VistrowVoiceSettings";
 
@@ -34,13 +35,10 @@ export default function VistrowVoiceSettingsPage({ tab = "connection" }) {
         </div>
       </div>
 
-      <div className="flex gap-2" role="tablist">
-        {tabs.map((t) => (
-          <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} data-testid={`tab-${t.key}`}
-            onClick={() => navigate(t.path, { replace: true })}
-            className={`rounded-xl px-4 py-2 text-sm font-semibold ${tab === t.key ? "btn-primary" : "btn-secondary"}`}>{t.label}</button>
-        ))}
-      </div>
+      {/* Shared tab strip; data-testid kept for e2e/vistrow-outbound/drive.cjs. */}
+      <SegmentTabs ariaLabel="Vistrow Voice settings" value={tab}
+        onChange={(key) => navigate(tabs.find((t) => t.key === key).path, { replace: true })}
+        tabs={tabs.map((t) => ({ value: t.key, label: t.label, testId: `tab-${t.key}` }))} />
 
       {!isAdmin
         ? <p className="text-sm text-app-soft">Only an admin can change these settings.</p>

@@ -12,6 +12,7 @@ import {
 import { Modal, Spinner, EmptyState } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 import DateTimePicker from "../components/DateTimePicker";
+import SegmentTabs from "../components/SegmentTabs";
 
 // Debounced lead search-select — resolves to a real Lead _id (not just a label)
 // so tasks stay genuinely linked to the lead they're about. Remounts fresh each
@@ -104,19 +105,6 @@ function PriorityBadge({ priority }) {
       <span className={`h-1.5 w-1.5 rounded-full ${m.dot}`} />
       {m.label}
     </span>
-  );
-}
-
-function SummaryCard({ label, count, color, active, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex-1 min-w-[120px] rounded-2xl p-4 text-center transition-all ${active ? "ring-2 ring-orange-500 shadow-md" : "hover:opacity-80"}`}
-      style={{ background: color }}
-    >
-      <p className="text-2xl font-black text-white">{count}</p>
-      <p className="text-xs font-semibold text-white/80 mt-0.5">{label}</p>
-    </button>
   );
 }
 
@@ -294,11 +282,11 @@ export default function Tasks() {
   };
 
   const cards = [
-    { key: "all",       label: "All",       count: summary.all,       color: "linear-gradient(135deg,#6366f1,#8b5cf6)" },
-    { key: "today",     label: "Today",     count: summary.today,     color: "linear-gradient(135deg,#f59e0b,#f97316)" },
-    { key: "upcoming",  label: "Upcoming",  count: summary.upcoming,  color: "linear-gradient(135deg,#10b981,#059669)" },
-    { key: "overdue",   label: "Overdue",   count: summary.overdue,   color: "linear-gradient(135deg,#ef4444,#dc2626)" },
-    { key: "completed", label: "Completed", count: summary.completed, color: "linear-gradient(135deg,#64748b,#475569)" },
+    { value: "all",       label: "All",       count: summary.all },
+    { value: "today",     label: "Today",     count: summary.today },
+    { value: "upcoming",  label: "Upcoming",  count: summary.upcoming },
+    { value: "overdue",   label: "Overdue",   count: summary.overdue },
+    { value: "completed", label: "Completed", count: summary.completed },
   ];
 
   return (
@@ -318,12 +306,8 @@ export default function Tasks() {
         )}
       </div>
 
-      {/* Summary cards */}
-      <div className="flex gap-3 flex-wrap">
-        {cards.map(c => (
-          <SummaryCard key={c.key} {...c} active={activeCard === c.key} onClick={() => setActiveCard(c.key)} />
-        ))}
-      </div>
+      {/* Summary filter (shared SegmentTabs strip) */}
+      <SegmentTabs ariaLabel="Task filter" value={activeCard} onChange={setActiveCard} tabs={cards} />
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
