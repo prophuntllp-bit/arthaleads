@@ -26,7 +26,22 @@ const { activityMatch, updateCallActivity, pushActivity } = require("../services
 const { uploadCallRecording } = require("../utils/upload");
 const { sendPushToUser, sendPushToAll } = require("../utils/push");
 
-const form = express.urlencoded({ extended: false });
+// The raw body is kept for the signature check: a "+" in a value (a caller's
+// number) that Plivo didn't percent-encode becomes a space once parsed, and
+// the signature is over what Plivo sent (incoming calls failed the check, 27 Oct 2026).
+const form = express.urlencoded({ extended: false, verify: (req, res, buf) => { req.rawBody = buf.toString("utf8"); } });
+
+/** Form fields exactly as sent: "+" kept, %XX decoded. */
+function rawParams(raw) {
+  const out = {};
+  for (const pair of String(raw || "").split("&")) {
+    if (!pair) continue;
+    const i = pair.indexOf("=");
+    const k = i < 0 ? pair : pair.slice(0, i), v = i < 0 ? "" : pair.slice(i + 1);
+    try { out[decodeURIComponent(k)] = decodeURIComponent(v); } catch { out[k] = v; }
+  }
+  return out;
+}
 const callEvents = () => require("./enablexRoutes")._callEvents;
 
 // ── Settings (admins) ─────────────────────────────────────────────────────────
@@ -113,13 +128,20 @@ router.post("/settings/test", protect, authorize("admin", "super_admin"), async 
 async function verify(req, orgId, label) {
   const org = await Organization.findById(orgId).select("name plivo").lean();
   const creds = plivo.credentials(org);
-  const result = creds ? plivo.checkSignature({
+  const check = (params) => plivo.checkSignature({
     url: `${plivo.publicBase(req)}${req.originalUrl}`,
-    params: req.body || {},
+    params,
     nonce: req.get("X-Plivo-Signature-V3-Nonce"),
     signature: req.get("X-Plivo-Signature-V3"),
     authToken: creds.authToken,
-  }) : "unconfigured";
+  });
+  let result = creds ? check(req.body || {}) : "unconfigured";
+  if (result === "invalid" && req.rawBody) result = check(rawParams(req.rawBody));
+  if (result === "invalid") {
+    // Which fields could be read differently, to learn the signing format (names only, no values).
+    const odd = Object.entries(req.body || {}).filter(([, v]) => /[\s+%]/.test(String(v))).map(([k]) => k);
+    console.warn(`[plivo ${label}] signature check detail: url=${plivo.publicBase(req)}${req.path} fields=${Object.keys(req.body || {}).length} spaced/plus fields=${odd.join(",") || "none"}`);
+  }
   if (result !== "ok") {
     const enforce = process.env.PLIVO_WEBHOOK_ENFORCE === "true";
     console.warn(`[plivo ${label}] signature ${result}${enforce ? " - refused" : " - allowed (enforcement off)"}`);
@@ -286,9 +308,9 @@ router.post("/recording/:orgId", form, async (req, res) => {
 // ── Incoming calls ────────────────────────────────────────────────────────────
 /** The lead (or project lead) with this phone, newest first. */
 async function findLeadByPhone(orgId, phone) {
-  const last10 = String(phone || "").replace(/\D/g, "").slice(-10);
-  if (last10.length < 8) return null;
-  const q = { orgId, phone: { $regex: `${last10}$` }, isDeleted: { $ne: true } };
+  const match = require("../utils/phone").samePhone(phone);
+  if (!match) return null;
+  const q = { orgId, phone: match, isDeleted: { $ne: true } };
   for (const Model of [Lead, ProjectLead]) {
     const lead = await Model.findOne(q).sort({ updatedAt: -1 }).select("name phone activities").lean();
     if (lead) return { Model, lead };

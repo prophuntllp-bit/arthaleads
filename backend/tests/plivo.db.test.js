@@ -257,6 +257,29 @@ test("incoming call nobody picks up: the caller hears a sorry message; missed, a
   assert.match((await callback(`/api/plivo/inbound-dialed/${ORG}?ref=x`, { DialStatus: "completed" })).text, /^<Response><Hangup\/><\/Response>$/);
 });
 
+test("a lead stored with spaces (+91 98220 01299) is still recognised when they call in", async () => {
+  const lead = await db.collection("leads").insertOne({ orgId: ORG, name: "Meena Joshi", phone: "+91 98220 01299", status: "New", createdAt: new Date(), updatedAt: new Date(),
+    activities: [{ _id: oid(), type: "called", performedBy: AGENT, performedByName: "Sheetal Powar", createdAt: new Date(), meta: { direction: "outbound", status: "answered" } }] });
+  await callback(`/api/plivo/inbound/${ORG}`, { CallUUID: "in-5", From: "919822001299" });
+  const a = (await db.collection("leads").findOne({ _id: lead.insertedId })).activities.find((x) => x.meta?.callUuid === "in-5");
+  assert.ok(a, "logged on Meena's lead");
+  assert.equal(a.meta.direction, "inbound");
+});
+
+test("signature over a raw '+' that Plivo didn't percent-encode still checks out", async () => {
+  const url = `${process.env.APP_URL}/api/plivo/inbound/${ORG}`;
+  const nonce = "n-plus";
+  const params = { CallUUID: "in-6", From: "+919000000123" };
+  const sorted = Object.keys(params).sort().map((k) => `${k}${params[k]}`).join("");
+  const sig = crypto.createHmac("sha256", TOKEN).update(`${url}.${sorted}.${nonce}`).digest("base64");
+  process.env.PLIVO_WEBHOOK_ENFORCE = "true";
+  const res = await realFetch(`${base}/api/plivo/inbound/${ORG}`, { method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Plivo-Signature-V3": sig, "X-Plivo-Signature-V3-Nonce": nonce },
+    body: "CallUUID=in-6&From=+919000000123" });
+  delete process.env.PLIVO_WEBHOOK_ENFORCE;
+  assert.match(await res.text(), /<Dial/, "accepted, not refused");
+});
+
 test("an unknown number still reaches someone on the team; nothing logged against a lead", async () => {
   const r = await callback(`/api/plivo/inbound/${ORG}`, { CallUUID: "in-4", From: "919000000099" });
   assert.match(r.text, /<Number>919876500001<\/Number>/, "the only team member with a phone");

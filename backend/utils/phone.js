@@ -19,7 +19,10 @@ function phoneKey(raw) {
  */
 function samePhone(raw) {
   const key = phoneKey(raw);
-  return key ? { $regex: `${key}$` } : null;
+  // Spaces, dashes or brackets may sit between the stored digits ("+91 744 743
+  // 0431" missed an incoming call's lookup, 27 Oct 2026), so any non-digits
+  // are allowed between them.
+  return key ? { $regex: `${key.split("").join("\\D*")}\\D*$` } : null;
 }
 
 /**
