@@ -1891,7 +1891,7 @@ export default function Automation() {
         <p className="text-sm text-app-soft">Connect where your leads come from, how you call them, and how your ads learn from them.</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <StatTile icon={Link2} label="Connected" value={liveCards} note="live and sending" />
         <StatTile icon={LayoutGrid} label="Available" value={allCards.length} note="open one to set it up" />
         <StatTile icon={Plug} label="Your connections" value={items.length} note="pages, sites and links below" />
