@@ -1,14 +1,19 @@
 // PlivoSettings.jsx — Plivo click-to-call credentials (27 Oct 2026). Settings live
 // in /api/plivo/settings; the Auth Token is stored encrypted and never sent back.
+// Only the Auth ID and Token are asked for: the caller ID is fetched from the
+// Plivo account, and the agent is always the recording's left side (owner, 27 Oct).
 import { useEffect, useState } from "react";
 import { Loader2, CheckCircle2, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import CustomSelect from "./CustomSelect";
 
+// "918065492852" reads as "+91 80 6549 2852".
+const showNumber = (n) => (/^91\d{10}$/.test(n) ? `+91 ${n.slice(2, 4)} ${n.slice(4, 8)} ${n.slice(8)}` : `+${n}`);
+
 export default function PlivoSettings({ onSaved }) {
   const [d, setD] = useState(null);
-  const [form, setForm] = useState({ authId: "", authToken: "", number: "", agentChannel: "" });
+  const [form, setForm] = useState({ authId: "", authToken: "" });
   const [showToken, setShowToken] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -17,7 +22,7 @@ export default function PlivoSettings({ onSaved }) {
 
   const load = () => api.get("/plivo/settings").then((r) => {
     setD(r.data);
-    setForm({ authId: r.data.plivo.authId, authToken: "", number: r.data.plivo.number, agentChannel: r.data.plivo.agentChannel || "" });
+    setForm({ authId: r.data.plivo.authId, authToken: "" });
   }).catch(() => {});
   useEffect(() => { load(); }, []);
   if (!d) return null;
@@ -25,7 +30,7 @@ export default function PlivoSettings({ onSaved }) {
   const save = async () => {
     setSaving(true);
     try {
-      const body = { authId: form.authId, number: form.number, agentChannel: form.agentChannel };
+      const body = { authId: form.authId };
       if (form.authToken.trim()) body.authToken = form.authToken.trim();
       await api.patch("/plivo/settings", body);
       toast.success("Plivo settings saved.");
@@ -47,6 +52,14 @@ export default function PlivoSettings({ onSaved }) {
     } catch (e) {
       setNote({ ok: false, text: e?.response?.data?.message || "Could not reach Plivo." });
     } finally { setTesting(false); }
+  };
+
+  const setNumber = async (number) => {
+    try {
+      await api.patch("/plivo/settings", { number });
+      toast.success(`Calls now go out from ${showNumber(number)}.`);
+      await load();
+    } catch (e) { toast.error(e?.response?.data?.message || "Could not change the number."); }
   };
 
   const connectInbound = async () => {
@@ -89,18 +102,21 @@ export default function PlivoSettings({ onSaved }) {
             </button>
           </div>
         </div>
-        <div>
-          <label className="text-xs font-semibold text-app-soft mb-1.5 block">Plivo number (caller ID)</label>
-          <input className="input w-full" inputMode="tel" autoComplete="off" placeholder="e.g. +91 22 4012 3456"
-            value={form.number} onChange={(e) => setForm((f) => ({ ...f, number: e.target.value }))} />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-app-soft mb-1.5 block">Agent's side of the recording</label>
-          <CustomSelect value={form.agentChannel} onChange={(v) => setForm((f) => ({ ...f, agentChannel: v }))}
-            options={[{ value: "", label: "Left channel (your phone, Plivo's default)" }, { value: "right", label: "Right channel" }]}
-            style={{ width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 }} />
-        </div>
       </div>
+
+      {d.plivo.number && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="text-sm text-app-soft">Calls go out from</span>
+          {d.plivo.numbers?.length > 1 ? (
+            <CustomSelect value={d.plivo.number} onChange={setNumber}
+              options={d.plivo.numbers.map((n) => ({ value: n, label: showNumber(n) }))}
+              style={{ minWidth: 220, padding: "12px 16px", borderRadius: "1rem", fontSize: 14 }} />
+          ) : (
+            <b className="text-sm text-app">{showNumber(d.plivo.number)}</b>
+          )}
+          <span className="text-xs text-app-soft">from your Plivo account</span>
+        </div>
+      )}
 
       <div className="rounded-2xl px-4 py-3 flex flex-wrap items-center justify-between gap-3" style={{ border: "1px solid var(--app-border)" }}>
         <div className="min-w-0">
