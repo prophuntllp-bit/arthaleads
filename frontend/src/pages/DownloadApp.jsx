@@ -10,6 +10,7 @@ import { PageHero, FaqSection } from "../components/site/Blocks";
 import { Reveal } from "../components/motion/Motion";
 import { useSEO } from "../utils/useSEO";
 import api from "../services/api";
+import AndroidLockScreen from "../components/site/AndroidLockScreen";
 
 // The APK is not on Google Play, so the install runs through Android's
 // "unknown sources" warning. That prompt is where people give up, so it gets a
@@ -73,44 +74,12 @@ const FAQ_JSONLD = JSON.stringify({
 
 const iconTile = { background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" };
 
-/** A coded Android phone showing the alerts the app sends (an illustration, not a screenshot). */
+/** The hero phone: a realistic Android lock screen with arriving notifications. */
 function PhoneAlerts() {
-  const alerts = [
-    { Icon: Bell, color: "#ff6b00", bg: "rgba(255,107,0,0.14)", title: "New lead · Ananya Iyer", sub: "2 BHK · Aurum Heights · Facebook ad", time: "now" },
-    { Icon: Phone, color: "#16a34a", bg: "rgba(22,163,74,0.14)", title: "Call logged · 4 min 12 sec", sub: "Raj Patil · recording saved", time: "9 min" },
-    { Icon: MapPin, color: "#2563eb", bg: "rgba(37,99,235,0.14)", title: "Clocked in at Aurum Heights", sub: "Selfie and location recorded", time: "10:02" },
-  ];
   return (
-    <div className="relative mx-auto w-full max-w-[420px] px-3 sm:px-6 lg:px-0">
+    <div className="relative mx-auto w-fit px-3 sm:px-6 lg:px-0">
       <div aria-hidden="true" className="hero-glass" />
-      <div className="relative mx-auto my-6 w-[264px] sm:w-[290px] rounded-[2.6rem] p-[10px]" role="img" aria-label="An Android phone showing Arthaleads alerts for a new lead, a logged call and a site attendance check-in"
-        style={{ background: "linear-gradient(145deg,#2b2d35,#121318)", boxShadow: "0 40px 80px -30px rgba(0,0,0,0.55), inset 0 0 0 1.5px rgba(255,255,255,0.08)" }}>
-        <div className="relative overflow-hidden rounded-[2.1rem] h-[540px] sm:h-[580px]"
-          style={{ background: "radial-gradient(120% 70% at 20% 0%, #ff8a3d 0%, #c2410c 38%, #2a1206 100%)" }}>
-          <span aria-hidden="true" className="absolute top-3 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-black/80" />
-          <div className="px-6 pt-12 text-white">
-            <p className="font-display text-[56px] leading-none font-bold tracking-tight">10:42</p>
-            <p className="mt-1 text-sm text-white/80">Saturday</p>
-          </div>
-          <div className="absolute inset-x-3 bottom-6 space-y-2.5">
-            {alerts.map(({ Icon, color, bg, title, sub, time }) => (
-              <div key={title} className="rounded-2xl p-3 flex items-start gap-3" style={{ background: "rgba(255,255,255,0.92)", boxShadow: "0 10px 24px -14px rgba(0,0,0,0.6)" }}>
-                <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: bg }}>
-                  <Icon className="w-[18px] h-[18px]" style={{ color }} aria-hidden="true" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="text-[10.5px] font-semibold text-[#6b7180]">Arthaleads</span>
-                    <span className="text-[10px] text-[#6b7180]">{time}</span>
-                  </span>
-                  <span className="block text-[12.5px] font-semibold text-[#0f1222] leading-tight truncate">{title}</span>
-                  <span className="block text-[11px] text-[#474d5c] leading-tight mt-0.5 truncate">{sub}</span>
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <div className="relative py-6"><AndroidLockScreen /></div>
     </div>
   );
 }

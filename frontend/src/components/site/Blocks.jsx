@@ -11,9 +11,10 @@
 // coded illustrations only), no fake social proof, no eyebrow pills, Book a
 // Demo is the main action.
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { ArrowRight, CircleCheck, Plus, Minus } from "lucide-react";
 import { Section, Container, SectionHeader, Card, SiteButton, SiteImage } from "./Site";
-import { FloatCard } from "./HomeVisuals";
+import { FloatCard, Cycle } from "./HomeVisuals";
 import { Reveal } from "../motion/Motion";
 import { WhatsAppLogo } from "./BrandLogos";
 import { CRM_SIGNUP_URL, waLink, WA_MESSAGES } from "../../utils/crmLinks";
@@ -101,7 +102,8 @@ const CARD_POS = [
 
 /**
  * An AI photo (public/img/site/{name}-*.webp, 3:2) on the glass panel with
- * up to three floating cards: [{ Icon, iconColor, iconBg, title, sub }].
+ * up to three floating cards: [{ Icon, iconColor, iconBg, title, sub, cycle? }],
+ * where `cycle` is more [{ title, sub }] the card rotates through.
  */
 export function PhotoVisual({ name, alt, cards = [], aspect = "aspect-[4/3]", position = "object-center", priority = true }) {
   return (
@@ -111,17 +113,21 @@ export function PhotoVisual({ name, alt, cards = [], aspect = "aspect-[4/3]", po
         <SiteImage name={name} width={1536} height={1024} priority={priority} sizes="(min-width: 1024px) 540px, 92vw" alt={alt}
           className={cx("block w-full h-auto object-cover", aspect, position)} />
       </div>
-      {cards.slice(0, 3).map(({ Icon, iconColor = "var(--site-brand-ink)", iconBg = "rgba(255,107,0,0.12)", title, sub }, i) => (
-        <FloatCard key={title} className={cx(CARD_POS[i], "flex items-center gap-3 !py-3 max-w-[260px]")}>
+      {cards.slice(0, 3).map(({ Icon, iconColor = "var(--site-brand-ink)", iconBg = "rgba(255,107,0,0.12)", title, sub, cycle }, i) => (
+        <FloatCard key={title} index={i} className={cx(CARD_POS[i], "flex items-center gap-3 !py-3 max-w-[260px]")}>
           {Icon && (
             <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: iconBg }}>
               <Icon className="w-[18px] h-[18px]" style={{ color: iconColor }} aria-hidden="true" />
             </span>
           )}
-          <span className="min-w-0">
-            <span className="block text-[13px] font-semibold site-ink leading-tight">{title}</span>
-            {sub && <span className="block text-[11px] site-muted leading-tight mt-0.5">{sub}</span>}
-          </span>
+          <Cycle items={[{ title, sub }, ...(cycle || [])]} offset={600 + i * 1300}>
+            {(c) => (
+              <span className="min-w-0 block">
+                <span className="block text-[13px] font-semibold site-ink leading-tight">{c.title}</span>
+                {c.sub && <span className="block text-[11px] site-muted leading-tight mt-0.5">{c.sub}</span>}
+              </span>
+            )}
+          </Cycle>
         </FloatCard>
       ))}
     </div>
@@ -172,11 +178,45 @@ export function FaqSection({ items, title = "Questions people ask", eyebrow = "F
  * The closing panel, as on the home page: title (with an optional gradient
  * part), body, Book a Demo + trial, and a photo on the right.
  */
+// Every page has its own closing photo (owner, 27 Oct 2026: no photo used
+// twice). AI-generated per outputs/site-images/cta/BRIEF.md, served as
+// public/img/site/cta-*-{640,1024,1600}.webp. The home page keeps "keys".
+const CTA_PHOTOS = {
+  keys:                "A sales executive handing house keys to a young couple",
+  "cta-ai-crm":        "A young woman on a sofa at night smiling as a reply arrives on her phone",
+  "cta-builder-crm":   "A sales manager handing a project brochure to a couple at a site office",
+  "cta-whatsapp-crm":  "A man at a sunlit cafe smiling as he reads a message on his phone",
+  "cta-selldo":        "A developer's sales leadership meeting in a glass-walled room",
+  "cta-leadrat":       "A brokerage team's morning huddle in an open office",
+  "cta-kylas":         "A brokerage owner reviewing paperwork at his desk",
+  "cta-pricing":       "Two business partners discussing costs over tea at their office desk",
+  "cta-features":      "A telecalling team with headsets at work in a bright office",
+  "cta-compare":       "Two colleagues comparing notes side by side at a coworking table",
+  "cta-about":         "A small product team planning at a whiteboard in a Pune office",
+  "cta-security":      "An office manager locking her laptop at a tidy desk at dusk",
+  "cta-product-tour":  "A young couple watching something together on a tablet at home",
+  "cta-help":          "A support specialist with a headset smiling while he helps a customer",
+  "cta-api":           "A software developer reviewing code at her desk",
+  "cta-updates":       "Two colleagues high-fiving as the team celebrates a win",
+  "cta-refer":         "Two brokers shaking hands warmly at a cafe",
+  "cta-cases":         "A builder's sales team in hard hats reviewing a site plan at a project",
+};
+const CTA_BY_PAGE = {
+  "/ai-crm": "cta-ai-crm", "/builder-crm": "cta-builder-crm", "/whatsapp-crm": "cta-whatsapp-crm",
+  "/compare/sell-do-alternative": "cta-selldo", "/compare/leadrat-alternative": "cta-leadrat", "/compare/kylas-alternative": "cta-kylas",
+  "/pricing": "cta-pricing", "/features": "cta-features", "/compare": "cta-compare", "/about-us": "cta-about",
+  "/security": "cta-security", "/product-tour": "cta-product-tour", "/help-guide": "cta-help", "/api-docs": "cta-api",
+  "/product-updates": "cta-updates", "/refer": "cta-refer", "/case-studies": "cta-cases",
+};
+
 export function ClosingCta({
   title = "Stop losing buyers", dim = "to whoever replies first.",
   body = "Book a 30-minute demo on your own leads, or start the 14-day free trial yourself.",
-  image = "keys", imageAlt = "A sales executive handing house keys to a young couple", tone = "white",
+  image, imageAlt, tone = "white",
 }) {
+  const { pathname } = useLocation();
+  const photo = image || CTA_BY_PAGE[pathname.replace(/\/$/, "") || "/"] || "keys";
+  const alt = imageAlt || CTA_PHOTOS[photo] || "";
   return (
     <Section tone={tone}>
       <Container>
@@ -192,7 +232,7 @@ export function ClosingCta({
               <TrustLine className="mt-6 !justify-start" />
             </div>
             <div className="relative overflow-hidden rounded-[24px] border" style={{ borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
-              <SiteImage name={image} width={1600} height={900} sizes="(min-width: 1024px) 520px, 92vw" alt={imageAlt}
+              <SiteImage name={photo} width={1600} height={900} sizes="(min-width: 1024px) 520px, 92vw" alt={alt}
                 className="block w-full h-auto aspect-[16/10] object-cover" />
             </div>
           </div>

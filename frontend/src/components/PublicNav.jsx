@@ -325,7 +325,6 @@ function NavInner({ onScrollTo }) {
 
           {/* Desktop nav links */}
           <div className="hidden xl:flex items-center gap-6">
-            <NavLink id="hero"        label="Home" />
             <NavLink href="/features" label="Features" />
             <NavLink href="/about-us" label="About Us" />
             <NavLink href="/pricing"  label="Pricing" />

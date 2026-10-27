@@ -8,13 +8,14 @@
 // Rendered by entry-prerender.jsx too, so nothing touches window during render.
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, CircleCheck, Clock3, IndianRupee, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CircleCheck, Clock3, IndianRupee, Play, Sparkles } from "lucide-react";
 import { SitePage, Section, Container, SiteButton, SiteImage, Card } from "../components/site/Site";
 import { WhatsAppLogo } from "../components/site/BrandLogos";
 import { useSEO } from "../utils/useSEO";
 import { getRecaptchaToken } from "../utils/recaptcha";
 import { waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { track } from "../utils/analytics";
+import YouTubePlayer from "../components/site/YouTubePlayer";
 
 // Must match the allowed values in backend/controllers/demoRequestController.js.
 const ROLES = ["Owner / Director", "Sales head", "Marketing", "Broker", "Other"];
@@ -83,6 +84,29 @@ function Choice({ options, value, onChange, multi = false, name }) {
           {isOn(o) && <Check className="inline w-3.5 h-3.5 mr-1 -mt-0.5" aria-hidden="true" />}{o}
         </button>
       ))}
+    </div>
+  );
+}
+
+const INTRO_ID = "ZybPiXyK2vQ";
+const INTRO_CHAPTERS = [
+  ["0:00", "What is Arthaleads?"],
+  ["0:24", "The receptionist who never sleeps: the WhatsApp AI agent"],
+  ["0:46", "The register that never forgets: every lead in one place"],
+  ["1:08", "The manager who keeps everyone on track"],
+  ["1:35", "Start your 14-day free trial"],
+];
+
+/** The intro film, on the shared YouTube player (components/site/YouTubePlayer.jsx). */
+function IntroFilm() {
+  return (
+    <div className="relative min-w-0">
+      <div aria-hidden="true" className="hero-glass" />
+      <div className="relative rounded-[22px] sm:rounded-[26px] p-1.5 sm:p-2" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
+        <YouTubePlayer videoId={INTRO_ID} poster={`https://i.ytimg.com/vi/${INTRO_ID}/maxresdefault.jpg`} name="intro"
+          title="What is Arthaleads? The real estate CRM, explained in 2 minutes" badge="1:47 · English"
+          className="rounded-[17px] sm:rounded-[20px]" />
+      </div>
     </div>
   );
 }
@@ -271,6 +295,34 @@ export default function BookDemo() {
               </form>
             )}
           </Card>
+        </Container>
+      </Section>
+
+      {/* Watch first: the 2-minute intro film ("What is Arthaleads?", YouTube
+          ZybPiXyK2vQ), different from the 1 AM tour film on the home page and
+          /product-tour. A thumbnail until clicked, then YouTube's
+          privacy-enhanced player, so nothing from YouTube loads by default. */}
+      <Section tone="tint">
+        <Container className="grid lg:grid-cols-[0.8fr_1.2fr] gap-8 lg:gap-14 items-center">
+          <div className="min-w-0">
+            <p className="site-eyebrow mb-4">Before your demo</p>
+            <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[28px] sm:text-[36px]">
+              What is Arthaleads? <span className="site-dim">Explained in 2 minutes.</span>
+            </h2>
+            <p className="mt-4 text-base sm:text-[17px] leading-relaxed max-w-lg">
+              A WhatsApp AI agent that answers every enquiry, one list for every lead, and a clear view of what your team should do next.
+            </p>
+            <ol className="mt-6 space-y-2.5">
+              {INTRO_CHAPTERS.map(([t, label]) => (
+                <li key={t} className="flex items-center gap-3 text-[15px]">
+                  <span className="font-mono text-xs font-semibold tabular-nums px-2 py-1 rounded-md shrink-0" style={{ background: "rgba(255,107,0,0.12)", color: "var(--site-brand-ink)" }}>{t}</span>
+                  <span className="site-ink">{label}</span>
+                </li>
+              ))}
+            </ol>
+            <SiteButton href="#demo-form" className="mt-8">Book your demo <ArrowRight className="w-4 h-4" /></SiteButton>
+          </div>
+          <IntroFilm />
         </Container>
       </Section>
     </SitePage>

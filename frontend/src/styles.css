@@ -1147,3 +1147,26 @@ html[data-public-theme="dark"] .hero-glass {
   .site-glow { transition: transform 0.18s ease; }
   .site-glow:active { transform: scale(0.985); }
 }
+
+/* Floating hero cards (HomeVisuals FloatCard): rise in one after another,
+   then hold still. Content changes are crossfades inside <Cycle>. */
+.float-card {
+  animation: fc-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--fc-i, 0) * 160ms + 250ms);
+}
+@keyframes fc-in { from { opacity: 0; transform: translate3d(0, 18px, 0) scale(0.97); } to { opacity: 1; transform: none; } }
+
+/* <Cycle>: all items share one grid cell; only the active one is shown. */
+.cycle { display: grid; min-width: 0; }
+.cycle-item {
+  grid-area: 1 / 1; min-width: 0;
+  opacity: 0; transform: translate3d(0, 8px, 0); filter: blur(4px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1), filter 0.6s ease;
+  will-change: opacity, transform;
+  pointer-events: none;
+}
+.cycle-item.is-active { opacity: 1; transform: none; filter: none; pointer-events: auto; transition-delay: 0.12s; }
+@media (prefers-reduced-motion: reduce) {
+  .float-card { animation: none; }
+  .cycle-item { transition: none; filter: none; transform: none; }
+}

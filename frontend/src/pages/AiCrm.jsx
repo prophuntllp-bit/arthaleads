@@ -60,9 +60,9 @@ export default function AiCrm() {
         photo: "partner",
         photoAlt: "Three colleagues in a small real estate office working together at a laptop",
         cards: [
-          { Icon: WhatsAppLogo, iconBg: "rgba(37,211,102,0.14)", title: "AI agent replied in 4 sec", sub: "11:02 PM · in Hindi" },
-          { Icon: Flame, title: "Lead score 87 · Hot", sub: "Asked for a site visit Saturday" },
-          { Icon: Sparkles, title: "Artha: 3 follow-ups due today", sub: "Apply all in one tap" },
+          { Icon: WhatsAppLogo, iconBg: "rgba(37,211,102,0.14)", title: "AI agent replied in 4 sec", sub: "11:02 PM · in Hindi", cycle: [{ title: "AI agent replied in 6 sec", sub: "1:17 AM · in Marathi" }, { title: "AI agent replied in 3 sec", sub: "9:40 PM · in English" }] },
+          { Icon: Flame, title: "Lead score 87 · Hot", sub: "Asked for a site visit Saturday", cycle: [{ title: "Lead score 74 · Warm", sub: "Budget confirmed on WhatsApp" }, { title: "Lead score 91 · Hot", sub: "Loan approved, wants a 2 BHK" }] },
+          { Icon: Sparkles, title: "Artha: 3 follow-ups due today", sub: "Apply all in one tap", cycle: [{ title: "Artha: 2 site visits tomorrow", sub: "Reminders drafted" }, { title: "Artha: 5 leads gone quiet", sub: "Follow-ups ready to send" }] },
         ],
       }}
       answer={{
