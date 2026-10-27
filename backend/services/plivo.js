@@ -72,6 +72,16 @@ async function testConnection(org) {
 }
 
 /**
+ * The phone numbers on the Plivo account, Indian ones first (E.164 digits).
+ * The caller ID is taken from here instead of being typed in (owner, 27 Oct 2026).
+ */
+async function listNumbers(creds) {
+  const out = await api(creds, "GET", "/Number/?limit=20");
+  const all = (out.objects || []).map((n) => e164(n.number)).filter(Boolean);
+  return [...all.filter((n) => /^91\d{10}$/.test(n)), ...all.filter((n) => !/^91\d{10}$/.test(n))];
+}
+
+/**
  * Rings the agent; the answer URL then bridges the customer (see answerXml).
  * Returns Plivo's request_uuid (the call's own CallUUID arrives on callbacks).
  */
@@ -219,6 +229,6 @@ async function hangup(org, callUuid) {
 }
 
 module.exports = {
-  credentials, isReady, e164, publicBase, inboundXml, connectInbound, NOBODY, testConnection, placeBridgeCall, answerXml, hangupXml,
+  credentials, isReady, e164, listNumbers, publicBase, inboundXml, connectInbound, NOBODY, testConnection, placeBridgeCall, answerXml, hangupXml,
   checkSignature, downloadRecording, hangup, encryptField, decryptField,
 };

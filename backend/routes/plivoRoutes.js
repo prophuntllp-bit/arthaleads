@@ -51,7 +51,7 @@ router.get("/settings", protect, authorize("admin", "manager", "super_admin"), a
     const p = org?.plivo || {};
     res.json({
       provider: org?.telephony?.provider || "enablex",
-      plivo: { enabled: !!p.enabled, authId: p.authId || "", hasAuthToken: !!p.authToken, number: p.number || "", agentChannel: p.agentChannel || "",
+      plivo: { enabled: !!p.enabled, authId: p.authId || "", hasAuthToken: !!p.authToken, number: p.number || "", numbers: p.numbers || [],
         inboundConnected: !!(p.appId && p.inboundConnectedAt), inboundConnectedAt: p.inboundConnectedAt || null },
     });
   } catch (err) { next(err); }
@@ -59,7 +59,7 @@ router.get("/settings", protect, authorize("admin", "manager", "super_admin"), a
 
 router.patch("/settings", protect, authorize("admin", "super_admin"), async (req, res, next) => {
   try {
-    const { authId, authToken, number, agentChannel, provider } = req.body || {};
+    const { authId, authToken, number, provider } = req.body || {};
     const set = {};
     if (authId !== undefined) {
       const v = String(authId).trim();
@@ -71,18 +71,29 @@ router.patch("/settings", protect, authorize("admin", "super_admin"), async (req
       if (t.length < 20 || /\s/.test(t)) return res.status(400).json({ message: "That doesn't look like a Plivo Auth Token." });
       set["plivo.authToken"] = plivo.encryptField(t);
     }
-    if (number !== undefined) {
-      const n = plivo.e164(number);
-      if (n && !/^91\d{10}$/.test(n)) return res.status(400).json({ message: "Enter the Plivo Indian number, e.g. 91 22 4012 3456." });
-      set["plivo.number"] = n;
+    // The caller ID comes from the account itself (owner, 27 Oct 2026): new
+    // credentials fetch its numbers; a number sent must be one of them. The
+    // agent is always the left channel (the first leg), so there is nothing to pick.
+    const cur = await Organization.findById(req.user.orgId).select("plivo").lean();
+    const credsChanged = set["plivo.authId"] !== undefined || set["plivo.authToken"];
+    if (credsChanged || number !== undefined) {
+      const creds = plivo.credentials({ plivo: { ...(cur?.plivo || {}), authId: set["plivo.authId"] ?? cur?.plivo?.authId, authToken: set["plivo.authToken"] || cur?.plivo?.authToken } });
+      if (creds) {
+        let numbers;
+        try { numbers = await plivo.listNumbers(creds); }
+        catch (err) { return res.status(400).json({ message: err.status === 401 ? "Plivo didn't accept that Auth ID and Auth Token." : `Plivo said: ${err.message}` }); }
+        if (!numbers.length) return res.status(400).json({ message: "This Plivo account has no phone number yet. Buy an Indian number in the Plivo console first." });
+        const want = number !== undefined ? plivo.e164(number) : cur?.plivo?.number;
+        if (number !== undefined && !numbers.includes(want)) return res.status(400).json({ message: "That number isn't on this Plivo account." });
+        set["plivo.numbers"] = numbers;
+        set["plivo.number"] = numbers.includes(want) ? want : numbers[0];
+      }
     }
-    if (agentChannel !== undefined) set["plivo.agentChannel"] = ["left", "right"].includes(agentChannel) ? agentChannel : "";
     if (provider !== undefined) {
       if (!["enablex", "plivo"].includes(provider)) return res.status(400).json({ message: "Unknown phone service." });
       if (provider === "plivo") {
-        const cur = await Organization.findById(req.user.orgId).select("plivo").lean();
         const merged = { plivo: { ...(cur?.plivo || {}), ...Object.fromEntries(Object.entries(set).map(([k, v]) => [k.replace("plivo.", ""), v])), enabled: true } };
-        if (!plivo.isReady(merged)) return res.status(400).json({ message: "Save the Plivo Auth ID, Auth Token and number before switching calls to Plivo." });
+        if (!plivo.isReady(merged)) return res.status(400).json({ message: "Save the Plivo Auth ID and Auth Token before switching calls to Plivo." });
         set["plivo.enabled"] = true;
       }
       set["telephony.provider"] = provider;
@@ -93,7 +104,7 @@ router.patch("/settings", protect, authorize("admin", "super_admin"), async (req
     if (provider === "plivo") {
       inbound = await connectIncoming(req).then(() => "connected").catch((err) => `not connected: ${err.message}`);
     }
-    res.json({ success: true, ...(inbound ? { inbound } : {}) });
+    res.json({ success: true, number: set["plivo.number"], ...(inbound ? { inbound } : {}) });
   } catch (err) { next(err); }
 });
 
@@ -117,7 +128,14 @@ router.post("/settings/test", protect, authorize("admin", "super_admin"), async 
   try {
     const org = await Organization.findById(req.user.orgId).select("plivo").lean();
     const out = await plivo.testConnection(org);
-    if (out.numberOk === false) return res.status(400).json({ success: false, message: `Connected, but ${org.plivo.number} is not a number on this Plivo account.` });
+    // Refresh the account's numbers (companies set up before they were fetched).
+    const numbers = await plivo.listNumbers(plivo.credentials(org)).catch(() => null);
+    if (numbers?.length) {
+      const number = numbers.includes(plivo.e164(org.plivo.number)) ? plivo.e164(org.plivo.number) : numbers[0];
+      await Organization.updateOne({ _id: req.user.orgId }, { $set: { "plivo.numbers": numbers, "plivo.number": number } });
+      org.plivo.number = number;
+    }
+    if (out.numberOk === false && !numbers?.length) return res.status(400).json({ success: false, message: `Connected, but ${org.plivo.number} is not a number on this Plivo account.` });
     res.json({ success: true, message: `Connected to Plivo${out.name ? ` (${out.name})` : ""}.`, ...out });
   } catch (err) {
     res.status(400).json({ success: false, message: `Plivo said: ${err.message}` });

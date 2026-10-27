@@ -32,6 +32,7 @@ global.fetch = async (url, opts = {}) => {
     if (/\/Call\/$/.test(url)) return new Response(JSON.stringify({ message: "call fired", request_uuid: "req-123", api_id: "a1" }), { status: 201 });
     if (/\/Application\/$/.test(url)) return new Response(JSON.stringify({ message: "created", app_id: "app-1" }), { status: 201 });
     if (/\/Application\/app-1\/$/.test(url)) return new Response(JSON.stringify({ message: "changed" }), { status: 202 });
+    if (/\/Number\/\?/.test(url)) return new Response(JSON.stringify({ objects: [{ number: "18885550100" }, { number: "912240123457" }, { number: "912240123456" }] }), { status: 200 });
     if (/\/Number\//.test(url)) return new Response(JSON.stringify({ message: "changed" }), { status: 202 });
     return new Response(JSON.stringify({ name: "Prophunt LLP", cash_credits: "1000" }), { status: 200 });
   }
@@ -174,10 +175,14 @@ test("settings: the token is stored encrypted and never sent back; switching to 
   await db.collection("organizations").insertOne({ _id: org2, name: "Second", slug: `second-${org2}`, plan: "enterprise", isActive: true, approvalStatus: "approved" });
   await db.collection("users").insertOne({ _id: admin2, name: "Admin Two", email: "a2@example.com", role: "admin", orgId: org2, isActive: true });
   assert.equal((await api("PATCH", "/api/plivo/settings", admin2, { provider: "plivo" })).status, 400, "nothing saved yet");
-  assert.equal((await api("PATCH", "/api/plivo/settings", admin2, { authId: AUTH_ID, authToken: TOKEN, number: "022 4012 3457" })).status, 200);
+  const first = await api("PATCH", "/api/plivo/settings", admin2, { authId: AUTH_ID, authToken: TOKEN });
+  assert.equal(first.status, 200, JSON.stringify(first.json));
   const saved = await db.collection("organizations").findOne({ _id: org2 });
   assert.notEqual(saved.plivo.authToken, TOKEN, "encrypted at rest");
-  assert.equal(saved.plivo.number, "912240123457");
+  assert.equal(saved.plivo.number, "912240123457", "the account's first Indian number, not typed in");
+  assert.deepEqual(saved.plivo.numbers, ["912240123457", "912240123456", "18885550100"]);
+  assert.equal((await api("PATCH", "/api/plivo/settings", admin2, { number: "+91 22 4012 3456" })).status, 200, "another number on the account");
+  assert.equal((await db.collection("organizations").findOne({ _id: org2 })).plivo.number, "912240123456");
   const got = await api("GET", "/api/plivo/settings", admin2);
   assert.equal(got.json.plivo.hasAuthToken, true);
   assert.ok(!JSON.stringify(got.json).includes(TOKEN));
@@ -185,7 +190,7 @@ test("settings: the token is stored encrypted and never sent back; switching to 
   assert.equal((await db.collection("organizations").findOne({ _id: org2 })).telephony.provider, "plivo");
   const t = await api("POST", "/api/plivo/settings/test", admin2);
   assert.equal(t.status, 200, JSON.stringify(t.json));
-  assert.equal((await api("PATCH", "/api/plivo/settings", admin2, { number: "12345" })).status, 400, "not an Indian number");
+  assert.equal((await api("PATCH", "/api/plivo/settings", admin2, { number: "022 9999 0000" })).status, 400, "not a number on the account");
 });
 
 // ── Incoming calls ────────────────────────────────────────────────────────────
