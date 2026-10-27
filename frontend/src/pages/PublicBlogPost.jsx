@@ -372,7 +372,7 @@ function BlogPostInner() {
         <Section tone="white" className="!pt-[6.5rem] sm:!pt-32 overflow-x-clip">
           <div aria-hidden="true" className="hero-warm" style={{ opacity: 0.55 }} />
           <Container className="relative flex flex-col items-center justify-center text-center min-h-[50vh]">
-            <span className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={iconTile}>
+            <span className="site-icon w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={iconTile}>
               <BookOpen className="w-7 h-7" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
             </span>
             <h1 className="font-display site-ink font-extrabold tracking-[-0.02em] text-[28px] sm:text-[36px] mb-3">Article not found</h1>

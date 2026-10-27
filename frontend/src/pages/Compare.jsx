@@ -170,7 +170,11 @@ export default function Compare() {
         eyebrow="Buyer's guide"
         title={<>Choosing the best real estate CRM <span className="site-dim">in India</span></>}
         lede="An honest buyer's guide: who each CRM suits, what it costs, and a feature-by-feature comparison of Arthaleads, Sell.Do, Leadrat and Kylas, sourced from their own websites."
-        actions={null}
+        actions={[
+          { label: "See the comparison", href: "#feature-table" },
+          { label: "Book a Demo", to: "/book-demo" },
+        ]}
+        trust={[`Checked ${CHECKED}`, "Sources linked", "Four CRMs side by side"]}
       />
 
       {/* Quick answer: who each one suits */}
@@ -193,7 +197,7 @@ export default function Compare() {
       </Section>
 
       {/* Feature comparison */}
-      <Section tone="white">
+      <Section tone="white" id="feature-table">
         <Container narrow>
           <SectionHeader eyebrow="Feature by feature" title="Arthaleads, Leadrat, Sell.Do and Kylas" />
           <div className="relative mb-6">

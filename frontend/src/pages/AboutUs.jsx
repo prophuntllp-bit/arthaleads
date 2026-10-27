@@ -44,6 +44,10 @@ export default function AboutUs() {
         eyebrow="About us"
         title={<>Built for real estate. <span className="site-dim">Built for India.</span></>}
         lede="We set out to solve a problem every Indian real estate team knows: leads slipping through the cracks across WhatsApp groups, Facebook campaigns, and forgotten spreadsheets."
+        actions={[
+          { label: "Read our story", href: "#story" },
+          { label: "Work with us", to: "/careers" },
+        ]}
         visual={
           <PhotoVisual name="partner" alt="A real estate sales team working through their leads together in the office"
             cards={[
@@ -60,7 +64,7 @@ export default function AboutUs() {
           <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {STATS.map(({ num, suffix, label }, i) => (
               <Reveal as="li" key={label} delay={i * 80} className="min-w-0">
-                <Card className="h-full p-5 sm:p-6 text-center">
+                <Card glow className="h-full p-5 sm:p-6 text-center">
                   <p className="font-display text-[34px] sm:text-[42px] leading-none font-extrabold site-dim"><CountUp value={num} />{suffix}</p>
                   <p className="mt-2.5 text-[13px] site-muted font-medium">{label}</p>
                 </Card>
@@ -71,7 +75,7 @@ export default function AboutUs() {
       </Section>
 
       {/* Our story */}
-      <Section tone="white">
+      <Section tone="white" id="story">
         <Container className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           <Reveal className="min-w-0">
             <SectionHeader eyebrow="Our story" title={<>Why we built <span className="site-dim">Arthaleads</span></>} className="!mb-6" />
@@ -85,7 +89,7 @@ export default function AboutUs() {
             {STORY_POINTS.map(({ icon: Icon, text }, i) => (
               <Reveal as="li" key={text} delay={120 + i * 90}>
                 <Card glow className="flex items-start gap-4 p-5">
-                  <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
+                  <span className="site-icon w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
                     <Icon className="w-[18px] h-[18px]" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                   </span>
                   <p className="text-[15px] leading-relaxed site-ink pt-1.5">{text}</p>
@@ -122,7 +126,7 @@ export default function AboutUs() {
             {VALUES.map(({ icon: Icon, title, desc }, i) => (
               <Reveal key={title} delay={i * 110} className="min-w-0 flex">
                 <Card glow className="w-full p-6 sm:p-7">
-                  <span className="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
+                  <span className="site-icon w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
                     <Icon className="w-[22px] h-[22px]" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                   </span>
                   <h3 className="font-display text-xl font-bold site-ink mb-2">{title}</h3>

@@ -4,6 +4,7 @@ import { SitePage, Section, Container, Card } from "../components/site/Site";
 import { PageHero, ClosingCta } from "../components/site/Blocks";
 import { Reveal } from "../components/motion/Motion";
 import { useSEO } from "../utils/useSEO";
+import { CRM_SIGNUP_URL } from "../utils/crmLinks";
 
 const updates = [
   {
@@ -153,12 +154,14 @@ function ProductUpdatesInner() {
         eyebrow="Product updates"
         title={<>What's New in <span className="site-dim">Arthaleads</span></>}
         lede="We ship improvements every week. Here's what's changed."
-        actions={null}
-        trust={false}
+        actions={[
+          { label: "See the latest", href: "#updates" },
+          { label: "Try them free", href: CRM_SIGNUP_URL, external: true },
+        ]}
       />
 
       {/* Timeline */}
-      <Section tone="tint" className="!pt-12 sm:!pt-16">
+      <Section tone="tint" id="updates" className="!pt-12 sm:!pt-16">
         <Container narrow>
           <div className="relative">
             <div aria-hidden="true" className="absolute left-0 top-2 bottom-2 w-px ml-[7px] hidden sm:block" style={{ background: "var(--site-line-strong)" }} />
@@ -168,7 +171,7 @@ function ProductUpdatesInner() {
                   <span aria-hidden="true" className="hidden sm:block absolute left-0 top-1 w-[15px] h-[15px] rounded-full"
                     style={{ background: "var(--site-brand)", boxShadow: "0 0 0 3px var(--site-tint), 0 6px 14px -4px rgba(255,107,0,0.55)" }} />
                   <p className="site-eyebrow !text-xs mb-2.5">{date}</p>
-                  <Card className="p-6 sm:p-7">
+                  <Card glow className="p-6 sm:p-7">
                     <h2 className="font-display text-lg sm:text-xl font-bold site-ink mb-3 leading-snug">{title}</h2>
                     <p className="text-[15px] leading-relaxed mb-5">{desc}</p>
                     <ul className="flex flex-wrap gap-2" aria-label="Tags">

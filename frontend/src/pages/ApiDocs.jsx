@@ -177,6 +177,35 @@ requests.post(
   },
 ];
 
+/** Hero visual: one real request against the lead capture endpoint, as a code card. */
+function ApiHeroCode() {
+  const line = (k, v) => <><span style={{ color: "#7dd3fc" }}>{k}</span>{v}</>;
+  return (
+    <div className="relative mx-auto w-full max-w-[520px]">
+      <div aria-hidden="true" className="hero-glass" />
+      <div className="relative rounded-[22px] overflow-hidden text-left" style={{ background: "#0f1117", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "var(--site-shadow-lg)" }}>
+        <div className="flex items-center gap-2 px-4 h-10" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" /><span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" /><span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+          <span className="ml-3 text-[11px] font-mono" style={{ color: "rgba(255,255,255,0.5)" }}>POST /api/leads</span>
+        </div>
+        <pre className="relative overflow-x-auto p-5 text-[12.5px] leading-[1.75] font-mono" style={{ color: "#e6e6e6" }}>
+{line("curl", " -X POST https://api.arthaleads.com/api/leads \\")}{"\n"}
+{"  "}{line("-H", " \"Authorization: Bearer YOUR_API_TOKEN\" \\")}{"\n"}
+{"  "}{line("-H", " \"Content-Type: application/json\" \\")}{"\n"}
+{"  "}{line("-d", " '{")}{"\n"}
+{"    "}<span style={{ color: "#fdba74" }}>"name"</span>: <span style={{ color: "#86efac" }}>"Ananya Iyer"</span>,{"\n"}
+{"    "}<span style={{ color: "#fdba74" }}>"phone"</span>: <span style={{ color: "#86efac" }}>"+91 98765 43210"</span>,{"\n"}
+{"    "}<span style={{ color: "#fdba74" }}>"source"</span>: <span style={{ color: "#86efac" }}>"Website"</span>{"\n"}
+{"  }'"}
+        </pre>
+        <div className="flex items-center gap-2 px-5 py-3 text-[12px] font-mono" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", color: "#86efac" }}>
+          <span className="w-2 h-2 rounded-full bg-[#22c55e]" /> Lead created in your CRM
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ApiDocs() {
   const [activeId, setActiveId] = useState(ENDPOINTS[0].id);
 
@@ -197,11 +226,15 @@ export default function ApiDocs() {
         eyebrow="Developers"
         title={<>Arthaleads <span className="site-dim">API</span></>}
         lede="A simple REST API to push leads into your CRM, list your pipeline, and connect any form on the web. Available on the Enterprise plan."
-        actions={null}
-        trust={false}
+        actions={[
+          { label: "Read the endpoints", href: "#endpoints" },
+          { label: "Get API access", to: "/book-demo" },
+        ]}
+        trust={["REST and JSON", "Token auth", "Enterprise plan"]}
+        visual={<ApiHeroCode />}
       />
 
-      <Section tone="tint" className="!pt-12 sm:!pt-16">
+      <Section tone="tint" id="endpoints" className="!pt-12 sm:!pt-16">
         <Container className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-10 items-start">
           {/* Sidebar */}
           <nav aria-label="Endpoints" className="hidden lg:block sticky top-28">
@@ -231,7 +264,7 @@ export default function ApiDocs() {
             {/* Auth note */}
             <Reveal>
               <Card raised className="p-6 sm:p-7 flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
-                <span className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
+                <span className="site-icon w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
                   <KeyRound className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
@@ -268,7 +301,7 @@ export default function ApiDocs() {
         <Container narrow>
           <Reveal>
             <Card raised className="p-6 sm:p-10 flex flex-col sm:flex-row sm:items-start gap-6">
-              <span className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={iconTile}>
+              <span className="site-icon w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={iconTile}>
                 <Terminal className="w-7 h-7" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
               </span>
               <div className="min-w-0 flex-1">

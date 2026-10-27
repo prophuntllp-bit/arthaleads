@@ -17,7 +17,7 @@
 // visit; booking a slot is the Enterprise button flow.
 import { Bot, Sparkles, MessageSquareText, Gauge, Headphones, PhoneCall, Image as ImageIcon, Flame } from "lucide-react";
 import { WhatsAppLogo } from "../components/site/BrandLogos";
-import SolutionPage, { solutionJsonLd } from "../components/SolutionPage";
+import SolutionPage, { solutionJsonLd, MiniChat } from "../components/SolutionPage";
 import { useSEO } from "../utils/useSEO";
 import { PLAN_PRICING } from "../utils/plan";
 
@@ -52,6 +52,11 @@ export default function AiCrm() {
         lines: ["AI CRM for real estate", "built for Indian sales teams"],
         lede: "Arthaleads replies to every property enquiry in seconds with a WhatsApp AI agent, fills in the lead from the chat, scores it from what the buyer said and tells your team who to call first. Artha, the AI copilot, answers questions about your pipeline and updates leads when you ask.",
         eyebrow: "AI real estate CRM",
+        actions: [
+          { label: "Book an AI demo", to: "/book-demo" },
+          { label: "See every AI feature", href: "#features" },
+        ],
+        trust: ["Replies in English, Hindi and Marathi", "Answers 24/7", "AI agent from Growth"],
         photo: "partner",
         photoAlt: "Three colleagues in a small real estate office working together at a laptop",
         cards: [
@@ -79,6 +84,11 @@ export default function AiCrm() {
         ],
       }}
       features={{
+        visual: <MiniChat messages={[
+          ["buyer", "Is the 2 BHK at Aurum Heights still available?"],
+          ["ai", "Yes, 2 BHK homes start at ₹82 L. Can you visit this Saturday, 11 AM or 4 PM?"],
+          ["buyer", "11 AM works"],
+        ]} />,
         title: "The AI features, and the plan each is on",
         intro: "Built on the official WhatsApp Business Platform. Nothing here is a demo-only feature.",
         items: [

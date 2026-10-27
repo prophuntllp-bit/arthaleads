@@ -304,7 +304,7 @@ function WordPressPluginInner() {
               { label: "Lines of code needed", value: "0" },
             ].map(({ label, value }) => (
               <li key={label}>
-                <Card className="h-full p-4 sm:p-6 text-center">
+                <Card glow className="h-full p-4 sm:p-6 text-center">
                   <p className="font-display text-3xl sm:text-4xl font-extrabold" style={{ color: "var(--site-brand-ink)" }}>{value}</p>
                   <p className="text-xs sm:text-sm site-muted mt-1">{label}</p>
                 </Card>
@@ -345,7 +345,7 @@ function WordPressPluginInner() {
               <Reveal as="li" key={n} delay={i * 80} className="min-w-0 flex">
                 <Card glow className="w-full p-6">
                   <div className="flex items-center justify-between mb-5">
-                    <span className="w-11 h-11 rounded-xl flex items-center justify-center" style={iconTile}>
+                    <span className="site-icon w-11 h-11 rounded-xl flex items-center justify-center" style={iconTile}>
                       <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                     </span>
                     <span className="font-display text-sm font-extrabold site-muted">{n}</span>
@@ -416,7 +416,7 @@ function WordPressPluginInner() {
             {FEATURES.map(({ icon: Icon, title, desc }, i) => (
               <Reveal key={title} delay={(i % 3) * 80} className="min-w-0 flex">
                 <Card glow className="w-full p-6">
-                  <span className="w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
+                  <span className="site-icon w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
                     <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                   </span>
                   <h3 className="font-display text-base font-bold site-ink mb-2">{title}</h3>
@@ -444,7 +444,7 @@ function WordPressPluginInner() {
         <Container>
           <Reveal>
             <div className="site-cta-panel relative overflow-hidden rounded-[28px] sm:rounded-[32px] p-6 sm:p-12 text-center">
-              <span className="relative w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6" style={iconTile}>
+              <span className="site-icon relative w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6" style={iconTile}>
                 <Globe className="w-6 h-6" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
               </span>
               <h2 className="relative font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[30px] sm:text-[40px]" style={{ textWrap: "balance" }}>

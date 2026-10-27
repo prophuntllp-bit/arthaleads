@@ -41,12 +41,34 @@ export function TrustLine({ items = ["14-day free trial", "No credit card", "Mad
 }
 
 /**
+ * A page's own hero buttons: [{ label, to | href, external?, variant?, Icon? }].
+ * The first is the main action (primary unless a variant is given, with an
+ * arrow); anchors ("#id") scroll within the page. Every page passes its own
+ * set, so no two heroes read the same (owner, 27 Oct 2026).
+ */
+export function HeroActions({ items, className, center = false }) {
+  return (
+    <div className={cx("flex flex-wrap gap-2.5 sm:gap-3", center ? "justify-center" : "justify-center lg:justify-start", className)}>
+      {items.map(({ label, to, href, external, variant, Icon }, i) => (
+        <SiteButton key={label} to={to} href={href} external={external} variant={variant || (i === 0 ? "primary" : "secondary")}
+          className="!px-6 sm:!px-7 sm:min-h-[3.5rem] sm:text-base">
+          {Icon && <Icon className="w-[18px] h-[18px]" {...(variant === "whatsapp" ? { color: "#fff" } : {})} aria-hidden="true" />}
+          {label}
+          {i === 0 && !Icon && <ArrowRight className="w-4 h-4" aria-hidden="true" />}
+        </SiteButton>
+      ))}
+    </div>
+  );
+}
+
+/**
  * Page hero. `title` is a node (use <span className="site-dim"> for the
  * gradient half). With `visual` it is two columns on the warm glass stage;
- * without, the text is centred. `actions` defaults to Book a Demo + trial;
- * pass null to hide them. `crumb` (a breadcrumb nav) sits above the H1.
+ * without, the text is centred. `actions` is the page's own button list (see
+ * HeroActions) or a custom node; `trust` an optional list of short facts
+ * under them. `crumb` (a breadcrumb nav) sits above the H1.
  */
-export function PageHero({ eyebrow, crumb, title, lede, visual, actions, trust = true, children }) {
+export function PageHero({ eyebrow, crumb, title, lede, visual, actions, trust, children }) {
   const two = !!visual;
   return (
     <Section tone="white" className="!pt-[6.5rem] sm:!pt-32 !pb-14 sm:!pb-20 overflow-x-clip">
@@ -61,8 +83,8 @@ export function PageHero({ eyebrow, crumb, title, lede, visual, actions, trust =
           {lede && (
             <p className={cx("mt-5 text-base sm:text-[17px] leading-relaxed max-w-[36rem]", two ? "mx-auto lg:mx-0" : "mx-auto")} style={{ textWrap: "pretty" }}>{lede}</p>
           )}
-          {actions === undefined ? <DemoActions className="mt-7" center={!two} /> : actions}
-          {trust && actions !== null && <TrustLine className="mt-4" center={!two} />}
+          {Array.isArray(actions) ? <HeroActions items={actions} className="mt-7" center={!two} /> : actions}
+          {Array.isArray(trust) && <TrustLine items={trust} className="mt-4" center={!two} />}
           {children}
         </div>
         {two && <div className="relative min-w-0">{visual}</div>}

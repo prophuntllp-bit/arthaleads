@@ -144,6 +144,11 @@ export default function CompetitorComparison({ c }) {
         title={<>{c.name} pricing and alternative: <span className="site-dim">Arthaleads vs {c.name}</span></>}
         lede={c.intro}
         visual={<PriceCard c={c} />}
+        actions={[
+          { label: "Book a Demo", to: "/book-demo" },
+          { label: `Compare ${c.name} pricing`, href: "#pricing" },
+        ]}
+        trust={["Prices published", "Every claim sourced", "14-day free trial"]}
       >
         <p className="text-[13px] site-muted mt-4">{c.name} details checked on {c.checked}.</p>
       </PageHero>
@@ -176,7 +181,7 @@ export default function CompetitorComparison({ c }) {
             <Reveal delay={120} className="flex min-w-0">
               <Card glow className="w-full p-6 sm:p-8" style={ourBorder}>
                 <div className="flex items-center gap-3 mb-5">
-                  <span className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
+                  <span className="site-icon w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
                     <Receipt className="w-5 h-5" style={brandInk} aria-hidden="true" />
                   </span>
                   <h3 className="font-display text-xl font-bold site-ink">How Arthaleads prices</h3>

@@ -20,9 +20,11 @@ import { PageHero, PhotoVisual, FaqSection, ClosingCta } from "./site/Blocks";
 import { Reveal } from "./motion/Motion";
 
 const planLabel = (plan) => (plan === "all" ? "Every plan" : `From ${plan}`);
+// Desktop span for the last bento tile, by the cells left in its row once the
+// 2 x 2 featured tile is counted ((n + 3) % 4 cells used in the last row).
+const LAST_SPAN = { 0: "", 1: "lg:col-span-4", 2: "lg:col-span-3", 3: "lg:col-span-2" };
 
 export default function SolutionPage({ hero, answer, steps, features, compare, faqs, related, close, jsonLd }) {
-  const cols3 = features.items.length % 4 !== 0 && features.items.length % 3 === 0;
   return (
     <SitePage>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
@@ -32,6 +34,8 @@ export default function SolutionPage({ hero, answer, steps, features, compare, f
         title={<>{hero.lines[0]}{" "}<span className="site-dim">{hero.lines[1]}</span></>}
         lede={hero.lede}
         visual={hero.visual || <PhotoVisual name={hero.photo} alt={hero.photoAlt} cards={hero.cards} />}
+        actions={hero.actions}
+        trust={hero.trust}
       />
 
       {/* Short answer first: what search snippets and AI answers quote */}
@@ -45,7 +49,7 @@ export default function SolutionPage({ hero, answer, steps, features, compare, f
       </Section>
 
       {/* How it works */}
-      <Section tone="white">
+      <Section tone="white" id="how">
         <Container>
           <SectionHeader eyebrow="How it works" title={steps.title} lede={steps.intro} />
           <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -64,25 +68,33 @@ export default function SolutionPage({ hero, answer, steps, features, compare, f
       </Section>
 
       {/* Features, each with the plan it starts on */}
-      <Section tone="tint">
+      <Section tone="tint" id="features">
         <Container>
           <SectionHeader eyebrow="Features" title={features.title} lede={features.intro} />
-          <div className={`grid sm:grid-cols-2 ${cols3 ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-4`}>
-            {features.items.map(({ icon: Icon, title, body, plan }, i) => (
-              <Reveal key={title} delay={(i % 4) * 80} className="min-w-0 flex">
-                <Card glow className="w-full p-6 flex flex-col">
-                  <span className="w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
-                    <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
-                  </span>
-                  <h3 className="font-display text-base font-bold site-ink mb-2">{title}</h3>
-                  <p className="text-[14px] leading-relaxed flex-1">{body}</p>
-                  <span className="mt-5 self-start text-[11px] font-semibold rounded-md px-2 py-1"
-                    style={plan === "all" ? { background: "rgba(22,163,74,0.12)", color: "#16a34a" } : { background: "rgba(255,107,0,0.12)", color: "var(--site-brand-ink)" }}>
-                    {planLabel(plan)}
-                  </span>
-                </Card>
-              </Reveal>
-            ))}
+          {/* Bento: the first feature is the featured tile (2 x 2 on desktop, full
+              width on tablets); the last one stretches to close the final row. */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:auto-rows-fr">
+            {features.items.map(({ icon: Icon, title, body, plan }, i) => {
+              const first = i === 0, last = i === features.items.length - 1;
+              const lastSpan = last ? LAST_SPAN[(features.items.length + 3) % 4] : "";
+              const tabletSpan = last && (features.items.length - 1) % 2 === 1 ? "sm:col-span-2" : "";
+              return (
+                <Reveal key={title} delay={(i % 4) * 80} className={`min-w-0 flex ${first ? "sm:col-span-2 lg:row-span-2" : ""} ${lastSpan} ${tabletSpan}`}>
+                  <Card glow className={`w-full flex flex-col ${first ? "site-feature-glow site-live-border p-7 sm:p-9" : "p-6"}`}>
+                    <span className={`site-icon rounded-xl flex items-center justify-center ${first ? "w-14 h-14 mb-7" : "w-11 h-11 mb-5"}`} style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
+                      <Icon className={first ? "w-7 h-7" : "w-5 h-5"} style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
+                    </span>
+                    <h3 className={`font-display font-bold site-ink mb-2 ${first ? "text-2xl sm:text-[28px] leading-tight tracking-[-0.02em]" : "text-base"}`}>{title}</h3>
+                    <p className={`leading-relaxed ${first && features.visual ? "" : "flex-1"} ${first ? "text-base sm:text-[17px] max-w-md" : "text-[14px]"}`}>{body}</p>
+                    {first && features.visual && <div className="mt-6 flex-1 flex flex-col justify-center">{features.visual}</div>}
+                    <span className="mt-5 self-start text-[11px] font-semibold rounded-md px-2 py-1"
+                      style={plan === "all" ? { background: "rgba(22,163,74,0.12)", color: "#16a34a" } : { background: "rgba(255,107,0,0.12)", color: "var(--site-brand-ink)" }}>
+                      {planLabel(plan)}
+                    </span>
+                  </Card>
+                </Reveal>
+              );
+            })}
           </div>
           <p className="mt-8 text-center text-sm"><Link to="/pricing" className="site-link">See plans and prices <ArrowRight className="w-4 h-4" /></Link></p>
         </Container>
@@ -149,6 +161,22 @@ export default function SolutionPage({ hero, answer, steps, features, compare, f
 }
 
 /** FAQPage + BreadcrumbList JSON-LD for a solution page, escaped for a <script> tag. */
+/** A short coded WhatsApp exchange for a featured tile: [[who, text]], who = "buyer" | "ai". */
+export function MiniChat({ messages }) {
+  return (
+    <div className="site-stage p-4 space-y-2" aria-hidden="true">
+      {messages.map(([who, text], i) => (
+        <div key={i} className={`flex ${who === "ai" ? "justify-end" : "justify-start"}`}>
+          <p className="max-w-[85%] rounded-2xl px-3.5 py-2 text-[13px] leading-snug"
+            style={who === "ai" ? { background: "#d9fdd3", color: "#0f1222", borderTopRightRadius: 6 } : { background: "var(--site-card)", color: "var(--site-ink)", border: "1px solid var(--site-line)", borderTopLeftRadius: 6 }}>
+            {text}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function solutionJsonLd({ name, path, faqs }) {
   return JSON.stringify([
     {

@@ -242,7 +242,7 @@ function BlogPageInner() {
               <Skeleton />
             ) : posts.length === 0 ? (
               <Card raised className="text-center px-6 py-16 sm:py-20 max-w-2xl mx-auto">
-                <span className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5" style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
+                <span className="site-icon w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5" style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
                   <BookOpen className="w-6 h-6" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                 </span>
                 <h2 className="font-display site-ink text-xl font-bold mb-2">{hasFilters ? "No articles match" : "New articles are on the way"}</h2>

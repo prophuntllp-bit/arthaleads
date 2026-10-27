@@ -66,7 +66,7 @@ function ReferralBox() {
   if (!code) {
     return (
       <Card raised className="h-full p-6 sm:p-8 text-center flex flex-col items-center justify-center">
-        <span className="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
+        <span className="site-icon w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
           <Gift className="w-[22px] h-[22px]" style={brandInk} aria-hidden="true" />
         </span>
         <h2 className="font-display text-xl font-bold site-ink mb-2">Get your referral link</h2>
@@ -162,11 +162,15 @@ export default function ReferEarn() {
         eyebrow="Refer and earn"
         title={<>Give a month, <span className="site-dim">get a month</span></>}
         lede="Love Arthaleads? Refer another real estate team. When they subscribe, you both get a free month. No limits on how many friends you invite."
-        actions={null}
+        actions={[
+          { label: "Get your referral link", href: "#refer" },
+          { label: "How it works", href: "#how-it-works" },
+        ]}
+        trust={["A free month for you", "A free month for them"]}
       />
 
       {/* Referral box + calculator */}
-      <Section tone="tint" className="!pt-12 sm:!pt-16">
+      <Section tone="tint" id="refer" className="!pt-12 sm:!pt-16">
         <Container className="!max-w-[960px] grid md:grid-cols-2 gap-4 sm:gap-5 items-stretch">
           <Reveal className="min-w-0"><ReferralBox /></Reveal>
           <Reveal delay={100} className="min-w-0"><EarningsCalculator /></Reveal>
@@ -174,7 +178,7 @@ export default function ReferEarn() {
       </Section>
 
       {/* How it works */}
-      <Section tone="white">
+      <Section tone="white" id="how-it-works">
         <Container>
           <SectionHeader eyebrow="Four steps" title="How it works" align="center"
             lede="Four simple steps from sharing to earning." />
@@ -185,7 +189,7 @@ export default function ReferEarn() {
                   <div className="flex items-center justify-between mb-5">
                     <span className="font-display w-10 h-10 rounded-full flex items-center justify-center text-base font-extrabold text-white"
                       style={{ background: "var(--brand-btn)", boxShadow: "0 12px 26px -12px rgba(204,75,0,0.7)" }}>{i + 1}</span>
-                    <span className="w-10 h-10 rounded-xl flex items-center justify-center" style={iconTile}>
+                    <span className="site-icon w-10 h-10 rounded-xl flex items-center justify-center" style={iconTile}>
                       <s.icon className="w-5 h-5" style={brandInk} aria-hidden="true" />
                     </span>
                   </div>
@@ -204,7 +208,7 @@ export default function ReferEarn() {
           <Reveal>
             <Card raised className="p-6 sm:p-9">
               <div className="flex items-center gap-3 mb-6">
-                <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
+                <span className="site-icon w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
                   <Users className="w-5 h-5" style={brandInk} aria-hidden="true" />
                 </span>
                 <h2 className="font-display text-xl sm:text-2xl font-bold site-ink">Program terms</h2>

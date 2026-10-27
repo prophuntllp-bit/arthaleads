@@ -15,6 +15,7 @@
 // source/team reports are Growth.
 import { Building2, QrCode, FileSpreadsheet, Shuffle, MapPin, Camera, BarChart3, CalendarCheck2 } from "lucide-react";
 import SolutionPage, { solutionJsonLd } from "../components/SolutionPage";
+import { ProjectViz } from "../components/site/HomeVisuals";
 import { FacebookLogo } from "../components/site/BrandLogos";
 import { useSEO } from "../utils/useSEO";
 import { PLAN_PRICING } from "../utils/plan";
@@ -48,6 +49,11 @@ export default function BuilderCrm() {
         lines: ["Builder CRM", "for real estate developers"],
         lede: "Run every project's sales in one place. Leads from Facebook and Google ads, WhatsApp, portals and the site office land in the right project, reach the right telecaller in seconds, and are tracked through site visit to booking.",
         eyebrow: "Builder CRM software",
+        actions: [
+          { label: "Book a builder demo", to: "/book-demo" },
+          { label: "How it works", href: "#how" },
+        ],
+        trust: ["Leads kept project by project", "Site visits tracked", `From ₹${PLAN_PRICING.starter.monthly} per user`],
         photo: "builder",
         photoAlt: "A sales head explaining a scale model of residential towers to a young couple in a sales gallery",
         cards: [
@@ -75,6 +81,7 @@ export default function BuilderCrm() {
         ],
       }}
       features={{
+        visual: <ProjectViz />,
         title: "Built for developer sales teams",
         intro: "The plan each feature starts on is shown on its card.",
         items: [

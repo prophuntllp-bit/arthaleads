@@ -78,7 +78,12 @@ export default function Contact() {
         eyebrow="Contact"
         title={<>We'd love to <span className="site-dim">hear from you</span></>}
         lede="Questions about pricing, integrations or getting started? Send us a message, call, or chat on WhatsApp. A real person from our Pune team replies."
-        actions={null}
+        actions={[
+          { label: "Call +91 90670 97779", href: "tel:+919067097779", Icon: Phone },
+          { label: "WhatsApp us", href: waLink(WA_MESSAGES.sales), external: true, variant: "whatsapp", Icon: WhatsAppLogo },
+          { label: "Email us", href: "mailto:contact@arthaleads.com", Icon: Mail, variant: "secondary" },
+        ]}
+        trust={["Replies within 24 hours on weekdays", "Real people in Pune"]}
       />
 
       <Section tone="tint" className="!pt-12 sm:!pt-16">
@@ -90,7 +95,7 @@ export default function Contact() {
               <ul className="space-y-5">
                 {INFO.map(({ icon: Icon, label, val, href, note }) => (
                   <li key={label} className="flex items-center gap-4">
-                    <span className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
+                    <span className="site-icon w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
                       <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                     </span>
                     <span className="min-w-0">

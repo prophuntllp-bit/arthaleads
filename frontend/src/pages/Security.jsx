@@ -83,13 +83,16 @@ export default function Security() {
         eyebrow="Security"
         title={<>Your leads are <span className="site-dim">safe with us</span></>}
         lede="Arthaleads is built security-first: encryption, strict access control, signed webhooks and compliance with India's data protection law, so your most valuable asset, your pipeline, stays protected."
-        actions={null}
+        actions={[
+          { label: "See how we protect data", href: "#pillars" },
+          { label: "Report an issue", href: "mailto:contact@arthaleads.com?subject=Security%20Disclosure", Icon: Mail },
+        ]}
       >
         <ul className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
           {TRUST_BADGES.map(([label, Icon]) => (
             <li key={label}>
-              <Card className="flex items-center gap-2.5 p-3 h-full">
-                <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={iconTile}>
+              <Card glow className="flex items-center gap-2.5 p-3 h-full">
+                <span className="site-icon w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={iconTile}>
                   <Icon className="w-4 h-4" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                 </span>
                 <span className="text-[13px] font-semibold site-ink leading-tight">{label}</span>
@@ -100,7 +103,7 @@ export default function Security() {
       </PageHero>
 
       {/* The four pillars, all on the page (no tabs) so every point is readable and indexable */}
-      <Section tone="tint">
+      <Section tone="tint" id="pillars">
         <Container>
           <SectionHeader eyebrow="How we protect your data" title="Four pillars of Arthaleads security" />
           <div className="grid md:grid-cols-2 gap-4">
@@ -108,7 +111,7 @@ export default function Security() {
               <Reveal key={p.key} delay={(i % 2) * 100} className="min-w-0 flex">
                 <Card glow className="w-full p-6 sm:p-8">
                   <div className="flex items-center gap-3 mb-6">
-                    <span className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
+                    <span className="site-icon w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
                       <p.icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                     </span>
                     <h3 className="font-display text-xl font-bold site-ink">{p.label}</h3>
@@ -136,7 +139,7 @@ export default function Security() {
         <Container narrow>
           <Reveal>
             <Card raised className="p-6 sm:p-10 flex flex-col sm:flex-row sm:items-center gap-6">
-              <span className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={iconTile}>
+              <span className="site-icon w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={iconTile}>
                 <Shield className="w-7 h-7" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
               </span>
               <div className="min-w-0 flex-1">

@@ -10,9 +10,11 @@ import { Link } from "react-router-dom";
 import { Bot, Inbox, UserCheck, Megaphone, ShieldCheck, Clock, Wallet, Sparkles, CalendarCheck2 } from "lucide-react";
 import SolutionPage, { solutionJsonLd } from "../components/SolutionPage";
 import HeroChat from "../components/HeroChat";
-import { FloatCard } from "../components/site/HomeVisuals";
+import { FloatCard, CaptureViz } from "../components/site/HomeVisuals";
 import { FacebookLogo } from "../components/site/BrandLogos";
 import { useSEO } from "../utils/useSEO";
+import { waLink, WA_MESSAGES } from "../utils/crmLinks";
+import WhatsAppLogo from "../components/WhatsAppLogo";
 import { PLAN_PRICING } from "../utils/plan";
 
 const linkCls = "font-semibold underline underline-offset-4";
@@ -36,14 +38,14 @@ const FAQS = [
 /** The hero: the home page's WhatsApp phone with two status cards beside it. */
 function PhoneVisual() {
   return (
-    <div className="relative mx-auto w-full max-w-[460px] px-3 sm:px-6 lg:px-0" style={{ "--hc-h": "min(560px, 74svh)", "--hc-w": "calc(var(--hc-h) * 0.53)" }}>
+    <div className="relative mx-auto w-full max-w-[290px]" style={{ "--hc-h": "clamp(420px, 58svh, 480px)", "--hc-w": "calc(var(--hc-h) * 0.53)" }}>
       <div aria-hidden="true" className="hero-glass" />
-      <div className="relative py-6 sm:py-8"><HeroChat /></div>
-      <FloatCard className="hidden sm:flex left-0 lg:-left-6 top-[18%] items-center gap-3 !py-3 max-w-[240px]">
+      <div className="relative py-4"><HeroChat /></div>
+      <FloatCard className="hidden sm:flex -left-10 lg:-left-20 top-[16%] items-center gap-3 !py-3 max-w-[240px]">
         <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(24,119,242,0.12)" }}><FacebookLogo className="w-[18px] h-[18px]" /></span>
         <span className="min-w-0"><span className="block text-[13px] font-semibold site-ink leading-tight">New lead · Facebook ad</span><span className="block text-[11px] site-muted leading-tight mt-0.5">Saved with the ad name</span></span>
       </FloatCard>
-      <FloatCard className="hidden sm:flex right-0 lg:-right-6 bottom-[16%] items-center gap-3 !py-3 max-w-[240px]">
+      <FloatCard className="hidden sm:flex -right-10 lg:-right-20 bottom-[14%] items-center gap-3 !py-3 max-w-[240px]">
         <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(22,163,74,0.12)" }}><CalendarCheck2 className="w-[18px] h-[18px]" style={{ color: "#16a34a" }} /></span>
         <span className="min-w-0"><span className="block text-[13px] font-semibold site-ink leading-tight">Site visit booked</span><span className="block text-[11px] site-muted leading-tight mt-0.5">Saturday · 11:00 AM</span></span>
       </FloatCard>
@@ -63,6 +65,11 @@ export default function WhatsAppCrm() {
       jsonLd={solutionJsonLd({ name: "WhatsApp CRM", path: "/whatsapp-crm", faqs: FAQS })}
       hero={{
         eyebrow: "WhatsApp CRM",
+        actions: [
+          { label: "Book a WhatsApp demo", to: "/book-demo" },
+          { label: "Message us on WhatsApp", href: waLink(WA_MESSAGES.demo), external: true, variant: "whatsapp", Icon: WhatsAppLogo },
+        ],
+        trust: ["Official WhatsApp Business Platform", "One shared team inbox", "AI replies day and night"],
         lines: ["The WhatsApp CRM", "for real estate teams"],
         lede: "Buyers message you on WhatsApp first. Arthaleads answers them in seconds with an AI agent, saves every chat as a lead with the buyer's budget and needs filled in, and gives your whole team one inbox to follow up from.",
         visual: <PhoneVisual />,
@@ -86,6 +93,7 @@ export default function WhatsAppCrm() {
         ],
       }}
       features={{
+        visual: <CaptureViz />,
         title: "Everything your team needs on WhatsApp",
         intro: "Built on the official WhatsApp Business Platform. The plan each feature starts on is shown on its card.",
         items: [

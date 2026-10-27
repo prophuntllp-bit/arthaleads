@@ -18,7 +18,7 @@ function fmtDate(d) {
 
 function PostCard({ post }) {
   return (
-    <Card as={Link} to={`/blog/${post.slug}`} hover className="group h-full flex flex-col overflow-hidden">
+    <Card as={Link} to={`/blog/${post.slug}`} glow className="group h-full flex flex-col overflow-hidden">
       {post.featuredImage ? (
         <div className="h-48 overflow-hidden">
           <img

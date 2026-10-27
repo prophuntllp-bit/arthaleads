@@ -185,7 +185,7 @@ function DownloadAppInner() {
             {FEATURES.map(({ icon: Icon, title, desc }, i) => (
               <Reveal key={title} delay={i * 80} className="min-w-0 flex">
                 <Card glow className="w-full p-6">
-                  <span className="w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
+                  <span className="site-icon w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
                     <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                   </span>
                   <h3 className="font-display text-base font-bold site-ink mb-2">{title}</h3>
@@ -214,7 +214,7 @@ function DownloadAppInner() {
           <ol className="space-y-3 min-w-0">
             {INSTALL_STEPS.map((s, i) => (
               <Reveal as="li" key={s.title} delay={i * 80}>
-                <Card className="flex gap-4 p-5 sm:p-6">
+                <Card glow className="flex gap-4 p-5 sm:p-6">
                   <span className="font-display shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-base font-extrabold text-white"
                     style={{ background: "var(--brand-btn)", boxShadow: "0 12px 26px -12px rgba(204,75,0,0.7)" }}>{i + 1}</span>
                   <div className="min-w-0">

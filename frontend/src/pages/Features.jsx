@@ -88,7 +88,7 @@ function Workflow({ group, index }) {
             return (
               <Reveal key={f.title} delay={(i % 3) * 70} className={`min-w-0 flex ${spanFor(i, items.length)}`}>
                 <Card as="article" glow className="w-full p-6">
-                  <span className="w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
+                  <span className="site-icon w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
                     <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                   </span>
                   <h3 className="font-display font-bold text-[17px] site-ink mb-2 leading-snug">{f.title}</h3>
@@ -151,6 +151,11 @@ export default function Features() {
         eyebrow={`${FEATURES.length} features, one workspace`}
         title={<>From the first enquiry to the <span className="site-dim">paid invoice</span></>}
         lede="Real estate CRM software built for Indian sales teams, from small channel partner offices to large builder and developer sales floors. Here is everything Arthaleads does, in the order your team uses it."
+        actions={[
+          { label: "Walk through the workflow", href: "#group-capture" },
+          { label: "Book a Demo", to: "/book-demo" },
+        ]}
+        trust={["Android app included", "One workspace for the whole team", "14-day free trial"]}
       />
 
       {/* Sticky workflow progress */}

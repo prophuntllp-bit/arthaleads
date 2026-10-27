@@ -84,8 +84,10 @@ function HelpGuideInner() {
         eyebrow="Help guide"
         title={<>Arthaleads <span className="site-dim">Help Center</span></>}
         lede="Step-by-step guides and answers to the most common questions about setting up and using Arthaleads CRM."
-        actions={null}
-        trust={false}
+        actions={[
+          { label: "Start with step 1", href: "#getting-started" },
+          { label: "Email support", href: "mailto:contact@arthaleads.com", Icon: Mail },
+        ]}
       />
 
       {/* Getting started */}
@@ -99,7 +101,7 @@ function HelpGuideInner() {
           <ol className="space-y-3 min-w-0">
             {steps.map(({ num, title, desc }, i) => (
               <Reveal as="li" key={num} delay={i * 80}>
-                <Card className="flex gap-4 p-5 sm:p-6">
+                <Card glow className="flex gap-4 p-5 sm:p-6">
                   <span className="font-display shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-extrabold text-white"
                     style={{ background: "var(--brand-btn)", boxShadow: "0 12px 26px -12px rgba(204,75,0,0.7)" }}>{num}</span>
                   <div className="min-w-0">
@@ -120,7 +122,7 @@ function HelpGuideInner() {
         <Container narrow>
           <Reveal>
             <Card raised className="p-6 sm:p-10 flex flex-col sm:flex-row sm:items-center gap-6">
-              <span className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={iconTile}>
+              <span className="site-icon w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={iconTile}>
                 <LifeBuoy className="w-7 h-7" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
               </span>
               <div className="min-w-0 flex-1">

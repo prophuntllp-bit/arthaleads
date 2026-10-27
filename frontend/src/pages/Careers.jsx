@@ -231,7 +231,7 @@ function ApplyModal({ job, onClose }) {
         {/* Header */}
         <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-5 border-b" style={{ borderColor: "var(--site-line)" }}>
           <div className="flex items-center gap-3">
-            <span className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
+            <span className="site-icon w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
               <Briefcase className="w-5 h-5" style={brandInk} aria-hidden="true" />
             </span>
             <div>
@@ -381,7 +381,7 @@ function JobCard({ job, onApply }) {
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex gap-4 items-start min-w-0">
-            <span className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
+            <span className="site-icon w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
               <Icon className="w-[22px] h-[22px]" style={brandInk} aria-hidden="true" />
             </span>
             <div className="min-w-0">
@@ -500,7 +500,7 @@ export default function Careers() {
           <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {STATS.map(({ label, value }, i) => (
               <Reveal as="li" key={label} delay={i * 80} className="min-w-0">
-                <Card className="h-full p-5 sm:p-6 text-center">
+                <Card glow className="h-full p-5 sm:p-6 text-center">
                   <p className="font-display text-[34px] sm:text-[42px] leading-none font-extrabold site-dim"><CountUp value={value} /></p>
                   <p className="mt-2.5 text-[13px] site-muted font-medium">{label}</p>
                 </Card>
@@ -534,7 +534,7 @@ export default function Careers() {
             {CULTURE.map(({ icon: Icon, title, desc }, i) => (
               <Reveal key={title} delay={(i % 3) * 80} className="min-w-0 flex">
                 <Card glow className="w-full p-6 sm:p-7">
-                  <span className="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
+                  <span className="site-icon w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
                     <Icon className="w-[22px] h-[22px]" style={brandInk} aria-hidden="true" />
                   </span>
                   <h3 className="font-display text-lg font-bold site-ink mb-2">{title}</h3>
@@ -556,7 +556,7 @@ export default function Careers() {
             {PERKS.map(({ icon: Icon, title, desc }, i) => (
               <Reveal key={title} delay={i * 80} className="min-w-0 flex">
                 <Card glow className="w-full p-6">
-                  <span className="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
+                  <span className="site-icon w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
                     <Icon className="w-[22px] h-[22px]" style={brandInk} aria-hidden="true" />
                   </span>
                   <h3 className="font-display text-lg font-bold site-ink mb-2">{title}</h3>

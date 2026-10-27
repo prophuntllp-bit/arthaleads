@@ -1027,7 +1027,7 @@ html[data-public-theme="dark"] .hero-warm::after  { background: radial-gradient(
 @keyframes hero-drift-b { to { transform: translate(3vw, -3vw) scale(0.94); } }
 
 .hero-glass {
-  position: absolute; inset: -28px -32px; border-radius: 40px; pointer-events: none;
+  position: absolute; inset: -18px -20px; border-radius: 34px; pointer-events: none;
   background: linear-gradient(145deg, rgba(255,255,255,0.62), rgba(255,255,255,0.28));
   border: 1px solid rgba(255,255,255,0.75);
   box-shadow: 0 30px 80px -30px rgba(194,65,12,0.35), inset 0 1px 0 rgba(255,255,255,0.9);
@@ -1120,3 +1120,30 @@ html[data-public-theme="dark"] .hero-glass {
 .blog-code { margin: 2em 0; border-radius: 16px; overflow: hidden; background: #14151d; border: 1px solid rgba(255, 255, 255, 0.08); }
 .blog-code__lang { padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 255, 255, 0.45); }
 .blog-code pre { margin: 0; padding: 1.25rem; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.875rem; line-height: 1.7; color: #e6e8ef; }
+
+/* Cards that move (owner, 27 Oct 2026: "cards are the same and static").
+   - .site-icon: the orange icon tile fills and tilts when its card is hovered
+   - every .site-glow card grows a short orange accent line at the top on hover
+   - .site-live-border: the featured bento tile's slow animated gradient edge
+   - phones (no hover): a press-in on tap so cards still answer the finger */
+.site-icon { transition: transform 0.45s cubic-bezier(.2,.7,.2,1), background 0.3s ease, box-shadow 0.3s ease; }
+.site-icon svg { transition: color 0.3s ease; }
+@media (hover: hover) {
+  .site-glow:hover .site-icon { transform: scale(1.08) rotate(-6deg); background: var(--brand-btn) !important; box-shadow: 0 12px 26px -12px rgba(204,75,0,0.75) !important; }
+  .site-glow:hover .site-icon svg { color: #fff !important; }
+}
+.site-glow { --accent-w: 0%; }
+@media (hover: hover) { .site-glow:hover { --accent-w: 38%; } }
+.site-glow { background-image: linear-gradient(90deg, transparent calc(50% - var(--accent-w) / 2), rgba(255,122,26,0.9) calc(50% - var(--accent-w) / 2), rgba(255,170,0,0.9) calc(50% + var(--accent-w) / 2), transparent calc(50% + var(--accent-w) / 2)), var(--site-card-shine), linear-gradient(var(--card-bg, var(--site-card)), var(--card-bg, var(--site-card))); background-size: 100% 2px, auto, auto; background-repeat: no-repeat; background-position: top, 0 0, 0 0; }
+@property --accent-w { syntax: "<percentage>"; inherits: false; initial-value: 0%; }
+.site-glow { transition: transform 0.35s cubic-bezier(.2,.7,.2,1), box-shadow 0.35s ease, border-color 0.35s ease, --accent-w 0.45s ease; }
+
+.site-live-border { position: relative; border-color: transparent !important; }
+.site-live-border { box-shadow: var(--site-shadow), 0 30px 70px -40px rgba(255, 107, 0, 0.55); }
+.site-live-border { background-image: linear-gradient(var(--card-bg, var(--site-card)), var(--card-bg, var(--site-card))), linear-gradient(90deg, #ff6b00, #ffaa00, #ff8a3d, #ff6b00); background-origin: border-box; background-clip: padding-box, border-box; background-size: auto, 300% 100%; background-repeat: repeat; animation: ai-border 6s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .site-live-border { animation: none; } .site-icon { transition: none; } }
+
+@media (hover: none) {
+  .site-glow { transition: transform 0.18s ease; }
+  .site-glow:active { transform: scale(0.985); }
+}
