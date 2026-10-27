@@ -422,6 +422,8 @@ const MANIFEST = {
   "routes/webhookRoutes.js": { sites: 5, origins: ["webhook-facebook", "webhook-website", "webhook-custom", "webhook-google"] },
   "routes/whatsappRoutes.js": { sites: 1, origins: ["whatsapp-ctwa", "whatsapp-inbound", "whatsapp-handoff", "whatsapp-quiet"] },
   "utils/googleAdsPoller.js": { sites: 1, origins: ["poller-google"] },
+  // Property portal enquiries (27 Oct 2026): emitted for the record, not in CALLABLE_ORIGINS, so never auto-called.
+  "utils/portalLead.js": { sites: 1, origins: ["portal-99acres", "portal-housing", "portal-magicbricks"] },
   // An existing person moved between the pipeline and a project, or a soft-delete record: not a new lead.
   "services/projectService.js": { sites: 3, origins: [], why: "moves an existing person between lists" },
   // Developer tooling, never run in production.
@@ -461,7 +463,7 @@ test("guard: the number of emit call sites is exactly the reviewed set", () => {
     single += (src.match(/\bemitLeadCreated\(/g) || []).length;
     batch += (src.match(/\bemitLeadsCreated\(/g) || []).length;
   }
-  assert.equal(single, 11, "facebook, facebook recovered phone, website, custom, google webhook, google poller, whatsapp (delayed hand-off), whatsapp call request (assistant was handling the chat), manual, qr, call now (routes/vistrowLeadRoutes.js)");
+  assert.equal(single, 12, "facebook, facebook recovered phone, website, custom, google webhook, google poller, property portals, whatsapp (delayed hand-off), whatsapp call request (assistant was handling the chat), manual, qr, call now (routes/vistrowLeadRoutes.js)");
   assert.equal(batch, 1, "bulk import");
 });
 test("guard: the call_id branches of the inbound Vistrow route contain no emit", () => {
