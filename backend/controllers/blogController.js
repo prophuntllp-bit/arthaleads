@@ -109,33 +109,33 @@ const blogController = {
       // lastmod is the date the page's content last changed (git log of its
       // page file); bump it when you edit a page, Google ignores it if it lies.
       const staticPages = [
-        { url: "/",                 priority: "1.0", changefreq: "weekly", lastmod: "2026-10-16" },
-        { url: "/features",         priority: "0.9", changefreq: "monthly", lastmod: "2026-10-19" },
-        { url: "/pricing",          priority: "0.9", changefreq: "monthly", lastmod: "2026-10-19" },
-        { url: "/compare",          priority: "0.8", changefreq: "monthly", lastmod: "2026-10-19" },
-        { url: "/compare/sell-do-alternative", priority: "0.7", changefreq: "monthly", lastmod: "2026-10-19" },
-        { url: "/compare/leadrat-alternative", priority: "0.7", changefreq: "monthly", lastmod: "2026-10-16" },
-        { url: "/compare/kylas-alternative",   priority: "0.7", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/",                 priority: "1.0", changefreq: "weekly", lastmod: "2026-10-27" },
+        { url: "/features",         priority: "0.9", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/pricing",          priority: "0.9", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/compare",          priority: "0.8", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/compare/sell-do-alternative", priority: "0.7", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/compare/leadrat-alternative", priority: "0.7", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/compare/kylas-alternative",   priority: "0.7", changefreq: "monthly", lastmod: "2026-10-27" },
         { url: "/blog",             priority: "0.8", changefreq: "weekly"  },
-        { url: "/about-us",         priority: "0.7", changefreq: "monthly", lastmod: "2026-10-16" },
+        { url: "/about-us",         priority: "0.7", changefreq: "monthly", lastmod: "2026-10-27" },
         // /case-studies is noindex while it has no case studies (see pages/CaseStudies.jsx).
-        { url: "/product-updates",  priority: "0.7", changefreq: "weekly", lastmod: "2026-10-14" },
-        { url: "/help-guide",       priority: "0.6", changefreq: "monthly", lastmod: "2026-10-16" },
-        { url: "/wordpress-plugin", priority: "0.6", changefreq: "monthly", lastmod: "2026-10-16" },
-        { url: "/api-docs",         priority: "0.6", changefreq: "monthly", lastmod: "2026-10-14" },
-        { url: "/download-app",     priority: "0.6", changefreq: "monthly", lastmod: "2026-10-16" },
-        { url: "/ai-crm",           priority: "0.9", changefreq: "monthly", lastmod: "2026-10-23" },
-        { url: "/builder-crm",      priority: "0.9", changefreq: "monthly", lastmod: "2026-10-23" },
-        { url: "/whatsapp-crm",     priority: "0.9", changefreq: "monthly", lastmod: "2026-10-16" },
-        { url: "/product-tour",     priority: "0.8", changefreq: "monthly", video: true, lastmod: "2026-10-16" },
-        { url: "/refer",            priority: "0.5", changefreq: "monthly", lastmod: "2026-10-14" },
-        { url: "/careers",          priority: "0.5", changefreq: "monthly", lastmod: "2026-10-14" },
-        { url: "/contact",          priority: "0.6", changefreq: "monthly", lastmod: "2026-10-16" },
-        { url: "/book-demo",        priority: "0.7", changefreq: "monthly", lastmod: "2026-10-26" },
-        { url: "/security",         priority: "0.5", changefreq: "monthly", lastmod: "2026-10-14" },
-        { url: "/privacy",          priority: "0.3", changefreq: "yearly", lastmod: "2026-10-08" },
-        { url: "/terms",            priority: "0.3", changefreq: "yearly", lastmod: "2026-06-25" },
-        { url: "/refund",           priority: "0.3", changefreq: "yearly", lastmod: "2026-10-09" },
+        { url: "/product-updates",  priority: "0.7", changefreq: "weekly", lastmod: "2026-10-27" },
+        { url: "/help-guide",       priority: "0.6", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/wordpress-plugin", priority: "0.6", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/api-docs",         priority: "0.6", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/download-app",     priority: "0.6", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/ai-crm",           priority: "0.9", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/builder-crm",      priority: "0.9", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/whatsapp-crm",     priority: "0.9", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/product-tour",     priority: "0.8", changefreq: "monthly", video: true, lastmod: "2026-10-27" },
+        { url: "/refer",            priority: "0.5", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/careers",          priority: "0.5", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/contact",          priority: "0.6", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/book-demo",        priority: "0.7", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/security",         priority: "0.5", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/privacy",          priority: "0.3", changefreq: "yearly", lastmod: "2026-10-17" },
+        { url: "/terms",            priority: "0.3", changefreq: "yearly", lastmod: "2026-10-17" },
+        { url: "/refund",           priority: "0.3", changefreq: "yearly", lastmod: "2026-10-17" },
         { url: "/cookie-policy",    priority: "0.3", changefreq: "yearly", lastmod: "2026-10-08" },
       ];
 
@@ -156,13 +156,16 @@ const blogController = {
       const allEntries = [...staticPages, ...blogEntries];
 
       // The product film's watch page also carries a video entry, so Google
-      // finds the video file itself. Keep in step with frontend/src/data/introFilm.js.
+      // finds the video file itself (content_loc) and the player the page now
+      // uses (player_loc: the YouTube embed, since 27 Oct 2026). Keep in step
+      // with frontend/src/data/introFilm.js.
       const videoXml = `
     <video:video>
       <video:thumbnail_loc>${baseUrl}/video/arthaleads-intro-en-poster.jpg</video:thumbnail_loc>
       <video:title>What is ArthaLeads? The real estate CRM in 2 minutes</video:title>
       <video:description>A buyer messages at 1 AM. See how ArthaLeads replies on WhatsApp, qualifies the buyer, books the site visit, fills in the lead, scores it and tells your team who to call first.</video:description>
       <video:content_loc>https://api.arthaleads.com/api/media/arthaleads/site/video/arthaleads-intro-en.mp4</video:content_loc>
+      <video:player_loc>https://www.youtube.com/embed/htXLDOPHzac</video:player_loc>
       <video:duration>137</video:duration>
       <video:publication_date>2026-10-07T12:00:00+05:30</video:publication_date>
       <video:family_friendly>yes</video:family_friendly>
