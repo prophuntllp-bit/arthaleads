@@ -476,7 +476,7 @@ function BlogPostInner({ initial }) {
             <Card className="mt-12 p-6 sm:p-7">
               <h3 className="font-display text-lg font-bold site-ink mb-2">About Arthaleads</h3>
               <p className="text-sm leading-relaxed">
-                Arthaleads is a CRM for Indian real estate sales teams, by Vistrow Technologies. It brings enquiries from ads, portals, your website and WhatsApp into one workspace,
+                Arthaleads is a CRM for Indian real estate sales teams. It brings enquiries from ads, portals, your website and WhatsApp into one workspace,
                 with follow-ups, projects, bookings and invoices. These articles are educational and are not a substitute for advice based on your own business and data.
               </p>
             </Card>
