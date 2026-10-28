@@ -102,6 +102,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-28 IST: Blog covers: 14 designed covers (outputs/blog-covers in the main checkout: cover.html + covers.json + render.mjs) uploaded to Sanity (owner yes) as featuredImage AND openGraphImage with new alt text on every post, via the owner's Studio session; live on the blog after sync. Staging 6c336eb2 (NOT on main yet): blog image boxes 16:9 so covers aren't cropped (PublicBlog, PublicBlogPost, api/blog-index.js).
 - [claude] 2026-10-28 IST 78ecc6e4 (staging only): AI agent editor redesign: main card (name, Live/Paused/Draft, setup N of 6 with chips to the missing tab), SegmentTabs sections (Basics, What it knows, Conversation, What it can send, WhatsApp ads, Button questions in 4 steps, Advanced) with Next buttons, sticky test panel (Chat test / Button questions, preview restarts on edit, no raw step ids), sticky save bar with unsaved warning + confirm on leaving. Same fields and save. Tested on staging with /whatsapp/status faked as connected in one tab (no staging company has WhatsApp).
 - [claude] 2026-10-28 IST: DROPPED the 22 Oct AI Agent editor redesign (ecbe5453 and its 5 design options), owner's call. A fresh editor redesign is being planned instead.
 - [claude] 2026-10-28 IST 73d797e8 (staging only): Hot Today 'AI got it wrong' text is now a thumbs-down button (hover/aria 'Mark this AI reason as wrong'; red + Undo when pressed). frontend/src/pages/Dashboard.jsx.
