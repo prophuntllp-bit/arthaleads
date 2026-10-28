@@ -29,6 +29,7 @@ import {
   Phone,
   Plus,
   Sparkles,
+  ThumbsDown,
   Target,
   TrendingUp,
   Users,
@@ -1477,9 +1478,17 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
                         {lead._ai.reason}
                         {lead._ai.evidence?.[0] && <span className="text-app-soft"> &ldquo;{lead._ai.evidence[0]}&rdquo;</span>}
                       </p>
+                      {/* A thumbs-down button, not text: "AI got it wrong" read as a verdict (owner, 28 Oct 2026). */}
                       <button type="button" onClick={() => flagAi(lead, !lead._ai.wrong)}
-                        className="shrink-0 whitespace-nowrap text-[10px] font-semibold text-app-soft underline-offset-2 transition hover:text-orange-500 hover:underline">
-                        {lead._ai.wrong ? "Undo" : "AI got it wrong"}
+                        title={lead._ai.wrong ? "Marked as wrong. Click to undo." : "Mark this AI reason as wrong"}
+                        aria-label={lead._ai.wrong ? "Undo: AI reason marked wrong" : "Mark this AI reason as wrong"}
+                        aria-pressed={!!lead._ai.wrong}
+                        className="shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold transition"
+                        style={lead._ai.wrong
+                          ? { color: "#dc2626", background: "rgba(220,38,38,0.08)" }
+                          : { color: "var(--app-text-soft)", border: "1px solid var(--app-border)" }}>
+                        <ThumbsDown className="h-3 w-3" fill={lead._ai.wrong ? "currentColor" : "none"} />
+                        {lead._ai.wrong && "Undo"}
                       </button>
                     </div>
                   )}
