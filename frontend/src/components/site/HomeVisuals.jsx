@@ -77,7 +77,7 @@ export function HeroVisual() {
       {/* Frosted glass panel the photo stands on (styles.css .hero-glass). */}
       <div aria-hidden="true" className="hero-glass" />
       <div className="relative overflow-hidden rounded-[28px] border" style={{ borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
-        <SiteImage name="hero" width={1024} height={1280} priority sizes="(min-width: 1280px) 520px, (min-width: 1024px) 460px, 86vw"
+        <SiteImage name="hero" width={1024} height={1280} priority sizes="(min-width: 1024px) 460px, 86vw"
           alt="A real estate sales manager smiling at her phone in a modern sales lounge"
           className="block w-full h-auto aspect-[4/5] lg:aspect-[6/7] object-cover object-[50%_30%]" />
       </div>
@@ -301,7 +301,7 @@ export function ProjectViz() {
     <Stage className="flex flex-col">
       <div className={cx(tile, "overflow-hidden flex-1 flex flex-col")} style={tileStyle}>
         <div className="relative h-[84px] overflow-hidden">
-          <SiteImage name="builder" width={640} height={427} sizes="320px" alt="" className="w-full h-full object-cover object-[50%_70%]" />
+          <SiteImage name="builder" width={640} height={427} sizes="380px" alt="" className="w-full h-full object-cover object-[50%_70%]" />
           <span className="absolute top-2 left-2"><Badge tone={{ background: "rgba(15,18,34,0.7)", color: "#fff" }}>RERA registered</Badge></span>
         </div>
         <div className="px-3 py-2.5">

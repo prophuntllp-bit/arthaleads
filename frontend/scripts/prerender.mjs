@@ -93,7 +93,8 @@ const HEAD_EXTRA = `    <style id="prerender-css">
 // the hero photo on its download), so the page's main content showed only
 // after the app had finished starting: 3.5-5.5 s in Lighthouse's phone test.
 // Now the fonts the first screen uses are preloaded, and the app starts once
-// the static copy is on screen: fonts ready, first-screen images loaded, one
+// the static copy is on screen: fonts ready, the page's main image (the one
+// marked fetchpriority=high; measuring positions forced an early layout) loaded, one
 // frame painted (2.5 s at most; straight away in background tabs and for
 // dark-theme visitors, who see the splash, not the static copy). Links
 // in the static copy work as plain links in the meantime.
@@ -107,8 +108,8 @@ const bootScript = (src) => `<script>(function(){var d=document,w=window,started
       function boot(){if(started)return;started=1;w.__alBootStarted=Date.now();var s=d.createElement("script");s.type="module";s.crossOrigin="";s.src=${JSON.stringify(src)};d.head.appendChild(s)}
       function painted(){requestAnimationFrame(function(){setTimeout(boot,0)});setTimeout(boot,500)}
       function ready(){setTimeout(boot,2500);if(d.hidden||d.documentElement.hasAttribute("data-prerender-hide"))return boot();var waits=[];if(d.fonts&&d.fonts.ready)waits.push(d.fonts.ready);
-        var imgs=d.querySelectorAll("#root img:not([loading=lazy])");for(var i=0;i<imgs.length;i++){var im=imgs[i];
-          if(!im.complete&&im.getBoundingClientRect().top<innerHeight)waits.push(new Promise(function(r){im.addEventListener("load",r);im.addEventListener("error",r)}))}
+        var imgs=d.querySelectorAll("#root img[fetchpriority=high]");for(var i=0;i<imgs.length;i++){var im=imgs[i];
+          if(!im.complete)waits.push(new Promise(function(r){im.addEventListener("load",r);im.addEventListener("error",r)}))}
         Promise.all(waits).then(painted,painted)}
       if(d.readyState==="loading")d.addEventListener("DOMContentLoaded",ready);else ready()})()</script>`;
 const deferBoot = (html) => html.replace(/<script type="module" crossorigin src="(\/assets\/[^"]+\.js)"><\/script>/, (_, src) => bootScript(src));
