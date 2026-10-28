@@ -35,6 +35,7 @@ function get(url) {
   storage.put = async (key, buffer) => { bucket.set(key, Buffer.from(buffer)); return key; };
   storage.list = async (prefix) => [...bucket.keys()].filter((k) => k.startsWith(prefix)).map((k) => ({ key: k, size: reportWrongSize ? 1 : bucket.get(k).length, lastModified: new Date() }));
   storage.removeStrict = async (key) => { bucket.delete(key); };
+  storage.erase = async (key) => { bucket.delete(key); return 1; };
   storage.getObject = async (key) => { if (!bucket.has(key)) { const e = new Error("NoSuchKey"); e.name = "NoSuchKey"; throw e; } return { body: require("stream").Readable.from([bucket.get(key)]) }; };
 
   const backup = require("../utils/backup");
@@ -69,6 +70,18 @@ function get(url) {
   const yearAgo = new Date(`${today}T00:00:00Z`); yearAgo.setUTCMonth(yearAgo.getUTCMonth() - 12);
   check(oldest.slice(0, 7) > yearAgo.toISOString().slice(0, 7), "copies older than 12 months are deleted", oldest);
   check(bucket.has("arthaleads/avatars/someone.jpg"), "nothing outside the backup folder is touched");
+
+  // Hard cap (owner, 28 Oct 2026): after a long gap in backups, the "newest 30"
+  // can be older than a year. They go anyway, so erased data never outlives 12 months.
+  {
+    const t = "2026-10-28";
+    const keys = ["2025-09-01", "2025-09-15", "2025-10-27", "2025-10-28", "2025-10-29", "2025-11-02", "2026-10-28"].map(backup.keyFor);
+    const gone = backup.pickExpired(keys, t).map(backup.dateOf).sort();
+    check(JSON.stringify(gone) === JSON.stringify(["2025-09-01", "2025-09-15", "2025-10-27", "2025-10-28"]),
+      "no copy dated 12 months ago or earlier is kept, even among the newest 30", gone.join(","));
+    check(backup.maxAgeCutoff("2026-03-31") === "2025-03-31" && backup.maxAgeCutoff("2028-02-29") === "2027-02-28",
+      "the 12-month cutoff handles month ends and leap days");
+  }
 
   // The stored copy must not be deleted or replaced by pruning when the upload can't be confirmed.
   const before = new Set(bucket.keys());

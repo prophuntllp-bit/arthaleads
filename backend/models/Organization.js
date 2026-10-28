@@ -131,7 +131,10 @@ const orgSchema = new mongoose.Schema(
     address:         { type: String, default: "" },
     phone:           { type: String, default: "" },
     email:           { type: String, default: "" },
-    gstNo:           { type: String, default: "" },
+    // The company's own privacy policy, linked under the consent box on its QR
+    // enquiry form (DPDP notice; the company is the Data Fiduciary for its leads).
+    privacyUrl:      { type: String, default: "" },
+    gstNo:          { type: String, default: "" },
     pan:             { type: String, default: "" },
     cin:             { type: String, default: "" },
     rera:            { type: String, default: "" },

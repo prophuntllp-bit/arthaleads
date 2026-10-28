@@ -209,6 +209,8 @@ const BILLING_FIELDS = [
     { key: "address",   label: "Registered Address", placeholder: "e.g. Plot No. 12, Sector 5, Mumbai 400001", col: 2 },
     { key: "phone",     label: "Contact Number",      placeholder: "e.g. 9800000000" },
     { key: "email",     label: "Official Email",      placeholder: "e.g. accounts@yourcompany.com" },
+    // Linked under the consent box on your QR enquiry forms (DPDP notice).
+    { key: "privacyUrl", label: "Privacy Policy Link (shown on your QR enquiry forms)", placeholder: "e.g. https://yourcompany.com/privacy", col: 2 },
   ]},
   { section: "Tax & Compliance", fields: [
     { key: "gstNo", label: "GST Number",    placeholder: "e.g. 27XXXXX0000X1ZX", mono: true },
@@ -228,7 +230,7 @@ const BILLING_FIELDS = [
 function OrgBillingSection({ org, updateOrg }) {
   const [form, setForm] = useState({
     name: "",
-    address: "", phone: "", email: "", gstNo: "", pan: "", cin: "", rera: "",
+    address: "", phone: "", email: "", privacyUrl: "", gstNo: "", pan: "", cin: "", rera: "",
     bankAccountName: "", bankAccountNo: "", bankIfsc: "", bankName: "", bankBranch: "",
   });
   const [saving, setSaving] = useState(false);
@@ -240,6 +242,7 @@ function OrgBillingSection({ org, updateOrg }) {
         address:         org.address         || "",
         phone:           org.phone           || "",
         email:           org.email           || "",
+        privacyUrl:      org.privacyUrl      || "",
         gstNo:           org.gstNo           || "",
         pan:             org.pan             || "",
         cin:             org.cin             || "",
@@ -264,16 +267,15 @@ function OrgBillingSection({ org, updateOrg }) {
       toast.error("Organisation name must be at least 2 characters.");
       return;
     }
+    // Partial details save too (owner, 28 Oct 2026), so the privacy link or
+    // a contact number can be kept before the invoice fields are ready.
     const missing = BILLING_REQUIRED.filter(k => !form[k]?.trim());
-    if (missing.length) {
-      toast.error("Please fill all required fields (marked *) before saving.");
-      return;
-    }
     setSaving(true);
     try {
       const { data } = await api.patch("/org/me/billing", form);
       updateOrg(data.org);
-      toast.success("Billing details saved.");
+      if (missing.length) toast.success("Saved. Invoices need the fields marked * filled in too.");
+      else toast.success("Billing details saved.");
     } catch (e) {
       toast.error(e.response?.data?.message || "Failed to save.");
     } finally { setSaving(false); }

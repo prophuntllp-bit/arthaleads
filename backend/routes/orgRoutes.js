@@ -240,7 +240,7 @@ router.patch("/me/logo", authorize("admin"), async (req, res, next) => {
 // handoff, etc.) rather than being fixed at signup.
 router.patch("/me/billing", authorize("admin"), async (req, res, next) => {
   try {
-    const ALLOWED = ["name","address","phone","email","gstNo","pan","cin","rera",
+    const ALLOWED = ["name","address","phone","email","privacyUrl","gstNo","pan","cin","rera",
                      "bankAccountName","bankAccountNo","bankIfsc","bankName","bankBranch"];
     const update = {};
     for (const k of ALLOWED) {
@@ -248,6 +248,10 @@ router.patch("/me/billing", authorize("admin"), async (req, res, next) => {
     }
     if (update.name !== undefined && (update.name.length < 2 || update.name.length > 100)) {
       return res.status(400).json({ success: false, message: "Organisation name must be 2-100 characters." });
+    }
+    // Shown as a link on the public QR form, so only a real web address.
+    if (update.privacyUrl && (update.privacyUrl.length > 300 || !/^https?:\/\/[^\s/]+\.[^\s]+$/i.test(update.privacyUrl))) {
+      return res.status(400).json({ success: false, message: "Privacy policy link must be a full web address, like https://yourcompany.com/privacy" });
     }
     if (!Object.keys(update).length) {
       return res.status(400).json({ success: false, message: "No valid fields provided." });

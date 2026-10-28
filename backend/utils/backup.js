@@ -19,7 +19,13 @@
 // A file without the _end line was cut short and must not be restored.
 //
 // Kept: the newest 30 daily copies, plus the oldest copy of each of the last
-// 12 months. Older ones are deleted only after the new copy is confirmed stored.
+// 12 months, and NOTHING older than 12 months, whichever rule would keep it
+// (owner, 28 Oct 2026). That cap is what lets the privacy policy promise that
+// erased data (services/leadErasure.js, account deletion) is gone from backups
+// within 12 months; before it, a gap in backups could leave the "newest 30"
+// copies older than a year and they were kept. Old copies are deleted only
+// after the new copy is confirmed stored, and with every stored version
+// (storage.erase), so a versioned bucket does not quietly keep them.
 const zlib     = require("zlib");
 const mongoose = require("mongoose");
 const logger   = require("../config/logger");
@@ -74,22 +80,31 @@ async function dumpDatabase(db) {
   return { buffer: Buffer.concat(chunks), rawSize, stats, totalDocs };
 }
 
+/** The first date that is too old to keep: today, KEEP_MONTHS months ago. */
+function maxAgeCutoff(today) {
+  const [y, m, d] = today.split("-").map(Number);
+  const last = new Date(Date.UTC(y, m - 1 - KEEP_MONTHS + 1, 0)).getUTCDate(); // days in that month
+  return new Date(Date.UTC(y, m - 1 - KEEP_MONTHS, Math.min(d, last))).toISOString().slice(0, 10);
+}
+
 /**
  * Backup keys to delete: all but the newest KEEP_DAILY copies and the oldest
- * copy of each of the last KEEP_MONTHS months (today's month included).
+ * copy of each of the last KEEP_MONTHS months (today's month included), and
+ * every copy dated KEEP_MONTHS months ago or earlier, even one of the newest 30.
  */
 function pickExpired(keys, today = istDateKey()) {
+  const tooOld = maxAgeCutoff(today);
   const dated = keys
     .map((key) => ({ key, date: dateOf(key) }))
     .filter((x) => x.date)
     .sort((a, b) => b.date.localeCompare(a.date)); // newest first
-  const keep = new Set(dated.slice(0, KEEP_DAILY).map((x) => x.key));
+  const keep = new Set(dated.slice(0, KEEP_DAILY).filter((x) => x.date > tooOld).map((x) => x.key));
   const [y, m] = today.split("-").map(Number);
   const cutoff = new Date(Date.UTC(y, m - 1 - KEEP_MONTHS, 1)).toISOString().slice(0, 7); // months after this are kept
   const oldestInMonth = new Map();
   for (const x of dated) {
     const month = x.date.slice(0, 7);
-    if (month > cutoff) oldestInMonth.set(month, x.key); // later entries are older, so the last one wins
+    if (month > cutoff && x.date > tooOld) oldestInMonth.set(month, x.key); // later entries are older, so the last one wins
   }
   for (const key of oldestInMonth.values()) keep.add(key);
   return dated.filter((x) => !keep.has(x.key)).map((x) => x.key);
@@ -137,7 +152,7 @@ async function runBackup() {
 
     const deleted = [];
     for (const old of pickExpired(stored.map((o) => o.key), date)) {
-      try { await storage.removeStrict(old); deleted.push(old); }
+      try { await storage.erase(old); deleted.push(old); }
       catch (err) { logger.warn(`[backup] could not delete ${old}: ${err.message}`); }
     }
     const kept = stored.length - deleted.length;
@@ -157,4 +172,4 @@ async function runBackup() {
   }
 }
 
-module.exports = { runBackup, dumpDatabase, pickExpired, PREFIX, keyFor, dateOf };
+module.exports = { runBackup, dumpDatabase, pickExpired, maxAgeCutoff, PREFIX, keyFor, dateOf, KEEP_DAILY, KEEP_MONTHS };

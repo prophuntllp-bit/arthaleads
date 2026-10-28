@@ -19,6 +19,9 @@ const EMPTY = {
   name: "", phone: "", email: "",
   propertyType: "Apartment", budget: "", message: "",
   // Unticked by default on purpose: a pre-ticked consent box is not consent.
+  // dataConsent is required (DPDP notice for this enquiry); whatsappConsent is
+  // the separate, optional yes to marketing updates.
+  dataConsent: false,
   whatsappConsent: false,
   // Hidden from people; a bot that fills every field fills this too.
   company_website: "",
@@ -53,6 +56,11 @@ export default function PublicLeadForm() {
   const accent = meta?.org?.brandColor || "#FF6B00";
   const orgName = meta?.org?.name || "";
   const orgDigits = digitsOf(meta?.org?.phone);
+  // The server sends the exact wording it records on the lead; the fallback
+  // only covers an older API that doesn't send it yet.
+  const consentText = meta?.consentText
+    || `I agree that ${orgName || "this company"} may contact me about this enquiry by phone, WhatsApp or email, and store my details in its CRM.`;
+  const privacyUrl = /^https?:\/\//i.test(meta?.org?.privacyUrl || "") ? meta.org.privacyUrl : "";
   const waDigits = orgDigits.length === 10 ? `91${orgDigits}` : orgDigits;
 
   const validate = () => {
@@ -61,6 +69,7 @@ export default function PublicLeadForm() {
     if (!form.phone.trim()) e.phone = "Phone is required";
     else if (digitsOf(form.phone).length < 10 || digitsOf(form.phone).length > 13) e.phone = "Enter a valid mobile number (10 digits)";
     if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) e.email = "Enter a valid email";
+    if (!form.dataConsent) e.dataConsent = "Please tick this box to send your enquiry";
     return e;
   };
 
@@ -230,6 +239,30 @@ export default function PublicLeadForm() {
               className="w-full rounded-xl border px-4 py-3 text-base outline-none resize-none"
               style={{ border: "1.5px solid #e5e7eb", background: "#f9fafb", color: "#111827" }}
             />
+          </div>
+
+          {/* DPDP notice and consent: required, names the company that will hold the details. */}
+          <div>
+            <label className="flex items-start gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.dataConsent}
+                onChange={(e) => { setForm((p) => ({ ...p, dataConsent: e.target.checked })); setErrors((p) => ({ ...p, dataConsent: "", _form: "" })); }}
+                aria-invalid={!!errors.dataConsent}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded"
+                style={{ accentColor: accent }}
+              />
+              <span className="text-xs leading-relaxed" style={{ color: "#4b5563" }}>
+                {consentText} <span className="text-red-500">*</span>
+              </span>
+            </label>
+            {errors.dataConsent && <p className="mt-1 text-xs text-red-500" style={{ marginLeft: 26 }}>{errors.dataConsent}</p>}
+            <p className="mt-1.5 text-[11px] leading-relaxed" style={{ color: "#6b7280", marginLeft: 26 }}>
+              {orgName || "This company"} is responsible for your details and uses Arthaleads to manage enquiries.
+              {privacyUrl && (
+                <> <a href={privacyUrl} target="_blank" rel="noopener noreferrer" className="underline font-semibold" style={{ color: accent }}>Read its privacy policy</a>.</>
+              )}
+            </p>
           </div>
 
           <label className="flex items-start gap-2.5 cursor-pointer select-none">

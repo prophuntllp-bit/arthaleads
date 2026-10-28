@@ -783,7 +783,9 @@ const leadService = {
       throw new AppError("Access denied", 403);
     }
     if (user.role === "super_admin") {
-      await lead.deleteOne();
+      // A hard delete is an erasure: recordings, WhatsApp chat, project copies
+      // and the rest go with it (services/leadErasure.js, DPDP, owner, 28 Oct 2026).
+      await require("./leadErasure").eraseLeads(user.orgId, [lead._id]);
     } else {
       lead.isDeleted = true;
       lead.deletedAt = new Date();
@@ -804,8 +806,8 @@ const leadService = {
       : {};
 
     if (user.role === "super_admin") {
-      const result = await Lead.deleteMany({ _id: { $in: ids }, orgId: user.orgId });
-      return result.deletedCount;
+      const result = await require("./leadErasure").eraseLeads(user.orgId, ids);
+      return result.leads;
     }
     const result = await Lead.updateMany(
       { _id: { $in: ids }, orgId: user.orgId, ...ownerFilter },
@@ -1674,9 +1676,11 @@ const leadService = {
   },
 
   // ── Permanent delete ──────────────────────────────────────────────────────
+  // Erases the lead and everything about the person that hangs off it, not
+  // just this document (services/leadErasure.js, DPDP, owner, 28 Oct 2026).
   async permanentDelete(id, orgId) {
-    const lead = await Lead.findOneAndDelete({ _id: id, orgId });
-    if (!lead) throw new AppError("Lead not found", 404);
+    if (!require("mongoose").isValidObjectId(id) || !(await Lead.exists({ _id: id, orgId }))) throw new AppError("Lead not found", 404);
+    await require("./leadErasure").eraseLeads(orgId, [id]);
   },
 
   // ── Follow-ups due: overdue + today, user-scoped ─────────────────────────

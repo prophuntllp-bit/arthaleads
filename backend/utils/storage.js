@@ -26,7 +26,7 @@
 // hosts out of the page entirely, and avoids Backblaze's payment requirement
 // for public buckets.
 
-const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
+const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command, ListObjectVersionsCommand } = require("@aws-sdk/client-s3");
 const logger = require("../config/logger");
 
 const REQUIRED = ["B2_KEY_ID", "B2_APP_KEY", "B2_BUCKET", "B2_ENDPOINT"];
@@ -158,6 +158,72 @@ async function removeStrict(key) {
   await require("./storageLedger").forget(key);
 }
 
+const isMissing = (err) => err?.name === "NoSuchKey" || err?.name === "NotFound" || err?.$metadata?.httpStatusCode === 404;
+
+/**
+ * Erase a file for good: every stored version of `key`, not just the newest.
+ *
+ * A plain delete on a B2 bucket that keeps versions only HIDES the file; the
+ * bytes stay until a lifecycle rule removes them. That is fine for freeing
+ * space, not for a DPDP erasure, so erasures go through here (owner, 28 Oct
+ * 2026). A file that is already gone counts as erased. Throws on any other
+ * failure so the caller can log which key is left. Returns how many versions
+ * were deleted (0 when the bucket would not list them and a plain delete was
+ * used instead).
+ */
+async function erase(key) {
+  const c = client();
+  const Bucket = process.env.B2_BUCKET;
+  const versions = [];
+  try {
+    let KeyMarker, VersionIdMarker, more = true;
+    while (more) {
+      const page = await c.send(new ListObjectVersionsCommand({ Bucket, Prefix: key, KeyMarker, VersionIdMarker }));
+      for (const v of [...(page.Versions || []), ...(page.DeleteMarkers || [])]) {
+        if (v.Key === key && v.VersionId) versions.push(v.VersionId);
+      }
+      more = !!page.IsTruncated && !!(page.NextKeyMarker || page.NextVersionIdMarker);
+      KeyMarker = page.NextKeyMarker;
+      VersionIdMarker = page.NextVersionIdMarker;
+    }
+  } catch (err) {
+    logger.warn(`[storage] could not list versions of ${key}, deleting the current one only: ${err.message}`);
+    versions.length = 0;
+  }
+  try {
+    if (!versions.length) await c.send(new DeleteObjectCommand({ Bucket, Key: key }));
+    for (const VersionId of versions) await c.send(new DeleteObjectCommand({ Bucket, Key: key, VersionId }));
+  } catch (err) {
+    if (!isMissing(err)) throw err;
+  }
+  await require("./storageLedger").forget(key);
+  return versions.length;
+}
+
+/**
+ * The storage key behind a URL this API handed out (".../api/media/<key>"), or
+ * null for anything else (Vistrow links, data URIs, old Cloudinary URLs).
+ */
+const MEDIA_PATH = "\\/api\\/media\\/([^\"'\\s?#)\\\\]+)";
+
+function keyFromUrl(url) {
+  const m = new RegExp(MEDIA_PATH).exec(String(url || ""));
+  if (!m) return null;
+  try { return m[1].split("/").map(decodeURIComponent).join("/"); } catch { return null; }
+}
+
+/** Every storage key referenced anywhere inside `value` (a document, an array, a string). */
+function keysIn(value) {
+  const out = new Set();
+  const text = typeof value === "string" ? value : JSON.stringify(value || "");
+  const re = new RegExp(MEDIA_PATH, "g");
+  let m;
+  while ((m = re.exec(text))) {
+    try { out.add(m[1].split("/").map(decodeURIComponent).join("/")); } catch { /* malformed escape: not one of ours */ }
+  }
+  return [...out];
+}
+
 /** Every object whose key starts with `prefix`: [{ key, size, lastModified }]. */
 async function list(prefix) {
   const out = [];
@@ -185,6 +251,9 @@ module.exports = {
   putDataUri,
   remove,
   removeStrict,
+  erase,
+  keyFromUrl,
+  keysIn,
   getObject,
   list,
   publicUrl,

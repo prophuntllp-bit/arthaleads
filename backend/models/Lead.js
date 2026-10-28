@@ -400,6 +400,22 @@ const leadSchema = new mongoose.Schema(
     capturedAt: { type: Date },
   },
 
+  // ── DPDP notice and consent ──────────────────────────────────────────────
+  // Set only by the capture forms we render ourselves (the QR enquiry form):
+  // the person ticked a box under a notice naming the company. text is the
+  // exact wording they saw, so the record stands on its own if the wording
+  // changes later. Other sources leave it unset (owner, 28 Oct 2026).
+  dataConsent: {
+    type: {
+      given:  { type: Boolean },
+      at:     { type: Date },
+      source: { type: String },   // qr-form
+      text:   { type: String },
+    },
+    default: undefined,
+    _id: false,
+  },
+
   whatsappConversationId: { type: mongoose.Schema.Types.ObjectId, ref: "WaConversation", default: null },
   },
   { timestamps: true }

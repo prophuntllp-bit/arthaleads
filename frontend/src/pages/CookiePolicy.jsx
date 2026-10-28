@@ -8,7 +8,7 @@ const STORAGE_KEY = "cookie_prefs";
 
 function CookiePreferences() {
   const { isDark } = usePublicTheme();
-  const [prefs, setPrefs] = useState({ necessary: true, analytics: true, marketing: false });
+  const [prefs, setPrefs] = useState({ necessary: true, analytics: false, marketing: false });
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -16,7 +16,8 @@ function CookiePreferences() {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       if (stored) setPrefs({ ...stored, necessary: true });
       // No detailed choice saved yet: follow what the banner recorded, if anything.
-      else if (localStorage.getItem("artha_cookie_consent") === "declined") setPrefs({ necessary: true, analytics: false, marketing: false });
+      // Nothing chosen yet means analytics stay off (no pre-ticked consent).
+      else if (localStorage.getItem("artha_cookie_consent") === "accepted") setPrefs({ necessary: true, analytics: true, marketing: false });
     } catch { /* ignore */ }
   }, []);
 
@@ -29,7 +30,7 @@ function CookiePreferences() {
     { key: "necessary", name: "Strictly Necessary", locked: true,
       desc: "Required for login, security, and core CRM functionality. Cannot be turned off." },
     { key: "analytics", name: "Analytics", locked: false,
-      desc: "Help us understand how the platform is used so we can improve it. Anonymous and aggregated." },
+      desc: "Google Analytics on our website, to understand how it is used so we can improve it. Off until you allow it." },
     { key: "marketing", name: "Marketing", locked: false,
       desc: "Used to measure ad campaign effectiveness and show relevant content. Off by default." },
   ];
@@ -110,12 +111,12 @@ export default function CookiePolicy() {
   });
 
   return (
-    <LegalLayout title="Cookie Policy" badge="Privacy" updated="25 June 2026">
+    <LegalLayout title="Cookie Policy" badge="Privacy" updated="28 October 2026">
 
       <Section title="1. What Are Cookies?">
         <p>
           Cookies are small text files stored on your device when you visit a website. They help the
-          platform remember your preferences — such as login state, theme, and display settings — so you
+          platform remember your preferences, such as login state, theme, and display settings, so you
           don't have to re-enter them each visit. We also use similar technologies such as <code>localStorage</code>{" "}
           and <code>sessionStorage</code> for client-side state that never leaves your browser.
         </p>
@@ -125,7 +126,7 @@ export default function CookiePolicy() {
         <p>
           Under India's Digital Personal Data Protection (DPDP) Act, 2023, and general principles of
           privacy, we give you control over non-essential cookies. Use the panel below to set your
-          preferences at any time — your choice is saved on this device.
+          preferences at any time. Your choice is saved on this device.
         </p>
         <div style={{ marginTop: "1rem" }}>
           <CookiePreferences />
@@ -142,9 +143,11 @@ export default function CookiePolicy() {
           </li>
           <li>
             <strong style={{ color: "var(--app-text)" }}>Analytics:</strong>{" "}
-            Anonymous, aggregated data that helps us understand which features are most used and where
-            improvements are needed. No personally identifiable information is included. Enabled by default
-            but can be turned off in the panel above.
+            Google Analytics on our marketing website (www.arthaleads.com) only, never inside the CRM app.
+            It helps us understand which pages are used and where improvements are needed, with IP addresses
+            anonymised. It loads only after you choose "Accept all" in the cookie banner or turn analytics on
+            in the panel above, and you can turn it off again at any time. When on, Google sets cookies such
+            as <code>_ga</code> and <code>_ga_*</code>.
           </li>
           <li>
             <strong style={{ color: "var(--app-text)" }}>Marketing:</strong>{" "}
@@ -157,24 +160,25 @@ export default function CookiePolicy() {
       <Section title="4. Specific Cookies We Set">
         <ul className="list-disc pl-5 space-y-2">
           <li>
-            <strong style={{ color: "var(--app-text)" }}>crm_token</strong> —
+            <strong style={{ color: "var(--app-text)" }}>crm_token</strong>:
             Secure httpOnly session cookie that keeps you authenticated. Set on login, cleared on logout.
             Expires after 2 hours of inactivity (or 7 days if "Remember me" is selected).
             <em style={{ color: "var(--app-text-soft)" }}> Strictly necessary.</em>
           </li>
           <li>
-            <strong style={{ color: "var(--app-text)" }}>cookie_prefs</strong> —
-            Stores your cookie consent choices from the preference panel above. Set locally in{" "}
+            <strong style={{ color: "var(--app-text)" }}>cookie_prefs</strong> and{" "}
+            <strong style={{ color: "var(--app-text)" }}>artha_cookie_consent</strong>:
+            Store your cookie consent choices from the preference panel above and the cookie banner. Set locally in{" "}
             <code>localStorage</code>, never sent to our servers.
             <em style={{ color: "var(--app-text-soft)" }}> Strictly necessary (preference storage).</em>
           </li>
           <li>
-            <strong style={{ color: "var(--app-text)" }}>theme</strong> —
+            <strong style={{ color: "var(--app-text)" }}>theme</strong>:
             Remembers your light/dark mode choice. Stored in <code>localStorage</code>.
             <em style={{ color: "var(--app-text-soft)" }}> Strictly necessary (UI preference).</em>
           </li>
           <li>
-            <strong style={{ color: "var(--app-text)" }}>admin_sidebar_pinned</strong> —
+            <strong style={{ color: "var(--app-text)" }}>admin_sidebar_pinned</strong>:
             Remembers whether the admin panel sidebar is pinned open or collapsed. Stored in{" "}
             <code>localStorage</code>. Never sent to servers.
             <em style={{ color: "var(--app-text-soft)" }}> Strictly necessary (UI preference).</em>
@@ -189,14 +193,14 @@ export default function CookiePolicy() {
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
           <li>
-            <strong style={{ color: "var(--app-text)" }}>impersonating</strong> —
+            <strong style={{ color: "var(--app-text)" }}>impersonating</strong>:
             When Arthaleads platform support enters a support session on your account, a temporary record
             is stored in <code>sessionStorage</code> so the support banner can display context. This is
             cleared the moment the session ends or the browser tab is closed. It is never persisted to
             our servers beyond the audit log entry.
           </li>
           <li>
-            <strong style={{ color: "var(--app-text)" }}>fup_panel_dismissed</strong> —
+            <strong style={{ color: "var(--app-text)" }}>fup_panel_dismissed</strong>:
             Tracks whether you have dismissed the follow-up reminder panel during the current session.
           </li>
         </ul>
@@ -208,12 +212,17 @@ export default function CookiePolicy() {
           may set their own cookies or store identifiers strictly to deliver their function:
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
-          <li><strong style={{ color: "var(--app-text)" }}>Cloudinary</strong> — Image and media hosting (org logos, blog images). No tracking cookies.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Firebase (Google)</strong> — Push notification delivery for Android app users. May store a device token.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>OpenAI</strong> — AI feature processing. API calls only; no browser-level cookies set by OpenAI in our platform.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Resend</strong> — Transactional email delivery. No browser cookies.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Google Analytics</strong>: website usage statistics, only if you allow analytics cookies (see Section 3).</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Google reCAPTCHA</strong>: spam protection on sign-up and website forms. Google may set its own cookies to tell people from bots.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Firebase (Google)</strong>: push notification delivery for Android app users. May store a device token.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>OpenAI</strong>: AI feature processing. API calls only; no browser-level cookies set by OpenAI in our platform.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Resend</strong>: transactional email delivery. No browser cookies.</li>
         </ul>
-        <p>We do not use Google Analytics, Facebook Pixel, or any behavioural advertising trackers.</p>
+        <p>
+          We do not use Facebook Pixel or any behavioural advertising trackers. The full list of service
+          providers that process personal data for us is in the{" "}
+          <a href="/privacy#10-sub-processors" style={{ color: "var(--brand-text)" }} className="hover:underline">Privacy Policy</a>.
+        </p>
       </Section>
 
       <Section title="7. Managing Cookies in Your Browser">
@@ -234,7 +243,8 @@ export default function CookiePolicy() {
 
       <Section title="8. DPDP Act 2023 Compliance">
         <p>
-          Arthaleads is committed to compliance with India's Digital Personal Data Protection Act, 2023.
+          Arthaleads is committed to compliance with India's Digital Personal Data Protection Act, 2023 and
+          the DPDP Rules, 2025.
           In line with this:
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
@@ -252,7 +262,7 @@ export default function CookiePolicy() {
       <Section title="9. Contact Us">
         <p>Questions about our use of cookies or data practices?</p>
         <ContactBox>
-          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Arthaleads (Prophunt LLP)</p>
+          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Vistrow Technologies (Arthaleads)</p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Email:{" "}
             <a href="mailto:contact@arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">

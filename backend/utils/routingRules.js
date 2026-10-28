@@ -94,6 +94,10 @@ async function fileLeadInRoutedProject(rule, lead) {
       sourcePage: lead.sourcePage || "",
       sourceDomain: lead.sourceDomain || "",
       campaignRef: lead.campaignRef || undefined,
+      // QR form leads carry the notice the person agreed to (DPDP); others have none.
+      dataConsent: lead.dataConsent?.given
+        ? { given: true, at: lead.dataConsent.at, source: lead.dataConsent.source, text: lead.dataConsent.text }
+        : undefined,
       assignedTo: lead.assignedTo || (rule.keepUnassigned ? null : rule.assignTo) || null,
       assignedToName: lead.assignedToName || (rule.keepUnassigned ? "" : rule.assignToName) || "",
       importedBy: rule.ruleOwner || rule.assignTo,

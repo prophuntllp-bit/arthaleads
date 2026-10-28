@@ -163,7 +163,7 @@ test("QR form: sent as a Contact with its project and recorded WhatsApp opt-in; 
   world.state.qrOrg = null;
   world.state.qrProject = { _id: KHOPOLI, name: "SP Khopoli", orgId: ORG };
   const res = mockRes();
-  await publicController.submitLead({ params: { token: "qr-token-12345" }, body: { name: "Asha Menon", phone: phone10(), email: "a@x.com", whatsappConsent: "true" } }, res, (e) => { throw e; });
+  await publicController.submitLead({ params: { token: "qr-token-12345" }, body: { name: "Asha Menon", phone: phone10(), email: "a@x.com", whatsappConsent: "true", dataConsent: "true" } }, res, (e) => { throw e; });
   assert.equal(res.code, 201);
   await settle();
   const b = bodies()[0];
@@ -175,7 +175,7 @@ test("QR form: an org-level QR carries no project", async () => {
   fresh();
   world.state.qrOrg = { _id: ORG, isActive: true, autoAssign: false };
   const res = mockRes();
-  await publicController.submitLead({ params: { token: "qr-token-12345" }, body: { name: "Asha Menon", phone: phone10() } }, res, (e) => { throw e; });
+  await publicController.submitLead({ params: { token: "qr-token-12345" }, body: { name: "Asha Menon", phone: phone10(), dataConsent: "true" } }, res, (e) => { throw e; });
   await settle();
   assert.ok(!("project" in bodies()[0]));
 });

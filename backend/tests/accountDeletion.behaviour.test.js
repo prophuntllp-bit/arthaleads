@@ -23,6 +23,19 @@ const ORG_ID  = "64b7f1c2a4d3e10087654321";
 let otherAdmins = 1;      // flipped per scenario
 let dueOrgs = [];
 
+// Rows the file sweep reads (Model.find), and a stand-in for the bucket.
+const docsFor = {
+  Attendance: [{ clockInSelfie: "https://api.arthaleads.com/api/media/arthaleads/attendance/att-1-in.jpg" }],
+  StorageObject: [{ key: "arthaleads/recordings/call-1.wav", orgId: ORG_ID }],
+  WaMessage: [{ mediaUrl: `https://api.arthaleads.com/api/media/arthaleads/wa-inbound/${ORG_ID}/2026-10/a.jpg` }],
+  BlogPost: [{ cover: "https://api.arthaleads.com/api/media/arthaleads/blog/cover.jpg" }],
+};
+const storage = require("../utils/storage");
+const erased = [];
+storage.isConfigured = () => true;
+storage.list = async () => [];
+storage.erase = async (key) => { erased.push(key); return 1; };
+
 for (const [name, Model] of Object.entries(mongoose.models)) {
   const rec = (op) => (...args) => {
     calls.push({ model: name, op, args });
@@ -33,12 +46,20 @@ for (const [name, Model] of Object.entries(mongoose.models)) {
   Model.deleteOne = rec("deleteOne");
   Model.updateMany = rec("updateMany");
   Model.updateOne = rec("updateOne");
+  // Reads used to find stored files: a chain that resolves to the rows in docsFor.
+  Model.find = (filter) => {
+    calls.push({ model: name, op: "find", args: [filter] });
+    const rows = (docsFor[name] || []);
+    const chain = { select: () => chain, lean: () => chain, then: (ok, bad) => Promise.resolve(rows).then(ok, bad) };
+    return chain;
+  };
   if (name === "User") {
-    Model.findById = () => ({ lean: async () => ({ _id: USER_ID, name: "Asha Menon", orgId: ORG_ID, role: "admin" }) });
+    Model.findById = () => ({ lean: async () => ({ _id: USER_ID, name: "Asha Menon", orgId: ORG_ID, role: "admin",
+      avatar: `https://api.arthaleads.com/api/media/arthaleads/avatars/${ORG_ID}/${USER_ID}-1.jpg` }) });
     Model.countDocuments = async () => otherAdmins;
   }
   if (name === "Organization") {
-    Model.find = () => ({ select: () => ({ lean: async () => dueOrgs }) });
+    Model.find = () => { const chain = { select: () => chain, lean: () => chain, then: (ok, bad) => Promise.resolve(dueOrgs).then(ok, bad) }; return chain; };
   }
 }
 
@@ -86,6 +107,9 @@ const find = (model, op) => calls.filter((c) => c.model === model && c.op === op
   check(find("AuditLog", "deleteMany").length === 0, "audit rows are kept as a security record");
   check(audit.some((c) => c.args[1].$set?.ip === ""), "the recorded IP is scrubbed");
 
+  check(erased.includes(`arthaleads/avatars/${ORG_ID}/${USER_ID}-1.jpg`), "their avatar file is erased from storage", erased.join(", "));
+  check(erased.includes("arthaleads/attendance/att-1-in.jpg"), "their attendance selfies are erased from storage", erased.join(", "));
+
   // ── the last admin ───────────────────────────────────────────────────────
   console.log("\n  The last admin leaves\n");
   otherAdmins = 0;
@@ -115,6 +139,7 @@ const find = (model, op) => calls.filter((c) => c.model === model && c.op === op
   console.log("\n  Thirty days pass\n");
   calls.length = 0;
   dueOrgs = [{ _id: ORG_ID, name: "Rudranee Developers" }];
+  erased.length = 0;
   const r4 = await svc.runDueDeletions();
   check(r4.processed === 1, "the due organisation is processed");
 
@@ -125,6 +150,9 @@ const find = (model, op) => calls.filter((c) => c.model === model && c.op === op
   check(missed.length === 0, `all ${orgScoped.length} orgId collections purged`, missed.join(", "));
   check(purgedModels.has("AuditLog"), "AuditLog purged via targetOrg despite having no orgId");
   check(find("Organization", "deleteOne").length === 1, "the organisation record itself is deleted");
+  check(["arthaleads/recordings/call-1.wav", `arthaleads/wa-inbound/${ORG_ID}/2026-10/a.jpg`, "arthaleads/attendance/att-1-in.jpg"].every((k) => erased.includes(k)),
+    "every org file found in the ledger and in its records is erased", erased.join(", "));
+  check(!erased.includes("arthaleads/blog/cover.jpg"), "platform files (blog, site, backups) are never erased with an org");
 
   console.log(`\n  ${failures ? `${failures} failed` : "all checks passed"}\n`);
   process.exit(failures ? 1 : 0);

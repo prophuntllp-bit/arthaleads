@@ -104,6 +104,48 @@ const DISPOSITION = {
 
 const model = (name) => mongoose.models[name];
 
+// ── Stored files (DPDP, owner, 28 Oct 2026) ─────────────────────────────────
+// Deleting the documents used to leave every file they pointed at in the
+// bucket: selfies, avatars, recordings, WhatsApp media, project media. Files are
+// now found before the documents go (by the URLs in them, the storage ledger
+// and the org's own key prefixes) and erased after. What the records hold, per
+// lead, user and org, is mapped at the top of services/leadErasure.js.
+
+// Platform files that are never any one org's, even if an org links to them.
+const PLATFORM_PREFIXES = ["arthaleads/blog/", "arthaleads/site/", "arthaleads/backups/"];
+const isOrgFile = (key) => !PLATFORM_PREFIXES.some((p) => key.startsWith(p));
+
+/** Storage keys referenced by the documents `filter` matches in `Model`. */
+async function keysInDocs(Model, filter) {
+  const { keysIn } = require("../utils/storage");
+  const keys = new Set();
+  const add = (doc) => { for (const key of keysIn(doc)) if (isOrgFile(key)) keys.add(key); };
+  const query = Model.find(filter).lean();
+  // Streamed: an org's messages alone can run to hundreds of thousands.
+  if (typeof query.cursor === "function") for await (const doc of query.cursor()) add(doc);
+  else for (const doc of (await query) || []) add(doc);
+  return keys;
+}
+
+/** Keys under a prefix in the bucket itself, for files no record points at any more. */
+async function keysUnder(prefix) {
+  const storage = require("../utils/storage");
+  if (!storage.isConfigured()) return [];
+  try { return (await storage.list(prefix)).map((o) => o.key); }
+  catch (err) { logger.warn(`[account-deletion] could not list ${prefix}: ${err.message}`); return []; }
+}
+
+/** Drop keys whose ledger row says another org owns them. */
+async function onlyOwnedBy(orgId, keys) {
+  const list = [...keys];
+  if (!list.length || !model("StorageObject")) return list;
+  const rows = await model("StorageObject").find({ key: { $in: list } }).select("key orgId").lean();
+  const other = new Set((rows || []).filter((r) => orgId && String(r.orgId) !== String(orgId)).map((r) => r.key));
+  return list.filter((k) => !other.has(k));
+}
+
+const eraseFiles = (keys, context) => require("./leadErasure").eraseFiles(keys, context);
+
 /**
  * Removes a person and unlinks them from everything the organisation keeps.
  * Does not touch the organisation itself.
@@ -115,6 +157,16 @@ async function eraseUser(userId) {
   if (!user) return { erased: false, reason: "not found" };
 
   const touched = {};
+
+  // Their own files: the avatar (every one they ever uploaded) and the files
+  // on the rows that are dropped with them (attendance selfies, ticket
+  // attachments). Found now, erased once the records are gone.
+  const files = new Set(require("../utils/storage").keysIn(user.avatar || ""));
+  for (const [name, rule] of Object.entries(DISPOSITION)) {
+    if (!rule.drop || !model(name)) continue;
+    for (const key of await keysInDocs(model(name), { [rule.drop]: id })) files.add(key);
+  }
+  if (user.orgId) for (const key of await keysUnder(`arthaleads/avatars/${user.orgId}/${id}-`)) files.add(key);
 
   for (const [name, rule] of Object.entries(DISPOSITION)) {
     const Model = model(name);
@@ -174,6 +226,9 @@ async function eraseUser(userId) {
   await User.deleteOne({ _id: id });
   touched.User = "1 deleted";
 
+  const fileResult = await eraseFiles(await onlyOwnedBy(user.orgId, files), `user ${id}`);
+  if (fileResult.removed || fileResult.failed.length) touched.files = `${fileResult.removed} erased, ${fileResult.failed.length} failed`;
+
   logger.info(`[account-deletion] erased user ${id}: ${JSON.stringify(touched)}`);
   return { erased: true, touched };
 }
@@ -189,6 +244,23 @@ async function eraseUser(userId) {
 async function purgeOrg(orgId) {
   const id = new mongoose.Types.ObjectId(String(orgId));
   const purged = {};
+
+  // Every file the org holds, found before its records are deleted: the
+  // ledger, every /api/media URL in any of its documents (logo, avatars,
+  // selfies, recordings, WhatsApp media, project media), and its own folders.
+  const files = new Set();
+  const StorageObject = model("StorageObject");
+  if (StorageObject) for (const r of (await StorageObject.find({ orgId: id }).select("key").lean()) || []) files.add(r.key);
+  for (const [name, Model] of Object.entries(mongoose.models)) {
+    if (name === "StorageObject") continue;
+    const filter = name === "Organization" ? { _id: id } : Model.schema.path("orgId") ? { orgId: id } : null;
+    if (!filter) continue;
+    for (const key of await keysInDocs(Model, filter)) files.add(key);
+  }
+  const projects = model("Project") ? (await model("Project").find({ orgId: id }).select("_id").lean()) || [] : [];
+  const prefixes = [`arthaleads/wa-inbound/${id}/`, `arthaleads/avatars/${id}/`, `arthaleads/logos/org-${id}`,
+    ...projects.flatMap((p) => [`arthaleads/projects/${p._id}/`, `arthaleads/brochures/project-${p._id}`, `arthaleads/floorplans/project-${p._id}`])];
+  for (const prefix of prefixes) for (const key of await keysUnder(prefix)) files.add(key);
 
   for (const [name, Model] of Object.entries(mongoose.models)) {
     if (name === "Organization") continue;
@@ -206,6 +278,12 @@ async function purgeOrg(orgId) {
 
   await model("Organization").deleteOne({ _id: id });
   purged.Organization = 1;
+
+  // Last, so a file that will not delete never holds up erasing the records.
+  // Each one left behind is logged by key (leadErasure.eraseFiles).
+  const fileResult = await eraseFiles(await onlyOwnedBy(id, files), `org ${id}`);
+  purged.files = fileResult.removed;
+  if (fileResult.failed.length) purged.filesFailed = fileResult.failed.length;
 
   logger.warn(`[account-deletion] purged org ${id}: ${JSON.stringify(purged)}`);
   return purged;

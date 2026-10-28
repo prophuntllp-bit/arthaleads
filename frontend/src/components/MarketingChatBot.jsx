@@ -268,7 +268,7 @@ export default function MarketingChatBot() {
             <span onClickCapture={() => track("artha_cta_click", { cta: "demo", from: "panel" })}><CtaChip cta="demo" /></span>
             <span onClickCapture={() => track("artha_cta_click", { cta: "signup", from: "panel" })}><CtaChip cta="signup" /></span>
           </div>
-          <form onSubmit={send} className="flex items-center gap-2 px-3 pt-2 pb-3 shrink-0">
+          <form onSubmit={send} className="flex items-center gap-2 px-3 pt-2 pb-1.5 shrink-0">
             <input
               ref={inputRef}
               value={input}
@@ -289,6 +289,12 @@ export default function MarketingChatBot() {
               <Send className="h-4 w-4" />
             </button>
           </form>
+          {/* DPDP notice, visible before anything is typed: chats are saved
+              (models/WebsiteChat.js) and a visitor may type a name or number. */}
+          <p className="px-4 pb-2.5 text-[10.5px] leading-snug shrink-0" style={{ color: t.textSoft }}>
+            Arthaleads (Vistrow Technologies) saves this chat to answer you and improve Artha. Please don't share phone numbers or other personal details here.{" "}
+            <Link to="/privacy" className="underline" style={{ color: t.textSoft }}>Privacy policy</Link>
+          </p>
         </div>
       )}
     </>
