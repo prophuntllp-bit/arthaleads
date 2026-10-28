@@ -209,12 +209,13 @@ router.post("/answer/:orgId", form, async (req, res) => {
     if (!ok) return xml(res, plivo.hangupXml());
     const call = await findCall(req.params.orgId, req.query.ref);
     if (!call || !plivo.isReady(org)) return xml(res, plivo.hangupXml("Sorry, this call could not be connected."));
-    const { Model, lead, match } = call;
+    const { Model, lead, act, match } = call;
     await updateCallActivity(Model, lead._id, match, { set: {
       "meta.agentAnswered": true,
       "meta.callUuid": String(req.body.CallUUID || ""),
     } });
-    xml(res, plivo.answerXml({ number: org.plivo.number, leadPhone: lead.phone, base: plivo.publicBase(req), orgId: req.params.orgId, ref: req.query.ref }));
+    // The number picked when the call started (a field can hold two numbers).
+    xml(res, plivo.answerXml({ number: org.plivo.number, leadPhone: act.meta?.leadPhone || lead.phone, base: plivo.publicBase(req), orgId: req.params.orgId, ref: req.query.ref }));
   } catch (err) {
     console.error("[plivo answer] error:", err.message);
     xml(res, plivo.hangupXml("Sorry, this call could not be connected."));

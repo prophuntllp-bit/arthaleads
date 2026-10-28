@@ -13,6 +13,7 @@ import fetchLeadToOpen from "../utils/fetchLeadToOpen";
 import { fmtDateTime } from "../utils/constants";
 import CustomSelect from "../components/CustomSelect";
 import SegmentTabs from "../components/SegmentTabs";
+import { missedReason } from "../utils/dialNumbers";
 import CallTranscript from "../components/CallTranscript";
 import { useAuth } from "../context/AuthContext";
 
@@ -273,6 +274,9 @@ function CallDetailPanel({ call, leadId, leadName, isProjectLead, onBack }) {
           <DirectionBadge direction={meta.direction} />
           <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase"
             style={{ background: ss.bg, color: ss.color }}>{status}</span>
+          {status === "missed" && missedReason(meta) && (
+            <span className="text-xs font-semibold" style={{ color: ss.color }}>{missedReason(meta)}</span>
+          )}
           {sent && (
             <span className="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase"
               style={{ background: sent.bg, color: sent.color }}>{sent.label}</span>
@@ -567,6 +571,9 @@ function LeadCallModal({ lead, onClose }) {
                           <DirectionBadge direction={meta.direction} compact />
                           <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
                             style={{ background: ss.bg, color: ss.color }}>{status}</span>
+                          {status === "missed" && missedReason(meta) && (
+                            <span className="text-[11px] font-semibold" style={{ color: ss.color }}>{missedReason(meta)}</span>
+                          )}
                           {meta.duration > 0 && (
                             <span className="text-xs font-semibold text-app">{fmt(meta.duration)}</span>
                           )}
@@ -613,6 +620,9 @@ function LeadCallCard({ lead, onClick, first }) {
             <DirectionBadge direction={lead.lastDirection} compact />
             <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
               style={{ background: ss.bg, color: ss.color }}>{status}</span>
+            {status === "missed" && missedReason(lead.lastMeta) && (
+              <span className="text-[11px] font-semibold" style={{ color: ss.color }}>{missedReason(lead.lastMeta)}</span>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-app-soft">
             <span>Last: {fmtDateTime(lead.lastCallAt)}</span>
