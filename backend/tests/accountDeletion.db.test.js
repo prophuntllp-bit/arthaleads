@@ -132,6 +132,15 @@ const check = (ok, msg, detail = "") => {
   await svc.requestDeletion({ _id: asha._id, orgId: orgA._id, role: "admin" });
   await Organization.updateOne({ _id: orgA._id }, { $set: { deletionScheduledAt: new Date(Date.now() - 1000) } });
 
+  // Our own billing records for the company (owner, 28 Oct 2026: kept for GST),
+  // and its own invoice to a buyer (not ours, so it goes).
+  const Payment = require("../models/Payment"), CreditLedger = require("../models/CreditLedger");
+  const Invoice = require("../models/Invoice"), ClosedOrgBilling = require("../models/ClosedOrgBilling");
+  await Organization.updateOne({ _id: orgA._id }, { $set: { gstNo: "27ABCDE1234F1Z5", address: "Baner, Pune" } });
+  await Payment.collection.insertOne({ orgId: orgA._id, amount: 99900, status: "captured", createdAt: new Date() });
+  await CreditLedger.collection.insertOne({ orgId: orgA._id, type: "topup", amountPaise: 50000, createdAt: new Date() });
+  await Invoice.collection.insertOne({ orgId: orgA._id, invoiceNumber: 1, customerName: "A buyer" });
+
   const done = await svc.runDueDeletions();
   check(done.processed === 1, "exactly one organisation is purged", String(done.processed));
 
@@ -140,7 +149,12 @@ const check = (ok, msg, detail = "") => {
   check((await Lead.countDocuments({ orgId: orgA._id })) === 0, "its leads are gone");
   check((await Task.countDocuments({ orgId: orgA._id })) === 0, "its tasks are gone");
   check((await Attendance.countDocuments({ orgId: orgA._id })) === 0, "its attendance is gone");
-  check((await AuditLog.countDocuments({ targetOrg: orgA._id })) === 0, "its audit trail is gone");
+  check((await AuditLog.countDocuments({ targetOrg: orgA._id })) === 1, "its activity log is kept (it expires by itself)");
+  check((await Payment.countDocuments({ orgId: orgA._id })) === 1, "our plan payment record is kept for GST");
+  check((await CreditLedger.countDocuments({ orgId: orgA._id })) === 1, "its credit ledger is kept");
+  check((await Invoice.countDocuments({ orgId: orgA._id })) === 0, "its own invoices to buyers are gone");
+  const closed = await ClosedOrgBilling.findOne({ formerOrgId: orgA._id }).lean();
+  check(closed?.name === "Rudranee Developers" && closed?.gstNo === "27ABCDE1234F1Z5", "its billing identity is kept with the records", JSON.stringify(closed));
 
   console.log("\n  The other tenant, after all of that\n");
   check(!!(await Organization.findById(orgB._id)), "organisation intact");

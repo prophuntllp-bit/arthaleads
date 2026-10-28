@@ -58,7 +58,8 @@ export default function DeleteAccount() {
             <strong style={{ color: "var(--app-text)" }}>If you are the only admin</strong>, deleting your
             account closes the whole workspace. That is scheduled 30 days ahead so it can be undone: signing in
             during those 30 days cancels it. After that the organisation and every record in it are deleted
-            permanently.
+            permanently, except our billing records for it (kept up to 8 years for tax) and its activity log
+            (deleted automatically after about one year).
           </li>
         </ul>
       </Section>
@@ -73,7 +74,7 @@ export default function DeleteAccount() {
         <p>
           We keep a security audit trail of significant account actions, with you unlinked from it and your IP
           address removed. It records that something happened, not who you are. When a whole organisation is
-          deleted, its audit trail goes with it.
+          deleted, its audit trail is kept for about one year and then deleted automatically.
         </p>
         <p>
           Deletion is permanent. There is no recovery once it has run, and this is not a deactivation.

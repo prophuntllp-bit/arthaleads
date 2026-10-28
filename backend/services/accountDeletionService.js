@@ -29,6 +29,14 @@
 
 const mongoose = require("mongoose");
 const logger = require("../config/logger");
+require("../models/ClosedOrgBilling"); // so the purge can record a closed company's billing identity
+
+// Kept when a company closes its account (owner, 28 Oct 2026): our own sales
+// records, which GST law needs for about six years (the company's identity is
+// copied to ClosedOrgBilling so they stay readable), and its activity log,
+// which the DPDP Rules need for a year and which expires by itself (AuditLog
+// TTL). The company's own invoices to its buyers (Invoice) are not ours and go.
+const RETAINED_ON_ORG_CLOSE = ["Payment", "CreditOrder", "StorageOrder", "CreditLedger"];
 
 /** The window between requesting organisation deletion and it happening. */
 const GRACE_DAYS = 30;
@@ -262,19 +270,33 @@ async function purgeOrg(orgId) {
     ...projects.flatMap((p) => [`arthaleads/projects/${p._id}/`, `arthaleads/brochures/project-${p._id}`, `arthaleads/floorplans/project-${p._id}`])];
   for (const prefix of prefixes) for (const key of await keysUnder(prefix)) files.add(key);
 
+  // Billing identity first, while the Organization still exists, if any of
+  // the records we keep belong to it.
+  let retained = 0;
+  for (const name of RETAINED_ON_ORG_CLOSE) {
+    if (model(name)) retained += await model(name).countDocuments({ orgId: id });
+  }
+  if (retained && model("ClosedOrgBilling")) {
+    const org = await model("Organization").findById(id).select("name gstNo pan address email phone").lean();
+    if (org) {
+      await model("ClosedOrgBilling").create({
+        formerOrgId: id, name: org.name || "", gstNo: org.gstNo || "", pan: org.pan || "",
+        address: org.address || "", email: org.email || "", phone: org.phone || "",
+      });
+      purged.retainedBilling = retained;
+    }
+  }
+
   for (const [name, Model] of Object.entries(mongoose.models)) {
-    if (name === "Organization") continue;
+    if (name === "Organization" || RETAINED_ON_ORG_CLOSE.includes(name)) continue;
     if (!Model.schema.path("orgId")) continue;
     const { deletedCount } = await Model.deleteMany({ orgId: id });
     if (deletedCount) purged[name] = deletedCount;
   }
 
-  // AuditLog has no orgId — it is keyed to the org through targetOrg.
-  const AuditLog = model("AuditLog");
-  if (AuditLog) {
-    const { deletedCount } = await AuditLog.deleteMany({ targetOrg: id });
-    if (deletedCount) purged.AuditLog = deletedCount;
-  }
+  // AuditLog (keyed by targetOrg, no orgId) is kept: it expires by itself
+  // after about 400 days, so the activity of a closed company stays
+  // investigable for the year the DPDP Rules require.
 
   await model("Organization").deleteOne({ _id: id });
   purged.Organization = 1;
@@ -355,6 +377,7 @@ async function runDueDeletions() {
 }
 
 module.exports = {
+  RETAINED_ON_ORG_CLOSE,
   requestDeletion,
   cancelDeletion,
   runDueDeletions,

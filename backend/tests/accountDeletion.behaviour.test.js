@@ -46,6 +46,8 @@ for (const [name, Model] of Object.entries(mongoose.models)) {
   Model.deleteOne = rec("deleteOne");
   Model.updateMany = rec("updateMany");
   Model.updateOne = rec("updateOne");
+  Model.countDocuments = async () => 0;
+  Model.create = rec("create");
   // Reads used to find stored files: a chain that resolves to the rows in docsFor.
   Model.find = (filter) => {
     calls.push({ model: name, op: "find", args: [filter] });
@@ -146,9 +148,12 @@ const find = (model, op) => calls.filter((c) => c.model === model && c.op === op
   const purgedModels = new Set(calls.filter((c) => c.op === "deleteMany").map((c) => c.model));
   const orgScoped = Object.entries(mongoose.models)
     .filter(([n, M]) => n !== "Organization" && M.schema.path("orgId")).map(([n]) => n);
-  const missed = orgScoped.filter((m) => !purgedModels.has(m));
-  check(missed.length === 0, `all ${orgScoped.length} orgId collections purged`, missed.join(", "));
-  check(purgedModels.has("AuditLog"), "AuditLog purged via targetOrg despite having no orgId");
+  // Our own billing records are kept for GST and the activity log expires by
+  // itself (owner, 28 Oct 2026); everything else with an orgId goes.
+  const missed = orgScoped.filter((m) => !purgedModels.has(m) && !svc.RETAINED_ON_ORG_CLOSE.includes(m));
+  check(missed.length === 0, `all ${orgScoped.length - svc.RETAINED_ON_ORG_CLOSE.length} other orgId collections purged`, missed.join(", "));
+  check(svc.RETAINED_ON_ORG_CLOSE.every((m) => !purgedModels.has(m)), "billing records (Payment, CreditOrder, StorageOrder, CreditLedger) are kept");
+  check(!purgedModels.has("AuditLog"), "the activity log is kept and expires by itself");
   check(find("Organization", "deleteOne").length === 1, "the organisation record itself is deleted");
   check(["arthaleads/recordings/call-1.wav", `arthaleads/wa-inbound/${ORG_ID}/2026-10/a.jpg`, "arthaleads/attendance/att-1-in.jpg"].every((k) => erased.includes(k)),
     "every org file found in the ledger and in its records is erased", erased.join(", "));
