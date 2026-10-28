@@ -59,7 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
-- [claude] 2026-10-28 IST: Website forms popup replaced by its own page /integrations/websites (site cards with icon, status, IST last lead, forms, key, remove; setup help). frontend pages/integrations/WebsitesPage.jsx, pages/Automation.jsx (WordPressWizard removed), components/integrations/IntegrationUI.jsx, App.jsx, Sidebar.jsx. Pushing live
+- [claude] 2026-10-28 IST: Website forms popup replaced by its own page /integrations/websites (site cards with icon, status, IST last lead, forms, key, remove; setup help). frontend pages/integrations/WebsitesPage.jsx, pages/Automation.jsx (WordPressWizard removed), components/integrations/IntegrationUI.jsx, App.jsx, Sidebar.jsx. Live 4c72d954 (staging 5a870cb6), checked on live with 6 real sites
 
 
 - [claude] 2026-10-22 IST (PARKED on staging ecbe5453, NOT on main; waiting for the owner to pick one of 5 designs, do not push without approval): AI Agent editor redesign: one section at a time (Basics, How it talks, What it knows, Button questions, What it can send, Ads and go live, Advanced), sticky Save bar with setup ring + unsaved warning, questions folded to one line, preview tabs Chat/Button flow. frontend/src/pages/conversations/AgentBuilder.jsx; backend/utils/botText.js (range dash fix)
