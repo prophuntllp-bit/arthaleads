@@ -1848,6 +1848,12 @@ router.post("/website/register", express.json(), noOperators, async (req, res) =
     automation.lastSyncAt = new Date();
     await automation.save();
 
+    // Its icon, found in the background (the plugin does not wait for it).
+    if (automation.siteUrl) {
+      require("../utils/siteIcon").fetchSiteIcon(automation.siteUrl)
+        .then((icon) => Automation.updateOne({ _id: automation._id }, { $set: { siteIconUrl: icon?.url || "", siteIconKind: icon?.kind || "", siteIconCheckedAt: new Date() } }))
+        .catch(() => {});
+    }
     logger.info(`[website register] connected: ${site_name || site_url} | forms: ${(forms || []).join(", ")}`);
     res.json({ success: true });
   } catch (err) {

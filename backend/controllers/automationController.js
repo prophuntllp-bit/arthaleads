@@ -58,6 +58,8 @@ const automationController = {
           lastSyncAt: a.lastSyncAt,
           siteUrl: a.siteUrl || "",
           siteName: a.siteName || "",
+          siteIconUrl: a.siteIconUrl || "",
+          siteIconKind: a.siteIconKind || "",
           connectedForms: a.connectedForms || [],
         })),
       });
