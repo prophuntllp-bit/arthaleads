@@ -102,6 +102,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-28 IST 520e1bfd (staging only): website leads never labelled with a placeholder connection name ('WordPress Site N' / 'New WordPress Site'): label = real connection name > siteName > host; /webhook/website/register renames a placeholder connection to site_name. Prophunt live: 120 leads 'WordPress Site 5' (shaporjipallonji.com, automation 6abd1370), 3 'WordPress Site 6', 1 'WordPress Site 4'; relabel needs owner's yes. Prophunt has no website routing rules, so 292 of 400 exported leads have no project.
 - [claude] 2026-10-28 IST: LIVE on main d37e08fd: 9d4ac11a (WhatsApp tabs), c7e09c58 (call number checks).
 - [claude] 2026-10-28 IST c7e09c58 (staging only): Plivo calls: foreign numbers refused before the agent rings (code international), first Indian number used when the phone field holds two (or the one picked in the call menu; answer XML uses meta.leadPhone), call menu per-number buttons, Calls page missed reasons (utils/dialNumbers.js backend + frontend). Prophunt live 28 Oct: UAE lead 'Destination Country Barred', 'a/b' phone 'Invalid Destination Address'. International calling needs a separate USD/Enterprise Plivo account (Plivo docs).
 - [claude] 2026-10-28 IST 9d4ac11a (staging only): WhatsApp section tabs no longer blank the whole page: ConversationsLayout wraps its Outlet in its own Suspense (spinner under the tabs) and prefetches the other tabs' chunks once connected.
