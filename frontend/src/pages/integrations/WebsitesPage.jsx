@@ -4,10 +4,11 @@
 // portals. Each site has its own key, pasted into the ArthaLeads plugin.
 // Backend: /api/automations/website/* (controllers/automationController.js).
 import { useCallback, useEffect, useState } from "react";
-import { Globe, FileText, Clock, Copy, Check, Download, Plus, Trash2, ExternalLink, Loader2, KeyRound, Puzzle } from "lucide-react";
+import { Globe, FileText, Clock, Copy, Check, Download, Plus, Trash2, ExternalLink, Loader2, KeyRound, Puzzle, Pencil } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../services/api";
-import { ConfirmDialog } from "../../components/UI";
+import { ConfirmDialog, Modal } from "../../components/UI";
+import { isGenericSiteName } from "../../utils/leadSource";
 import { IntegrationShell, Panel, Steps, StatusChip, LogoTile, SiteFavicon, WordPressIcon, FORM_PLUGINS, ago, istWhen } from "../../components/integrations/IntegrationUI";
 
 const PLUGIN_ZIP = "/arthaleads-integration.zip";
@@ -25,11 +26,93 @@ function CopyButton({ text }) {
 
 const hostOf = (url) => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return url || ""; } };
 
-function SiteCard({ site, onRemove }) {
-  const connected = site.status === "connected";
-  const title = site.siteName || (site.siteUrl ? hostOf(site.siteUrl) : site.name);
+// The name you gave the site wins; then the name its plugin reports; then its address.
+const siteTitle = (site) => (!isGenericSiteName(site.name) && site.name)
+  || (!isGenericSiteName(site.siteName) && site.siteName)
+  || (site.siteUrl ? hostOf(site.siteUrl) : site.name);
+
+/**
+ * Add a site (name and address, then its key) or edit one (name and address).
+ * After adding, the key stays on screen so it can be copied before going to WordPress.
+ */
+function SiteForm({ open, site, onClose, onSaved }) {
+  const editing = !!site?.id;
+  const [name, setName] = useState("");
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [created, setCreated] = useState(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setName(editing ? siteTitle(site) : "");
+    setUrl(editing ? site.siteUrl || "" : "");
+    setError(""); setCreated(null);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const save = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) { setError("Give the site a name."); return; }
+    setBusy(true); setError("");
+    try {
+      if (editing) {
+        const { data } = await api.patch(`/automations/website/${site.id}`, { name: name.trim(), siteUrl: url.trim() });
+        const moved = data.connection.siteUrl !== (site.siteUrl || "");
+        onSaved({ ...site, ...data.connection, ...(moved ? { siteIconUrl: "", siteIconKind: "" } : {}) });
+        toast.success("Site saved.");
+        onClose();
+      } else {
+        const { data } = await api.post("/automations/website/create", { name: name.trim(), siteUrl: url.trim() });
+        onSaved(data.connection, true);
+        setCreated(data.connection);
+      }
+    } catch (err) { setError(err?.response?.data?.message || "Could not save. Try again."); }
+    finally { setBusy(false); }
+  };
+
   return (
-    <section className="card p-5 flex flex-col gap-4" style={{ boxShadow: "none" }}>
+    <Modal open={open} onClose={() => !busy && onClose()} title={created ? "Site added" : editing ? "Edit site" : "Add a site"} size="sm">
+      {created ? (
+        <div className="space-y-4">
+          <p className="text-sm text-app-soft">Paste this key into the ArthaLeads plugin on <b className="text-app">{created.name}</b>. It turns Connected here once the plugin is saved.</p>
+          <div className="flex items-center gap-2">
+            <input className="input w-full font-mono text-xs" readOnly value={created.token} onFocus={(e) => e.target.select()} aria-label="Connection key" />
+            <CopyButton text={created.token} />
+          </div>
+          <div className="flex justify-end">
+            <button type="button" className="btn-primary rounded-full px-5 py-2 text-sm font-semibold" onClick={onClose}>Done</button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={save} className="space-y-4">
+          <div className="space-y-1.5">
+            <label htmlFor="site-name" className="text-xs font-semibold text-app-soft">Site name</label>
+            <input id="site-name" className="input w-full" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Green Valley Homes" maxLength={120} autoFocus />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="site-url" className="text-xs font-semibold text-app-soft">Website address <span className="font-normal">(optional)</span></label>
+            <input id="site-url" className="input w-full" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="greenvalleyhomes.com" inputMode="url" />
+            <p className="text-xs text-app-soft">Used for the site's icon. The plugin fills it in when it connects.</p>
+          </div>
+          {editing && <p className="text-xs text-app-soft">New leads from this site show this name as their source.</p>}
+          {error && <p className="text-xs font-semibold text-red-500">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <button type="button" className="btn-secondary rounded-full px-4 py-2 text-sm font-semibold" onClick={onClose} disabled={busy}>Cancel</button>
+            <button type="submit" className="btn-primary rounded-full px-5 py-2 text-sm font-semibold inline-flex items-center gap-1.5" disabled={busy}>
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />} {editing ? "Save" : "Add site"}
+            </button>
+          </div>
+        </form>
+      )}
+    </Modal>
+  );
+}
+
+function SiteCard({ site, onRemove, onEdit }) {
+  const connected = site.status === "connected";
+  const title = siteTitle(site);
+  return (
+    <section className="card p-5 flex flex-col gap-4" style={{ boxShadow: site.justAdded ? "0 0 0 2px rgba(var(--app-primary-rgb),0.45)" : "none" }}>
       <div className="flex items-start gap-3">
         <LogoTile size={44} bg="#fff">
           <SiteFavicon iconUrl={site.siteIconUrl} kind={site.siteIconKind} name={site.siteName || site.siteUrl || site.name} size={26} />
@@ -73,7 +156,11 @@ function SiteCard({ site, onRemove }) {
         {!connected && <p className="text-xs text-app-soft">Paste this key into the ArthaLeads plugin on the site. This page updates by itself once it connects.</p>}
       </div>
 
-      <div className="flex justify-end pt-3 -mb-1" style={{ borderTop: "1px solid var(--app-border)" }}>
+      <div className="flex justify-end gap-1 pt-3 -mb-1" style={{ borderTop: "1px solid var(--app-border)" }}>
+        <button type="button" onClick={() => onEdit(site)}
+          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-app-soft hover:text-app transition">
+          <Pencil className="h-3.5 w-3.5" /> Edit
+        </button>
         <button type="button" onClick={() => onRemove(site)}
           className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-app-soft hover:text-red-500 transition">
           <Trash2 className="h-3.5 w-3.5" /> Remove site
@@ -86,12 +173,19 @@ function SiteCard({ site, onRemove }) {
 export default function WebsitesPage() {
   const [tab, setTab] = useState("sites");
   const [sites, setSites] = useState(null);
-  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState(null); // {} to add a site, a site to edit it
   const [removing, setRemoving] = useState(null);
   const [busyRemove, setBusyRemove] = useState(false);
 
   const load = useCallback(() => api.get("/automations/website/token")
-    .then(({ data }) => { const list = data.connections || []; setSites(list); return list; })
+    .then(({ data }) => {
+      const list = data.connections || [];
+      setSites((prev) => {
+        const fresh = new Set((prev || []).filter((x) => x.justAdded).map((x) => x.id));
+        return [...list.filter((x) => fresh.has(x.id)).map((x) => ({ ...x, justAdded: true })), ...list.filter((x) => !fresh.has(x.id))];
+      });
+      return list;
+    })
     .catch(() => { setSites((s) => s || []); return null; }), []);
 
   useEffect(() => { load(); }, [load]);
@@ -105,15 +199,11 @@ export default function WebsitesPage() {
     return () => clearInterval(t);
   }, [waiting, load]);
 
-  const addSite = async () => {
-    setAdding(true);
-    try {
-      const { data } = await api.post("/automations/website/create", { name: `WordPress Site ${(sites || []).length + 1}` });
-      setSites((prev) => [...(prev || []), data.connection]);
-      setTab("sites");
-      toast.success("Site added. Copy its key into the plugin on that site.");
-    } catch (e) { toast.error(e?.response?.data?.message || "Could not add a site."); }
-    finally { setAdding(false); }
+  const addSite = () => setForm({});
+  // A new site goes to the top, outlined, so it is seen without scrolling.
+  const onSaved = (conn, isNew) => {
+    if (isNew) { setTab("sites"); setSites((prev) => [{ ...conn, justAdded: true }, ...(prev || [])]); }
+    else setSites((prev) => prev.map((x) => (x.id === conn.id ? { ...x, ...conn } : x)));
   };
 
   const confirmRemove = async () => {
@@ -144,8 +234,8 @@ export default function WebsitesPage() {
         <a href={PLUGIN_ZIP} download className="btn-secondary rounded-full px-4 py-2 text-sm font-semibold inline-flex items-center gap-1.5">
           <Download className="h-4 w-4" /> Download plugin
         </a>
-        <button type="button" onClick={addSite} disabled={adding} className="btn-primary rounded-full px-4 py-2 text-sm font-semibold inline-flex items-center gap-1.5">
-          {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Add a site
+        <button type="button" onClick={addSite} className="btn-primary rounded-full px-4 py-2 text-sm font-semibold inline-flex items-center gap-1.5">
+          <Plus className="h-4 w-4" /> Add a site
         </button>
       </>}
       stats={[
@@ -166,8 +256,8 @@ export default function WebsitesPage() {
             <LogoTile size={48} bg="#21759b"><WordPressIcon /></LogoTile>
             <p className="text-base font-bold text-app">No websites connected yet</p>
             <p className="text-sm text-app-soft max-w-md">Add a site to get its key, install the ArthaLeads plugin on that WordPress site and paste the key in. Its form enquiries then come straight into Leads.</p>
-            <button type="button" onClick={addSite} disabled={adding} className="btn-primary rounded-full px-4 py-2 text-sm font-semibold inline-flex items-center gap-1.5">
-              {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Add a site
+            <button type="button" onClick={addSite} className="btn-primary rounded-full px-4 py-2 text-sm font-semibold inline-flex items-center gap-1.5">
+              <Plus className="h-4 w-4" /> Add a site
             </button>
           </div>
         </Panel>
@@ -175,7 +265,7 @@ export default function WebsitesPage() {
 
       {tab === "sites" && list.length > 0 && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 items-start">
-          {list.map((s) => <SiteCard key={s.id} site={s} onRemove={setRemoving} />)}
+          {list.map((s) => <SiteCard key={s.id} site={s} onRemove={setRemoving} onEdit={setForm} />)}
         </div>
       )}
 
@@ -183,7 +273,7 @@ export default function WebsitesPage() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 items-start">
           <Panel icon={Puzzle} title="Connect a WordPress site">
             <Steps items={[
-              <>Click <b>Add a site</b> above and copy the site's key.</>,
+              <>Click <b>Add a site</b> above, give it a name and copy its key.</>,
               <>In WordPress go to <b>Plugins → Add New</b>, search for <b>ArthaLeads</b> and install it. Or download the plugin here and use <b>Upload Plugin</b>.</>,
               <>Activate it and open <b>ArthaLeads CRM</b> in the WordPress menu.</>,
               <>Paste the key into <b>Account Token</b>, enter the site's name and click <b>Save</b>.</>,
@@ -203,10 +293,12 @@ export default function WebsitesPage() {
         </div>
       )}
 
+      <SiteForm open={!!form} site={form} onClose={() => setForm(null)} onSaved={onSaved} />
+
       <ConfirmDialog
         open={!!removing}
         title="Remove this site?"
-        message={removing ? `${removing.siteName || removing.name} will stop sending leads. Leads already in your CRM stay.` : ""}
+        message={removing ? `${siteTitle(removing)} will stop sending leads. Leads already in your CRM stay.` : ""}
         confirmLabel="Remove"
         loading={busyRemove}
         onConfirm={confirmRemove}

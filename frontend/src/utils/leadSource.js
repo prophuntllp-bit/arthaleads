@@ -3,6 +3,9 @@
 
 const GENERIC = /^(new wordpress site|wordpress site|wordpress|website|my site|my website|just another wordpress site)( \d+)?$/i;
 
+/** True for a placeholder name like "WordPress Site 5". */
+export const isGenericSiteName = (name) => !String(name || "").trim() || GENERIC.test(String(name).trim());
+
 /** "shaporjipallonji.com/treetopia-2": the site and the page a website lead came from. */
 export function websiteSource(lead) {
   const domain = String(lead?.sourceDomain || "").trim().replace(/^www\./i, "");

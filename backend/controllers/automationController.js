@@ -72,8 +72,10 @@ const automationController = {
   async createWebsiteConnection(req, res) {
     try {
       const { name } = req.body || {};
+      const siteUrl = cleanSiteUrl(req.body?.siteUrl);
       const automation = await Automation.create({
-        name: name || "New WordPress Site",
+        name: String(name || "").trim().slice(0, 120) || "New WordPress Site",
+        siteUrl,
         platform: "Website Form",
         mode: "form",
         status: "draft",
@@ -94,11 +96,41 @@ const automationController = {
           token: automation.verifyToken,
           status: automation.status,
           lastSyncAt: automation.lastSyncAt,
-          siteUrl: "",
+          siteUrl: automation.siteUrl || "",
           siteName: "",
           connectedForms: [],
         },
       });
+      if (siteUrl) refreshSiteIcon(automation);
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  // PATCH /api/automations/website/:id - rename a site or set its address
+  // (owner, 28 Oct 2026). Only these two fields; the plugin keeps the rest.
+  async updateWebsiteConnection(req, res) {
+    try {
+      const automation = await Automation.findOne({ _id: req.params.id, orgId: req.user.orgId, platform: "Website Form" });
+      if (!automation) return res.status(404).json({ success: false, message: "Site not found" });
+      const { name, siteUrl } = req.body || {};
+      if (name !== undefined) {
+        const clean = String(name).trim().slice(0, 120);
+        if (!clean) return res.status(400).json({ success: false, message: "Give the site a name." });
+        automation.name = clean;
+      }
+      let urlChanged = false;
+      if (siteUrl !== undefined) {
+        const clean = cleanSiteUrl(siteUrl);
+        if (String(siteUrl).trim() && !clean) return res.status(400).json({ success: false, message: "Enter the address as https://yoursite.com" });
+        urlChanged = clean !== (automation.siteUrl || "");
+        automation.siteUrl = clean;
+        if (urlChanged) { automation.siteIconUrl = ""; automation.siteIconKind = ""; }
+      }
+      automation.updatedBy = req.user._id;
+      await automation.save();
+      if (urlChanged && automation.siteUrl) refreshSiteIcon(automation);
+      res.json({ success: true, connection: { id: automation._id, name: automation.name, siteUrl: automation.siteUrl || "" } });
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -704,5 +736,24 @@ const automationController = {
     }
   },
 };
+
+// A site address typed in the CRM: http(s) only, "www.site.com" gets https://.
+function cleanSiteUrl(value) {
+  let v = String(value || "").trim();
+  if (!v) return "";
+  if (!/^https?:\/\//i.test(v)) v = `https://${v}`;
+  try {
+    const u = new URL(v);
+    if (!/^https?:$/.test(u.protocol) || !u.hostname.includes(".")) return "";
+    return u.href.replace(/\/$/, "").slice(0, 300);
+  } catch { return ""; }
+}
+
+// The site's icon, found in the background like the plugin's register call does.
+function refreshSiteIcon(automation) {
+  require("../utils/siteIcon").fetchSiteIcon(automation.siteUrl)
+    .then((icon) => Automation.updateOne({ _id: automation._id }, { $set: { siteIconUrl: icon?.url || "", siteIconKind: icon?.kind || "", siteIconCheckedAt: new Date() } }))
+    .catch(() => {});
+}
 
 module.exports = automationController;

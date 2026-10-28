@@ -43,6 +43,7 @@ router.post("/facebook/verify-system-token",    automationController.verifySyste
 
 router.get("/website/token", automationController.getWebsiteToken);
 router.post("/website/create", automationController.createWebsiteConnection);
+router.patch("/website/:id", automationController.updateWebsiteConnection);
 
 // Vistrow Voice and the Custom webhook / API are Enterprise features. Reading the
 // list stays open so an org that dropped a plan can still see what it had.
