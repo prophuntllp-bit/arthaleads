@@ -116,7 +116,8 @@ function DayTypeBadge({ dayType, totalMinutes, clockIn, clockOut }) {
 function LateBadge({ isLate, lateByMinutes, outsideShift }) {
   if (outsideShift) return (
     <span title="Clocked in after the shift had ended"
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-gray-300">
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold text-app"
+      style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border-strong)" }}>
       <MoonStar className="w-2.5 h-2.5" /> Outside shift
     </span>
   );
