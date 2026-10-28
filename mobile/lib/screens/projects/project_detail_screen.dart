@@ -376,8 +376,8 @@ class _LeadsTabState extends State<_LeadsTab> {
       phone: phone,
     );
     if (!mounted || choice == null) return;
-    if (choice == 'native') {
-      await launchUrl(Uri.parse('tel:$phone'));
+    if (choice.native) {
+      await launchUrl(Uri.parse('tel:${choice.dial(phone)}'));
       return;
     }
     try {
@@ -388,11 +388,11 @@ class _LeadsTabState extends State<_LeadsTab> {
       // the agent gets "Lead not found." on every EnableX call.
       final res = await _api.dio.post(
         '/calls/initiate',
-        data: callTargetPayload({
+        data: choice.body(callTargetPayload({
           ...lead,
           '_type': 'project',
           'projectId': _projectId,
-        }),
+        })),
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -410,7 +410,7 @@ class _LeadsTabState extends State<_LeadsTab> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              ApiClient.errorMessage(e, 'Call failed. Check EnableX settings.'),
+              ApiClient.errorMessage(e, 'Call failed. Check the phone service in Integrations.'),
             ),
             backgroundColor: AppColors.danger,
           ),

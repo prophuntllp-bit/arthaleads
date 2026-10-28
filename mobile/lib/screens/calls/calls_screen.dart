@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/dial_numbers.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
@@ -146,9 +147,9 @@ class _CallsScreenState extends State<CallsScreen> {
       phone: phone,
     );
     if (!mounted || choice == null) return;
-    if (choice == 'native') {
+    if (choice.native) {
       if (phone != null && phone.isNotEmpty) {
-        await launchUrl(Uri.parse('tel:$phone'));
+        await launchUrl(Uri.parse('tel:${choice.dial(phone)}'));
       }
       return;
     }
@@ -156,7 +157,7 @@ class _CallsScreenState extends State<CallsScreen> {
     try {
       final res = await _api.dio.post(
         '/calls/initiate',
-        data: {'leadId': leadId},
+        data: choice.body({'leadId': leadId}),
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -802,7 +803,10 @@ class _CallsScreenState extends State<CallsScreen> {
                       border: Border.all(color: color.withValues(alpha: 0.35)),
                     ),
                     child: Text(
-                      row['lastStatus'] as String? ?? '—',
+                      [
+                        row['lastStatus'] as String? ?? '—',
+                        if (row['lastStatus'] == 'missed') missedReason(row['lastMeta'] as Map?),
+                      ].where((v) => v.isNotEmpty).join(' · '),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,

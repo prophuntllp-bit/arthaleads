@@ -16,7 +16,7 @@ List<String> statusOptions = List.of(_defaultStatusOptions);
 const _defaultSourceOptions = [
   'Facebook', 'Google', 'WhatsApp', 'Manual', 'Website', 'Custom',
   'Vistrow Voice', 'Referral', 'Walk-in', 'PropTiger', '99acres',
-  'MagicBricks', 'QR Code', 'Other',
+  'MagicBricks', 'Housing.com', 'QR Code', 'Other',
 ];
 List<String> sourceOptions = List.of(_defaultSourceOptions);
 

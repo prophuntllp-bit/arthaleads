@@ -535,15 +535,15 @@ class LeadsScreenState extends State<LeadsScreen> {
       phone: phone,
     );
     if (!mounted || choice == null) return;
-    if (choice == 'native') {
-      await launchUrl(Uri.parse('tel:$phone'));
+    if (choice.native) {
+      await launchUrl(Uri.parse('tel:${choice.dial(phone)}'));
       _markContacted(lead);
       return;
     }
     try {
       final res = await _api.dio.post(
         '/calls/initiate',
-        data: {'leadId': lead['_id']},
+        data: choice.body({'leadId': lead['_id']}),
       );
       if (mounted) {
         _snack(
@@ -555,7 +555,7 @@ class LeadsScreenState extends State<LeadsScreen> {
     } catch (e) {
       if (mounted) {
         _snack(
-          ApiClient.errorMessage(e, 'Call failed. Check EnableX settings.'),
+          ApiClient.errorMessage(e, 'Call failed. Check the phone service in Integrations.'),
           error: true,
         );
       }
@@ -766,7 +766,7 @@ class LeadsScreenState extends State<LeadsScreen> {
     lead['phone'] ?? '',
     lead['email'] ?? '',
     lead['source'] ?? '',
-    lead['leadSourceLabel'] ?? '',
+    LeadOrigin.originalSourceLabel(lead),
     lead['status'] ?? '',
     lead['priority'] ?? '',
     lead['propertyType'] ?? '',

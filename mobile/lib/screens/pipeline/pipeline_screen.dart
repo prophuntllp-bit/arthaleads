@@ -139,13 +139,13 @@ class _PipelineScreenState extends State<PipelineScreen> {
     if (phone == null || phone.isEmpty) return;
     final choice = await pickCallMethod(context, name: lead['name'] as String?, phone: phone);
     if (!mounted || choice == null) return;
-    if (choice == 'native') {
-      await launchUrl(Uri.parse('tel:$phone'));
+    if (choice.native) {
+      await launchUrl(Uri.parse('tel:${choice.dial(phone)}'));
       _markContacted(lead);
       return;
     }
     try {
-      final res = await _api.dio.post('/calls/initiate', data: callTargetPayload(lead));
+      final res = await _api.dio.post('/calls/initiate', data: choice.body(callTargetPayload(lead)));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -159,7 +159,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(ApiClient.errorMessage(e, 'Call failed. Check EnableX settings.')),
+            content: Text(ApiClient.errorMessage(e, 'Call failed. Check the phone service in Integrations.')),
             backgroundColor: AppColors.danger,
           ),
         );
