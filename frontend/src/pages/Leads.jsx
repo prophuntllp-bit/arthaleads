@@ -56,7 +56,7 @@ import { downloadCsv, downloadXlsx, downloadXlsxSheets, parseCsv } from "../util
 import DateTimePicker from "../components/DateTimePicker";
 import DateRangePicker from "../components/DateRangePicker";
 import SegmentTabs from "../components/SegmentTabs";
-import { originalSourceLabel } from "../utils/leadSource";
+import { originalSourceLabel, adFromPage } from "../utils/leadSource";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
 function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "Add note…", multiline = false }) {
@@ -739,7 +739,7 @@ export default function Leads() {
           Email:         str(lead.email),
           Source:        str(lead.source),
           LeadSource:    str(originalSourceLabel(lead)),  // sub-source / campaign label, never a placeholder
-          Campaign:      str(lead.campaignRef?.headline),
+          Campaign:      str(lead.campaignRef?.headline || adFromPage(lead.sourcePage)),
           CreatedAt:     istStamp(lead.createdAt),
           LeadAgeDays:   lead.createdAt ? Math.floor((Date.now() - new Date(lead.createdAt)) / 86400000) : "",
           FirstContacted: istStamp(lead.firstContactedAt),
@@ -1336,19 +1336,17 @@ export default function Leads() {
                     <td>
                       <div className="flex flex-col gap-0.5">
                         <SourceBadge source={lead.source} />
+                        {/* Website leads: site and page ("shaporjipallonji.com/treetopia-2"),
+                            then the ad that sent them; others: the source label. */}
                         {originalSourceLabel(lead) && (
-                          <span className="text-[10px] text-app-soft truncate max-w-[130px]" title={originalSourceLabel(lead)}>
+                          <span className={`text-[10px] truncate max-w-[150px] ${lead.sourceDomain ? "text-blue-500" : "text-app-soft"}`}
+                            title={lead.sourcePage ? String(lead.sourcePage).split("?")[0] : originalSourceLabel(lead)}>
                             {originalSourceLabel(lead)}
                           </span>
                         )}
-                        {lead.sourceDomain && lead.sourceDomain !== originalSourceLabel(lead) && (
-                          <span className="text-[10px] text-blue-500 truncate max-w-[130px]" title={lead.sourceDomain}>
-                            {lead.sourceDomain}
-                          </span>
-                        )}
-                        {pagePath(lead.sourcePage) && (
-                          <span className="text-[10px] text-app-soft truncate max-w-[130px]" title={String(lead.sourcePage).split("?")[0]}>
-                            {pagePath(lead.sourcePage)}
+                        {adFromPage(lead.sourcePage) && (
+                          <span className="text-[10px] text-app-soft truncate max-w-[150px]" title={adFromPage(lead.sourcePage)}>
+                            {adFromPage(lead.sourcePage)}
                           </span>
                         )}
                       </div>

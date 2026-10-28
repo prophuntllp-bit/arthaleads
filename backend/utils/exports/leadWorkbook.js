@@ -70,7 +70,7 @@ function leadRows(source, now = Date.now()) {
       Email:         str(lead.email),
       Source:        str(lead.source),
       LeadSource:    str(require("../siteName").originalSourceLabel(lead)), // never a placeholder like "WordPress Site 5"
-      Campaign:      str(lead.campaignRef?.headline),
+      Campaign:      str(lead.campaignRef?.headline || require("../siteName").adFromPage(lead.sourcePage)),
       CreatedAt:     istStamp(lead.createdAt),
       LeadAgeDays:   lead.createdAt ? Math.floor((now - new Date(lead.createdAt)) / 86400000) : "",
       FirstContacted: istStamp(lead.firstContactedAt),
