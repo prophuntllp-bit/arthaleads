@@ -1170,3 +1170,9 @@ html[data-public-theme="dark"] .hero-glass {
   .float-card { animation: none; }
   .cycle-item { transition: none; filter: none; transform: none; }
 }
+
+/* Blog cards and covers (PublicBlog, PublicBlogPost, api/blog-index.js):
+   covers are light, dark or orange, so each gets its own frame and the card
+   a clear edge; nothing blends into the page behind it. */
+.blog-card { border-color: var(--site-line-strong) !important; }
+.blog-cover { border: 1px solid var(--site-line-strong); border-radius: 16px; box-shadow: 0 12px 26px -20px rgba(15, 18, 34, 0.45); }
