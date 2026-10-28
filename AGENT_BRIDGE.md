@@ -102,6 +102,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-28 IST 2e4a915d (staging only): website connection icons: utils/siteIcon.js finds the site's favicon or logo (browser UA, verified image), stored on Automation (siteIconUrl/Kind/CheckedAt; weekly via automationService.fillSiteIcons, and on /website/register); cards show it or a letter tile instead of Google's grey globe. tests/siteIcon.test.js. All 6 Prophunt sites resolve and load from app.arthaleads.com.
 - [claude] 2026-10-28 IST: LIVE on main 23a4a359: 520e1bfd, 79a1c13e, 705768aa (lead source fixes).
 - [claude] 2026-10-28 IST (staging only): website leads' source = site+page (websiteSource) in downloads, Leads list, Source Detail, Dump Leads; Campaign / Ad column + list line from the page URL (adFromPage: utm_campaign, gad_campaignid, gclid, fbclid). backend utils/siteName.js + frontend utils/leadSource.js.
 - [claude] 2026-10-28 IST 79a1c13e (staging only): originalSourceLabel (backend utils/siteName.js + frontend utils/leadSource.js): downloads (web + server Excel), Leads list, lead popup Source Detail and Dump Leads show the saved label unless it is a placeholder ('WordPress Site N'), then the website domain. No data change.
