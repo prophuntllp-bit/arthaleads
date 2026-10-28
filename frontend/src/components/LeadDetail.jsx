@@ -13,6 +13,7 @@ import { useSoftPhone } from "../context/SoftPhoneContext";
 import CustomSelect from "./CustomSelect";
 import CopyButton from "./CopyButton";
 import SegmentTabs from "./SegmentTabs";
+import { originalSourceLabel } from "../utils/leadSource";
 import { fmtCurrency, fmtDate, fmtDateTime, STATUS_OPTIONS } from "../utils/constants";
 import WaMessageMedia, { messageText } from "./WaMessageMedia";
 
@@ -680,7 +681,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                 </div>
               </div>
             )}
-            {lead.leadSourceLabel && <Info label="Source Detail" value={lead.leadSourceLabel} />}
+            {originalSourceLabel(lead) && <Info label="Source Detail" value={originalSourceLabel(lead)} />}
             <Info label="Property Type" value={lead.propertyType} />
             <Info label="BHK" value={lead.bhk} />
             <Info label="Purpose" value={lead.purpose} />

@@ -56,6 +56,7 @@ import { downloadCsv, downloadXlsx, downloadXlsxSheets, parseCsv } from "../util
 import DateTimePicker from "../components/DateTimePicker";
 import DateRangePicker from "../components/DateRangePicker";
 import SegmentTabs from "../components/SegmentTabs";
+import { originalSourceLabel } from "../utils/leadSource";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
 function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "Add note…", multiline = false }) {
@@ -737,7 +738,7 @@ export default function Leads() {
           AssignedTo:    str(lead.assignedToName),
           Email:         str(lead.email),
           Source:        str(lead.source),
-          LeadSource:    str(lead.leadSourceLabel),  // sub-source / campaign label
+          LeadSource:    str(originalSourceLabel(lead)),  // sub-source / campaign label, never a placeholder
           Campaign:      str(lead.campaignRef?.headline),
           CreatedAt:     istStamp(lead.createdAt),
           LeadAgeDays:   lead.createdAt ? Math.floor((Date.now() - new Date(lead.createdAt)) / 86400000) : "",
@@ -1335,12 +1336,12 @@ export default function Leads() {
                     <td>
                       <div className="flex flex-col gap-0.5">
                         <SourceBadge source={lead.source} lead={lead} />
-                        {lead.leadSourceLabel && (
-                          <span className="text-[10px] text-app-soft truncate max-w-[130px]" title={lead.leadSourceLabel}>
-                            {lead.leadSourceLabel}
+                        {originalSourceLabel(lead) && (
+                          <span className="text-[10px] text-app-soft truncate max-w-[130px]" title={originalSourceLabel(lead)}>
+                            {originalSourceLabel(lead)}
                           </span>
                         )}
-                        {lead.sourceDomain && lead.sourceDomain !== lead.leadSourceLabel && (
+                        {lead.sourceDomain && lead.sourceDomain !== originalSourceLabel(lead) && (
                           <span className="text-[10px] text-blue-500 truncate max-w-[130px]" title={lead.sourceDomain}>
                             {lead.sourceDomain}
                           </span>

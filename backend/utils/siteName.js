@@ -61,4 +61,17 @@ async function fetchSiteName(siteUrl) {
   }
 }
 
-module.exports = { fetchSiteName, isGenericSiteName, pickName, isSafePublicUrl };
+/**
+ * Where a lead really came from, for lists and downloads: its saved source
+ * label, unless that is a placeholder connection name ("WordPress Site 5"),
+ * in which case the website it was sent from (owner, 28 Oct 2026).
+ * Mirrored in frontend/src/utils/leadSource.js.
+ */
+function originalSourceLabel(lead) {
+  const label = String(lead?.leadSourceLabel || "").trim();
+  if (label && !isGenericSiteName(label)) return label;
+  const domain = String(lead?.sourceDomain || "").trim().replace(/^www\./i, "");
+  return domain || label;
+}
+
+module.exports = { fetchSiteName, isGenericSiteName, pickName, isSafePublicUrl, originalSourceLabel };
