@@ -15,6 +15,7 @@ import toast from "react-hot-toast";
 import { read as xlsxRead, utils as xlsxUtils } from "xlsx";
 import { downloadCsv, downloadXlsx, parseCsv } from "../utils/sheetExport";
 import SegmentTabs from "../components/SegmentTabs";
+import { originalSourceLabel } from "../utils/leadSource";
 
 const BOOKING_COLOR = {
   "Not Interested":    "bg-red-500/10 text-red-500 border-red-500/20",
@@ -436,9 +437,9 @@ export default function DumpLeads() {
                     <td>
                       <div className="flex flex-col gap-0.5">
                         <SourceBadge source={lead.source} />
-                        {(lead.leadSourceLabel || lead.campaignRef?.headline) && (
-                          <span className="max-w-[150px] truncate text-[10px] text-app-soft" title={lead.leadSourceLabel || lead.campaignRef?.headline}>
-                            {lead.leadSourceLabel || lead.campaignRef?.headline}
+                        {(originalSourceLabel(lead) || lead.campaignRef?.headline) && (
+                          <span className="max-w-[150px] truncate text-[10px] text-app-soft" title={originalSourceLabel(lead) || lead.campaignRef?.headline}>
+                            {originalSourceLabel(lead) || lead.campaignRef?.headline}
                           </span>
                         )}
                         {lead.sourceDomain && lead.sourceDomain !== lead.leadSourceLabel && (
