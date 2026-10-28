@@ -4,6 +4,7 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { Modal } from "./UI";
 import { loadRazorpay, RZP_LOAD_ERROR, UPI_FIRST_CONFIG } from "../utils/razorpay";
+import SegmentTabs from "./SegmentTabs";
 
 // Presets in rupees. The ₹500 floor matches the server's MIN_TOPUP_PAISE —
 // the server re-validates; this is only so the buttons never offer something
@@ -126,20 +127,14 @@ export default function CreditTopUpModal({ open, onClose, onSuccess, orgName }) 
 
         <div>
           <label className="text-xs font-semibold text-app-soft mb-2 block">Amount to add</label>
-          <div className="grid grid-cols-4 gap-2 mb-3">
-            {PRESETS.map((p) => (
-              <button key={p} type="button" onClick={() => setAmount(p)}
-                className="relative py-2.5 rounded-xl text-sm font-bold transition"
-                style={amount === p
-                  ? { background: "rgba(255,107,0,0.12)", border: "1.5px solid rgba(255,107,0,0.5)", color: "var(--app-primary)" }
-                  : { background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
-                {p === SUGGESTED && (
-                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] font-bold uppercase tracking-wider px-1.5 py-px rounded-full text-white"
-                    style={{ background: "var(--app-primary)" }}>Suggested</span>
-                )}
-                ₹{p.toLocaleString("en-IN")}
-              </button>
-            ))}
+          <div className="mb-3">
+            <SegmentTabs ariaLabel="Amount to add" value={amount} onChange={setAmount} stretch
+              tabs={PRESETS.map((p) => ({ value: p, label: (
+                <span className="flex flex-col items-center leading-tight">
+                  ₹{p.toLocaleString("en-IN")}
+                  {p === SUGGESTED && <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--app-primary)" }}>Suggested</span>}
+                </span>
+              ) }))} />
           </div>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-soft text-sm">₹</span>

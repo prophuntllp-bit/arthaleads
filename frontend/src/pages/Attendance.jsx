@@ -219,7 +219,7 @@ export default function Attendance() {
   const fetchRecords = useCallback(async () => {
     setListLoading(true);
     try {
-      const params = new URLSearchParams({ page, limit: 60 });
+      const params = new URLSearchParams({ page, limit: 50 });
       if (from) params.set("from", from);
       if (to)   params.set("to", to);
       if (filterUser) params.set("userId", filterUser);

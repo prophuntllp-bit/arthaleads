@@ -863,7 +863,7 @@ export default function Calls() {
   const [agentId,   setAgentId]   = useState("");
   const [analytics, setAnalytics] = useState(null);
   const [selected,  setSelected]  = useState(null);
-  const LIMIT = 30;
+  const LIMIT = 50;
 
   const loadCalls = useCallback(async (status, pg, agId, sq) => {
     setLoading(true);

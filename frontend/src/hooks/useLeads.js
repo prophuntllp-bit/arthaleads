@@ -3,7 +3,7 @@ import useAppRefresh from "./useAppRefresh";
 import api from "../services/api";
 
 export function useLeads(mode = "normal", initialFilters = {}) {
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(50); // rows per page: 50 by default everywhere
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
   // Per-status counts for the Leads page's status tabs (unified mode only).

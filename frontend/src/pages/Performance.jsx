@@ -616,7 +616,7 @@ function SmallTile({ label, value, highlight = false, valueClass = "", note = nu
   );
 }
 
-const LIST_LIMIT = 25;
+const LIST_LIMIT = 50;
 
 function PerformanceLeadsModal({ drill, dateFrom, dateTo, onClose, onOpenLead, version, hidden }) {
   const [rows, setRows]       = useState([]);
