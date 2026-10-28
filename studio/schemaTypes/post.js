@@ -4,7 +4,12 @@ import { SeoAudit } from "../components/SeoAudit";
 // Keep this in step with backend/services/sanityBlogSync.js: the sync only
 // understands the fields queried there and the block types listed in `body`.
 // Layout follows the Vistrow studio: Content, SEO (live score), Social, Advanced SEO.
-export const CATEGORIES = ["CRM Tips", "Lead Generation", "WhatsApp Marketing", "Real Estate Sales", "Product Updates"];
+// The blog's topics, each with its own page at /blog/category/<slug>. Keep in
+// step with backend/config/blogCategories.js (names must match exactly).
+export const CATEGORIES = [
+  "Real Estate CRM", "Lead Generation", "Lead Management & Follow-ups", "WhatsApp for Real Estate",
+  "AI & Automation", "Sales Team & Telecalling", "Site Visits & Bookings", "Channel Partners",
+];
 
 const robotsToggle = (name, title, initialValue) =>
   defineField({ name, title, type: "boolean", group: "advanced", fieldset: "robots", initialValue });
@@ -87,6 +92,12 @@ export const post = defineType({
     }),
     defineField({ name: "tags", title: "Tags", type: "array", of: [{ type: "string" }], options: { layout: "tags" }, group: "content" }),
     defineField({
+      name: "keyTakeaways", title: "Key takeaways", type: "array", group: "content",
+      description: "4 or 5 sentences shown in a box under the cover image. Each should stand on its own.",
+      of: [{ type: "string" }],
+      validation: (r) => r.max(8),
+    }),
+    defineField({
       name: "body", title: "Article", type: "array", group: "content",
       description: "Use Heading 2 for each main section and Heading 3 inside them. Link to other ArthaLeads pages where it helps.",
       validation: (r) => r.required().min(1),
@@ -100,7 +111,7 @@ export const post = defineType({
             { title: "Heading 4", value: "h4" },
             { title: "Quote", value: "blockquote" },
           ],
-          lists: [{ title: "Bullets", value: "bullet" }, { title: "Numbered", value: "number" }],
+          lists: [{ title: "Bullets", value: "bullet" }, { title: "Numbered", value: "number" }, { title: "Checklist (boxed)", value: "check" }],
           marks: {
             decorators: [
               { title: "Bold", value: "strong" },
@@ -126,7 +137,45 @@ export const post = defineType({
           fields: [defineField({ name: "language", type: "string", title: "Language" }), defineField({ name: "code", type: "text", title: "Code" })],
         }),
         defineArrayMember({ type: "object", name: "divider", title: "Divider line", fields: [defineField({ name: "label", type: "string", hidden: true })] }),
+        defineArrayMember({
+          type: "object", name: "table", title: "Table",
+          fields: [
+            defineField({
+              name: "rows", title: "Rows (the first row is the header)", type: "array",
+              of: [defineArrayMember({
+                type: "object", name: "tableRow", title: "Row",
+                fields: [defineField({ name: "cells", title: "Cells", type: "array", of: [{ type: "string" }] })],
+                preview: { select: { cells: "cells" }, prepare: ({ cells }) => ({ title: (cells || []).join("  |  ") }) },
+              })],
+            }),
+            defineField({ name: "caption", title: "Caption", type: "string" }),
+          ],
+          preview: { select: { caption: "caption", rows: "rows" }, prepare: ({ caption, rows }) => ({ title: caption || "Table", subtitle: `${(rows || []).length} rows` }) },
+        }),
+        defineArrayMember({
+          type: "object", name: "steps", title: "Step cards",
+          fields: [defineField({
+            name: "items", title: "Steps", type: "array",
+            of: [defineArrayMember({
+              type: "object", name: "step", title: "Step",
+              fields: [defineField({ name: "title", title: "Title", type: "string" }), defineField({ name: "text", title: "Text", type: "text", rows: 2 })],
+            })],
+          })],
+          preview: { select: { items: "items" }, prepare: ({ items }) => ({ title: "Step cards", subtitle: (items || []).map((s) => s.title).join(" > ") }) },
+        }),
       ],
+    }),
+    defineField({
+      name: "faqs", title: "Frequently asked questions", type: "array", group: "content",
+      description: "Shown at the end of the article and sent to Google as FAQ data. Ask the way people search; answer in the first sentence.",
+      of: [defineArrayMember({
+        type: "object", name: "faq", title: "Question",
+        fields: [
+          defineField({ name: "question", title: "Question", type: "string", validation: (r) => r.required().max(300) }),
+          defineField({ name: "answer", title: "Answer", type: "text", rows: 4, validation: (r) => r.required().max(2000) }),
+        ],
+        preview: { select: { title: "question", subtitle: "answer" } },
+      })],
     }),
 
     // ── SEO ──────────────────────────────────────────────────────────────────
