@@ -8,11 +8,12 @@
 // a time: it starts the player there, or moves the running player with the
 // IFrame API's postMessage commands. Plays are sent to Analytics as
 // video_play. CSP: frame-src allows https://www.youtube-nocookie.com.
+// `posterSet` (optional) is a srcset of WebP sizes, so phones fetch the small one.
 import { useEffect, useRef, useState } from "react";
 import { Play } from "lucide-react";
 import { track } from "../../utils/analytics";
 
-export default function YouTubePlayer({ videoId, poster, title, badge, seek = null, startAt = 0, name = "film", className = "" }) {
+export default function YouTubePlayer({ videoId, poster, posterSet, posterSizes = "(min-width: 1024px) 900px, 100vw", title, badge, seek = null, startAt = 0, name = "film", className = "" }) {
   const [playing, setPlaying] = useState(false);
   const [start, setStart] = useState(startAt);
   const frame = useRef(null);
@@ -55,7 +56,7 @@ export default function YouTubePlayer({ videoId, poster, title, badge, seek = nu
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
       ) : (
         <button type="button" onClick={() => play(start)} className="group absolute inset-0 w-full h-full" aria-label={`Play: ${title}`}>
-          <img src={poster} alt="" width="1280" height="720" loading="lazy" decoding="async"
+          <img src={poster} srcSet={posterSet} sizes={posterSet ? posterSizes : undefined} alt="" width="1280" height="720" loading="lazy" decoding="async"
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
           <span aria-hidden="true" className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.55) 100%)" }} />
           <span className="absolute inset-0 flex items-center justify-center">

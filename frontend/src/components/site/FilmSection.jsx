@@ -47,7 +47,7 @@ export default function FilmSection() {
           } />
 
         <div className="relative rounded-[22px] sm:rounded-[30px] p-1.5 sm:p-2" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
-          <YouTubePlayer videoId={v.youtubeId} poster={v.poster} name={`home-${lang}`} seek={jump}
+          <YouTubePlayer videoId={v.youtubeId} poster={v.poster} posterSet={v.posterSet} name={`home-${lang}`} seek={jump}
             title={`Arthaleads product tour (${v.label})`} badge={`${v.length} · ${v.label}`}
             className="rounded-[17px] sm:rounded-[23px]" />
         </div>

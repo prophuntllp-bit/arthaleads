@@ -768,7 +768,7 @@ html[data-public-theme="dark"] { --brand-text: #ff6b00; }
   --site-tint: #f7f3ee;
   --site-ink: #0f1222;
   --site-text: #474d5c;
-  --site-muted: #6b7180;
+  --site-muted: #5e6472;   /* 4.5:1+ on the chip and tint surfaces (audit, 28 Oct 2026) */
   --site-line: rgba(15, 18, 34, 0.09);
   --site-line-strong: rgba(15, 18, 34, 0.16);
   --site-card: #ffffff;
@@ -778,7 +778,7 @@ html[data-public-theme="dark"] { --brand-text: #ff6b00; }
   --site-dark: #0d0e15;
   --site-dark-card: #181a25;
   --site-brand: #ff6b00;
-  --site-brand-ink: #c2410c;
+  --site-brand-ink: #ad3a0a;   /* 4.7:1+ on the orange-tint chips */
   --site-grid: rgba(15, 18, 34, 0.055);
   --site-card-shine: linear-gradient(transparent, transparent);
   --site-shadow-sm: 0 1px 2px rgba(15, 18, 34, 0.05), 0 6px 16px -6px rgba(15, 18, 34, 0.08);

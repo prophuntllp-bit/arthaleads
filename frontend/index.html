@@ -145,7 +145,7 @@
     <link rel="manifest" href="/manifest.json" />
 
     <!-- Preload splash logo so it's ready instantly -->
-    <link rel="preload" as="image" href="/logo.png" />
+    <link rel="preload" as="image" href="/logo-splash.webp" />
 
     <!-- Sitemap autodiscovery -->
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
@@ -174,8 +174,15 @@
           if ((t.tagName === 'SCRIPT' || t.tagName === 'LINK') && url.indexOf('/assets/') !== -1) recover();
         }, true);
         window.addEventListener('vite:preloadError', function () { recover(); });
+        // Prerendered pages start the app after their first paint (scripts/prerender.mjs
+        // sets __alBootStarted): count the 5 s from whichever came later, load or that.
         window.addEventListener('load', function () {
-          setTimeout(function () { if (!window.__alBooted) recover(); }, 5000);
+          var loadedAt = Date.now();
+          (function check() {
+            if (window.__alBooted) return;
+            if (Date.now() - Math.max(window.__alBootStarted || 0, loadedAt) >= 5000) recover();
+            else setTimeout(check, 500);
+          })();
         });
       })();
     </script>
@@ -211,7 +218,7 @@
       <div class="splash-orb">
         <span class="splash-ring-outer"></span>
         <span class="splash-ring-inner"></span>
-        <img src="/logo.png" alt="Arthaleads" class="splash-logo" />
+        <img src="/logo-splash.webp" alt="Arthaleads" class="splash-logo" width="84" height="84" />
       </div>
       <!-- Shimmer sweep instead of pulsing dots -->
       <div class="splash-bar"><span class="splash-bar-fill"></span></div>

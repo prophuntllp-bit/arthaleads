@@ -17,7 +17,7 @@ const date = (d) => (d ? new Date(d).toLocaleDateString("en-IN", { timeZone: "As
 function card(p) {
   const author = p.byline || p.author?.name || "Arthaleads Team";
   const cover = p.featuredImage
-    ? `<img src="${esc(sized(p.featuredImage, 720))}" alt="${esc(p.featuredImageAlt || p.title)}" loading="lazy" decoding="async" class="absolute inset-0 w-full h-full object-cover">`
+    ? `<img src="${esc(sized(p.featuredImage, 720))}" alt="${esc(p.featuredImageAlt || p.title)}" width="720" height="405" loading="lazy" decoding="async" class="absolute inset-0 w-full h-full object-cover">`
     : `<div class="absolute inset-0" style="background:linear-gradient(135deg, rgba(255,107,0,0.16), rgba(255,170,0,0.05)), var(--site-chip)"></div>`;
   return `<a href="/blog/${esc(p.slug)}" class="site-card blog-card group h-full flex flex-col overflow-hidden">`
     + `<div class="p-3 pb-0"><div class="blog-cover relative overflow-hidden" style="aspect-ratio:16 / 9">${cover}</div></div>`
@@ -25,7 +25,7 @@ function card(p) {
     + `<div class="flex items-center justify-between gap-3 mb-3">`
     + (p.category?.name ? `<span class="text-[11px] font-bold uppercase tracking-[0.14em]" style="color:var(--site-brand-ink)">${esc(p.category.name)}</span>` : "<span></span>")
     + `<span class="text-xs shrink-0 site-muted">${p.readingTime || 1} min read</span></div>`
-    + `<h3 class="font-display site-ink font-bold text-[1.15rem] leading-snug tracking-[-0.01em] mb-3">${esc(p.title)}</h3>`
+    + `<h2 class="font-display site-ink font-bold text-[1.15rem] leading-snug tracking-[-0.01em] mb-3">${esc(p.title)}</h2>`
     + (p.excerpt ? `<p class="text-[15px] leading-relaxed mb-5">${esc(p.excerpt)}</p>` : "")
     + `<div class="mt-auto pt-4 text-xs site-muted" style="border-top:1px solid var(--site-line)">${esc(date(p.publishedAt))} · ${esc(author)}</div>`
     + `</div></a>`;

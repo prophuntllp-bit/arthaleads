@@ -83,10 +83,10 @@ export function SiteBlogCard({ post, eager = false }) {
           <PostCategory post={post} />
           <span className="text-xs shrink-0 site-muted">{post.readingTime || 1} min read</span>
         </div>
-        <h3 className="font-display site-ink font-bold text-[1.15rem] leading-snug tracking-[-0.01em] mb-3 line-clamp-3 transition-colors group-hover:text-[color:var(--site-brand-ink)]"
+        <h2 className="font-display site-ink font-bold text-[1.15rem] leading-snug tracking-[-0.01em] mb-3 line-clamp-3 transition-colors group-hover:text-[color:var(--site-brand-ink)]"
           style={{ textWrap: "balance" }}>
           {post.title}
-        </h3>
+        </h2>
         {post.excerpt && <p className="text-[15px] leading-relaxed line-clamp-3 mb-5">{post.excerpt}</p>}
         <div className="mt-auto pt-4 flex items-center justify-between gap-3 text-xs site-muted" style={{ borderTop: "1px solid var(--site-line)" }}>
           <span>{fmtDate(post.publishedAt)} · {authorOf(post)}</span>

@@ -19,6 +19,7 @@ import Features from "./pages/Features";
 import Pricing from "./pages/Pricing";
 import Compare from "./pages/Compare";
 import PublicBlog from "./pages/PublicBlog";
+import PublicBlogPost from "./pages/PublicBlogPost";
 import AboutUs from "./pages/AboutUs";
 import CaseStudies from "./pages/CaseStudies";
 import ProductUpdates from "./pages/ProductUpdates";
@@ -74,6 +75,33 @@ export const PAGES = {
   "/refund": Refund,
   "/cookie-policy": CookiePolicy,
 };
+
+// The blog post page with placeholder values (@@...@@, plus a sample author,
+// date and image the function recognises). api/blog-post.js fills it in for
+// each post, so a post's first paint is the real page, not a hidden plain copy.
+// One heading, category and tag of each kind is enough: the function repeats them.
+export function renderBlogTemplate() {
+  const post = {
+    _id: "tpl", slug: "@@SLUG@@", title: "@@TITLE@@", excerpt: "@@EXCERPT@@", byline: "Qqauthor Zzauthor",
+    publishedAt: "2001-02-03T06:30:00.000Z", readingTime: 97, category: { _id: "@@CATID@@", name: "@@CATNAME@@" },
+    featuredImage: "https://cdn.sanity.io/images/tpl/tpl/tplcover-2000x1125.png", featuredImageAlt: "@@IMGALT@@",
+    blocks: [{ id: "tpl", type: "paragraph", content: "@@BODY@@" }], tags: ["@@TAG@@"],
+  };
+  const initial = {
+    post,
+    categories: [{ _id: "@@CID@@", name: "@@CNAME@@" }],
+    headings: [{ id: "@@HID1@@", text: "@@HTEXT1@@" }, { id: "@@HID2@@", text: "@@HTEXT2@@" }],
+  };
+  return renderToString(
+    <StaticRouter location="/blog/@@SLUG@@">
+      <PublicThemeProvider>
+        <AuthProvider>
+          <PublicBlogPost initial={initial} />
+        </AuthProvider>
+      </PublicThemeProvider>
+    </StaticRouter>
+  );
+}
 
 export function render(path) {
   const Page = PAGES[path];

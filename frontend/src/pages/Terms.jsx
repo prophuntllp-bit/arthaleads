@@ -223,7 +223,7 @@ export default function Terms() {
           </p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Platform:{" "}
-            <a href="https://arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">
+            <a href="https://www.arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">
               https://arthaleads.com
             </a>
           </p>

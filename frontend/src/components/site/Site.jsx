@@ -107,7 +107,7 @@ export function SiteButton({ variant = "primary", size, to, href, external = fal
 
 /**
  * Responsive site photo. Expects pre-sized WebP files named
- * `${name}-640.webp`, `${name}-1024.webp`, `${name}-1600.webp` in
+ * `${name}-640.webp`, `-768`, `-1024` and `-1600.webp` in
  * /public/img/site (made by scripts in outputs/site-images). `priority`
  * marks the one LCP image per page.
  */
@@ -116,7 +116,7 @@ export function SiteImage({ name, alt, width, height, sizes = "100vw", priority 
   return (
     <img
       src={`${base}-1024.webp`}
-      srcSet={`${base}-640.webp 640w, ${base}-1024.webp 1024w, ${base}-1600.webp 1600w`}
+      srcSet={`${base}-640.webp 640w, ${base}-768.webp 768w, ${base}-1024.webp 1024w, ${base}-1600.webp 1600w`}
       sizes={sizes}
       width={width}
       height={height}
