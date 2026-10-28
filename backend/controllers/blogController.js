@@ -37,7 +37,11 @@ const blogController = {
     try {
       const { page = 1, limit = 12, category, tag, search } = req.query;
       const filter = { status: "published" };
-      if (category) filter.category = category;
+      // A topic by id (CRM editor, older links) or by slug (/blog/category/<slug>).
+      if (category) {
+        if (/^[a-f0-9]{24}$/i.test(category)) filter.category = category;
+        else filter.category = (await BlogCategory.findOne({ slug: String(category).toLowerCase() }).select("_id"))?._id || null;
+      }
       if (tag)      filter.tags = tag;
       if (search)   filter.title = { $regex: escapeRegex(search), $options: "i" };
 
@@ -79,11 +83,17 @@ const blogController = {
       // ?inUse=1 (public blog filter): only topics that have a published post,
       // so readers never pick a topic that shows nothing. The CRM editor calls
       // this without it and still gets every category.
+      // Every topic also carries `count`, its number of published posts (the
+      // blog's topic tabs show it). Topics come in their tab order.
+      const counts = await BlogPost.aggregate([
+        { $match: { status: "published", category: { $ne: null } } },
+        { $group: { _id: "$category", count: { $sum: 1 } } },
+      ]);
+      const countOf = new Map(counts.map((c) => [String(c._id), c.count]));
       const query = {};
-      if (req.query.inUse === "1") {
-        query._id = { $in: await BlogPost.distinct("category", { status: "published", category: { $ne: null } }) };
-      }
-      const categories = await BlogCategory.find(query).sort({ name: 1 });
+      if (req.query.inUse === "1") query._id = { $in: counts.map((c) => c._id) };
+      const categories = (await BlogCategory.find(query).sort({ order: 1, name: 1 }).lean())
+        .map((c) => ({ ...c, count: countOf.get(String(c._id)) || 0 }));
       res.json({ success: true, categories });
     } catch (err) { next(err); }
   },
@@ -99,7 +109,7 @@ const blogController = {
         "robots.index": { $ne: false },
         $or: [{ redirectUrl: { $exists: false } }, { redirectUrl: "" }],
       })
-        .select("slug publishedAt updatedAt")
+        .select("slug publishedAt updatedAt category")
         .sort({ publishedAt: -1 })
         .limit(1000);
 
@@ -153,7 +163,19 @@ const blogController = {
       const blogIndex = staticPages.find((e) => e.url === "/blog");
       if (blogEntries.length) blogIndex.lastmod = blogEntries.map((e) => e.lastmod).sort().pop();
 
-      const allEntries = [...staticPages, ...blogEntries];
+      // Topic pages, only for topics with an article in the sitemap; each
+      // changes whenever one of its articles does.
+      const newestByTopic = new Map();
+      posts.forEach((p, i) => {
+        const id = p.category && String(p.category);
+        if (id && !(newestByTopic.get(id) >= blogEntries[i].lastmod)) newestByTopic.set(id, blogEntries[i].lastmod);
+      });
+      const topics = await BlogCategory.find({ _id: { $in: [...newestByTopic.keys()] } }).select("slug").lean();
+      const topicEntries = topics.map((t) => ({
+        url: `/blog/category/${t.slug}`, priority: "0.7", changefreq: "weekly", lastmod: newestByTopic.get(String(t._id)),
+      }));
+
+      const allEntries = [...staticPages, ...topicEntries, ...blogEntries];
 
       // The product film's watch page also carries a video entry, so Google
       // finds the video file itself (content_loc) and the player the page now

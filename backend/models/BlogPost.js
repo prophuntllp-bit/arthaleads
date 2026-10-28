@@ -4,13 +4,21 @@ const mongoose = require("mongoose");
 const blockSchema = new mongoose.Schema(
   {
     id:      { type: String, required: true },
-    type:    { type: String, enum: ["paragraph", "h2", "h3", "h4", "image", "quote", "bulletList", "numberedList", "divider", "code"], required: true },
+    type:    { type: String, enum: ["paragraph", "h2", "h3", "h4", "image", "quote", "bulletList", "numberedList", "checklist", "table", "steps", "divider", "code"], required: true },
     content: { type: String, default: "" },   // HTML for text blocks, URL for image
     alt:     { type: String, default: "" },   // image alt text
-    caption: { type: String, default: "" },   // image caption
-    items:   [{ type: String }],              // list items
+    caption: { type: String, default: "" },   // image or table caption
+    items:   [{ type: String }],              // list and checklist items
     language:{ type: String, default: "" },   // code block language
+    rows:    [[{ type: String }]],            // table: first row is the header
+    steps:   [{ title: { type: String, default: "" }, text: { type: String, default: "" }, _id: false }],
   },
+  { _id: false }
+);
+
+// "Key takeaways" box and the FAQ under the article (FAQPage structured data).
+const faqSchema = new mongoose.Schema(
+  { question: { type: String, default: "", maxlength: 300 }, answer: { type: String, default: "", maxlength: 2000 } },
   { _id: false }
 );
 
@@ -20,6 +28,8 @@ const blogPostSchema = new mongoose.Schema(
     slug:              { type: String, required: true, unique: true, lowercase: true, trim: true, maxlength: 200 },
     excerpt:           { type: String, default: "", maxlength: 500 },
     blocks:            [blockSchema],
+    keyTakeaways:      [{ type: String, trim: true, maxlength: 400 }],
+    faqs:              [faqSchema],
     featuredImage:     { type: String, default: "" },
     featuredImageAlt:  { type: String, default: "" },
     category:          { type: mongoose.Schema.Types.ObjectId, ref: "BlogCategory", default: null },
@@ -77,7 +87,10 @@ blogPostSchema.pre("save", function (next) {
   const text = this.blocks
     .filter((b) => ["paragraph", "h2", "h3", "h4", "quote"].includes(b.type))
     .map((b) => (b.content || "").replace(/<[^>]*>/g, ""))
-    .concat(this.blocks.filter((b) => b.type === "bulletList" || b.type === "numberedList").flatMap((b) => (b.items || []).map((i) => String(i).replace(/<[^>]*>/g, ""))))
+    .concat(this.blocks.filter((b) => ["bulletList", "numberedList", "checklist"].includes(b.type)).flatMap((b) => (b.items || []).map((i) => String(i).replace(/<[^>]*>/g, ""))))
+    .concat(this.blocks.filter((b) => b.type === "table").flatMap((b) => (b.rows || []).flat()))
+    .concat(this.blocks.filter((b) => b.type === "steps").flatMap((b) => (b.steps || []).flatMap((s) => [s.title, s.text])))
+    .concat(this.keyTakeaways || [], (this.faqs || []).flatMap((f) => [f.question, f.answer]))
     .join(" ");
   const words = text.split(/\s+/).filter(Boolean).length;
   this.readingTime = Math.max(1, Math.ceil(words / 200));

@@ -14,7 +14,8 @@
 // the template (or if anything is left unfilled) the older plain copy is used.
 //
 // vercel.json routes /blog/:slug here. Any failure falls back to the plain shell.
-const API = "https://api.arthaleads.com/api";
+// The staging site reads the staging API, so its HTML matches the staging app.
+const apiFor = (host) => (/staging/.test(String(host)) ? "https://api-staging.arthaleads.com/api" : "https://api.arthaleads.com/api");
 const SITE = "https://www.arthaleads.com";
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -95,16 +96,26 @@ function cleanHtml(html) {
     });
 }
 
-function blockHtml(b) {
+// `num` numbers the main sections, as on the live page (see bodyHtml).
+function blockHtml(b, num = 0) {
   switch (b.type) {
     case "paragraph": return `<p>${cleanHtml(b.content)}</p>`;
     // Same markup as RenderBlock in pages/PublicBlogPost.jsx (ids feed "In this article").
-    case "h2": return `<h2 id="sec-${esc(b.id)}" class="font-display">${cleanHtml(b.content)}</h2>`;
+    case "h2": return `<h2 id="sec-${esc(b.id)}" class="font-display blog-h2"><span class="blog-h2__num" aria-hidden="true">${String(num).padStart(2, "0")}</span><span>${cleanHtml(b.content)}</span></h2>`;
     case "h3": return `<h3 id="sec-${esc(b.id)}" class="font-display">${cleanHtml(b.content)}</h3>`;
     case "h4": return `<h4 class="font-display">${cleanHtml(b.content)}</h4>`;
     case "quote": return `<blockquote><p class="font-display">${cleanHtml(b.content)}</p></blockquote>`;
     case "bulletList": return `<ul>${(b.items || []).map((i) => `<li>${cleanHtml(i)}</li>`).join("")}</ul>`;
     case "numberedList": return `<ol>${(b.items || []).map((i) => `<li>${cleanHtml(i)}</li>`).join("")}</ol>`;
+    case "checklist": return `<ul class="blog-checklist">${(b.items || []).map((i) => `<li>${cleanHtml(i)}</li>`).join("")}</ul>`;
+    case "table": {
+      const [head = [], ...rows] = b.rows || [];
+      return `<figure class="blog-table"><div class="blog-table__wrap"><table><thead><tr>${head.map((c) => `<th scope="col">${esc(c)}</th>`).join("")}</tr></thead>`
+        + `<tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`
+        + `${b.caption ? `<figcaption>${esc(b.caption)}</figcaption>` : ""}</figure>`;
+    }
+    case "steps": return `<ol class="blog-steps">${(b.steps || []).map((s, i) => `<li><span class="blog-steps__num" aria-hidden="true">${i + 1}</span><div>`
+      + `<p class="blog-steps__title">${esc(s.title)}</p>${s.text ? `<p class="blog-steps__text">${esc(s.text)}</p>` : ""}</div></li>`).join("")}</ol>`;
     case "image": return /^https?:/i.test(b.content || "")
       ? `<figure><img src="${esc(sized(b.content, 1200))}" alt="${esc(b.alt || "")}"${sizeAttrs(b.content)} loading="lazy" decoding="async">${b.caption ? `<figcaption>${esc(b.caption)}</figcaption>` : ""}</figure>`
       : "";
@@ -113,6 +124,8 @@ function blockHtml(b) {
     default: return "";
   }
 }
+
+const bodyHtml = (blocks = []) => { let n = 0; return blocks.map((b) => blockHtml(b, b.type === "h2" ? ++n : 0)).join("\n"); };
 
 // The site menu and footer, as plain links, so the first HTML a crawler gets
 // links to the main pages the way every other page on the site does (the live
@@ -150,7 +163,7 @@ function articleHtml(post) {
 ${post.excerpt ? `<p>${esc(post.excerpt)}</p>` : ""}
 <p>${esc(author)}${date ? ` · <time datetime="${esc(post.publishedAt)}">${esc(date)}</time>` : ""}${post.readingTime ? ` · ${post.readingTime} min read` : ""}</p>
 ${image ? `<img src="${esc(sized(image, 1400))}" alt="${esc(post.featuredImageAlt || post.title)}"${sizeAttrs(image)} fetchpriority="high">` : ""}
-${(post.blocks || []).map(blockHtml).join("\n")}
+${bodyHtml(post.blocks)}
 <p><a href="/blog">More guides on the Arthaleads blog</a> · <a href="/features">Arthaleads features</a> · <a href="/pricing">Pricing</a></p>
 </article></main>
 ${siteFooter()}`;
@@ -160,6 +173,12 @@ ${siteFooter()}`;
 // Placeholders come from renderBlogTemplate() in src/entry-prerender.jsx. Plain
 // split/join, never String.replace with a string, so "$" in a post is safe.
 const put = (s, token, value) => s.split(token).join(value);
+// Same data as faqLd in pages/PublicBlogPost.jsx (the app replaces it, same id).
+const faqLd = (faqs) => ({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.question, acceptedAnswer: { "@type": "Answer", text: f.answer } })),
+});
 const TPL_COVER = "https://cdn.sanity.io/images/tpl/tpl/tplcover-2000x1125.png";
 const stripTags = (h) => String(h || "").replace(/<[^>]*>/g, "").trim();
 const dateIN = (d) => (d ? new Date(d).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" }) : "");
@@ -170,6 +189,9 @@ function fillTemplate(html, post, categories) {
   const tags = post.tags || [];
   const heads = (post.blocks || []).filter((b) => b.type === "h2")
     .map((b) => ({ id: `sec-${b.id}`, text: stripTags(b.content) })).filter((h) => h.text);
+  const takeaways = post.keyTakeaways || [];
+  const faqs = post.faqs || [];
+  if (faqs.length) heads.push({ id: "faq", text: "Frequently asked questions" });   // as the live page's contents list
 
   // Parts a post may not have.
   if (!post.category?.name) html = html.replace(/<a [^>]*>@@CATNAME@@<\/a>/, "");
@@ -201,17 +223,26 @@ function fillTemplate(html, post, categories) {
       return put(li, `>0${n}<`, `>${String(i + 1).padStart(2, "0")}<`);
     }).join("") + close);
   if (heads.length < 2) html = html.replace(/<div class="pt-6"[^>]*><nav aria-label="In this article">[\s\S]*?<\/nav><\/div>/, "");
-  html = html.replace(/<option value="@@CID@@">@@CNAME@@<\/option>/,
-    () => categories.map((c) => `<option value="${esc(c._id)}">${esc(c.name)}</option>`).join(""));
+  html = html.replace(/<option value="@@CSLUG@@">@@CNAME@@<\/option>/,
+    () => categories.map((c) => `<option value="${esc(c.slug)}">${esc(c.name)}${c.count ? ` (${c.count})` : ""}</option>`).join(""));
+  html = html.replace(/<li>@@TK@@<\/li>/, () => takeaways.map((t) => `<li>${esc(t)}</li>`).join(""));
+  if (!takeaways.length) html = html.replace(/<aside class="blog-takeaways"[\s\S]*?<\/aside>/, "");
+  html = html.replace(/(<details class="blog-faq__item" open="">[\s\S]*?<\/details>)(<details class="blog-faq__item">[\s\S]*?<\/details>)/, (_, first, other) =>
+    faqs.map((f, i) => {
+      const n = i === 0 ? 1 : 2;
+      return put(put(i === 0 ? first : other, `@@FQ${n}@@`, esc(f.question)), `@@FA${n}@@`, esc(f.answer));
+    }).join(""));
+  if (!faqs.length) html = html.replace(/<section id="faq"[\s\S]*?<\/section>/, "");
+  else html = html.replace("</head>", () => `    <script type="application/ld+json" id="faq-jsonld">${JSON.stringify(faqLd(faqs)).replace(/</g, "\u005Cu003c")}</script>\n  </head>`);
   if (!categories.length) html = html.replace(/<label class="relative flex items-center mt-3">[\s\S]*?<\/label>/, "");
 
-  html = put(html, "<p>@@BODY@@</p>", (post.blocks || []).map(blockHtml).join("\n"));
+  html = put(html, "<p>@@BODY@@</p>", bodyHtml(post.blocks));
   html = put(html, "%40%40TITLE%40%40", encodeURIComponent(post.title));
   html = put(html, "%40%40SLUG%40%40", encodeURIComponent(post.slug));
   html = put(html, "@@TITLE@@", esc(post.title));
   html = put(html, "@@SLUG@@", esc(post.slug));
   html = put(html, "@@EXCERPT@@", esc(post.excerpt));
-  html = put(html, "@@CATID@@", esc(post.category?._id));
+  html = put(html, "@@CATSLUG@@", esc(post.category?.slug));
   html = put(html, "@@CATNAME@@", esc(post.category?.name));
   html = put(html, "Qqauthor Zzauthor", esc(author));
   html = put(html, ">QZ<", `>${esc(initials)}<`);
@@ -226,10 +257,11 @@ const HIDE_UNTIL_LIVE = `    <style id="prerender-css">[data-prerender-hide] [da
     <script>document.documentElement.setAttribute("data-prerender-hide","")</script>`;
 
 export default async function handler(req, res) {
+  const API = apiFor(req.headers.host);
   const slug = String(req.query.slug || "").toLowerCase().replace(/[^a-z0-9-]/g, "");
   let post = null;
   let status = 200;
-  const cats = fetch(`${API}/blog/categories`, { headers: { Accept: "application/json" } })
+  const cats = fetch(`${API}/blog/categories?inUse=1`, { headers: { Accept: "application/json" } })
     .then((r) => (r.ok ? r.json() : {})).then((d) => d.categories || []).catch(() => []);
   try {
     // nocount: this lookup must not add to the post's view counter.
@@ -297,7 +329,7 @@ export default async function handler(req, res) {
       { "@type": "ListItem", position: 1, name: "Home", item: SITE },
       { "@type": "ListItem", position: 2, name: "Blog", item: `${SITE}/blog` },
     ];
-    if (post.category?.name) crumbs.push({ "@type": "ListItem", position: 3, name: post.category.name, item: `${SITE}/blog?category=${post.category._id}` });
+    if (post.category?.name) crumbs.push({ "@type": "ListItem", position: 3, name: post.category.name, item: `${SITE}/blog/category/${post.category.slug}` });
     crumbs.push({ "@type": "ListItem", position: crumbs.length + 1, name: post.breadcrumbTitle || post.title, item: `${SITE}/blog/${post.slug}` });
     const bc = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: crumbs };
     html = html.replace("</head>", () => `    <script type="application/ld+json" id="breadcrumb-jsonld">${JSON.stringify(bc).replace(/</g, "\u005Cu003c")}</script>

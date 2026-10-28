@@ -15,6 +15,7 @@ const BlogPost = require("../models/BlogPost");
 const BlogCategory = require("../models/BlogCategory");
 const logger = require("../config/logger");
 const indexNow = require("./indexNow");
+const TOPICS = require("../config/blogCategories");
 
 const PROJECT_ID = process.env.SANITY_PROJECT_ID || "2racdioq";
 const DATASET    = process.env.SANITY_DATASET    || "production";
@@ -34,6 +35,7 @@ const QUERY = `*[_type == "post" && defined(slug.current) && defined(publishedAt
   robotsIndex, robotsFollow, robotsNoArchive, robotsNoImageIndex, robotsNoSnippet,
   robotsMaxSnippet, robotsMaxVideoPreview, robotsMaxImagePreview,
   excludeFromSitemap, redirectUrl, redirectPermanent,
+  keyTakeaways, faqs[]{ question, answer },
   body[]{ ..., _type == "image" => { ..., "url": asset->url } }
 } | order(publishedAt desc)`;
 
@@ -79,7 +81,7 @@ function toBlocks(body) {
   for (const b of body || []) {
     if (b._type === "block") {
       if (b.listItem) {
-        const type = b.listItem === "number" ? "numberedList" : "bulletList";
+        const type = b.listItem === "number" ? "numberedList" : b.listItem === "check" ? "checklist" : "bulletList";
         if (!list || list.type !== type) { flush(); list = { id: b._key, type, content: "", items: [] }; }
         // Items keep their inline HTML (bold, links), like paragraphs do.
         if (plainText(b).trim()) list.items.push(inlineHtml(b));
@@ -103,16 +105,37 @@ function toBlocks(body) {
     } else if (b._type === "divider") {
       flush();
       out.push({ id: b._key, type: "divider", content: "" });
+    } else if (b._type === "table") {
+      // Plain-text cells; the first row is the header.
+      flush();
+      const rows = (b.rows || []).map((r) => (r.cells || []).map((c) => String(c ?? "").trim().slice(0, 300))).filter((r) => r.some(Boolean));
+      if (rows.length) out.push({ id: b._key, type: "table", content: "", caption: String(b.caption || "").trim().slice(0, 200), rows });
+    } else if (b._type === "steps") {
+      flush();
+      const steps = (b.items || []).map((s) => ({ title: String(s.title || "").trim().slice(0, 120), text: String(s.text || "").trim().slice(0, 400) })).filter((s) => s.title);
+      if (steps.length) out.push({ id: b._key, type: "steps", content: "", steps });
     }
   }
   flush();
   return out;
 }
 
+// The topics in config/blogCategories.js, with their page titles and intros,
+// kept in step on every sync (creating any that are missing).
+async function ensureTopics() {
+  await Promise.all(TOPICS.map((t, i) => BlogCategory.updateOne(
+    { slug: t.slug },
+    { $set: { name: t.name, description: t.description, seoTitle: t.seoTitle, intro: t.intro, order: i } },
+    { upsert: true }
+  )));
+}
+
 async function categoryId(name) {
   const clean = String(name || "").trim();
   if (!clean) return null;
-  const slug = slugify(clean);
+  // A topic by its name, or by an older name it replaced.
+  const topic = TOPICS.find((t) => t.name === clean || (t.legacy || []).includes(clean));
+  const slug = topic ? topic.slug : slugify(clean);
   if (!slug) return null;
   const existing = await BlogCategory.findOne({ slug });
   if (existing) return existing._id;
@@ -170,6 +193,7 @@ async function fetchPublished() {
  */
 async function sync() {
   const docs = await fetchPublished();
+  await ensureTopics();
   const stats = { fetched: docs.length, created: 0, updated: 0, unchanged: 0, skipped: 0, unpublished: 0 };
   const changed = [];   // /blog/<slug> paths to tell search engines about (IndexNow)
 
@@ -205,6 +229,10 @@ async function sync() {
     post.featuredImageAlt = d.featuredImageAlt || "";
     post.category = await categoryId(d.category);
     post.tags = (d.tags || []).map((t) => String(t).trim().slice(0, 60)).filter(Boolean);
+    post.keyTakeaways = (d.keyTakeaways || []).map((t) => String(t || "").trim().slice(0, 400)).filter(Boolean).slice(0, 8);
+    post.faqs = (d.faqs || [])
+      .map((f) => ({ question: String(f?.question || "").trim().slice(0, 300), answer: String(f?.answer || "").trim().slice(0, 2000) }))
+      .filter((f) => f.question && f.answer).slice(0, 12);
     post.status = "published";
     post.publishedAt = new Date(d.publishedAt);
     post.metaTitle = String(d.metaTitle || d.title).trim().slice(0, 70);

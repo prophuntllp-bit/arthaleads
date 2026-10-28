@@ -653,6 +653,7 @@ export default function App() {
         <Route path="/compare/kylas-alternative" element={<KylasAlternative />} />
         <Route path="/product-tour"         element={<ProductTour />} />
         <Route path="/blog"                 element={<PublicBlog />} />
+        <Route path="/blog/category/:slug"  element={<PublicBlog />} />
         <Route path="/blog/:slug"           element={<PublicBlogPost />} />
         <Route path="/about-us"             element={<AboutUs />} />
         <Route path="/case-studies"         element={<CaseStudies />} />

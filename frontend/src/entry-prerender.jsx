@@ -79,17 +79,20 @@ export const PAGES = {
 // The blog post page with placeholder values (@@...@@, plus a sample author,
 // date and image the function recognises). api/blog-post.js fills it in for
 // each post, so a post's first paint is the real page, not a hidden plain copy.
-// One heading, category and tag of each kind is enough: the function repeats them.
+// One heading, category, tag, takeaway and FAQ of each kind is enough: the
+// function repeats them (two FAQs and headings: the first is drawn differently).
 export function renderBlogTemplate() {
   const post = {
     _id: "tpl", slug: "@@SLUG@@", title: "@@TITLE@@", excerpt: "@@EXCERPT@@", byline: "Qqauthor Zzauthor",
-    publishedAt: "2001-02-03T06:30:00.000Z", readingTime: 97, category: { _id: "@@CATID@@", name: "@@CATNAME@@" },
+    publishedAt: "2001-02-03T06:30:00.000Z", readingTime: 97, category: { _id: "@@CATID@@", slug: "@@CATSLUG@@", name: "@@CATNAME@@" },
     featuredImage: "https://cdn.sanity.io/images/tpl/tpl/tplcover-2000x1125.png", featuredImageAlt: "@@IMGALT@@",
     blocks: [{ id: "tpl", type: "paragraph", content: "@@BODY@@" }], tags: ["@@TAG@@"],
+    keyTakeaways: ["@@TK@@"],
+    faqs: [{ question: "@@FQ1@@", answer: "@@FA1@@" }, { question: "@@FQ2@@", answer: "@@FA2@@" }],
   };
   const initial = {
     post,
-    categories: [{ _id: "@@CID@@", name: "@@CNAME@@" }],
+    categories: [{ _id: "@@CID@@", slug: "@@CSLUG@@", name: "@@CNAME@@" }],
     headings: [{ id: "@@HID1@@", text: "@@HTEXT1@@" }, { id: "@@HID2@@", text: "@@HTEXT2@@" }],
   };
   return renderToString(

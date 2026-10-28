@@ -9,7 +9,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { CRM_SIGNUP_URL } from "../utils/crmLinks";
 import DOMPurify from "dompurify";
 import api from "../services/api";
-import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, ChevronRight, Link2, Search, Tag } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, ChevronRight, Link2, Plus, Search, Tag } from "lucide-react";
 import { WhatsAppLogo } from "../components/site/BrandLogos";
 import { SitePage, Section, Container, SectionHeader, Card, SiteButton } from "../components/site/Site";
 import { Reveal } from "../components/motion/Motion";
@@ -103,7 +103,7 @@ function useSEO(post) {
       { "@type": "ListItem", "position": 2, "name": "Blog",  "item": `${SITE}/blog` },
     ];
     if (post.category?.name) {
-      breadcrumbs.push({ "@type": "ListItem", "position": 3, "name": post.category.name, "item": `${SITE}/blog?category=${post.category._id}` });
+      breadcrumbs.push({ "@type": "ListItem", "position": 3, "name": post.category.name, "item": `${SITE}/blog/category/${post.category.slug}` });
       breadcrumbs.push({ "@type": "ListItem", "position": 4, "name": crumb, "item": url });
     } else {
       breadcrumbs.push({ "@type": "ListItem", "position": 3, "name": crumb, "item": url });
@@ -111,14 +111,31 @@ function useSEO(post) {
     bcScript.textContent = JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": breadcrumbs });
     document.head.appendChild(bcScript);
 
+    // The article's FAQ, as Google's FAQPage data (same id as api/blog-post.js writes).
+    document.getElementById("faq-jsonld")?.remove();
+    if (post.faqs?.length) {
+      const faqScript = document.createElement("script");
+      faqScript.id = "faq-jsonld";
+      faqScript.type = "application/ld+json";
+      faqScript.textContent = JSON.stringify(faqLd(post.faqs));
+      document.head.appendChild(faqScript);
+    }
+
     return () => {
       document.title = "Arthaleads - Real Estate CRM";
       setMeta("robots", prevRobots);
       document.getElementById("blog-jsonld")?.remove();
       document.getElementById("breadcrumb-jsonld")?.remove();
+      document.getElementById("faq-jsonld")?.remove();
     };
   }, [post]);
 }
+
+export const faqLd = (faqs) => ({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": faqs.map((f) => ({ "@type": "Question", "name": f.question, "acceptedAnswer": { "@type": "Answer", "text": f.answer } })),
+});
 
 function setMeta(name, content) {
   if (!content) return;
@@ -145,13 +162,21 @@ const stripTags = (html) => String(html || "").replace(/<[^>]*>/g, "").trim();
 
 // ── Block renderer ─────────────────────────────────────────────────────────────
 // Plain semantic elements; .blog-prose (styles.css) gives them their look.
-function RenderBlock({ block }) {
+// api/blog-post.js writes the same markup (blockHtml) into the page's HTML:
+// change both together. `num` numbers the main sections (01, 02, ...) to
+// match "In this article".
+function RenderBlock({ block, num }) {
   const html = (s) => ({ __html: sanitizeHtml(s) });
   switch (block.type) {
     case "paragraph":
       return <p dangerouslySetInnerHTML={html(block.content)} />;
     case "h2":
-      return <h2 id={`sec-${block.id}`} className="font-display" dangerouslySetInnerHTML={html(block.content)} />;
+      return (
+        <h2 id={`sec-${block.id}`} className="font-display blog-h2">
+          <span className="blog-h2__num" aria-hidden="true">{String(num).padStart(2, "0")}</span>
+          <span dangerouslySetInnerHTML={html(block.content)} />
+        </h2>
+      );
     case "h3":
       return <h3 id={`sec-${block.id}`} className="font-display" dangerouslySetInnerHTML={html(block.content)} />;
     case "h4":
@@ -181,6 +206,40 @@ function RenderBlock({ block }) {
           {(block.items || []).map((item, i) => <li key={i} dangerouslySetInnerHTML={html(item)} />)}
         </ol>
       );
+    case "checklist":
+      return (
+        <ul className="blog-checklist">
+          {(block.items || []).map((item, i) => <li key={i} dangerouslySetInnerHTML={html(item)} />)}
+        </ul>
+      );
+    case "table": {
+      const [head = [], ...rows] = block.rows || [];
+      return (
+        <figure className="blog-table">
+          <div className="blog-table__wrap">
+            <table>
+              <thead><tr>{head.map((c, i) => <th key={i} scope="col">{c}</th>)}</tr></thead>
+              <tbody>{rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j}>{c}</td>)}</tr>)}</tbody>
+            </table>
+          </div>
+          {block.caption && <figcaption>{block.caption}</figcaption>}
+        </figure>
+      );
+    }
+    case "steps":
+      return (
+        <ol className="blog-steps">
+          {(block.steps || []).map((s, i) => (
+            <li key={i}>
+              <span className="blog-steps__num" aria-hidden="true">{i + 1}</span>
+              <div>
+                <p className="blog-steps__title">{s.title}</p>
+                {s.text && <p className="blog-steps__text">{s.text}</p>}
+              </div>
+            </li>
+          ))}
+        </ol>
+      );
     case "code":
       return (
         <div className="blog-code">
@@ -193,6 +252,35 @@ function RenderBlock({ block }) {
     default:
       return null;
   }
+}
+
+/** The article's main points, in a box above the body. */
+function KeyTakeaways({ items }) {
+  if (!items?.length) return null;
+  return (
+    <aside className="blog-takeaways" aria-label="Key takeaways">
+      <p className="site-eyebrow !text-xs">Key takeaways</p>
+      <ul>{items.map((t, i) => <li key={i}>{t}</li>)}</ul>
+    </aside>
+  );
+}
+
+/** Questions and answers under the article; the first one starts open. */
+function Faq({ faqs }) {
+  if (!faqs?.length) return null;
+  return (
+    <section id="faq" className="blog-faq scroll-mt-28" aria-labelledby="faq-title">
+      <h2 id="faq-title" className="font-display site-ink font-extrabold tracking-[-0.02em] text-[24px] sm:text-[28px] mb-6">Frequently asked questions</h2>
+      <div className="blog-faq__list">
+        {faqs.map((f, i) => (
+          <details key={i} className="blog-faq__item" open={i === 0}>
+            <summary>{f.question}<span className="blog-faq__icon" aria-hidden="true"><Plus className="w-3.5 h-3.5" /></span></summary>
+            <p className="blog-faq__answer">{f.answer}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 // ── Sidebar pieces ────────────────────────────────────────────────────────────
@@ -254,10 +342,10 @@ function Sidebar({ headings, related, categories }) {
         {categories.length > 0 && (
           <label className="relative flex items-center mt-3">
             <span className="sr-only">Topic</span>
-            <select defaultValue="" onChange={(e) => navigate(e.target.value ? `/blog?category=${e.target.value}` : "/blog")}
+            <select defaultValue="" onChange={(e) => navigate(e.target.value ? `/blog/category/${e.target.value}` : "/blog")}
               className={`${inputCls} !py-2.5 !pl-3.5 !pr-9 !rounded-xl appearance-none cursor-pointer`} style={inputStyle}>
               <option value="">All topics</option>
-              {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+              {categories.map((c) => <option key={c._id} value={c.slug}>{c.name}{c.count ? ` (${c.count})` : ""}</option>)}
             </select>
             <ChevronDown className="w-4 h-4 absolute right-3 pointer-events-none site-muted" aria-hidden="true" />
           </label>
@@ -341,7 +429,7 @@ function BlogPostInner({ initial }) {
   }, [slug]);
 
   useEffect(() => {
-    api.get("/blog/categories").then((r) => setCategories(r.data.categories || [])).catch(() => {});
+    api.get("/blog/categories?inUse=1").then((r) => setCategories(r.data.categories || [])).catch(() => {});
   }, []);
 
   // Same-topic articles first, then the newest to fill the row.
@@ -358,7 +446,7 @@ function BlogPostInner({ initial }) {
     () => (post?.blocks || []).filter((b) => b.type === "h2").map((b) => ({ id: `sec-${b.id}`, text: stripTags(b.content) })).filter((h) => h.text),
     [post]
   );
-  const headings = initial?.headings || fromBlocks;
+  const headings = initial?.headings || (post?.faqs?.length ? [...fromBlocks, { id: "faq", text: "Frequently asked questions" }] : fromBlocks);
 
   // No nav/footer while loading: main.jsx swaps out the server's static copy
   // of the article once the live page renders its footer.
@@ -406,7 +494,7 @@ function BlogPostInner({ initial }) {
 
           <div className="max-w-4xl">
             {post.category && (
-              <Link to={`/blog?category=${post.category._id}`} className="site-eyebrow inline-block hover:underline underline-offset-4 mb-5">
+              <Link to={`/blog/category/${post.category.slug}`} className="site-eyebrow inline-block hover:underline underline-offset-4 mb-5">
                 {post.category.name}
               </Link>
             )}
@@ -449,9 +537,11 @@ function BlogPostInner({ initial }) {
       <Section tone="white" className="!pt-2 sm:!pt-4">
         <Container className="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-10 xl:gap-16">
           <article className="min-w-0 max-w-[44rem]">
+            <KeyTakeaways items={post.keyTakeaways} />
             <div className="blog-prose">
-              {(post.blocks || []).map((block) => <RenderBlock key={block.id} block={block} />)}
+              {numbered(post.blocks).map(({ block, num }) => <RenderBlock key={block.id} block={block} num={num} />)}
             </div>
+            <Faq faqs={post.faqs} />
 
             {post.tags?.length > 0 && (
               <div className="mt-12 pt-7 flex flex-wrap items-center gap-2" style={{ borderTop: "1px solid var(--site-line)" }}>
@@ -476,7 +566,7 @@ function BlogPostInner({ initial }) {
             <Card className="mt-12 p-6 sm:p-7">
               <h3 className="font-display text-lg font-bold site-ink mb-2">About Arthaleads</h3>
               <p className="text-sm leading-relaxed">
-                Arthaleads is a CRM for Indian real estate sales teams, by Vistrow Technologies. It brings enquiries from ads, portals, your website and WhatsApp into one workspace,
+                Arthaleads is a CRM for Indian real estate sales teams. It brings enquiries from ads, portals, your website and WhatsApp into one workspace,
                 with follow-ups, projects, bookings and invoices. These articles are educational and are not a substitute for advice based on your own business and data.
               </p>
             </Card>
@@ -504,6 +594,9 @@ function BlogPostInner({ initial }) {
     </SitePage>
   );
 }
+
+// Each block with its main-section number (h2s count 1, 2, 3 ...).
+const numbered = (blocks = []) => { let n = 0; return blocks.map((block) => ({ block, num: block.type === "h2" ? ++n : 0 })); };
 
 const imageSize = (url) => { const m = /-(\d+)x(\d+)\.\w+(?:\?|$)/.exec(url || ""); return m ? { width: Number(m[1]), height: Number(m[2]) } : {}; };
 
