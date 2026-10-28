@@ -101,6 +101,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-28 IST main d37e08fd (pushed live, from staging 9d4ac11a + c7e09c58): WhatsApp tabs switch content only (Suspense under the tabs + prefetch); Plivo calls refuse foreign numbers before ringing the agent, pick the Indian number when a field holds two, Calls page shows missed reasons.
 - [claude] 2026-10-28 IST (main, released from staging by file copy): sitemap lastmod dates after the redesign (marketing pages 2026-10-27; privacy/terms/refund 2026-10-17) + video:player_loc YouTube embed for /product-tour. backend/controllers/blogController.js only. Then resubmitted the sitemap in GSC and Bing.
 - [claude] 2026-10-28 IST (main, released from staging 6c336eb2 + edb1a646 by file copy): blog covers shown whole at 16:9 and framed (blog-card / blog-cover in styles.css); PublicBlog, PublicBlogPost, api/blog-index.js, styles.css only.
 - [claude] 2026-10-28 IST main 3166a95f (pushed live, from staging 73d797e8 + 78ecc6e4): Hot Today thumbs-down button for a wrong AI reason; AI agent editor redesign (main card, setup checklist, tabs, sticky test panel and save bar, plain labels).
