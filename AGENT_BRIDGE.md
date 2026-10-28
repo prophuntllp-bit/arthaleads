@@ -59,7 +59,6 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
-- [claude] 2026-10-28 IST: AI agent editor redesign (main card + checklist + SegmentTabs sections, sticky test panel, sticky save bar with unsaved warning, plain labels). frontend/src/pages/conversations/AgentBuilder.jsx
 - [claude] 2026-10-22 IST: Customer photos/voice notes/documents on WhatsApp are fetched from Meta and saved; bot looks at photos (gpt-4o-mini vision), acknowledges voice notes/files, team alerted; chat bubbles show media or say it is missing. backend/utils/waInboundMedia.js, routes/whatsappRoutes.js, models/WaMessage.js, frontend components/WaMessageMedia.jsx, pages/Inbox.jsx, components/LeadDetail.jsx
 - [claude] 2026-10-22 IST: Returning WhatsApp customers: lead moved to a project stays with the project (activity + alert, no duplicate in Leads); other re-created leads carry old details; purpose labels by meaning. backend/routes/whatsappRoutes.js (relinkConversationLead), utils/formFieldMapper.js, scripts/fixProjectLeadDuplicates.js, tests/whatsappLeadRelink.db.test.js
 - [claude] 2026-10-22 IST: Button flows read typed replies (budgets like "1.5 cr", AI check for other answers) and re-ask once after answering a side question; every agent. backend/services/ctwaFlowService.js, new utils/flowAnswer.js, routes/whatsappRoutes.js (handleInbound + triggerBotReply opts), models/WaConversation.js (flowState fields), models/AiUsage.js
@@ -103,6 +102,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-28 IST 78ecc6e4 (staging only): AI agent editor redesign: main card (name, Live/Paused/Draft, setup N of 6 with chips to the missing tab), SegmentTabs sections (Basics, What it knows, Conversation, What it can send, WhatsApp ads, Button questions in 4 steps, Advanced) with Next buttons, sticky test panel (Chat test / Button questions, preview restarts on edit, no raw step ids), sticky save bar with unsaved warning + confirm on leaving. Same fields and save. Tested on staging with /whatsapp/status faked as connected in one tab (no staging company has WhatsApp).
 - [claude] 2026-10-28 IST: DROPPED the 22 Oct AI Agent editor redesign (ecbe5453 and its 5 design options), owner's call. A fresh editor redesign is being planned instead.
 - [claude] 2026-10-28 IST 73d797e8 (staging only): Hot Today 'AI got it wrong' text is now a thumbs-down button (hover/aria 'Mark this AI reason as wrong'; red + Undo when pressed). frontend/src/pages/Dashboard.jsx.
 - [claude] 2026-10-27 IST (staging cf80ba5d, NOT on main yet): site films now YouTube embeds: components/site/YouTubePlayer.jsx (poster facade, youtube-nocookie, postMessage seekTo, GA video_play); FilmSection (home), IntroVideo (product tour, rewritten, INTRO_VIDEOS now has youtubeId/length), BookDemo intro film. Self-hosted mp4s are no longer played on the site (still referenced as VideoObject contentUrl in data/introFilm.js).
