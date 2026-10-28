@@ -112,6 +112,16 @@ const bootScript = (src) => `<script>(function(){var d=document,w=window,started
         Promise.all(waits).then(painted,painted)}
       if(d.readyState==="loading")d.addEventListener("DOMContentLoaded",ready);else ready()})()</script>`;
 const deferBoot = (html) => html.replace(/<script type="module" crossorigin src="(\/assets\/[^"]+\.js)"><\/script>/, (_, src) => bootScript(src));
+// The stylesheet goes into the page itself: a separate file held the first
+// paint back by a whole extra request on a slow phone connection (Lighthouse
+// "render-blocking", ~1 s). Its font and image URLs are absolute (/assets/...).
+const inlineCss = (html) => html.replace(/<link rel="stylesheet"(?: crossorigin)? href="(\/assets\/[^"]+\.css)"\s*\/?>/, (tag, href) => {
+  const css = readFileSync(join(dist, href.slice(1)), "utf8");
+  // The disabled link is never fetched or applied; it is there so Vite's lazy
+  // chunk loader (which looks for link[href][rel=stylesheet]) knows the sheet
+  // is already on the page and does not add and re-parse it after the app starts.
+  return css.includes("</style") ? tag : `<style id="app-css">${css}</style><link rel="stylesheet" href="${href}" disabled>`;
+});
 
 // ── 3b. Render and inject ──────────────────────────────────────────────────
 const { render, renderBlogTemplate, PAGES } = await import(pathToFileURL(join(outDir, "entry.mjs")).href);
@@ -129,13 +139,13 @@ for (const path of Object.keys(PAGES)) {
     if (!body || body.length < 500) throw new Error(`suspiciously small output (${body.length} bytes)`);
     const shell = readFileSync(file, "utf8");
     if (!shell.includes('<div id="root"></div>')) throw new Error("no empty #root in shell");
-    const out = deferBoot(shell
+    const out = deferBoot(inlineCss(shell
       // The splash never shows on these pages for light-theme visitors: don't preload its logo.
       .replace(/\s*<link rel="preload" as="image" href="\/logo-splash\.webp" \/>/, "")
       .replace("</head>", `${FONT_PRELOADS}
 ${HEAD_EXTRA}
   </head>`)
-      .replace('<div id="root"></div>', `<div id="root" data-prerendered>${body}</div>`));
+      .replace('<div id="root"></div>', `<div id="root" data-prerendered>${body}</div>`)));
     if (!out.includes("__alBootStarted")) console.warn(`  prerender  ${path}: app script tag not found, app starts as before`);
     writeFileSync(file, out);
     ok++;
@@ -153,13 +163,13 @@ try {
   if (!body.includes("@@BODY@@") || !body.includes("<footer")) throw new Error("placeholders or footer missing");
   const shell = readFileSync(join(dist, "app.html"), "utf8");
   if (!shell.includes('<div id="root"></div>')) throw new Error("no empty #root in app.html");
-  const out = deferBoot(shell
+  const out = deferBoot(inlineCss(shell
     .replace(/\s*<link rel="preload" as="image" href="\/logo-splash\.webp" \/>/, "")
     .replace(/<meta name="robots"[^>]*>/, '<meta name="robots" content="noindex" />')
     .replace("</head>", `${FONT_PRELOADS}
 ${HEAD_EXTRA}
   </head>`)
-    .replace('<div id="root"></div>', `<div id="root" data-prerendered>${body}</div>`));
+    .replace('<div id="root"></div>', `<div id="root" data-prerendered>${body}</div>`)));
   writeFileSync(join(dist, "blog-post-template.html"), out);
   console.log(`  prerender  blog post template ${(body.length / 1024).toFixed(0)} KB`);
 } catch (e) {

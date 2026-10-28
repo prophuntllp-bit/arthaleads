@@ -303,6 +303,7 @@ function NavInner({ onScrollTo }) {
                   single file would disappear on one of the two backgrounds. */}
               <img
                 src={isDark ? "/logo-lockup-dark.webp" : "/logo-lockup.webp"}
+                srcSet={isDark ? "/logo-lockup-dark-240.webp 240w, /logo-lockup-dark.webp 420w" : "/logo-lockup-240.webp 240w, /logo-lockup.webp 420w"} sizes="120px"
                 width={isDark ? 1515 : 1574} height={isDark ? 459 : 471}
                 alt="Arthaleads — Turning Opportunities Into Value"
                 className="h-9 w-auto"
@@ -427,7 +428,7 @@ function NavInner({ onScrollTo }) {
           open={mobileOpen}
           onOpenChange={setMobileOpen}
           linkComponent={NavAnchor}
-          logo={<img src={isDark ? "/logo-lockup-dark.webp" : "/logo-lockup.webp"} alt="" width={isDark ? 1515 : 1574} height={isDark ? 459 : 471} />}
+          logo={<img src={isDark ? "/logo-lockup-dark.webp" : "/logo-lockup.webp"} srcSet={isDark ? "/logo-lockup-dark-240.webp 240w, /logo-lockup-dark.webp 420w" : "/logo-lockup-240.webp 240w, /logo-lockup.webp 420w"} sizes="120px" alt="" width={isDark ? 1515 : 1574} height={isDark ? 459 : 471} />}
           logoHref="/"
           logoAlt="Arthaleads home"
           cta={{ label: "Start free trial", href: CRM_SIGNUP_URL }}

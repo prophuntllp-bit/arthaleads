@@ -77,7 +77,7 @@ export function HeroVisual() {
       {/* Frosted glass panel the photo stands on (styles.css .hero-glass). */}
       <div aria-hidden="true" className="hero-glass" />
       <div className="relative overflow-hidden rounded-[28px] border" style={{ borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
-        <SiteImage name="hero" width={1024} height={1280} priority sizes="(min-width: 1024px) 520px, 92vw"
+        <SiteImage name="hero" width={1024} height={1280} priority sizes="(min-width: 1280px) 520px, (min-width: 1024px) 460px, 86vw"
           alt="A real estate sales manager smiling at her phone in a modern sales lounge"
           className="block w-full h-auto aspect-[4/5] lg:aspect-[6/7] object-cover object-[50%_30%]" />
       </div>
