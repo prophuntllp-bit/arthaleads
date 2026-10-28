@@ -103,6 +103,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-28 IST 73d797e8 (staging only): Hot Today 'AI got it wrong' text is now a thumbs-down button (hover/aria 'Mark this AI reason as wrong'; red + Undo when pressed). frontend/src/pages/Dashboard.jsx.
 - [claude] 2026-10-27 IST (staging cf80ba5d, NOT on main yet): site films now YouTube embeds: components/site/YouTubePlayer.jsx (poster facade, youtube-nocookie, postMessage seekTo, GA video_play); FilmSection (home), IntroVideo (product tour, rewritten, INTRO_VIDEOS now has youtubeId/length), BookDemo intro film. Self-hosted mp4s are no longer played on the site (still referenced as VideoObject contentUrl in data/introFilm.js).
 - [claude] 2026-10-27 IST (staging 8fe1f35a, NOT on main yet): components/site/AndroidLockScreen.jsx replaces the Download App hero phone; BookDemo.jsx adds the intro film section (YouTube ZybPiXyK2vQ via youtube-nocookie, click-to-load, GA event video_play); vercel.json CSP frame-src + https://www.youtube-nocookie.com.
 - [claude] 2026-10-27 IST (staging 3aa3c55c, NOT on main yet): 17 new closing-card photos public/img/site/cta-*.webp (brief + PNGs in main checkout outputs/site-images/cta/, generated with Codex); Blocks.jsx CTA_BY_PAGE maps every inner page to its own photo.
