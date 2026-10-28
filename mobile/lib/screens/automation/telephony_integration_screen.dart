@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:provider/provider.dart';
+
 import '../../core/api_client.dart';
+import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
@@ -255,9 +258,30 @@ class _TelephonyIntegrationScreenState
       ),
     );
 
+    // Which phone service is in use is chosen on the website (Integrations →
+    // Telephony, 27-28 Oct 2026: EnableX, Plivo, or both off). This screen
+    // only holds EnableX's settings, so say when it isn't the one in use.
+    final provider = '${(context.read<AuthState>().org?['telephony'] as Map?)?['provider'] ?? 'enablex'}';
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (provider != 'enablex') ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.warning.withValues(alpha: 0.25)),
+            ),
+            child: Text(
+              provider == 'plivo'
+                  ? 'Your company calls through Plivo, so these EnableX settings are not in use. Switch phone services on the website: Integrations → Telephony.'
+                  : 'Calling through the company number is switched off. Switch it on on the website: Integrations → Telephony.',
+              style: TextStyle(fontSize: 12.5, color: AppTheme.of(context).text),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

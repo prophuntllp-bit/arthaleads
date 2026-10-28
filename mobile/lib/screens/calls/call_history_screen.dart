@@ -7,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:provider/provider.dart';
 
+import '../../widgets/call_transcript.dart';
+import '../../core/dial_numbers.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/plan.dart';
@@ -129,14 +131,14 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
       phone: phone,
     );
     if (!mounted || choice == null) return;
-    if (choice == 'native') {
-      await launchUrl(Uri.parse('tel:$phone'));
+    if (choice.native) {
+      await launchUrl(Uri.parse('tel:${choice.dial(phone)}'));
       return;
     }
     try {
       final res = await _api.dio.post(
         '/calls/initiate',
-        data: {'leadId': widget.leadId},
+        data: choice.body({'leadId': widget.leadId}),
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -535,7 +537,8 @@ class _CallCardState extends State<_CallCard> {
     final sentiment = _meta['sentiment'] as String?;
     final hasAnalysis = _meta['summary'] != null;
     final recordingUrl = _meta['recordingUrl'] as String?;
-    final transcript = _meta['transcript'] as String?;
+    final hasTranscript = CallTranscriptView.hasAny(_meta);
+    final reason = isMissed ? missedReason(_meta) : '';
     final keyPoints = (_meta['keyPoints'] as List?)?.cast<String>() ?? [];
 
     return Card(
@@ -563,7 +566,8 @@ class _CallCardState extends State<_CallCard> {
                     border: Border.all(color: color.withValues(alpha: 0.35)),
                   ),
                   child: Text(
-                    status ?? '—',
+                    // Why it was missed, when the phone service said (28 Oct 2026).
+                    reason.isNotEmpty ? '${status ?? 'missed'} · $reason' : (status ?? '—'),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -583,17 +587,17 @@ class _CallCardState extends State<_CallCard> {
                         phone: widget.leadPhone,
                       );
                       if (!mounted || choice == null) return;
-                      if (choice == 'native') {
+                      if (choice.native) {
                         final phone = widget.leadPhone;
                         if (phone != null && phone.isNotEmpty) {
-                          await launchUrl(Uri.parse('tel:$phone'));
+                          await launchUrl(Uri.parse('tel:${choice.dial(phone)}'));
                         }
                         return;
                       }
                       try {
                         await _api.dio.post(
                           '/calls/initiate',
-                          data: {'leadId': widget.leadId},
+                          data: choice.body({'leadId': widget.leadId}),
                         );
                       } catch (_) {}
                     },
@@ -662,7 +666,7 @@ class _CallCardState extends State<_CallCard> {
               ),
             ],
 
-            if (transcript != null && transcript.isNotEmpty) ...[
+            if (hasTranscript) ...[
               const SizedBox(height: 8),
               InkWell(
                 onTap: () => setState(() => _transcriptOpen = !_transcriptOpen),
@@ -686,10 +690,8 @@ class _CallCardState extends State<_CallCard> {
               if (_transcriptOpen)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    transcript,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+                  // Customer and agent as a chat when the server split the turns.
+                  child: CallTranscriptView(meta: _meta),
                 ),
             ],
 

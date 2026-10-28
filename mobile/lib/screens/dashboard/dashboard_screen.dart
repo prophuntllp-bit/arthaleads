@@ -57,12 +57,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (phone == null || phone.isEmpty) return;
     final choice = await pickCallMethod(context, name: name, phone: phone);
     if (!mounted || choice == null) return;
-    if (choice == 'native') {
-      await launchUrl(Uri.parse('tel:$phone'));
+    if (choice.native) {
+      await launchUrl(Uri.parse('tel:${choice.dial(phone)}'));
       return;
     }
     try {
-      final res = await _api.dio.post('/calls/initiate', data: {'leadId': leadId});
+      final res = await _api.dio.post('/calls/initiate', data: choice.body({'leadId': leadId}));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -75,7 +75,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(ApiClient.errorMessage(e, 'Call failed. Check EnableX settings.')),
+            content: Text(ApiClient.errorMessage(e, 'Call failed. Check the phone service in Integrations.')),
             backgroundColor: AppColors.danger,
           ),
         );
@@ -1394,6 +1394,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 11.5, color: t.textSoft),
               ),
+              if (hot['_ai'] is Map && '${(hot['_ai'] as Map)['reason'] ?? ''}'.isNotEmpty) _AiReason(hot),
             ]),
           ),
           IconButton(
@@ -2699,6 +2700,93 @@ class _SectionHeader extends StatelessWidget {
         ),
         Expanded(child: Divider(color: border)),
       ],
+    );
+  }
+}
+
+
+/// Why the AI scored a Hot Today lead, from what the customer wrote, with a
+/// thumbs-down to mark it wrong (tap again to undo). Mirrors the web's Hot
+/// Today (28 Oct 2026); the feedback is saved for review only and changes
+/// neither the score nor the lead.
+class _AiReason extends StatefulWidget {
+  final Map<String, dynamic> lead;
+  const _AiReason(this.lead);
+
+  @override
+  State<_AiReason> createState() => _AiReasonState();
+}
+
+class _AiReasonState extends State<_AiReason> {
+  Map get _ai => widget.lead['_ai'] as Map;
+  bool _busy = false;
+
+  Future<void> _flag() async {
+    if (_busy) return;
+    final wrong = _ai['wrong'] != true;
+    setState(() {
+      _busy = true;
+      _ai['wrong'] = wrong;
+    });
+    try {
+      await ApiClient.instance.dio.post('/leads/${widget.lead['_id']}/ai-score/feedback', data: {'wrong': wrong});
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _ai['wrong'] = !wrong);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ApiClient.errorMessage(e, 'Could not save that')),
+        backgroundColor: AppColors.danger,
+      ));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTheme.of(context);
+    final wrong = _ai['wrong'] == true;
+    final evidence = (_ai['evidence'] as List?)?.firstOrNull;
+    return Padding(
+      padding: const EdgeInsets.only(top: 3),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(
+          child: Text.rich(
+            TextSpan(children: [
+              TextSpan(text: '${_ai['reason']}'),
+              if (evidence != null) TextSpan(text: ' "$evidence"', style: TextStyle(color: t.textSoft)),
+            ]),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11.5,
+              color: wrong ? t.textSoft : t.text,
+              decoration: wrong ? TextDecoration.lineThrough : null,
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        InkWell(
+          onTap: _flag,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+            decoration: BoxDecoration(
+              color: wrong ? AppColors.danger.withValues(alpha: 0.08) : null,
+              border: wrong ? null : Border.all(color: t.border),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(wrong ? Icons.thumb_down_rounded : Icons.thumb_down_outlined,
+                  size: 13, color: wrong ? AppColors.danger : t.textSoft, semanticLabel: wrong ? 'Undo: AI reason marked wrong' : 'Mark this AI reason as wrong'),
+              if (wrong) ...[
+                const SizedBox(width: 4),
+                const Text('Undo', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.danger)),
+              ],
+            ]),
+          ),
+        ),
+      ]),
     );
   }
 }

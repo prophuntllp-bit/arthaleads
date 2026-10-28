@@ -62,9 +62,39 @@ class LeadOrigin {
     return h.startsWith('www.') ? h.substring(4) : h;
   }
 
+  /// A placeholder site or connection name ("WordPress Site 5"), never shown
+  /// as where a lead came from (web leadSource.js, 28 Oct 2026).
+  static final _generic = RegExp(
+      r'^(new wordpress site|wordpress site|wordpress|website|my site|my website|just another wordpress site)( \d+)?$',
+      caseSensitive: false);
+  static bool isGenericName(String name) => name.trim().isEmpty || _generic.hasMatch(name.trim());
+
+  /// The ad a website visit came from, read from its page address: a
+  /// utm_campaign name, a Google Ads campaign number, or just the network.
+  static String adFromPage(String pageUrl) {
+    final q = Uri.tryParse(pageUrl)?.queryParameters;
+    if (q == null || q.isEmpty) return '';
+    final utm = q['utm_campaign'] ?? '';
+    if (utm.isNotEmpty) return [q['utm_source'] ?? '', utm].where((v) => v.isNotEmpty).join(' · ');
+    if ((q['gad_campaignid'] ?? '').isNotEmpty) return 'Google Ads · campaign ${q['gad_campaignid']}';
+    if (const ['gclid', 'gbraid', 'wbraid', 'gad_source'].any(q.containsKey)) return 'Google Ads';
+    if (q.containsKey('fbclid')) return 'Facebook / Instagram ad';
+    return q['utm_source'] ?? '';
+  }
+
+  /// Where a lead really came from, for exports: the site and page for
+  /// website leads, else the saved label unless it is a placeholder.
+  static String originalSourceLabel(Map<String, dynamic> lead) {
+    final o = LeadOrigin.from(lead);
+    if (o.isWebsite) return '${o.primary}${o.page}';
+    final label = _s(lead['leadSourceLabel']);
+    return isGenericName(label) ? _s(lead['sourceDomain']) : label;
+  }
+
   factory LeadOrigin.from(Map<String, dynamic> lead) {
     final source = _s(lead['source']);
-    final label = _s(lead['leadSourceLabel']);
+    final rawLabel = _s(lead['leadSourceLabel']);
+    final label = isGenericName(rawLabel) ? '' : rawLabel;
     final pageUrl = _s(lead['sourcePage']);
     final domain = _s(lead['sourceDomain']).isNotEmpty
         ? _s(lead['sourceDomain'])
@@ -84,7 +114,13 @@ class LeadOrigin {
     var secondary = '';
     if (isWebsite) {
       primary = domain;
-      if (label.isNotEmpty && label != domain) secondary = label;
+      // The ad that sent the visitor tells landing pages apart best.
+      final ad = adFromPage(pageUrl);
+      if (ad.isNotEmpty) {
+        secondary = ad;
+      } else if (label.isNotEmpty && label != domain) {
+        secondary = label;
+      }
     } else if (isAd) {
       primary = headline.isNotEmpty ? headline : 'Ad $adId';
       secondary = 'Click to WhatsApp ad';

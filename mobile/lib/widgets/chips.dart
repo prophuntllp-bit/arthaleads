@@ -41,7 +41,7 @@ class BookingChip extends StatelessWidget {
 /// Lead source as a solid coloured pill with the source's own logo, so the
 /// origin of a lead reads at a glance. Colours match the web's source badges.
 /// Brand logos come from Font Awesome; real-estate portals (PropTiger, 99acres,
-/// MagicBricks) have no logo there, so they get a house icon in their brand colour.
+/// MagicBricks, Housing.com) have no logo there, so they get a house icon in their brand colour.
 class SourceChip extends StatelessWidget {
   final String? source;
   const SourceChip(this.source, {super.key});
@@ -58,6 +58,7 @@ class SourceChip extends StatelessWidget {
     'PropTiger': (Color(0xFFDC2626), FontAwesomeIcons.house),
     '99acres': (Color(0xFF65A30D), FontAwesomeIcons.house),
     'MagicBricks': (Color(0xFF4F46E5), FontAwesomeIcons.house),
+    'Housing.com': (Color(0xFF7C3AED), FontAwesomeIcons.house),
     'QR Code': (Color(0xFF1F2937), FontAwesomeIcons.qrcode),
     'Other': (Color(0xFF6B7280), FontAwesomeIcons.ellipsis),
     'Vistrow Voice': (Color(0xFF9333EA), FontAwesomeIcons.microphoneLines),
