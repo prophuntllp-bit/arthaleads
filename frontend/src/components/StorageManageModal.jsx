@@ -10,6 +10,7 @@ import { useAuth } from "../context/AuthContext";
 import { Modal } from "./UI";
 import { formatBytes, upgradeTarget } from "../utils/plan";
 import { loadRazorpay, RZP_LOAD_ERROR, UPI_FIRST_CONFIG } from "../utils/razorpay";
+import SegmentTabs from "./SegmentTabs";
 
 const rupees = (paise) =>
   `₹${((paise || 0) / 100).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
@@ -238,15 +239,8 @@ export default function StorageManageModal({ open, onClose }) {
                       {canClear && (
                         <div className="mt-2 flex flex-wrap items-center gap-1.5">
                           <span className="text-[11px] text-app-soft mr-1">Delete ones older than</span>
-                          {AGE_CHOICES.map((d) => (
-                            <button key={d} type="button" onClick={() => pickClean(key, d)}
-                              className="px-2.5 py-1 rounded-full text-[11px] font-semibold cursor-pointer transition"
-                              style={active && clean.days === d
-                                ? { background: "rgba(var(--app-primary-rgb),0.14)", border: "1px solid var(--app-primary)", color: "var(--app-primary)" }
-                                : { background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
-                              {d} days
-                            </button>
-                          ))}
+                          <SegmentTabs ariaLabel="Delete files older than" value={active ? clean.days : null} onChange={(d) => pickClean(key, d)}
+                            tabs={AGE_CHOICES.map((d) => ({ value: d, label: `${d} days` }))} />
                         </div>
                       )}
                       {active && (
@@ -295,17 +289,8 @@ export default function StorageManageModal({ open, onClose }) {
                   <button type="button" aria-label="More" onClick={() => setPacks((p) => Math.min(maxPacks, p + 1))}
                     className="w-9 h-9 flex items-center justify-center text-app-soft hover:text-app cursor-pointer"><Plus className="w-4 h-4" /></button>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {ov.addon.months.map((m) => (
-                    <button key={m} type="button" onClick={() => setMonths(m)}
-                      className="px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition"
-                      style={months === m
-                        ? { background: "rgba(var(--app-primary-rgb),0.14)", border: "1px solid var(--app-primary)", color: "var(--app-primary)" }
-                        : { background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
-                      {TERMS[m] || `${m} months`}
-                    </button>
-                  ))}
-                </div>
+                <SegmentTabs ariaLabel="Add-on length" value={months} onChange={setMonths}
+                  tabs={ov.addon.months.map((m) => ({ value: m, label: TERMS[m] || `${m} months` }))} />
               </div>
               {quote && (
                 <div className="rounded-2xl px-4 py-3 space-y-1.5 stitch-surface-muted text-sm">

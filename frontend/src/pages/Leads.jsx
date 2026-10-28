@@ -55,6 +55,7 @@ import { read as xlsxRead, utils as xlsxUtils } from "xlsx";
 import { downloadCsv, downloadXlsx, downloadXlsxSheets, parseCsv } from "../utils/sheetExport";
 import DateTimePicker from "../components/DateTimePicker";
 import DateRangePicker from "../components/DateRangePicker";
+import SegmentTabs from "../components/SegmentTabs";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
 function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "Add note…", multiline = false }) {
@@ -1451,14 +1452,8 @@ export default function Leads() {
           {/* Show rows selector */}
           <div className="flex items-center gap-2 text-xs text-app-soft">
             <span>Show rows:</span>
-            {[10, 30, 50, 100, 200, 500].map((n) => (
-              <button
-                key={n}
-                onClick={() => changeLimit(n)}
-                className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${limit === n ? "text-white" : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"}`}
-                style={limit === n ? { background: "var(--app-primary)" } : {}}
-              >{n}</button>
-            ))}
+            <SegmentTabs ariaLabel="Rows per page" value={limit} onChange={changeLimit}
+              tabs={[10, 30, 50, 100, 200, 500].map((n) => ({ value: n, label: String(n) }))} />
           </div>
           {/* Page info + navigation */}
           <div className="flex items-center gap-2 flex-wrap">

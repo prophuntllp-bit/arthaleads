@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { Archive, ChevronDown, Download, RotateCcw, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { EmptyState, PageLoader, PhoneActions, WhatsAppLink, SourceBadge, StatusBadge } from "../components/UI";
-import CustomSelect from "../components/CustomSelect";
 import { fmtDate } from "../utils/constants";
 
 // The page a website lead came from, without the site or the query string.
@@ -15,6 +14,7 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { read as xlsxRead, utils as xlsxUtils } from "xlsx";
 import { downloadCsv, downloadXlsx, parseCsv } from "../utils/sheetExport";
+import SegmentTabs from "../components/SegmentTabs";
 
 const BOOKING_COLOR = {
   "Not Interested":    "bg-red-500/10 text-red-500 border-red-500/20",
@@ -29,7 +29,7 @@ export default function DumpLeads() {
   const [leads, setLeads]           = useState([]);
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState("");
-  const [limit, setLimit]           = useState(10);
+  const [limit, setLimit]           = useState(50);
   const [page, setPage]             = useState(1);
   const [importing, setImporting]   = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -358,12 +358,8 @@ export default function DumpLeads() {
         />
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="text-xs text-app-soft whitespace-nowrap">Show rows</span>
-          <CustomSelect
-            value={String(limit)}
-            onChange={(v) => { setLimit(Number(v)); setPage(1); }}
-            options={[10, 25, 50, 100].map((n) => ({ value: String(n), label: String(n) }))}
-            style={{ minWidth: 70 }}
-          />
+          <SegmentTabs ariaLabel="Rows per page" value={limit} onChange={(n) => { setLimit(n); setPage(1); }}
+            tabs={[10, 30, 50, 100, 200, 500].map((n) => ({ value: n, label: String(n) }))} />
         </div>
       </div>
 

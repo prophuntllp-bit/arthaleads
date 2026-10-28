@@ -8,7 +8,7 @@ import { Archive, ChevronLeft, ChevronRight, RotateCcw, Search } from "lucide-re
 import api from "../services/api";
 import toast from "react-hot-toast";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 50;
 
 const fmt = (d) => (d ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }) : "");
 

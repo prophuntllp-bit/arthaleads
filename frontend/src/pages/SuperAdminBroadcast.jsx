@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { Megaphone, Send, Users, CheckCircle2 } from "lucide-react";
 import { Spinner } from "../components/UI";
 import { useEffect } from "react";
+import SegmentTabs from "../components/SegmentTabs";
 
 const TARGETS = [
   { value: "all",        label: "All Org Admins",          desc: "Send to every organisation's admin" },
@@ -78,30 +79,9 @@ export default function SuperAdminBroadcast() {
           <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-2">
             Target Audience
           </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {TARGETS.map(t => (
-              <button
-                key={t.value}
-                onClick={() => setTarget(t.value)}
-                className="flex items-start gap-3 p-3 rounded-2xl border text-left transition cursor-pointer"
-                style={{
-                  background: target === t.value ? "rgba(var(--app-primary-rgb),0.08)" : "var(--app-surface-low)",
-                  borderColor: target === t.value ? "var(--app-primary)" : "var(--app-border)",
-                }}
-              >
-                <div className="w-4 h-4 rounded-full border-2 mt-0.5 flex-shrink-0 flex items-center justify-center"
-                  style={{ borderColor: target === t.value ? "var(--app-primary)" : "var(--app-border)" }}>
-                  {target === t.value && (
-                    <div className="w-2 h-2 rounded-full" style={{ background: "var(--app-primary)" }} />
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-app">{t.label}</p>
-                  <p className="text-[11px] text-app-soft mt-0.5">{t.desc}</p>
-                </div>
-              </button>
-            ))}
-          </div>
+          <SegmentTabs ariaLabel="Target audience" value={target} onChange={setTarget}
+            tabs={TARGETS.map((t) => ({ value: t.value, label: t.label }))} />
+          <p className="text-[11px] text-app-soft mt-1.5">{TARGETS.find((t) => t.value === target)?.desc}</p>
         </div>
 
         {/* Subject */}

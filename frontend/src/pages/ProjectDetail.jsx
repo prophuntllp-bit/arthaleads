@@ -464,7 +464,7 @@ export default function ProjectDetail() {
   const tableScrollRef = useRef(null);
   const topSpacerRef   = useRef(null);
 
-  const [leadsLimit, setLeadsLimit] = useState(10);
+  const [leadsLimit, setLeadsLimit] = useState(50);
   const [bookingFilter, setBookingFilter] = useState("");
 
   // Prospective entry statuses - used only for badge pre-fetch fallback
@@ -1313,11 +1313,8 @@ export default function ProjectDetail() {
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3" style={{ borderColor: "var(--app-border)" }}>
                   <div className="flex items-center gap-2 text-xs text-app-soft">
                     <span>Show rows:</span>
-                    {[10, 30, 50, 100, 200, 500].map((n) => (
-                      <button key={n} onClick={() => { setLeadsLimit(n); setLeadsPage(1); }}
-                        className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${leadsLimit === n ? "bg-orange-500/15 text-orange-500" : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"}`}
-                      >{n}</button>
-                    ))}
+                    <SegmentTabs ariaLabel="Rows per page" value={leadsLimit} onChange={(n) => { setLeadsLimit(n); setLeadsPage(1); }}
+                      tabs={[10, 30, 50, 100, 200, 500].map((n) => ({ value: n, label: String(n) }))} />
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs text-app-soft">{leadsTotal === 0 ? "0" : `${(leadsPage - 1) * leadsLimit + 1} – ${Math.min(leadsPage * leadsLimit, leadsTotal)} of ${leadsTotal}`}</span>

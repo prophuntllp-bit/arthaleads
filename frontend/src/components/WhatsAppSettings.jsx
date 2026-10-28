@@ -7,6 +7,7 @@ import {
 import api from "../services/api";
 import toast from "react-hot-toast";
 import WhatsAppIcon from "./WhatsAppIcon";
+import SegmentTabs from "./SegmentTabs";
 
 // One line of the credential check. Each piece is probed on its own because
 // Meta reports every one of these failures with the same status code.
@@ -578,26 +579,19 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
           Connect directly through Arthaleads, or through a separate provider (AiSensy, Wati, Interakt)
           you already have your own account with. Templates and campaigns need the direct connection.
         </p>
-        <div className="pl-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {PROVIDERS.map(p => (
-            <button key={p.id} onClick={() => setProvider(p.id)}
-              className="text-left rounded-xl p-3 transition-all"
-              style={provider === p.id
-                ? { background: `${p.color}18`, border: `1.5px solid ${p.color}55` }
-                : { background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-              <div className="flex items-center gap-2 mb-1">
+        <div className="pl-8 space-y-2">
+          <SegmentTabs ariaLabel="WhatsApp provider" value={provider} onChange={setProvider}
+            tabs={PROVIDERS.map((p) => ({ value: p.id, label: (
+              <span className="inline-flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />
-                <span className="text-sm font-bold text-app">{p.name}</span>
+                {p.name}
                 {p.badge && (
                   <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
                     style={{ background: `${p.color}1f`, color: p.color }}>{p.badge}</span>
                 )}
-                {provider === p.id && <Check className="w-3.5 h-3.5 ml-auto" style={{ color: p.color }} />}
-              </div>
-              <p className="text-xs text-app-soft">{p.tagline}</p>
-              <p className="text-xs font-semibold mt-0.5" style={{ color: p.color }}>{p.pricing}</p>
-            </button>
-          ))}
+              </span>
+            ) }))} />
+          <p className="text-xs text-app-soft">{prov.tagline} · <span className="font-semibold" style={{ color: prov.color }}>{prov.pricing}</span></p>
         </div>
         <div className="pl-8 flex flex-wrap gap-2">
           <a href={prov.signupUrl} target="_blank" rel="noopener noreferrer"

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import SegmentTabs from "./SegmentTabs";
 
 const MONTHS   = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAY_HDRS = ["Mo","Tu","We","Th","Fr","Sa","Su"];
@@ -322,19 +323,9 @@ export default function DateTimePicker({ value, onChange, placeholder = "dd-mm-y
               </div>
 
               {/* AM / PM */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: "1px solid var(--app-border)" }}>
-                {["AM", "PM"].map(ap => (
-                  <button key={ap} type="button" onClick={() => setSt(s => ({ ...s, ampm: ap }))}
-                    style={{
-                      padding: "9px 0", fontSize: 11, fontWeight: 700,
-                      background: st.ampm === ap ? "var(--app-primary, #f97316)" : "transparent",
-                      color: st.ampm === ap ? "#fff" : "var(--app-text-soft)",
-                      border: "none", cursor: "pointer", transition: "background 0.1s",
-                    }}
-                  >
-                    {ap}
-                  </button>
-                ))}
+              <div style={{ padding: 8, borderTop: "1px solid var(--app-border)" }}>
+                <SegmentTabs ariaLabel="AM or PM" value={st.ampm} onChange={(ap) => setSt((s) => ({ ...s, ampm: ap }))} stretch
+                  tabs={[{ value: "AM", label: "AM" }, { value: "PM", label: "PM" }]} />
               </div>
 
               {/* Set button */}

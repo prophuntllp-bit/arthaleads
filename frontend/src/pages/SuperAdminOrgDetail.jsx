@@ -128,7 +128,7 @@ export default function SuperAdminOrgDetail() {
   const loadActivity = useCallback(async (p = actPage) => {
     setActLoading(true);
     try {
-      const params = new URLSearchParams({ page: p, limit: 25, orgId: id });
+      const params = new URLSearchParams({ page: p, limit: 50, orgId: id });
       if (actAction) params.set("action", actAction);
       const { data: res } = await api.get(`/super-admin/audit?${params}`);
       setActLogs(res.logs || []);

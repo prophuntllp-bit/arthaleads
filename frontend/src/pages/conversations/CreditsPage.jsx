@@ -272,7 +272,7 @@ export default function CreditsPage() {
   const [stmtRange, setStmtRange] = useState("");
   const loadLedger = useCallback((p) => {
     setLoading(true);
-    api.get("/credits/ledger", { params: { page: p, limit: 25, ...rangeParams(stmtRange) } })
+    api.get("/credits/ledger", { params: { page: p, limit: 50, ...rangeParams(stmtRange) } })
       .then((r) => { setRows(r.data.rows || []); setTotal(r.data.total || 0); })
       .catch(() => {})
       .finally(() => setLoading(false));

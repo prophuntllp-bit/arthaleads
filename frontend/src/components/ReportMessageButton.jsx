@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Flag, Check } from "lucide-react";
 import api from "../services/api";
+import SegmentTabs from "./SegmentTabs";
 
 const REASONS = [
   ["offensive", "Offensive"],
@@ -62,16 +63,9 @@ export default function ReportMessageButton({ reportedText, prompt = "", page = 
         What's wrong with this response?
       </p>
 
-      <div className="mb-2 flex flex-wrap gap-1">
-        {REASONS.map(([value, label]) => (
-          <button key={value} type="button" onClick={() => setReason(value)}
-            className="rounded-lg px-2 py-1 text-[11px] font-semibold transition"
-            style={reason === value
-              ? { background: "rgba(255,107,0,0.12)", color: "var(--app-primary, #ff6b00)", border: "1px solid rgba(255,107,0,0.3)" }
-              : { background: "transparent", color: "var(--app-text-soft)", border: "1px solid var(--app-border)" }}>
-            {label}
-          </button>
-        ))}
+      <div className="mb-2">
+        <SegmentTabs ariaLabel="Reason" value={reason} onChange={setReason}
+          tabs={REASONS.map(([value, label]) => ({ value, label }))} />
       </div>
 
       <textarea rows={2} value={detail} onChange={(e) => setDetail(e.target.value)}
