@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   CheckCircle2, ChevronRight, Copy, ExternalLink, Globe2,
-  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook, Download, RefreshCw, ShieldCheck, AlertTriangle, Mic, Phone, Lock, LayoutGrid, Plug,
+  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook, RefreshCw, ShieldCheck, AlertTriangle, Mic, Phone, Lock, LayoutGrid, Plug,
 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -11,7 +11,7 @@ import { canAccess } from "../utils/plan";
 import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 import WhatsAppIcon from "../components/WhatsAppIcon";
-import { IntegrationCard, LogoTile, SectionTitle, StatTile, BrandLogo, ago } from "../components/integrations/IntegrationUI";
+import { IntegrationCard, LogoTile, SectionTitle, StatTile, BrandLogo, ago, SiteFavicon, WordPressIcon } from "../components/integrations/IntegrationUI";
 import SegmentTabs from "../components/SegmentTabs";
 import { PortalLogo } from "./integrations/PortalsPage";
 import { RoutingLogo } from "./integrations/RoutingRulesPage";
@@ -796,40 +796,6 @@ function SourceModal({ open, onClose, editingItem, onSaved, apiBase }) {
   );
 }
 
-/* ─── WordPress Wizard ─────────────────────────────────────────────────────── */
-const FORM_PLUGINS = [
-  "Contact Form 7", "WPForms", "Elementor", "Gravity Forms",
-  "Ninja Forms", "Forminator", "Fluent Forms",
-];
-
-// The site's own favicon, so several connected sites are told apart at a
-// glance. Falls back to the plain icon when there is no URL yet or the image
-// can't load.
-// A connected website's own icon: its favicon, or its logo when it has none,
-// found by the server (backend/utils/siteIcon.js). Until one is found, or if it
-// will not load, a first-letter tile, never Google's grey globe (owner, 28 Oct 2026).
-function SiteFavicon({ iconUrl, kind, name, size = 32 }) {
-  const [failed, setFailed] = useState(false);
-  if (!iconUrl || failed) return <LetterTile name={name} />;
-  return (
-    <img src={iconUrl} alt="" referrerPolicy="no-referrer" loading="lazy" onError={() => setFailed(true)}
-      className="bg-white object-contain"
-      style={kind === "logo" ? { width: "100%", height: "100%", padding: 4 } : { width: size, height: size, borderRadius: 6 }} />
-  );
-}
-
-/** The first letter of a site's name on a colour picked from the name. */
-function LetterTile({ name }) {
-  const text = String(name || "?").replace(/^https?:\/\//i, "").replace(/^www\./i, "").trim();
-  const letter = (text.match(/[a-z0-9]/i) || ["?"])[0].toUpperCase();
-  let h = 0;
-  for (const ch of text) h = (h * 31 + ch.charCodeAt(0)) % 360;
-  return (
-    <div className="flex h-full w-full items-center justify-center text-base font-bold text-white"
-      style={{ background: `hsl(${h} 55% 48%)` }}>{letter}</div>
-  );
-}
-
 // Which endpoint actually accepts a source's token. The saved webhookPath is
 // "/api/leads" for every manually added source, which no token has ever worked
 // against, so the screen showed callers an address that always failed.
@@ -837,229 +803,6 @@ function ingestPath(platform, stored) {
   if (platform === "Website Form") return "/webhook/website";
   if (platform === "Custom" || platform === "Vistrow Voice" || platform === "WhatsApp") return "/webhook/lead";
   return stored || "/api/leads";
-}
-
-function WpSiteCard({ conn, onDelete }) {
-  const [copiedId, setCopiedId] = useState(null);
-  const isConnected = conn.status === "connected";
-  const [deleting, setDeleting] = useState(false);
-
-  const copy = () => {
-    navigator.clipboard.writeText(conn.token);
-    setCopiedId(conn.id);
-    toast.success("Token copied!");
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const handleDelete = async () => {
-    if (!confirm(`Remove "${conn.name}" from Arthaleads? This cannot be undone.`)) return;
-    setDeleting(true);
-    try {
-      await api.delete(`/automations/${conn.id}`);
-      onDelete(conn.id);
-      toast.success("Site connection removed");
-    } catch {
-      toast.error("Failed to remove connection");
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  return (
-    <div className={`rounded-2xl border overflow-hidden ${isConnected ? "border-emerald-500/30" : "border-[var(--app-border)]"}`}>
-      {/* Site header */}
-      <div className={`flex items-center gap-3 px-4 py-3 ${isConnected ? "bg-emerald-500" : "bg-[var(--app-surface-low)]"}`}>
-        <div className={`flex h-8 w-8 items-center justify-center rounded-xl shrink-0 ${isConnected ? "bg-white/20" : "bg-[#21759b]"}`}>
-          <div className="h-8 w-8 overflow-hidden rounded-lg flex items-center justify-center bg-white"><SiteFavicon iconUrl={conn.siteIconUrl} kind={conn.siteIconKind} name={conn.siteName || conn.siteUrl || conn.name} size={24} /></div>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className={`text-sm font-bold truncate ${isConnected ? "text-white" : "text-app"}`}>
-            {conn.siteName || conn.name}
-          </p>
-          {conn.siteUrl && <p className={`text-xs truncate ${isConnected ? "text-white/70" : "text-app-soft"}`}>{conn.siteUrl}</p>}
-          {conn.lastSyncAt && <p className={`text-xs ${isConnected ? "text-white/70" : "text-app-soft"}`}>Last lead: {new Date(conn.lastSyncAt).toLocaleString()}</p>}
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {isConnected ? (
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white">✓ Connected</span>
-          ) : (
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400">Pending</span>
-          )}
-          <button onClick={handleDelete} disabled={deleting} className={`p-1.5 rounded-lg hover:bg-black/10 transition ${isConnected ? "text-white/60 hover:text-white" : "text-app-soft hover:text-red-400"}`}>
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Connected forms */}
-      {conn.connectedForms?.length > 0 && (
-        <div className="flex flex-wrap gap-1 px-4 py-2" style={{ borderBottom: "1px solid var(--app-border)" }}>
-          {conn.connectedForms.map((f) => (
-            <span key={f} className="pill-ok">✓ {f}</span>
-          ))}
-        </div>
-      )}
-
-      {/* Token row */}
-      <div className="flex items-center gap-2 px-4 py-3">
-        <code className="flex-1 rounded-xl px-3 py-2 text-sm font-mono font-bold text-orange-600 tracking-wider min-w-0 truncate" style={{ background: "var(--app-surface-low)" }}>
-          {conn.token}
-        </code>
-        <button onClick={copy} className="btn-secondary rounded-xl px-3 py-2 shrink-0 flex items-center gap-1.5 text-xs">
-          {copiedId === conn.id ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-          {copiedId === conn.id ? "Copied" : "Copy"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function WordPressWizard({ open, onClose }) {
-  const [loading, setLoading] = useState(false);
-  const [connections, setConnections] = useState([]);
-  const [adding, setAdding] = useState(false);
-  const [showSteps, setShowSteps] = useState(false);
-
-  const load = useCallback((isInitial = false) => {
-    if (isInitial) setLoading(true);
-    return api.get("/automations/website/token")
-      .then(({ data }) => {
-        setConnections(data.connections || []);
-        return (data.connections || []);
-      })
-      .catch(() => isInitial && toast.error("Failed to load connections"))
-      .finally(() => isInitial && setLoading(false));
-  }, []);
-
-  // Poll every 4s while any site is pending, stop when all connected
-  useEffect(() => {
-    if (!open) return;
-    load(true);
-    const interval = setInterval(() => {
-      load(false).then((conns) => {
-        if (conns.every((c) => c.status === "connected")) clearInterval(interval);
-      });
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [open, load]);
-
-  const handleAddSite = async () => {
-    setAdding(true);
-    try {
-      const { data } = await api.post("/automations/website/create", { name: `WordPress Site ${connections.length + 1}` });
-      setConnections((prev) => [...prev, data.connection]);
-      toast.success("New site token created - copy it and paste it into the plugin on your new WordPress site.");
-    } catch {
-      toast.error("Failed to create connection");
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full sm:max-w-lg sm:rounded-[1.75rem] rounded-t-[1.75rem] overflow-hidden" style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)", boxShadow: "var(--app-shadow)" }}>
-        {/* Header */}
-        <div className="flex items-center gap-3 p-6" style={{ borderBottom: "1px solid var(--app-border)" }}>
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl" style={{ background: "#21759b" }}>
-            <WordPressIcon />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-app">WordPress / Website Forms</h2>
-            <p className="text-xs text-app-soft">Connect multiple WordPress sites - each gets its own token</p>
-          </div>
-          <a
-            href="/arthaleads-integration.zip"
-            download
-            title="Download WordPress Plugin"
-            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all"
-            style={{ background: "#21759b1a", color: "#21759b", border: "1px solid #21759b33" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#21759b"; e.currentTarget.style.color = "#fff"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#21759b1a"; e.currentTarget.style.color = "#21759b"; }}
-          >
-            <Download className="h-3.5 w-3.5" />
-            Download Plugin
-          </a>
-        </div>
-
-        <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
-          {loading ? (
-            <div className="flex justify-center py-8"><Spinner /></div>
-          ) : (
-            <>
-              {/* Connected sites list */}
-              {connections.map((conn) => (
-                <WpSiteCard
-                  key={conn.id}
-                  conn={conn}
-                  onDelete={(id) => setConnections((prev) => prev.filter((c) => c.id !== id))}
-                />
-              ))}
-
-              {/* Add another site */}
-              <button
-                type="button"
-                onClick={handleAddSite}
-                disabled={adding}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold border-2 border-dashed border-[var(--app-border)] text-app-soft hover:border-[#21759b] hover:text-[#21759b] transition"
-              >
-                {adding ? <Spinner size="sm" /> : <Plus className="h-4 w-4" />}
-                {adding ? "Creating…" : "Add Another WordPress Site"}
-              </button>
-
-              {/* Setup steps (collapsible) */}
-              <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--app-border)" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowSteps((v) => !v)}
-                  className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-app-soft uppercase tracking-wider hover:text-app transition"
-                  style={{ background: "var(--app-surface-low)" }}
-                >
-                  <span>Setup Steps</span>
-                  <ChevronRight className={`h-4 w-4 transition-transform ${showSteps ? "rotate-90" : ""}`} />
-                </button>
-                {showSteps && [
-                  "In your WordPress admin → Plugins → Add New",
-                  'Search for "Arthaleads" and install the plugin',
-                  'Activate it, then click "Arthaleads CRM" in the left sidebar',
-                  "Copy your site's token above and paste it into the Account Token field",
-                  "Enter your website name, then click Save",
-                  "Leads will now flow into Arthaleads automatically",
-                ].map((text, i) => (
-                  <div key={i} className="flex items-start gap-3 px-4 py-3" style={{ borderTop: "1px solid var(--app-border)" }}>
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-500/20 text-orange-400 text-xs font-bold mt-0.5">{i + 1}</span>
-                    <p className="text-sm text-app-soft">{text}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Supported plugins */}
-              <div className="flex flex-wrap gap-2">
-                {FORM_PLUGINS.map((p) => (
-                  <span key={p} className="pill-info">✓ {p}</span>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="flex justify-end px-6 pb-6">
-          <button type="button" className="btn-secondary rounded-xl" onClick={onClose}>Close</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function WordPressIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-      <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zM3.5 12c0-1.232.252-2.405.7-3.471L7.942 19.1A8.5 8.5 0 013.5 12zm8.5 8.5a8.46 8.46 0 01-2.41-.349l2.56-7.438 2.622 7.186a.95.95 0 00.07.136A8.472 8.472 0 0112 20.5zm1.17-12.485c.512-.027.973-.08.973-.08.457-.054.403-.726-.054-.7 0 0-1.376.108-2.265.108-.835 0-2.238-.108-2.238-.108-.457-.027-.511.673-.054.7 0 0 .435.053.893.08l1.327 3.635-1.863 5.589-3.102-9.224c.511-.027.972-.08.972-.08.457-.054.403-.726-.054-.7 0 0-1.376.108-2.265.108a15.1 15.1 0 01-.548-.018A8.5 8.5 0 0120.338 9.2c-.027.001-.054.004-.082.004-.835 0-1.428.726-1.428 1.508 0 .7.403 1.292.835 1.992.323.566.7 1.293.7 2.346 0 .727-.28 1.57-.646 2.75l-.847 2.826-3.07-9.11zm2.832 10.934l2.607-7.533c.487-1.219.65-2.193.65-3.059 0-.314-.021-.607-.058-.883a8.5 8.5 0 01-3.199 11.475z"/>
-    </svg>
-  );
 }
 
 /* ─── Google Ads: per-connection card ──────────────────────────────────────── */
@@ -1616,7 +1359,6 @@ export default function Automation() {
   const [fbEditingItem, setFbEditingItem] = useState(null);
 
   // WordPress wizard state
-  const [wpWizardOpen, setWpWizardOpen] = useState(false);
 
   // Vistrow Voice wizard state
 
@@ -1846,7 +1588,7 @@ export default function Automation() {
         { key: "web", logo: <LogoTile bg="#21759b"><WordPressIcon /></LogoTile>, name: "Website forms", category: "Lead sources",
           description: "Capture enquiries from WordPress contact forms with our plugin, or any site form.",
           ...conn(liveOf("Website Form").length), footer: footerFor("Website Form", "site"),
-          onOpen: () => setWpWizardOpen(true) },
+          onOpen: () => navigate("/integrations/websites") },
         { key: "portals", logo: <PortalLogo />, name: "Property portals", category: "99acres · Housing.com · MagicBricks",
           description: "Portal enquiries arrive in Leads by themselves, tagged with the portal and project.",
           ...conn(portalsLive.length || extra.portals?.housing?.enabled),
@@ -1977,13 +1719,6 @@ export default function Automation() {
           />
         </section>
       )}
-
-      {/* WordPress Wizard */}
-      <WordPressWizard
-        open={wpWizardOpen}
-        onClose={() => setWpWizardOpen(false)}
-        apiBase={apiBase}
-      />
 
       {/* Google Ads Wizard */}
       <GoogleWizard

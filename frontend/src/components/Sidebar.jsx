@@ -1131,6 +1131,7 @@ export default function Sidebar() {
         [/^telephony\/plivo$/, [{ label: "Telephony", to: "/integrations/telephony" }, { label: "Plivo" }]],
         [/^telephony\/enablex$/, [{ label: "Telephony", to: "/integrations/telephony" }, { label: "EnableX" }]],
         [/^portals$/, [{ label: "Property portals" }]],
+        [/^websites$/, [{ label: "Website forms" }]],
         [/^conversion-tracking$/, [{ label: "Conversion tracking" }]],
         [/^routing$/, [{ label: "Routing rules" }]],
       ].find(([re]) => re.test(rest));
