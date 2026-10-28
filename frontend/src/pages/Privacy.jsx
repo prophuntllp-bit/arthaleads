@@ -283,7 +283,7 @@ export default function Privacy() {
             <strong style={strong}>Accounts:</strong> you can delete your account from the app or from our{" "}
             <a href="/delete-account" style={link} className="hover:underline">Delete Account</a> page. A user
             is removed straight away. When the last admin of an organisation deletes it, the organisation and
-            its data are deleted within 30 days. Copies in backups age out within 12 months.
+            its data are deleted within 30 days. Copies in backups age out within 12 months. We keep two things the law requires: our billing records for the organisation (plan payments and credit or storage purchases, with its billing name and GST details) for up to 8 years for tax purposes, and its activity log, which is deleted automatically after about one year.
           </li>
           <li><strong style={strong}>WhatsApp access tokens and registration PINs:</strong> deleted immediately when you disconnect WhatsApp from the Connections page, or when your account is deleted, whichever is sooner.</li>
         </ul>

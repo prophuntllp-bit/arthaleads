@@ -93,7 +93,13 @@ const orgScoped = Object.entries(mongoose.models)
   .map(([n]) => n);
 report(orgScoped.length > 0, `${orgScoped.length} collections carry orgId and are purged by reflection`);
 report(!!mongoose.models.AuditLog?.schema.path("targetOrg"),
-  "AuditLog has no orgId and is purged by targetOrg instead");
+  "AuditLog has no orgId (keyed by targetOrg) and is kept, expiring by itself");
+const { RETAINED_ON_ORG_CLOSE } = require("../services/accountDeletionService");
+for (const name of RETAINED_ON_ORG_CLOSE) {
+  report(!!mongoose.models[name]?.schema.path("orgId"), `${name} is a real org-scoped model kept on org closure (billing)`);
+}
+report(!mongoose.models.ClosedOrgBilling?.schema.path("orgId"),
+  "ClosedOrgBilling has no orgId, so the purge leaves it");
 
 console.log(`\n  ${failures ? `${failures} failed` : "all checks passed"}\n`);
 process.exit(failures ? 1 : 0);
