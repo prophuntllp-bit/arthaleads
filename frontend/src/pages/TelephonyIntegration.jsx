@@ -8,11 +8,14 @@ import { Phone, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import { IntegrationShell, IntegrationCard, LogoTile, SectionTitle } from "../components/integrations/IntegrationUI";
+import { IntegrationShell, IntegrationCard, LogoTile, SectionTitle, BrandLogo } from "../components/integrations/IntegrationUI";
 
 const PhoneLogo = ({ size = 40 }) => (
   <LogoTile size={size} bg="rgba(249,115,22,0.10)"><Phone className="h-5 w-5" style={{ color: "#f97316" }} /></LogoTile>
 );
+
+// "918065492852" reads as "+91 80 6549 2852".
+const showNumber = (n) => (/^91\d{10}$/.test(n || "") ? `+91 ${n.slice(2, 4)} ${n.slice(4, 8)} ${n.slice(8)}` : `+${n}`);
 
 const PROVIDERS = {
   plivo:   { label: "Plivo",   path: "/integrations/telephony/plivo",   line: "Your phone rings first, then the lead. Each side is recorded separately, so transcripts show who said what." },
@@ -48,7 +51,7 @@ export default function TelephonyIntegration() {
 
   const ready = { plivo: !!(plivo?.hasAuthToken && plivo?.number), enablex: !!enablex?.connected };
   const footer = {
-    plivo: ready.plivo ? `Calls go out from +${plivo.number}` : "Not set up yet",
+    plivo: ready.plivo ? `Calls go out from ${showNumber(plivo.number)}` : "Not set up yet",
     enablex: ready.enablex ? `Number ${enablex?.enablex?.virtualNumber || "saved"}` : "Not set up yet",
   };
 
@@ -80,7 +83,7 @@ export default function TelephonyIntegration() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {["plivo", "enablex"].map((key) => (
           <IntegrationCard key={key}
-            logo={<PhoneLogo />}
+            logo={<BrandLogo brand={key} alt={PROVIDERS[key].label} />}
             name={PROVIDERS[key].label}
             category="Telephony"
             status={provider === key ? "In use" : ready[key] ? "Connected" : "Not connected"}

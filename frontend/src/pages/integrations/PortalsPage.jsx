@@ -9,13 +9,9 @@ import toast from "react-hot-toast";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { canAccess } from "../../utils/plan";
-import { IntegrationShell, LogoTile, Panel, KeyValues, Steps, PlanLocked, StatusChip, ago, istWhen } from "../../components/integrations/IntegrationUI";
+import { IntegrationShell, Panel, KeyValues, Steps, PlanLocked, StatusChip, PortalsLogo, MiniLogo, ago, istWhen } from "../../components/integrations/IntegrationUI";
 
-const DOT = { "99acres": "#65A30D", housing: "#7C3AED", magicbricks: "#4F46E5" };
-
-export const PortalLogo = ({ size = 40 }) => (
-  <LogoTile size={size} bg="rgba(124,58,237,0.08)"><Building2 className={size > 44 ? "h-6 w-6" : "h-5 w-5"} style={{ color: "#7C3AED" }} /></LogoTile>
-);
+export const PortalLogo = PortalsLogo;
 
 function CopyButton({ text, label = "Copy" }) {
   const [done, setDone] = useState(false);
@@ -110,7 +106,7 @@ export default function PortalsPage() {
             <div className="text-sm">
               {portals.map((p, i) => (
                 <div key={p.slug} className="flex items-center gap-3 py-2.5" style={i ? { borderTop: "1px solid var(--app-border)" } : undefined}>
-                  <span className="h-2 w-2 rounded-full shrink-0" style={{ background: DOT[p.slug] }} />
+                  <MiniLogo brand={p.slug} alt={p.label} size={20} />
                   <span className="font-semibold text-app w-28">{p.label}</span>
                   <span className="text-app-soft flex-1 min-w-0 truncate">
                     {p.lastLeadAt ? `Last enquiry ${istWhen(p.lastLeadAt)}` : "No enquiries yet"}
@@ -144,7 +140,7 @@ export default function PortalsPage() {
                   <button key={p.slug} type="button" role="tab" aria-selected={on} onClick={() => setPortal(p.slug)}
                     className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors"
                     style={on ? { color: "var(--app-text)", background: "var(--app-surface-solid)", boxShadow: "0 0 0 1px rgba(var(--app-primary-rgb),0.45)" } : { color: "var(--app-text-soft)" }}>
-                    <span className="w-2 h-2 rounded-full" style={{ background: DOT[p.slug] }} /> {p.label}
+                    <MiniLogo brand={p.slug} size={16} /> {p.label}
                   </button>
                 );
               })}
