@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Mail, FileText, Megaphone, Wallet, Settings as SettingsIcon, ShieldCheck, Sparkles, Lock } from "lucide-react";
 import { canAccess } from "../../utils/plan";
@@ -65,6 +65,18 @@ export default function ConversationsLayout() {
       .then((r) => { setConnected(r.data.connected); setChannel(r.data); })
       .catch(() => setConnected(false));
   }, []);
+
+  // Fetch the other tabs' code in the background once the section is open,
+  // so switching tabs is instant (same modules App.jsx lazy-loads).
+  useEffect(() => {
+    if (!connected) return undefined;
+    const load = () => {
+      import("../Inbox"); import("./TemplatesPage"); import("./CampaignsPage");
+      import("./CreditsPage"); import("./AgentsPage"); import("./ConversationSettings");
+    };
+    const id = window.requestIdleCallback ? window.requestIdleCallback(load) : setTimeout(load, 1200);
+    return () => (window.cancelIdleCallback ? window.cancelIdleCallback(id) : clearTimeout(id));
+  }, [connected]);
 
   useEffect(() => { reloadStatus(); }, [reloadStatus]);
   useEffect(() => { refreshCredits(); }, [refreshCredits]);
@@ -189,8 +201,12 @@ export default function ConversationsLayout() {
         </div>
       </div>
 
+      {/* A tab's code loads here, under the tabs, so switching tabs never blanks
+          the whole page (it used to fall through to the app-wide loader). */}
       <div className="flex-1 min-h-0 overflow-y-auto pt-4">
-        <Outlet context={ctx} />
+        <Suspense fallback={<div className="flex items-center justify-center py-16"><Spinner /></div>}>
+          <Outlet context={ctx} />
+        </Suspense>
       </div>
     </div>
   );
