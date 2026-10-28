@@ -4,6 +4,7 @@ import { Spinner, EmptyState, AppSelect, AppDatePicker, ConfirmDialog } from "..
 import UpgradeWall from "../components/UpgradeWall";
 import SegmentTabs from "../components/SegmentTabs";
 import AttendanceCapture from "../components/AttendanceCapture";
+import DateRangePicker, { rangeDays } from "../components/DateRangePicker";
 import { canAccess } from "../utils/plan";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -241,11 +242,10 @@ export default function Attendance() {
   const [teamMembers, setTeamMembers] = useState([]);
 
   // Filters
-  const [from, setFrom] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() - 29);
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  });
-  const [to, setTo]             = useState(todayStr);
+  // All time by default, so every entry is listed (owner, 28 Oct 2026);
+  // the picker narrows it to a preset or a custom range.
+  const [range, setRange]       = useState("");
+  const { from, to }            = rangeDays(range);
   const [filterUser, setFilterUser] = useState("");
   const [tab, setTab]           = useState("team");
 
@@ -635,14 +635,7 @@ export default function Attendance() {
           {/* Filters + actions */}
           <div className="flex items-center gap-3 flex-wrap mb-4">
             <Filter className="w-4 h-4 text-app-soft flex-shrink-0" />
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-app-soft font-medium">From</label>
-              <AppDatePicker value={from} onChange={v => { setFrom(v); setPage(1); }} className="w-36" />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-app-soft font-medium">To</label>
-              <AppDatePicker value={to} onChange={v => { setTo(v); setPage(1); }} className="w-36" />
-            </div>
+            <DateRangePicker value={range} onChange={v => { setRange(v); setPage(1); }} compact />
             {isAdmin && teamMembers.length > 0 && (
               <div className="flex items-center gap-2">
                 <label className="text-xs text-app-soft font-medium">Member</label>
@@ -810,7 +803,7 @@ export default function Attendance() {
           style={{ background: "rgba(0,0,0,0.6)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setSettingsModal(false); }}>
           <div className="w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col sm:max-h-[88vh] max-h-[90vh] sm:mx-0 mx-3"
-            style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+            style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
             {/* Header */}
             <div className="flex items-center justify-between px-4 pt-4 pb-3 flex-shrink-0" style={{ borderBottom: "1px solid var(--app-border)" }}>
               <h2 className="text-sm font-bold text-app flex items-center gap-2">
@@ -907,7 +900,7 @@ export default function Attendance() {
         <div className="fixed inset-0 z-50 flex sm:items-center items-end sm:justify-center justify-center sm:p-4 p-0"
           style={{ background: "rgba(0,0,0,0.6)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setEntryModal(false); }}>
-          <div className="w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl sm:p-6 p-4 shadow-2xl flex flex-col sm:max-h-[88vh] max-h-[92vh]" style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+          <div className="w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl sm:p-6 p-4 shadow-2xl flex flex-col sm:max-h-[88vh] max-h-[92vh]" style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-bold text-app flex items-center gap-2">
                 <Edit3 className="w-4 h-4 text-orange-500" /> {entryForm.id ? "Edit Attendance Entry" : "Manual Attendance Entry"}
