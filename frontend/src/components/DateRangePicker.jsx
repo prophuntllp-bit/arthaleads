@@ -72,6 +72,13 @@ function presetDates(value) {
   }
 }
 
+/** The "YYYY-MM-DD" days a picker value covers; both empty for All time. */
+export function rangeDays(value) {
+  if (value && typeof value === "object") return { from: value.from || "", to: value.to || "" };
+  const { start, end } = presetDates(value);
+  return { from: start ? fmtKey(start) : "", to: end ? fmtKey(end) : "" };
+}
+
 const BAND = "color-mix(in srgb, var(--app-primary, #f97316) 13%, transparent)";
 const RING = "color-mix(in srgb, var(--app-primary, #f97316) 30%, transparent)";
 
