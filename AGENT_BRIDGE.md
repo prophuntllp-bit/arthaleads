@@ -101,6 +101,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-28 IST main d0818b10 (pushed live, from staging 2e4a915d): website connection cards show the site's real favicon/logo (utils/siteIcon.js), else a letter tile. Checked live: all 6 Prophunt sites show their icon (shaporjipallonji.com fell back to /favicon.ico from Railway, its homepage is slow).
 - [claude] 2026-10-28 IST main 23a4a359 (pushed live, from staging 520e1bfd, 79a1c13e, 705768aa): website leads never labelled 'WordPress Site N'; lists and downloads show the original source, website leads as site+page plus the ad (gad_campaignid / utm / fbclid). Conflicts kept main's Vistrow captured-details box and two-tone SourceBadge.
 - [claude] 2026-10-28 IST main d37e08fd (pushed live, from staging 9d4ac11a + c7e09c58): WhatsApp tabs switch content only (Suspense under the tabs + prefetch); Plivo calls refuse foreign numbers before ringing the agent, pick the Indian number when a field holds two, Calls page shows missed reasons.
 - [claude] 2026-10-28 IST (main, released from staging by file copy): sitemap lastmod dates after the redesign (marketing pages 2026-10-27; privacy/terms/refund 2026-10-17) + video:player_loc YouTube embed for /product-tour. backend/controllers/blogController.js only. Then resubmitted the sitemap in GSC and Bing.
