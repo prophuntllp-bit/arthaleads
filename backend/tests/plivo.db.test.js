@@ -304,6 +304,30 @@ test("both services off: click-to-call is refused and an incoming call is not pu
   await db.collection("organizations").updateOne({ _id: ORG }, { $set: { "telephony.provider": "plivo" } });
 });
 
+test("a foreign number is refused before the agent's phone rings", async () => {
+  plivoCalls.length = 0;
+  const lead = await db.collection("leads").insertOne({ orgId: ORG, name: "NRI Lead", phone: "971504865636", status: "New", activities: [], createdAt: new Date() });
+  const r = await api("POST", "/api/calls/initiate", AGENT, { leadId: String(lead.insertedId) });
+  assert.equal(r.status, 400);
+  assert.equal(r.json.code, "international");
+  assert.match(r.json.message, /UAE number/);
+  assert.equal(plivoCalls.filter((c) => /\/Call\/$/.test(c.url)).length, 0, "Plivo is never asked to call");
+});
+
+test("two numbers in one field: the first Indian one, or the one the agent picked, is dialled", async () => {
+  const lead = await db.collection("leads").insertOne({ orgId: ORG, name: "Two Numbers", phone: "7020074316/8958108809", status: "New", activities: [], createdAt: new Date() });
+  let r = await api("POST", "/api/calls/initiate", AGENT, { leadId: String(lead.insertedId) });
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  let doc = await db.collection("leads").findOne({ _id: lead.insertedId });
+  let act = doc.activities.at(-1);
+  assert.equal(act.meta.leadPhone, "917020074316");
+  const ans = await callback(`/api/plivo/answer/${ORG}?ref=${encodeURIComponent(act.meta.ownerRef)}`, { CallUUID: "two-1" });
+  assert.match(ans.text, /<Number>917020074316<\/Number>/);
+  r = await api("POST", "/api/calls/initiate", AGENT, { leadId: String(lead.insertedId), phone: "8958108809" });
+  doc = await db.collection("leads").findOne({ _id: lead.insertedId });
+  assert.equal(doc.activities.at(-1).meta.leadPhone, "918958108809");
+});
+
 (async () => {
   const mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri());

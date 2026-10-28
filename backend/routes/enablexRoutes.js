@@ -588,6 +588,8 @@ router.get("/", async (req, res, next) => {
         lastDuration:    { $first: "$activities.meta.duration" },
         lastPerformedBy: { $first: "$activities.performedByName" },
         lastActivityId:  { $first: "$activities._id" },
+        lastMeta:        { $first: { cause: "$activities.meta.bLegHangupCause", agentAnswered: "$activities.meta.agentAnswered",
+                                     agentLegStatus: "$activities.meta.agentLegStatus", customerAnswered: "$activities.meta.customerAnswered" } },
       }},
       { $project: {
         _id:             0,
@@ -602,6 +604,7 @@ router.get("/", async (req, res, next) => {
         lastDuration:    1,
         lastPerformedBy: 1,
         lastActivityId:  1,
+        lastMeta:        1,
       }},
     ]);
 
@@ -859,6 +862,16 @@ router.post("/initiate", protect, async (req, res, next) => {
       if (!lead)       return res.status(404).json({ success: false, message: "Lead not found." });
       if (!lead.phone) return res.status(400).json({ success: false, message: "This lead has no phone number." });
       if (!req.user.phone) return res.status(400).json({ success: false, message: "Add your phone number in Settings → My Profile before making calls." });
+      // Plivo's India account only reaches Indian numbers, and refuses anything
+      // else only after the agent's phone has rung. Pick the Indian number in
+      // the field (or the one the agent chose), or say why there isn't one.
+      const pick = require("../utils/dialNumbers").pickIndianNumber(lead.phone, req.body?.phone);
+      if (!pick.number) {
+        const message = pick.reason === "international"
+          ? `This is a ${pick.country || "foreign"} number. Company calling only reaches Indian numbers; use Dial Personal Number or a WhatsApp call.`
+          : `This lead's phone number (${lead.phone}) isn't a number that can be dialled. Correct it on the lead first.`;
+        return res.status(400).json({ success: false, code: pick.reason, message });
+      }
       const ownerRef = `${isProjectLead ? "projectlead" : "lead"}_${targetId}_${Date.now()}`;
       lead.activities.push({
         type:            "called",
@@ -870,7 +883,7 @@ router.post("/initiate", protect, async (req, res, next) => {
           direction:  "outbound",
           status:     "initiated",
           phone:      lead.phone,
-          leadPhone:  plivo.e164(lead.phone),
+          leadPhone:  pick.number,
           agentPhone: req.user.phone,
         },
       });

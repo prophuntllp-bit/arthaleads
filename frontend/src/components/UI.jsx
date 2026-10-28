@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import api from "../services/api";
 import { useSoftPhone } from "../context/SoftPhoneContext";
 import { useAuth } from "../context/AuthContext";
+import { dialOptions, showDialNumber } from "../utils/dialNumbers";
 
 /**
  * An <img> that survives a transient failure.
@@ -408,13 +409,22 @@ export function PhoneActions({ phone, lead, projectLead, onContact, compact = fa
     setDialOpen(true);
   };
 
-  const callIVR = async () => {
+  // The numbers in the phone field (it can hold two, or a foreign one).
+  // Company calling through Plivo only reaches Indian numbers (28 Oct 2026).
+  const nums = dialOptions(phone);
+  const indianNums = nums.filter((n) => n.indian);
+  const foreignNum = nums.find((n) => !n.indian && n.valid);
+  const plivoOn = org?.telephony?.provider === "plivo";
+
+  const callIVR = async (number) => {
     setDialOpen(false);
     const targetId = lead?._id || projectLead?._id;
     if (!targetId) return;
     setCalling(true);
     try {
-      await api.post("/calls/initiate", lead?._id ? { leadId: targetId } : { projectLeadId: targetId });
+      const body = lead?._id ? { leadId: targetId } : { projectLeadId: targetId };
+      if (number) body.phone = number;
+      await api.post("/calls/initiate", body);
       toast.success("Call initiated — check your phone.");
       onContact?.();
     } catch (err) {
@@ -422,9 +432,9 @@ export function PhoneActions({ phone, lead, projectLead, onContact, compact = fa
     } finally { setCalling(false); }
   };
 
-  const callPersonal = () => {
+  const callPersonal = (number) => {
     setDialOpen(false);
-    window.location.href = `tel:${phone}`;
+    window.location.href = `tel:${number ? `+${number}` : phone}`;
     onContact?.();
   };
 
@@ -472,7 +482,7 @@ export function PhoneActions({ phone, lead, projectLead, onContact, compact = fa
         <>
           <div style={{ position:"fixed", inset:0, zIndex:9998 }} onClick={() => setDialOpen(false)} />
           <div style={{
-            position:"fixed", top: dialPos.top, left: dialPos.left, zIndex:9999, width: 215,
+            position:"fixed", top: dialPos.top, left: dialPos.left, zIndex:9999, width: 245,
             background:"var(--app-surface-solid)",
             border:"1px solid var(--app-border)",
             borderRadius:"1rem",
@@ -498,23 +508,31 @@ export function PhoneActions({ phone, lead, projectLead, onContact, compact = fa
                 </button>
               )}
               {(lead?._id || projectLead?._id) && org?.telephony?.provider !== "none" && (
-                <button onClick={callIVR}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-left transition"
-                  style={{ color:"#f97316" }}
-                  onMouseEnter={e => e.currentTarget.style.background="rgba(249,115,22,0.08)"}
-                  onMouseLeave={e => e.currentTarget.style.background=""}>
-                  <Phone className="w-4 h-4 shrink-0" />
-                  {/* Whichever phone service the company uses (Telephony settings). */}
-                  {org?.telephony?.provider === "plivo" ? "Call via company number" : "Call via EnableX IVR"}
-                </button>
+                plivoOn && indianNums.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-app-soft">
+                    {foreignNum ? `${foreignNum.country || "Foreign"} number: company calling only reaches Indian numbers.` : "This number can't be dialled. Correct it on the lead."}
+                  </p>
+                ) : (plivoOn && indianNums.length > 1 ? indianNums : [null]).map((n) => (
+                  <button key={n?.e164 || "one"} onClick={() => callIVR(n?.e164)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-left transition"
+                    style={{ color:"#f97316" }}
+                    onMouseEnter={e => e.currentTarget.style.background="rgba(249,115,22,0.08)"}
+                    onMouseLeave={e => e.currentTarget.style.background=""}>
+                    <Phone className="w-4 h-4 shrink-0" />
+                    {/* Whichever phone service the company uses (Telephony settings). */}
+                    {n ? `Company number → ${showDialNumber(n.e164)}` : plivoOn ? "Call via company number" : "Call via EnableX IVR"}
+                  </button>
+                ))
               )}
-              <button onClick={callPersonal}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-app text-left transition"
-                onMouseEnter={e => e.currentTarget.style.background="var(--app-surface-low)"}
-                onMouseLeave={e => e.currentTarget.style.background=""}>
-                <Phone className="w-4 h-4 shrink-0 text-app-soft" />
-                Dial Personal Number
-              </button>
+              {(nums.length > 1 ? nums.filter((n) => n.valid) : [null]).map((n) => (
+                <button key={n?.e164 || "one"} onClick={() => callPersonal(n?.e164)}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-app text-left transition"
+                  onMouseEnter={e => e.currentTarget.style.background="var(--app-surface-low)"}
+                  onMouseLeave={e => e.currentTarget.style.background=""}>
+                  <Phone className="w-4 h-4 shrink-0 text-app-soft" />
+                  {n ? `My phone → ${showDialNumber(n.e164)}` : "Dial Personal Number"}
+                </button>
+              ))}
             </div>
             <div className="px-3 pb-2.5">
               <button onClick={() => setDialOpen(false)}
