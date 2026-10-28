@@ -262,12 +262,15 @@ export default function CookiePolicy() {
       <Section title="9. Contact Us">
         <p>Questions about our use of cookies or data practices?</p>
         <ContactBox>
-          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Vistrow Technologies (Arthaleads)</p>
+          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Prophunt LLP (Arthaleads)</p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Email:{" "}
             <a href="mailto:contact@arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">
               contact@arthaleads.com
             </a>
+          </p>
+          <p style={{ color: "var(--app-text-soft)" }}>
+            Address: 1, Utkarsha Bungalow, Late Babanrao Shripati Dhankude Road, Baner, Pune, Maharashtra 411045, India
           </p>
         </ContactBox>
       </Section>

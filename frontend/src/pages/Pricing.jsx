@@ -55,7 +55,7 @@ const COMPARE_ROWS = [
   ["Bookings, invoices and Meta Conversions API", false, true, true],
   ["Google Ads leads", false, false, true],
   ["Webhooks and API access", false, false, true],
-  ["Vistrow Voice AI calling", false, false, true],
+  ["AI voice calling", false, false, true],
   ["Custom branding and reporting", false, false, true],
   ["Support", "Email", "Priority", "Dedicated account manager"],
 ];

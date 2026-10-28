@@ -104,7 +104,7 @@ const PLANS = [
           "Google Ads integration",
           "Custom webhook & API access",
           "WhatsApp button flow for click-to-WhatsApp ads",
-          "Vistrow Voice AI calling",
+          "AI voice calling",
           "100 GB file storage (more on request), call recordings kept 1 year",
           "Multi-org management",
           "Advanced automation management",

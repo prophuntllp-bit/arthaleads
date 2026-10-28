@@ -16,7 +16,8 @@ export default function Terms() {
           By accessing or using Arthaleads CRM ("the Service"), you agree to be bound by these Terms of
           Service ("Terms"). If you do not agree to these Terms, you must not use the Service. These Terms
           apply to all users, including organisation administrators, managers, and agents. Arthaleads is
-          made and operated by Vistrow Technologies ("Arthaleads", "we", "us", or "our").
+          made and operated by Prophunt LLP, a limited liability partnership registered in India (GSTIN
+          27ABAFP3487B1ZC) ("Arthaleads", "we", "us", or "our").
         </p>
         <p>
           We may update these Terms from time to time. Continued use of the Service after any change
@@ -72,7 +73,7 @@ export default function Terms() {
       <Section title="5. Lead Data and Data Ownership">
         <p>
           All lead data that you import into, create within, or generate through Arthaleads belongs to your
-          organisation. Arthaleads does not claim ownership over your lead data. Vistrow Technologies acts as
+          organisation. Arthaleads does not claim ownership over your lead data. Prophunt LLP acts as
           a <strong style={{ color: "var(--app-text)" }}>Data Processor</strong> on your behalf, storing and
           presenting your lead data solely to provide the CRM service to you.
         </p>
@@ -89,7 +90,7 @@ export default function Terms() {
 
       <Section title="6. Data Processing">
         <p>
-          This section sets out how Vistrow Technologies processes your organisation's personal data (mainly
+          This section sets out how Prophunt LLP processes your organisation's personal data (mainly
           lead data) as your Data Processor under the DPDP Act, 2023 and the DPDP Rules, 2025. It forms part
           of these Terms.
         </p>
@@ -198,7 +199,7 @@ export default function Terms() {
       <Section title="13. Intellectual Property">
         <p>
           All intellectual property in the Arthaleads platform, including software, design, trademarks,
-          and documentation, belongs to Vistrow Technologies. You are granted a limited, non-exclusive,
+          and documentation, belongs to Prophunt LLP. You are granted a limited, non-exclusive,
           non-transferable licence to use the Service for your internal business purposes only. Nothing in
           these Terms transfers any intellectual property rights to you.
         </p>
@@ -219,7 +220,7 @@ export default function Terms() {
 
       <Section title="15. Limitation of Liability">
         <p>
-          To the fullest extent permitted by applicable law, Vistrow Technologies shall not be liable for any
+          To the fullest extent permitted by applicable law, Prophunt LLP shall not be liable for any
           indirect, incidental, special, consequential, or punitive damages, including but not limited to loss
           of revenue, loss of data, loss of business opportunities, or reputational harm, arising from your
           use of or inability to use the Service, even if Arthaleads has been advised of the possibility of
@@ -243,12 +244,15 @@ export default function Terms() {
           contact us:
         </p>
         <ContactBox>
-          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Vistrow Technologies (Arthaleads)</p>
+          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Prophunt LLP (Arthaleads)</p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Email:{" "}
             <a href="mailto:contact@arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">
               contact@arthaleads.com
             </a>
+          </p>
+          <p style={{ color: "var(--app-text-soft)" }}>
+            Address: 1, Utkarsha Bungalow, Late Babanrao Shripati Dhankude Road, Baner, Pune, Maharashtra 411045, India
           </p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Platform:{" "}

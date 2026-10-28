@@ -4,7 +4,7 @@
 
 Key facts:
 
-- Founded in 2025 in Pune, Maharashtra, India. Arthaleads is a product of Vistrow Technologies (https://www.vistrow.com).
+- Founded in 2025 in Pune, Maharashtra, India. Arthaleads is operated by Prophunt LLP, a limited liability partnership registered in Pune.
 - Pricing: Starter ₹599 and Growth ₹999 per user per month, plus 18% GST, with a five-seat minimum. Annual billing gives two months free. Enterprise is custom-quoted for large or multi-branch teams. No setup fee.
 - 14-day free trial of the Growth plan, no credit card needed. 7-day money-back guarantee on new subscriptions.
 - Lead sources: Facebook and Instagram lead ads (automatic), WhatsApp chats, website forms through the WordPress plugin or REST API, Google Ads (Enterprise), and 99acres, MagicBricks and Housing.com leads imported from CSV or Excel.

@@ -35,7 +35,7 @@ const FAQS = [
   ["Will an AI CRM replace my sales team?",
    "No. The AI takes the first reply, the qualifying questions and the typing off your team. Calls, site visits, negotiation and the booking still need your people. What changes is that they spend their day on buyers who are ready to talk."],
   ["Which plan has the AI features?",
-   `The WhatsApp AI agent, AI lead scoring, AI-written replies and Artha, the AI copilot, are on Growth (₹${PLAN_PRICING.growth.monthly} per user per month plus GST). Call transcripts and Vistrow Voice AI calling are on Enterprise. Every team can try Growth free for 14 days, no credit card needed.`],
+   `The WhatsApp AI agent, AI lead scoring, AI-written replies and Artha, the AI copilot, are on Growth (₹${PLAN_PRICING.growth.monthly} per user per month plus GST). Call transcripts and AI voice calling are on Enterprise. Every team can try Growth free for 14 days, no credit card needed.`],
 ];
 
 export default function AiCrm() {
@@ -98,7 +98,7 @@ export default function AiCrm() {
           { icon: ImageIcon, title: "Reads the photos buyers send", body: "When a buyer sends a photo on WhatsApp, such as a floor plan or a site board, the AI agent looks at it and replies to what it shows.", plan: "Growth" },
           { icon: Sparkles, title: "AI-written follow-ups", body: "For any lead, AI drafts a personal WhatsApp message using their name, project interest and budget. The agent reviews it and sends it.", plan: "Growth" },
           { icon: Headphones, title: "Call transcripts and summaries", body: "Recorded calls are transcribed, with the buyer's intent, a summary and the next step. Switch it on and a call that books a site visit moves the lead's stage.", plan: "Enterprise" },
-          { icon: PhoneCall, title: "Vistrow Voice AI calling", body: "An AI calling agent phones new leads, qualifies them and hands them over with the call transcript and the language they spoke.", plan: "Enterprise" },
+          { icon: PhoneCall, title: "AI voice calling", body: "An AI calling agent phones new leads, qualifies them and hands them over with the call transcript and the language they spoke.", plan: "Enterprise" },
           { icon: Gauge, title: "Rule-based lead score", body: "Every lead gets a 0 to 100 score from rules on budget, recency, stage and activity, so your team can always see why a lead ranks where it does.", plan: "all" },
         ],
       }}

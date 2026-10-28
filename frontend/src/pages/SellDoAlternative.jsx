@@ -65,7 +65,7 @@ const SELLDO = {
     ["Can I move my leads from Sell.Do to Arthaleads?",
      "Yes, if you can export them as a CSV or Excel file. Arthaleads imports leads from CSV and Excel on every plan, and our team helps you map the columns and connect your Facebook, Google, website and WhatsApp sources during onboarding."],
     ["Does Arthaleads have AI calling like Sell.Do?",
-     "Yes, through Vistrow Voice, our AI calling agent, on the Enterprise plan. Every plan also has one-tap calling from the lead, with the call logged automatically."],
+     "Yes, through our AI calling agent, on the Enterprise plan. Every plan also has one-tap calling from the lead, with the call logged automatically."],
     ["Is this comparison fair?",
      `We wrote it, so read it with that in mind. Every statement about Sell.Do comes from its own website, linked in the table, as checked on ${CHECKED}. If something has changed, message us and we will correct it.`],
   ],

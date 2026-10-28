@@ -427,7 +427,7 @@ function Trust() {
             <Card glow className="h-full p-7 flex flex-col">
               <TrustIcon Icon={MapPin} />
               <h3 className="font-display text-lg font-bold site-ink mb-2">Made in Pune</h3>
-              <p className="text-[15px] leading-relaxed mb-5">Built by Vistrow Technologies for Indian sales teams, with real people answering on WhatsApp.</p>
+              <p className="text-[15px] leading-relaxed mb-5">Built by Prophunt LLP for Indian sales teams, with real people answering on WhatsApp.</p>
               <ul className="mt-auto space-y-1.5">
                 <TrustRow left="Built in" right="Pune, India" tone={T_ORANGE} />
                 <TrustRow left="Support" right="WhatsApp and phone" tone={T_PLAIN} />

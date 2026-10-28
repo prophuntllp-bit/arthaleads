@@ -52,7 +52,7 @@ export default function AboutUs() {
           <PhotoVisual name="partner" alt="A real estate sales team working through their leads together in the office"
             cards={[
               { Icon: MapPin, title: "Made in Pune", sub: "Maharashtra, India" },
-              { Icon: Building2, title: "By Vistrow Technologies", sub: "The team behind Arthaleads" },
+              { Icon: Building2, title: "By Prophunt LLP", sub: "The company behind Arthaleads" },
               { Icon: WhatsAppLogo, iconColor: "#25D366", iconBg: "rgba(37,211,102,0.12)", title: "Support on WhatsApp", sub: "From real people" },
             ]} />
         }
@@ -82,7 +82,7 @@ export default function AboutUs() {
             <div className="space-y-4 text-base sm:text-[17px] leading-relaxed">
               <p>Real estate sales teams in India work across multiple channels simultaneously: Facebook lead ads, Google campaigns, WhatsApp enquiries, walk-ins, and housing portals, all at once. Before Arthaleads, managing this meant juggling six different tabs, three WhatsApp groups, and a shared Excel sheet that nobody trusted.</p>
               <p>Hot leads would go cold because no one followed up in time. Telecallers would call the same number three times from different lists. Managers had no way to see what the team was actually doing.</p>
-              <p className="site-ink">We started Arthaleads in Pune in 2025, as a product of Vistrow Technologies, to be the single workspace where every property enquiry lands, gets assigned, gets called, and gets tracked. From first contact to closed deal.</p>
+              <p className="site-ink">Prophunt LLP started Arthaleads in Pune in 2025 to be the single workspace where every property enquiry lands, gets assigned, gets called, and gets tracked. From first contact to closed deal.</p>
             </div>
           </Reveal>
           <ul className="grid gap-3 min-w-0">
@@ -136,16 +136,16 @@ export default function AboutUs() {
             ))}
           </div>
 
-          {/* Parent company */}
+          {/* The company */}
           <Reveal>
             <Card raised className="mt-6 p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
               <div className="min-w-0">
-                <p className="site-eyebrow mb-2">Parent company</p>
+                <p className="site-eyebrow mb-2">The company</p>
                 <p className="text-[15px] leading-relaxed max-w-2xl">
-                  Arthaleads is a product of <strong className="site-ink">Vistrow Technologies</strong>, built and supported by the same team behind Vistrow's other software products.
+                  Arthaleads is built and run by <strong className="site-ink">Prophunt LLP</strong>, a limited liability partnership based in Baner, Pune. We started building Arthaleads in 2025 and support every customer from Pune.
                 </p>
               </div>
-              <SiteButton href="https://www.vistrow.com" external variant="secondary" className="shrink-0">Visit vistrow.com <ArrowRight className="w-4 h-4" /></SiteButton>
+              <SiteButton to="/contact" variant="secondary" className="shrink-0">Contact us <ArrowRight className="w-4 h-4" /></SiteButton>
             </Card>
           </Reveal>
         </Container>
