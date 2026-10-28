@@ -155,6 +155,11 @@ const automationSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // The site's own favicon, or its logo when it has none (utils/siteIcon.js),
+    // shown on the connection card; "" until found.
+    siteIconUrl:       { type: String, trim: true, default: "" },
+    siteIconKind:      { type: String, enum: ["", "favicon", "logo"], default: "" },
+    siteIconCheckedAt: { type: Date, default: null },
     connectedForms: {
       type: [String],
       default: [],

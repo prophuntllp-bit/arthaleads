@@ -805,20 +805,28 @@ const FORM_PLUGINS = [
 // The site's own favicon, so several connected sites are told apart at a
 // glance. Falls back to the plain icon when there is no URL yet or the image
 // can't load.
-function SiteFavicon({ url, fallback, size = 32 }) {
+// A connected website's own icon: its favicon, or its logo when it has none,
+// found by the server (backend/utils/siteIcon.js). Until one is found, or if it
+// will not load, a first-letter tile, never Google's grey globe (owner, 28 Oct 2026).
+function SiteFavicon({ iconUrl, kind, name, size = 32 }) {
   const [failed, setFailed] = useState(false);
-  let host = "";
-  try { host = url ? new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`).hostname : ""; } catch { host = ""; }
-  if (!host || failed) return fallback;
+  if (!iconUrl || failed) return <LetterTile name={name} />;
   return (
-    <img
-      src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`}
-      alt=""
-      width={size} height={size}
-      className="rounded-md bg-white object-contain"
-      style={{ width: size, height: size }}
-      onError={() => setFailed(true)}
-    />
+    <img src={iconUrl} alt="" referrerPolicy="no-referrer" loading="lazy" onError={() => setFailed(true)}
+      className="bg-white object-contain"
+      style={kind === "logo" ? { width: "100%", height: "100%", padding: 4 } : { width: size, height: size, borderRadius: 6 }} />
+  );
+}
+
+/** The first letter of a site's name on a colour picked from the name. */
+function LetterTile({ name }) {
+  const text = String(name || "?").replace(/^https?:\/\//i, "").replace(/^www\./i, "").trim();
+  const letter = (text.match(/[a-z0-9]/i) || ["?"])[0].toUpperCase();
+  let h = 0;
+  for (const ch of text) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  return (
+    <div className="flex h-full w-full items-center justify-center text-base font-bold text-white"
+      style={{ background: `hsl(${h} 55% 48%)` }}>{letter}</div>
   );
 }
 
@@ -862,7 +870,7 @@ function WpSiteCard({ conn, onDelete }) {
       {/* Site header */}
       <div className={`flex items-center gap-3 px-4 py-3 ${isConnected ? "bg-emerald-500" : "bg-[var(--app-surface-low)]"}`}>
         <div className={`flex h-8 w-8 items-center justify-center rounded-xl shrink-0 ${isConnected ? "bg-white/20" : "bg-[#21759b]"}`}>
-          <SiteFavicon url={conn.siteUrl} size={24} fallback={<WordPressIcon />} />
+          <div className="h-8 w-8 overflow-hidden rounded-lg flex items-center justify-center bg-white"><SiteFavicon iconUrl={conn.siteIconUrl} kind={conn.siteIconKind} name={conn.siteName || conn.siteUrl || conn.name} size={24} /></div>
         </div>
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-bold truncate ${isConnected ? "text-white" : "text-app"}`}>
@@ -1935,8 +1943,8 @@ export default function Automation() {
               const isVistrowVoice = item.platform === "Vistrow Voice";
               const leading = isFb ? <div className="flex h-full w-full items-center justify-center bg-[#1877F2]"><FacebookIcon /></div>
                 : isVistrowVoice ? <VistrowVoiceIcon size={40} />
-                : item.platform === "Website Form" && item.siteUrl
-                  ? <SiteFavicon url={item.siteUrl} size={28} fallback={<Icon className="h-5 w-5" />} />
+                : item.platform === "Website Form"
+                  ? <SiteFavicon iconUrl={item.siteIconUrl} kind={item.siteIconKind} name={item.siteName || item.siteUrl || item.name} size={28} />
                   : <Icon className="h-5 w-5" />;
               return (
                 <ConnectionCard

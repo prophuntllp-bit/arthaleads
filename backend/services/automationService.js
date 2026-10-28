@@ -98,7 +98,7 @@ async function assertNotClaimedElsewhere(normalized, orgId, selfId = null) {
 const automationService = {
   async list(orgId) {
     const rows = await Automation.find({ orgId }).select("-accessToken -userToken").sort({ createdAt: -1 });
-    await this.fillSiteNames(rows);
+    await Promise.all([this.fillSiteNames(rows), this.fillSiteIcons(rows)]);
     return rows;
   },
 
@@ -120,6 +120,23 @@ const automationService = {
       a.siteNameCheckedAt = patch.siteNameCheckedAt;
     }));
     await Promise.race([work, new Promise((r) => setTimeout(r, 5000))]).catch(() => {});
+  },
+
+  // Each website connection's own icon (favicon, else logo), found once a week
+  // at most; the page never waits more than a few seconds for slow sites.
+  async fillSiteIcons(rows) {
+    const { fetchSiteIcon } = require("../utils/siteIcon");
+    const weekAgo = Date.now() - 7 * 86400000;
+    const todo = rows.filter((a) => a.platform === "Website Form" && a.siteUrl
+      && (!a.siteIconCheckedAt || a.siteIconCheckedAt.getTime() < weekAgo));
+    if (!todo.length) return;
+    const work = Promise.all(todo.map(async (a) => {
+      const icon = await fetchSiteIcon(a.siteUrl);
+      const patch = { siteIconCheckedAt: new Date(), siteIconUrl: icon?.url || "", siteIconKind: icon?.kind || "" };
+      await Automation.updateOne({ _id: a._id }, { $set: patch });
+      Object.assign(a, patch);
+    }));
+    await Promise.race([work, new Promise((r) => setTimeout(r, 8000))]).catch(() => {});
   },
 
   async create(payload, actor) {
