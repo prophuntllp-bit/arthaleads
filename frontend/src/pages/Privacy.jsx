@@ -17,8 +17,9 @@ export default function Privacy() {
       <Section title="1. Introduction">
         <p>
           Arthaleads ("we", "us", or "our") is a real estate customer relationship management (CRM) platform
-          made and operated by <strong style={strong}>Vistrow Technologies</strong>, founded in 2025. This
-          Privacy Policy explains how we collect, use, store, share and protect personal data when you use
+          made and operated by <strong style={strong}>Prophunt LLP</strong>, a limited liability partnership
+          registered in India (GSTIN 27ABAFP3487B1ZC) with its principal place of business in Pune.
+          Arthaleads was founded in 2025. This Privacy Policy explains how we collect, use, store, share and protect personal data when you use
           the Arthaleads web app, mobile app and website ("the Service").
         </p>
         <p>
@@ -35,7 +36,7 @@ export default function Privacy() {
           <li>
             <strong style={strong}>Leads and customers of an organisation using Arthaleads:</strong>{" "}
             the organisation (our customer) is the <strong style={strong}>Data Fiduciary</strong>. It decides
-            why and how its leads' data is collected and used. Vistrow Technologies is its{" "}
+            why and how its leads' data is collected and used. Prophunt LLP is its{" "}
             <strong style={strong}>Data Processor</strong>: we process that data only to run the CRM for the
             organisation and only on its instructions. The organisation is responsible for giving its leads a
             privacy notice and for having a lawful basis, such as consent, for the data it uploads or captures.
@@ -43,7 +44,7 @@ export default function Privacy() {
           <li>
             <strong style={strong}>Arthaleads users and website visitors:</strong>{" "}
             for the people who sign up for or use Arthaleads (organisation admins, managers and agents), and
-            for visitors who use our website or fill in our forms, Vistrow Technologies is the{" "}
+            for visitors who use our website or fill in our forms, Prophunt LLP is the{" "}
             <strong style={strong}>Data Fiduciary</strong>.
           </li>
         </ul>
@@ -228,7 +229,7 @@ export default function Privacy() {
           <li><strong style={strong}>Approval option:</strong> Your administrator can be asked to approve access before the session begins, and can end access at any time by clicking "End Session".</li>
           <li><strong style={strong}>Access log:</strong> A complete history of all support access is available to your organisation administrator at Settings → Security at any time.</li>
           <li><strong style={strong}>Purpose limitation:</strong> Support access is used only to diagnose technical issues or provide assistance. Support staff never copy, export, or share your data for any other purpose.</li>
-          <li><strong style={strong}>Confidentiality:</strong> Everyone at Vistrow Technologies who can access customer data is bound to keep it confidential.</li>
+          <li><strong style={strong}>Confidentiality:</strong> Everyone at Prophunt LLP who can access customer data is bound to keep it confidential.</li>
         </ul>
       </Section>
 
@@ -255,7 +256,7 @@ export default function Privacy() {
           Some services are used only when your organisation chooses to connect them, and in that case your
           organisation has its own relationship with the provider: a WhatsApp Business Solution Provider
           (such as WATI, AiSensy or Interakt), property portals (99acres, Housing.com, MagicBricks), and
-          Vistrow Voice for automatic calling of new leads.
+          an AI voice calling provider you connect for automatic calling of new leads.
         </p>
         <p>
           We will update this list before we start using a new sub-processor, and we will tell customers
@@ -296,7 +297,7 @@ export default function Privacy() {
         <p>If a personal data breach happens:</p>
         <ul className="list-disc pl-5 space-y-1.5">
           <li>
-            <strong style={strong}>Data we process for customers:</strong> Vistrow Technologies will notify the
+            <strong style={strong}>Data we process for customers:</strong> Prophunt LLP will notify the
             affected customers (the Data Fiduciaries) without undue delay after becoming aware of the breach,
             share what we know about it, and help them inform the affected people and the Data Protection
             Board of India.
@@ -361,12 +362,15 @@ export default function Privacy() {
           contact:
         </p>
         <ContactBox>
-          <p className="font-bold mb-1" style={strong}>Grievance Officer, Vistrow Technologies (Arthaleads)</p>
+          <p className="font-bold mb-1" style={strong}>Grievance Officer, Prophunt LLP (Arthaleads)</p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Email:{" "}
             <a href="mailto:contact@arthaleads.com" style={link} className="hover:underline">
               contact@arthaleads.com
             </a>
+          </p>
+          <p style={{ color: "var(--app-text-soft)" }}>
+            Address: 1, Utkarsha Bungalow, Late Babanrao Shripati Dhankude Road, Baner, Pune, Maharashtra 411045, India
           </p>
           <p style={{ color: "var(--app-text-soft)" }}>Response time: within 30 days of receipt.</p>
         </ContactBox>
@@ -387,12 +391,15 @@ export default function Privacy() {
           contact:
         </p>
         <ContactBox>
-          <p className="font-bold mb-1" style={strong}>Vistrow Technologies (Arthaleads)</p>
+          <p className="font-bold mb-1" style={strong}>Prophunt LLP (Arthaleads)</p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Email:{" "}
             <a href="mailto:contact@arthaleads.com" style={link} className="hover:underline">
               contact@arthaleads.com
             </a>
+          </p>
+          <p style={{ color: "var(--app-text-soft)" }}>
+            Address: 1, Utkarsha Bungalow, Late Babanrao Shripati Dhankude Road, Baner, Pune, Maharashtra 411045, India
           </p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Platform:{" "}

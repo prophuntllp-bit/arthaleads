@@ -292,7 +292,7 @@ export default function MarketingChatBot() {
           {/* DPDP notice, visible before anything is typed: chats are saved
               (models/WebsiteChat.js) and a visitor may type a name or number. */}
           <p className="px-4 pb-2.5 text-[10.5px] leading-snug shrink-0" style={{ color: t.textSoft }}>
-            Arthaleads (Vistrow Technologies) saves this chat to answer you and improve Artha. Please don't share phone numbers or other personal details here.{" "}
+            Arthaleads (Prophunt LLP) saves this chat to answer you and improve Artha. Please don't share phone numbers or other personal details here.{" "}
             <Link to="/privacy" className="underline" style={{ color: t.textSoft }}>Privacy policy</Link>
           </p>
         </div>
