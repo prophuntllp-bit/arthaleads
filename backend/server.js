@@ -359,6 +359,9 @@ app.use(["/api", "/webhook", "/health"], (req, res, next) => {
 // ── API Routes ────────────────────────────────────────────────────────────────
 // The credential limiter is attached per-route inside authRoutes, so that
 // /auth/me, /auth/agents and the rest are not counted as login attempts.
+// Activity log (DPDP Rules 2025): writes a row after each response; see the file.
+app.use("/api", require("./middlewares/auditTrail").auditTrail);
+app.use("/api/audit-log", require("./routes/auditRoutes"));
 app.use("/api/auth",  authRoutes);
 app.use("/api/org",   orgRoutes);
 app.use("/api/leads", leadRoutes);

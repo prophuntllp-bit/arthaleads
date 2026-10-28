@@ -85,6 +85,12 @@ const projectLeadSchema = new mongoose.Schema(
       source:     { type: String },
       capturedAt: { type: Date },
     },
+    // Copied from the lead when a project QR files it here (see Lead.dataConsent).
+    dataConsent: {
+      type: { given: Boolean, at: Date, source: String, text: String },
+      default: undefined,
+      _id: false,
+    },
 
     // Remark system for telecallers
     remark: {

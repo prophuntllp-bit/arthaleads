@@ -26,9 +26,11 @@ const PROJECT_QR = "0f9e8d7c6b5a49382716f5e4d3c2b1a0";
 const ARCHIVED_QR = "11112222333344445555666677778888";
 const OFF_QR = "99998888777766665555444433332222";
 
+// Every enquiry here ticks the required consent box (DPDP, 28 Oct 2026) unless
+// the case says otherwise; refusal without it is covered in dataConsent.db.test.js.
 function call(method, path, body) {
   return new Promise((resolve, reject) => {
-    const data = body ? new URLSearchParams(body).toString() : "";
+    const data = body ? new URLSearchParams(method === "POST" ? { dataConsent: "true", ...body } : body).toString() : "";
     const req = http.request(`${base}${path}`, {
       method, agent: false,
       headers: { "content-type": "application/x-www-form-urlencoded", "content-length": Buffer.byteLength(data) },

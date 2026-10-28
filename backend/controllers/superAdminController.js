@@ -831,7 +831,11 @@ const superAdminController = {
         details:        { adminEmail: admin.email },
       });
 
-      const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, { expiresIn: "2h" });
+      // `sa` names the super admin behind this session. It only feeds the
+      // activity log (middlewares/auditTrail.js), so what support does inside
+      // a customer's CRM is recorded as support, not as their admin (owner,
+      // 28 Oct 2026). It changes nothing about what the session may do.
+      const token = jwt.sign({ id: admin._id, sa: req.user._id }, process.env.JWT_SECRET, { expiresIn: "2h" });
 
       res.cookie(COOKIE_NAME, token, {
         httpOnly: true,
@@ -856,6 +860,9 @@ const superAdminController = {
       const filter = {};
       if (req.query.action) filter.action = req.query.action;
       if (req.query.orgId)  filter.targetOrg = req.query.orgId;
+      // Activity rows (they carry `at`) would bury the admin actions this
+      // page lists; they are read through GET /api/audit-log instead.
+      if (!req.query.action) filter.at = { $exists: false };
 
       const [logs, total] = await Promise.all([
         AuditLog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),

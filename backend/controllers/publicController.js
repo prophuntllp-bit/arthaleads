@@ -13,7 +13,15 @@ const logger = require("../config/logger");
 // The QR enquiry form (/form/:token on the website). A token is either the
 // company's own QR (Organization.qrToken) or a project's (Project.qrToken).
 // The org's public phone is shown on the thank-you screen (call / WhatsApp).
-const ORG_FIELDS = "name logo brandColor isActive phone";
+const ORG_FIELDS = "name logo brandColor isActive phone privacyUrl";
+
+// DPDP: the company that owns the form is the Data Fiduciary, so the notice
+// names it, and the person must tick a box (an affirmative action) before the
+// form is accepted. The form shows this exact text and the lead stores it, so
+// what was agreed to is on record (owner, 28 Oct 2026).
+const consentText = (orgName) =>
+  `I agree that ${orgName || "this company"} may contact me about this enquiry by phone, WhatsApp or email, and store my details in its CRM.`;
+const ticked = (v) => ["true", "on", "1", "yes"].includes(String(v || "").toLowerCase());
 
 /** { org, project } for a token, or { status, message } when it can't be used. */
 async function resolveToken(token, orgFields = ORG_FIELDS) {
@@ -40,7 +48,8 @@ async function getForm(req, res, next) {
     res.json({
       success: true,
       type: project ? "project" : "org",
-      org: { _id: org._id, name: org.name, logo: org.logo, brandColor: org.brandColor, phone: org.phone || "" },
+      org: { _id: org._id, name: org.name, logo: org.logo, brandColor: org.brandColor, phone: org.phone || "", privacyUrl: org.privacyUrl || "" },
+      consentText: consentText(org.name),
       project: project ? { _id: project._id, name: project.name, location: project.location, images: project.images } : null,
     });
   } catch (err) {
@@ -69,7 +78,7 @@ async function submitLead(req, res, next) {
     const message = clip(body.message, 1000);
     // Only an explicit tick counts. The box is unticked by default on the form,
     // and an absent value is recorded as nothing rather than as a refusal.
-    const agreedToWhatsApp = ["true", "on", "1", "yes"].includes(String(body.whatsappConsent || "").toLowerCase());
+    const agreedToWhatsApp = ticked(body.whatsappConsent);
 
     if (name.length < 2) return res.status(400).json({ success: false, message: "Please enter your name" });
     if (!phoneKey(rawPhone)) return res.status(400).json({ success: false, message: "Please enter a valid mobile number (10 digits)" });
@@ -79,11 +88,16 @@ async function submitLead(req, res, next) {
     const budgetNum = Number(String(body.budget ?? "").replace(/[^\d.]/g, ""));
     const budget = Number.isFinite(budgetNum) && budgetNum > 0 ? Math.min(budgetNum, 1e11) : 0;
     const propertyType = OPTS.PROPERTY_TYPE.includes(body.propertyType) ? body.propertyType : undefined;
+    // Checked here too, so the box can't be skipped by posting to the API directly.
+    if (!ticked(body.dataConsent)) {
+      return res.status(400).json({ success: false, message: "Please tick the box to agree to be contacted about your enquiry." });
+    }
 
     const r = await resolveToken(req.params.token, "name isActive autoAssign plan");
     if (r.status) return res.status(r.status).json({ success: false, message: r.message });
     const { org, project } = r;
     const forWhat = project ? ` for ${project.name}` : "";
+    const dataConsent = { given: true, at: new Date(), source: "qr-form", text: consentText(org.name) };
 
     // Same person again (any stored format of the number): note it on their
     // lead instead of making a second one. A double tap within two minutes is
@@ -100,10 +114,14 @@ async function submitLead(req, res, next) {
           notes: { text, addedByName: "QR Form" },
           activities: { type: "note_added", description: `Enquired again via QR code${forWhat}`, performedByName: "QR Form", meta: {} },
         },
-        ...(agreedToWhatsApp ? { $set: { whatsappConsent: { status: "granted", source: "qr-form", capturedAt: new Date() } } } : {}),
+        // This enquiry's consent replaces any older one.
+        $set: {
+          dataConsent,
+          ...(agreedToWhatsApp ? { whatsappConsent: { status: "granted", source: "qr-form", capturedAt: new Date() } } : {}),
+        },
       });
       if (project && existing.assignedTo) {
-        await fileLeadInRoutedProject({ assignToProject: project._id, assignTo: existing.assignedTo, assignToName: existing.assignedToName }, existing);
+        await fileLeadInRoutedProject({ assignToProject: project._id, assignTo: existing.assignedTo, assignToName: existing.assignedToName }, { ...existing, dataConsent });
       }
       notify(org._id, existing, `${existing.name} enquired again${forWhat}`);
       logger.info(`[qr form] repeat enquiry folded into lead ${existing._id}`);
@@ -133,6 +151,7 @@ async function submitLead(req, res, next) {
       source: "QR Code",
       leadSourceLabel: project ? `QR code · ${project.name}` : "QR code",
       orgId: org._id,
+      dataConsent,
       ...(agreedToWhatsApp ? { whatsappConsent: { status: "granted", source: "qr-form", capturedAt: new Date() } } : {}),
       assignedTo,
       assignedToName,
@@ -172,4 +191,4 @@ function notify(orgId, lead, line) {
   }, orgId).catch(() => {});
 }
 
-module.exports = { getForm, submitLead };
+module.exports = { getForm, submitLead, consentText };

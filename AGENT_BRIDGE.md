@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+- [claude] 2026-10-28 IST: Pushing live: DPDP compliance (legal pages, QR consent + dataConsent, activity log 400-day TTL + /api/audit-log + docs/BREACH_RESPONSE.md, full erasure + 12-month backups, Settings partial billing save) and public Vistrow removal (Prophunt LLP named operator) + unused Vistrow logos removed + no 'encrypted backups' claim. Staging b6f4ca52, ebc9175a, b65f7d7a, 1876a924
 - [claude] 2026-10-28 IST: Website desktop speed LIVE 355ab13f (staging 5e91458b): boot script waits on img[fetchpriority=high] (no getBoundingClientRect), 480w site photos, lighter 240w logo
 - [claude] 2026-10-28 IST: Attendance: date range picker (All time default, presets, custom) instead of From/To 30-day default; solid entry/settings popups. 7 old open records on live closed at shift end (owner yes). frontend pages/Attendance.jsx, components/DateRangePicker.jsx (rangeDays export). Live ff6df4d2 (staging 75c20195)
 - [claude] 2026-10-28 IST: Website speed round 2 LIVE ed81238f (staging bfce54aa, bd0895ea, a7797c8a): rupee-only Inter files public/fonts/inter-rupee-*.woff2 + @font-face at top of styles.css; prerendered pages inline the stylesheet (scripts/prerender.mjs inlineCss + disabled link for Vite's loader); hero sizes, 240w logo srcset, blog cover 700/1400 srcset + Sanity preconnect; api/blog-post.js function replacers

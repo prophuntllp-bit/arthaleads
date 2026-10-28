@@ -439,8 +439,10 @@ const projectService = {
     }
 
     if (user.role === "super_admin") {
-      // Permanent hard delete - no dump record
-      await lead.deleteOne();
+      // Permanent hard delete - no dump record. An erasure: its recordings and,
+      // when nobody else holds the number, its WhatsApp chat go too
+      // (services/leadErasure.js, DPDP, owner, 28 Oct 2026).
+      await require("./leadErasure").eraseProjectLeads(user.orgId, [lead._id], { projectId: lead.project?._id || lead.project });
     } else {
       // Soft delete - convert to Lead with isDeleted so it appears in Dump Leads,
       // carrying everything the project entry had and where it was deleted from.
@@ -460,9 +462,9 @@ const projectService = {
     }
 
     if (user.role === "super_admin") {
-      // Permanent hard delete - no dump records
-      const result = await ProjectLead.deleteMany({ _id: { $in: ids }, project: projectId });
-      return result.deletedCount;
+      // Permanent hard delete - no dump records (an erasure, see deleteLead above)
+      const result = await require("./leadErasure").eraseProjectLeads(user.orgId, ids, { projectId });
+      return result.projectLeads;
     }
 
     // Soft delete - convert each to a Lead with isDeleted so they appear in Dump Leads

@@ -9,14 +9,14 @@ export default function Terms() {
   });
 
   return (
-    <LegalLayout title="Terms of Service" badge="Legal" updated="25 June 2026">
+    <LegalLayout title="Terms of Service" badge="Legal" updated="28 October 2026">
 
       <Section title="1. Acceptance of Terms">
         <p>
           By accessing or using Arthaleads CRM ("the Service"), you agree to be bound by these Terms of
           Service ("Terms"). If you do not agree to these Terms, you must not use the Service. These Terms
-          apply to all users — including organisation administrators, managers, and agents. Arthaleads is
-          operated by Prophunt LLP ("Arthaleads", "we", "us", or "our").
+          apply to all users, including organisation administrators, managers, and agents. Arthaleads is
+          made and operated by Vistrow Technologies ("Arthaleads", "we", "us", or "our").
         </p>
         <p>
           We may update these Terms from time to time. Continued use of the Service after any change
@@ -45,7 +45,7 @@ export default function Terms() {
         </ul>
         <p>
           Arthaleads is not liable for any loss or damage arising from your failure to keep your credentials
-          secure.
+          secure. The Service is not meant for anyone under 18 years of age.
         </p>
       </Section>
 
@@ -53,7 +53,7 @@ export default function Terms() {
         <p>
           You agree to use the Service only for lawful purposes and in a manner consistent with all applicable
           local, state, national, and international laws and regulations, including India's Digital Personal
-          Data Protection (DPDP) Act, 2023. You must not:
+          Data Protection (DPDP) Act, 2023 and the DPDP Rules, 2025. You must not:
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
           <li>Use the Service for any unlawful, fraudulent, or harmful purpose.</li>
@@ -72,47 +72,73 @@ export default function Terms() {
       <Section title="5. Lead Data and Data Ownership">
         <p>
           All lead data that you import into, create within, or generate through Arthaleads belongs to your
-          organisation. Arthaleads does not claim ownership over your lead data. We act as a <strong style={{ color: "var(--app-text)" }}>Data Processor</strong> on
-          your behalf — storing and presenting your lead data solely to provide the CRM service to you.
+          organisation. Arthaleads does not claim ownership over your lead data. Vistrow Technologies acts as
+          a <strong style={{ color: "var(--app-text)" }}>Data Processor</strong> on your behalf, storing and
+          presenting your lead data solely to provide the CRM service to you.
         </p>
         <p>
           You, as the organisation using Arthaleads, are the <strong style={{ color: "var(--app-text)" }}>Data Fiduciary</strong> for the personal
           data of your leads and customers under India's DPDP Act, 2023. You are responsible for:
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
-          <li>Ensuring you have the necessary rights, consents, and legal basis to store and process the personal data you upload to the platform.</li>
-          <li>Providing an appropriate privacy notice to your leads explaining how their data will be used.</li>
-          <li>Responding to data principal requests (access, correction, erasure) directed to your organisation.</li>
+          <li>Giving your leads a clear privacy notice and having valid consent or another lawful basis for every lead you upload, import or capture through the platform (including through ads, portals, WhatsApp and calls).</li>
+          <li>Responding to data principal requests (access, correction, erasure, nomination, grievances) directed to your organisation.</li>
           <li>Ensuring that WhatsApp messages, calls, and automated communications sent through Arthaleads comply with applicable telecom and data protection regulations.</li>
         </ul>
       </Section>
 
-      <Section title="6. AI Features (Artha AI)">
+      <Section title="6. Data Processing">
+        <p>
+          This section sets out how Vistrow Technologies processes your organisation's personal data (mainly
+          lead data) as your Data Processor under the DPDP Act, 2023 and the DPDP Rules, 2025. It forms part
+          of these Terms.
+        </p>
+        <ul className="list-disc pl-5 space-y-1.5">
+          <li><strong style={{ color: "var(--app-text)" }}>Your instructions:</strong> We process this data only to provide the Service and only on your documented instructions, which include these Terms, your settings and integrations in the CRM, and your requests to support. We do not use it for any other purpose.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Confidentiality:</strong> Our staff and contractors who can access this data are bound to keep it confidential and access it only when needed to run or support the Service.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Security safeguards:</strong> We protect the data with reasonable security safeguards, including encryption in transit (HTTPS/TLS), hashed passwords, encryption of stored access tokens, private file storage served only to authorised users, role-based access control, and logging of access and activity.</li>
+          <li>
+            <strong style={{ color: "var(--app-text)" }}>Sub-processors:</strong> You authorise us to use the
+            sub-processors listed in our{" "}
+            <a href="/privacy#10-sub-processors" style={{ color: "var(--brand-text)" }} className="hover:underline">Privacy Policy</a>.
+            {" "}We will update that list before adding a new sub-processor and tell you about material changes
+            through the app or by email. We hold each sub-processor to data protection obligations suited to
+            the service it provides.
+          </li>
+          <li><strong style={{ color: "var(--app-text)" }}>Breach notification:</strong> We will notify you without undue delay after becoming aware of a personal data breach affecting your data, share the information you need, and help you inform the affected people and the Data Protection Board of India.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Data principal requests:</strong> If one of your leads contacts us about their data, we will pass the request to you, and we will help you respond to requests for access, correction, completion or erasure.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Retention:</strong> Call recordings are deleted automatically after the period set by your plan, as described in the Privacy Policy. Other data stays until you delete it or the Service ends.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Deletion or return at the end of the Service:</strong> Before closing your account, an admin can export your lead data in CSV or Excel format. When your organisation's account is deleted, we delete its data within 30 days. Copies in our database backups are deleted as those backups expire, within 12 months.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Your responsibility:</strong> You are responsible for giving notice to, and having consent from, the people whose data you upload or capture, and for the lawfulness of your instructions to us.</li>
+        </ul>
+      </Section>
+
+      <Section title="7. AI Features (Artha AI)">
         <p>
           Arthaleads includes AI-powered features ("Artha AI") that help with lead scoring, follow-up
           suggestions, and sales assistance. When you use these features:
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
-          <li>Relevant lead and context data is sent to our AI provider (OpenAI) to generate responses. This data is processed under OpenAI's data processing agreement and is not used to train their general models.</li>
+          <li>Relevant lead and context data is sent to our AI provider (OpenAI) to generate responses. This data is processed under OpenAI's data processing terms and is not used to train its general models.</li>
           <li>You must not submit sensitive personal data (e.g. financial account details, government ID numbers, health information) to AI features.</li>
           <li>AI-generated content is advisory only. Arthaleads makes no warranty regarding the accuracy, completeness, or suitability of AI suggestions. You remain solely responsible for all decisions made using the platform.</li>
           <li>AI usage is tracked per organisation for billing and abuse-prevention purposes.</li>
         </ul>
       </Section>
 
-      <Section title="7. WhatsApp and Telephony Integrations">
+      <Section title="8. WhatsApp and Telephony Integrations">
         <p>
           When you connect WhatsApp Business or telephony (call) integrations through Arthaleads:
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
           <li>You are responsible for ensuring all WhatsApp communications comply with Meta's WhatsApp Business Policy and India's Telecom Commercial Communications Customer Preference Regulations (TCCCPR).</li>
           <li>You must obtain appropriate consent from recipients before sending WhatsApp messages or initiating calls.</li>
-          <li>Call recordings (where enabled) are stored within your organisation's account for your agents' reference. You are responsible for informing call participants that they are being recorded, as required by applicable law.</li>
+          <li>Call recordings (where enabled) are stored within your organisation's account for your agents' reference, for the period set by your plan. You are responsible for informing call participants that they are being recorded, as required by applicable law.</li>
           <li>Arthaleads is not responsible for messages or calls made through the platform that violate applicable law or platform policies.</li>
         </ul>
       </Section>
 
-      <Section title="8. Platform Support Access">
+      <Section title="9. Platform Support Access">
         <p>
           In order to provide technical support, debug issues, or assist with onboarding, authorised
           Arthaleads platform administrators may access your organisation's CRM account ("Support Access").
@@ -133,21 +159,22 @@ export default function Terms() {
         </p>
       </Section>
 
-      <Section title="9. Data & Privacy">
+      <Section title="10. Data & Privacy">
         <p>
           By using Arthaleads, you acknowledge that we collect and process certain data as described in our{" "}
           <a href="/privacy" style={{ color: "var(--brand-text)" }} className="hover:underline">Privacy Policy</a>.
           {" "}This includes account data, lead data, and integration data from connected platforms (Meta, Google,
-          WhatsApp, telephony providers). Your continued use of the Service constitutes acceptance of our data
+          WhatsApp, telephony providers). Some of this data is stored or processed outside India by the
+          sub-processors listed there. Your continued use of the Service constitutes acceptance of our data
           practices as outlined in the Privacy Policy.
         </p>
         <p>
-          Arthaleads is committed to compliance with the <strong style={{ color: "var(--app-text)" }}>Digital Personal Data Protection (DPDP) Act, 2023</strong> and
-          other applicable Indian data protection laws.
+          Arthaleads is committed to compliance with the <strong style={{ color: "var(--app-text)" }}>Digital Personal Data Protection (DPDP) Act, 2023</strong>, the
+          DPDP Rules, 2025, and other applicable Indian data protection laws.
         </p>
       </Section>
 
-      <Section title="10. Service Availability">
+      <Section title="11. Service Availability">
         <p>
           Arthaleads aims to maintain high availability for the platform. However, we do not guarantee
           uninterrupted or error-free access to the Service. The platform may be temporarily unavailable
@@ -157,7 +184,7 @@ export default function Terms() {
         </p>
       </Section>
 
-      <Section title="11. Billing, Subscriptions & Refunds">
+      <Section title="12. Billing, Subscriptions & Refunds">
         <p>
           Paid plans are billed in advance for the chosen billing period. You can cancel at any time, with
           no lock-in; your plan stays active until the end of the current billing cycle. We offer a 7-day
@@ -168,39 +195,41 @@ export default function Terms() {
         </p>
       </Section>
 
-      <Section title="12. Intellectual Property">
+      <Section title="13. Intellectual Property">
         <p>
-          All intellectual property in the Arthaleads platform — including software, design, trademarks,
-          and documentation — belongs to Prophunt LLP. You are granted a limited, non-exclusive,
+          All intellectual property in the Arthaleads platform, including software, design, trademarks,
+          and documentation, belongs to Vistrow Technologies. You are granted a limited, non-exclusive,
           non-transferable licence to use the Service for your internal business purposes only. Nothing in
           these Terms transfers any intellectual property rights to you.
         </p>
       </Section>
 
-      <Section title="13. Termination">
+      <Section title="14. Termination">
         <p>
           Arthaleads reserves the right to suspend or terminate your account at any time, with or without
           notice, if we determine that you have violated these Terms or engaged in conduct harmful to the
-          platform, other users, or third parties. You may also terminate your account at any time by
-          contacting us. Upon termination, your access to the platform will be revoked and your data will
-          be handled in accordance with our{" "}
+          platform, other users, or third parties. You may also terminate your account at any time from the
+          app, from our{" "}
+          <a href="/delete-account" style={{ color: "var(--brand-text)" }} className="hover:underline">Delete Account</a>
+          {" "}page, or by contacting us. Upon termination, your access to the platform will be revoked and your
+          data will be deleted as described in Section 6 and our{" "}
           <a href="/privacy" style={{ color: "var(--brand-text)" }} className="hover:underline">Privacy Policy</a>.
         </p>
       </Section>
 
-      <Section title="14. Limitation of Liability">
+      <Section title="15. Limitation of Liability">
         <p>
-          To the fullest extent permitted by applicable law, Arthaleads (Prophunt LLP) shall not be liable
-          for any indirect, incidental, special, consequential, or punitive damages — including but not
-          limited to loss of revenue, loss of data, loss of business opportunities, or reputational harm —
-          arising from your use of or inability to use the Service, even if Arthaleads has been advised of
-          the possibility of such damages. Our total liability to you for any claim arising out of or
-          relating to these Terms or the Service shall not exceed the amount paid by you to Arthaleads in
-          the three months preceding the event giving rise to the claim.
+          To the fullest extent permitted by applicable law, Vistrow Technologies shall not be liable for any
+          indirect, incidental, special, consequential, or punitive damages, including but not limited to loss
+          of revenue, loss of data, loss of business opportunities, or reputational harm, arising from your
+          use of or inability to use the Service, even if Arthaleads has been advised of the possibility of
+          such damages. Our total liability to you for any claim arising out of or relating to these Terms or
+          the Service shall not exceed the amount paid by you to Arthaleads in the three months preceding the
+          event giving rise to the claim.
         </p>
       </Section>
 
-      <Section title="15. Governing Law">
+      <Section title="16. Governing Law">
         <p>
           These Terms are governed by and construed in accordance with the laws of India. Any disputes
           arising under or in connection with these Terms shall be subject to the exclusive jurisdiction of
@@ -208,13 +237,13 @@ export default function Terms() {
         </p>
       </Section>
 
-      <Section title="16. Contact">
+      <Section title="17. Contact">
         <p>
           If you have any questions about these Terms of Service or wish to report a violation, please
           contact us:
         </p>
         <ContactBox>
-          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Arthaleads (Prophunt LLP)</p>
+          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Vistrow Technologies (Arthaleads)</p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Email:{" "}
             <a href="mailto:contact@arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">

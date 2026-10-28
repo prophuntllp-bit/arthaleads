@@ -17,9 +17,9 @@ const PILLARS = [
     icon: Database,
     points: [
       ["Encryption in transit", "All traffic is served over HTTPS/TLS. Data moving between your browser and our servers is always encrypted."],
-      ["Encryption at rest", "Your data is stored on MongoDB Atlas with encryption at rest on AWS infrastructure."],
+      ["Encryption at rest", "Your database is stored on MongoDB Atlas (AWS, Mumbai, India) with encryption at rest. Stored access tokens get an extra layer of field-level encryption."],
       ["Tenant isolation", "Every organisation's data is strictly scoped by a unique org ID. One customer can never see another's leads."],
-      ["Backups", "Automated daily backups of core records such as leads, projects, bookings and team data. Uploaded files (photos, brochures, recordings) are stored separately in our file storage."],
+      ["Backups", "The whole database is backed up every day, encrypted, into private Backblaze storage in the USA, and each backup is deleted after at most 12 months. Uploaded files (photos, documents, recordings) are kept separately in private storage and served only to signed-in users allowed to see them."],
     ],
   },
   {
@@ -29,7 +29,7 @@ const PILLARS = [
     points: [
       ["Role-based access", "Admin, Manager, and Agent roles each have precisely scoped permissions. Agents only see leads assigned to them."],
       ["Secure authentication", "Passwords are hashed with bcrypt. Login is protected by httpOnly session cookies that JavaScript cannot read."],
-      ["Email & phone OTP", "Verify identity with one-time passwords during signup and login."],
+      ["Email verification", "New accounts confirm their email address with a one-time code at signup."],
       ["Brute-force protection", "Login attempts are rate-limited to block password-guessing attacks."],
     ],
   },
@@ -49,8 +49,8 @@ const PILLARS = [
     label: "Privacy and compliance",
     icon: Eye,
     points: [
-      ["DPDP Act 2023", "Built to comply with India's Digital Personal Data Protection Act. Consent-first, data-minimal."],
-      ["No data selling", "We never sell, rent, or share your leads. Your data is used only to run the CRM for you."],
+      ["DPDP Act and Rules", "Built to follow India's Digital Personal Data Protection Act, 2023 and DPDP Rules, 2025, with a published sub-processor list, breach notification and a Grievance Officer."],
+      ["No data selling", "We never sell or rent your leads. They are shared only with the service providers that run the CRM, and used only to run it for you."],
       ["Facebook reviewed", "Our Meta app is App-Review approved for lead retrieval and held to Meta's data-use standards."],
       ["Full data export", "Export all your leads anytime in CSV/Excel. Your data belongs to you."],
     ],

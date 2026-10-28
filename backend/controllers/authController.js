@@ -58,6 +58,9 @@ const cookieOptions = () => ({
 
 // Helper: set auth cookie + respond
 function sendAuthResponse(res, statusCode, data) {
+  // Names who signed in for the activity log (middlewares/auditTrail.js);
+  // these routes are public, so there is no req.user to read it from.
+  if (data?.user) res.locals.auditUser = { _id: data.user._id, role: data.user.role, orgId: data.user.orgId };
   res.cookie(COOKIE_NAME, data.token, cookieOptions());
   res.status(statusCode).json({ success: true, ...data });
 }

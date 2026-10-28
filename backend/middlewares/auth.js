@@ -97,6 +97,9 @@ const protect = async (req, res, next) => {
 
     req.user  = user;
     req.orgId = user.orgId;
+    // Super admin support access ("Login as"): who is really behind the
+    // session, for the activity log only (middlewares/auditTrail.js).
+    if (decoded.sa) req.supportBy = decoded.sa;
 
     // An admin using "Switch account" is acting as this person. A few things
     // only the person themselves may ever do: clock in or out (it would fake
