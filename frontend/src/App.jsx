@@ -206,6 +206,7 @@ const TelephonyIntegration = lazy(() => import("./pages/TelephonyIntegration"));
 const PlivoPage = lazy(() => import("./pages/integrations/PlivoPage"));
 const EnableXPage = lazy(() => import("./pages/integrations/EnableXPage"));
 const PortalsPage = lazy(() => import("./pages/integrations/PortalsPage"));
+const WebsitesPage = lazy(() => import("./pages/integrations/WebsitesPage"));
 const ConversionTrackingPage = lazy(() => import("./pages/integrations/ConversionTrackingPage"));
 const RoutingRulesPage = lazy(() => import("./pages/integrations/RoutingRulesPage"));
 const WhatsAppIntegration = lazy(() => import("./pages/WhatsAppIntegration"));
@@ -726,6 +727,7 @@ export default function App() {
               <Route path="/integrations/telephony/plivo" element={<PlivoPage />} />
               <Route path="/integrations/telephony/enablex" element={<EnableXPage />} />
               <Route path="/integrations/portals" element={<PortalsPage />} />
+              <Route path="/integrations/websites" element={<WebsitesPage />} />
               <Route path="/integrations/conversion-tracking" element={<ConversionTrackingPage />} />
               <Route path="/integrations/routing" element={<RoutingRulesPage />} />
               <Route path="/integrations/whatsapp" element={<WhatsAppIntegration />} />

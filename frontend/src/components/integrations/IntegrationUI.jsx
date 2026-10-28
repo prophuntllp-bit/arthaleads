@@ -2,6 +2,7 @@
 // modelled on the Vistrow Voice dashboard): every integration is the same
 // card on /integrations, and every integration's own page has the same frame
 // (back link, header card, stat tiles, tabs).
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Lock } from "lucide-react";
 import SegmentTabs from "../SegmentTabs";
@@ -255,3 +256,41 @@ export function PortalsLogo({ size = 40 }) {
     </LogoTile>
   );
 }
+
+// A connected website's own icon: its favicon, or its logo when it has none,
+// found by the server (backend/utils/siteIcon.js). Until one is found, or if it
+// will not load, a first-letter tile, never Google's grey globe (owner, 28 Oct 2026).
+export function SiteFavicon({ iconUrl, kind, name, size = 32 }) {
+  const [failed, setFailed] = useState(false);
+  if (!iconUrl || failed) return <LetterTile name={name} />;
+  return (
+    <img src={iconUrl} alt="" referrerPolicy="no-referrer" loading="lazy" onError={() => setFailed(true)}
+      className="bg-white object-contain"
+      style={kind === "logo" ? { width: "100%", height: "100%", padding: 4 } : { width: size, height: size, borderRadius: 6 }} />
+  );
+}
+
+/** The first letter of a site's name on a colour picked from the name. */
+export function LetterTile({ name }) {
+  const text = String(name || "?").replace(/^https?:\/\//i, "").replace(/^www\./i, "").trim();
+  const letter = (text.match(/[a-z0-9]/i) || ["?"])[0].toUpperCase();
+  let h = 0;
+  for (const ch of text) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  return (
+    <div className="flex h-full w-full items-center justify-center text-base font-bold text-white"
+      style={{ background: `hsl(${h} 55% 48%)` }}>{letter}</div>
+  );
+}
+
+export function WordPressIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+      <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zM3.5 12c0-1.232.252-2.405.7-3.471L7.942 19.1A8.5 8.5 0 013.5 12zm8.5 8.5a8.46 8.46 0 01-2.41-.349l2.56-7.438 2.622 7.186a.95.95 0 00.07.136A8.472 8.472 0 0112 20.5zm1.17-12.485c.512-.027.973-.08.973-.08.457-.054.403-.726-.054-.7 0 0-1.376.108-2.265.108-.835 0-2.238-.108-2.238-.108-.457-.027-.511.673-.054.7 0 0 .435.053.893.08l1.327 3.635-1.863 5.589-3.102-9.224c.511-.027.972-.08.972-.08.457-.054.403-.726-.054-.7 0 0-1.376.108-2.265.108a15.1 15.1 0 01-.548-.018A8.5 8.5 0 0120.338 9.2c-.027.001-.054.004-.082.004-.835 0-1.428.726-1.428 1.508 0 .7.403 1.292.835 1.992.323.566.7 1.293.7 2.346 0 .727-.28 1.57-.646 2.75l-.847 2.826-3.07-9.11zm2.832 10.934l2.607-7.533c.487-1.219.65-2.193.65-3.059 0-.314-.021-.607-.058-.883a8.5 8.5 0 01-3.199 11.475z"/>
+    </svg>
+  );
+}
+
+export const FORM_PLUGINS = [
+  "Contact Form 7", "WPForms", "Elementor", "Gravity Forms",
+  "Ninja Forms", "Forminator", "Fluent Forms",
+];
