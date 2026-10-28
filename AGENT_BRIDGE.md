@@ -102,6 +102,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-28 IST: LIVE on main 23a4a359: 520e1bfd, 79a1c13e, 705768aa (lead source fixes).
 - [claude] 2026-10-28 IST (staging only): website leads' source = site+page (websiteSource) in downloads, Leads list, Source Detail, Dump Leads; Campaign / Ad column + list line from the page URL (adFromPage: utm_campaign, gad_campaignid, gclid, fbclid). backend utils/siteName.js + frontend utils/leadSource.js.
 - [claude] 2026-10-28 IST 79a1c13e (staging only): originalSourceLabel (backend utils/siteName.js + frontend utils/leadSource.js): downloads (web + server Excel), Leads list, lead popup Source Detail and Dump Leads show the saved label unless it is a placeholder ('WordPress Site N'), then the website domain. No data change.
 - [claude] 2026-10-28 IST 520e1bfd (staging only): website leads never labelled with a placeholder connection name ('WordPress Site N' / 'New WordPress Site'): label = real connection name > siteName > host; /webhook/website/register renames a placeholder connection to site_name. Prophunt live: 120 leads 'WordPress Site 5' (shaporjipallonji.com, automation 6abd1370), 3 'WordPress Site 6', 1 'WordPress Site 4'; relabel needs owner's yes. Prophunt has no website routing rules, so 292 of 400 exported leads have no project.
