@@ -165,12 +165,25 @@ router.get("/me/attendance-settings", async (req, res, next) => {
 router.patch("/me/attendance-settings", authorize("admin"), async (req, res, next) => {
   try {
     const { shiftStartTime, shiftEndTime, bufferMinutes, halfDayMinutes, fullDayMinutes, requireSelfie } = req.body;
+    const bad = (message) => res.status(400).json({ success: false, message });
+    const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+    const whole = (v, min, max) => { const n = Number(v); return Number.isInteger(n) && n >= min && n <= max ? n : null; };
     const update = {};
-    if (shiftStartTime)    update["attendanceSettings.shiftStartTime"] = shiftStartTime;
-    if (shiftEndTime)      update["attendanceSettings.shiftEndTime"]   = shiftEndTime;
-    if (bufferMinutes  != null) update["attendanceSettings.bufferMinutes"]  = Math.max(0, parseInt(bufferMinutes));
-    if (halfDayMinutes != null) update["attendanceSettings.halfDayMinutes"] = Math.max(1, parseInt(halfDayMinutes));
-    if (fullDayMinutes != null) update["attendanceSettings.fullDayMinutes"] = Math.max(1, parseInt(fullDayMinutes));
+    if (shiftStartTime) { if (!HHMM.test(shiftStartTime)) return bad("Enter the start time as HH:MM."); update["attendanceSettings.shiftStartTime"] = shiftStartTime; }
+    if (shiftEndTime)   { if (!HHMM.test(shiftEndTime)) return bad("Enter the end time as HH:MM."); update["attendanceSettings.shiftEndTime"] = shiftEndTime; }
+    if (shiftStartTime && shiftEndTime && shiftStartTime === shiftEndTime) return bad("The shift can't start and end at the same time.");
+    if (bufferMinutes != null) {
+      const n = whole(bufferMinutes, 0, 180);
+      if (n == null) return bad("Grace period must be 0 to 180 minutes.");
+      update["attendanceSettings.bufferMinutes"] = n;
+    }
+    const half = halfDayMinutes != null ? whole(halfDayMinutes, 30, 1440) : undefined;
+    const full = fullDayMinutes != null ? whole(fullDayMinutes, 30, 1440) : undefined;
+    if (half === null) return bad("Half day must be between 0.5 and 24 hours.");
+    if (full === null) return bad("Full day must be between 0.5 and 24 hours.");
+    if (half != null && full != null && half > full) return bad("A half day can't be longer than a full day.");
+    if (half != null) update["attendanceSettings.halfDayMinutes"] = half;
+    if (full != null) update["attendanceSettings.fullDayMinutes"] = full;
     if (requireSelfie  != null) update["attendanceSettings.requireSelfie"]  = Boolean(requireSelfie);
 
     if (!Object.keys(update).length) {

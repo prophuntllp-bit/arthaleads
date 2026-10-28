@@ -317,6 +317,14 @@ cron.schedule("30 21 * * *", () => {
 });
 
 // ── Every 10 minutes: retry failed Meta conversion events and catch missed status changes ──
+// Attendance: remind people who forgot to clock out, then close the session at
+// the shift's end (owner, 28 Oct 2026). See attendanceController.sweepOpenSessions.
+cron.schedule("*/15 * * * *", () => {
+  require("../controllers/attendanceController").sweepOpenSessions()
+    .then((r) => { if (r.closed || r.reminded) logger.info(`[attendance] auto-closed ${r.closed}, reminded ${r.reminded}`); })
+    .catch((err) => logger.error(`[attendance] sweep failed: ${err.message}`));
+});
+
 cron.schedule("*/10 * * * *", () => {
   require("../services/metaConversions").sweep()
     .catch((err) => logger.error(`[meta-capi] sweep failed: ${err.message}`));

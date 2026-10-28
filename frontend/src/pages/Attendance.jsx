@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Spinner, EmptyState, AppSelect, AppDatePicker } from "../components/UI";
+import { Spinner, EmptyState, AppSelect, AppDatePicker, ConfirmDialog } from "../components/UI";
 import UpgradeWall from "../components/UpgradeWall";
 import SegmentTabs from "../components/SegmentTabs";
 import AttendanceCapture from "../components/AttendanceCapture";
@@ -10,14 +10,14 @@ import toast from "react-hot-toast";
 import {
   Clock, ChevronLeft, ChevronRight, CalendarDays,
   Users, Timer, CheckCircle2, LogIn, Filter,
-  Download, PlusCircle, X, Edit3, Settings, AlertTriangle, MapPin, Camera,
+  Download, PlusCircle, X, Edit3, Settings, AlertTriangle, MapPin, Camera, Trash2, MoonStar, CameraOff,
 } from "lucide-react";
 
 function pad(n) { return String(n).padStart(2, "0"); }
 
 function fmtTime(d) {
   if (!d) return "-";
-  return new Date(d).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+  return new Date(d).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" });
 }
 
 function fmtDate(str) {
@@ -36,9 +36,14 @@ function fmtDuration(mins) {
 }
 
 function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 10);
 }
+
+// A session is "running" only within a day of its clock-in. An older one with
+// no clock-out was simply never closed: no live timer, no "Active" (28 Oct 2026).
+const RUNNING_MS = 24 * 3600e3;
+const isRunning = (a) => !!(a?.clockIn && !a?.clockOut && Date.now() - new Date(a.clockIn) < RUNNING_MS);
+const neverClosed = (a) => !!(a?.clockIn && !a?.clockOut && !isRunning(a));
 
 function LiveTimer({ since }) {
   const [secs, setSecs] = useState(0);
@@ -56,8 +61,20 @@ function LiveTimer({ since }) {
 }
 
 function StatusBadge({ a }) {
-  const isIn  = a?.clockIn && !a?.clockOut;
+  const isIn  = isRunning(a);
   const isOut = a?.clockIn && a?.clockOut;
+  if (isOut && a.autoClosed) return (
+    <span title="Nobody clocked out, so it was closed at the shift's end. Edit the entry to set the real time."
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
+      <AlertTriangle className="w-3 h-3" /> Auto closed
+    </span>
+  );
+  if (neverClosed(a)) return (
+    <span title="Clocked in but never clocked out. Edit the entry to add the clock-out time."
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
+      <AlertTriangle className="w-3 h-3" /> No clock-out
+    </span>
+  );
   if (isOut) return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
       <CheckCircle2 className="w-3 h-3" /> Done
@@ -96,7 +113,13 @@ function DayTypeBadge({ dayType, totalMinutes, clockIn, clockOut }) {
   return null;
 }
 
-function LateBadge({ isLate, lateByMinutes }) {
+function LateBadge({ isLate, lateByMinutes, outsideShift }) {
+  if (outsideShift) return (
+    <span title="Clocked in after the shift had ended"
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-gray-300">
+      <MoonStar className="w-2.5 h-2.5" /> Outside shift
+    </span>
+  );
   if (!isLate) return null;
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400">
@@ -116,7 +139,7 @@ function EarlyLeaveBadge({ isEarlyLeave, earlyLeaveByMinutes }) {
   );
 }
 
-const EMPTY_ENTRY = { userId: "", date: todayStr(), clockIn: "", clockOut: "", nextDayClockOut: false, note: "" };
+const EMPTY_ENTRY = { id: "", userId: "", date: todayStr(), clockIn: "", clockOut: "", nextDayClockOut: false, note: "" };
 
 function addDays(dateStr, days) {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -125,34 +148,66 @@ function addDays(dateStr, days) {
 }
 const DEFAULT_SETTINGS = { shiftStartTime: "09:30", shiftEndTime: "19:00", bufferMinutes: 15, halfDayMinutes: 240, fullDayMinutes: 480, requireSelfie: true };
 
-function ProofCell({ selfie, lat, lng }) {
+function ProofItem({ label, selfie, lat, lng, skipped }) {
   const [imgOk, setImgOk] = useState(true);
-  if (!selfie && lat == null) return <span className="text-app-soft">—</span>;
+  if (!selfie && lat == null && !skipped) return null;
   return (
-    <div className="flex items-center gap-2">
-      {selfie && (
-        <a href={selfie} target="_blank" rel="noreferrer" title="View selfie">
+    <div className="flex items-center gap-1.5">
+      <span className="text-[9px] font-bold uppercase text-app-soft w-6">{label}</span>
+      {selfie ? (
+        <a href={selfie} target="_blank" rel="noreferrer" title={`View ${label.toLowerCase()} photo`}>
           {imgOk ? (
-            <img src={selfie} alt="selfie"
-              className="w-10 h-10 rounded-xl object-cover border hover:opacity-80 transition flex-shrink-0"
+            <img src={selfie} alt={`${label} photo`}
+              className="w-8 h-8 rounded-lg object-cover border hover:opacity-80 transition flex-shrink-0"
               style={{ borderColor: "var(--app-border)" }}
               onError={() => setImgOk(false)} />
           ) : (
-            <span className="w-10 h-10 rounded-xl border flex items-center justify-center flex-shrink-0 hover:opacity-80 transition"
+            <span className="w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0"
               style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
-              <Camera className="w-4 h-4 text-orange-400" />
+              <Camera className="w-3.5 h-3.5 text-orange-400" />
             </span>
           )}
         </a>
-      )}
+      ) : skipped ? (
+        <span title="A photo was required, but this was done without one (camera unavailable)"
+          className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
+          <CameraOff className="w-2.5 h-2.5" /> No photo
+        </span>
+      ) : null}
       {lat != null && (
         <a href={`https://maps.google.com/?q=${lat},${lng}`} target="_blank" rel="noreferrer"
           className="text-blue-500 hover:text-blue-400 transition" title="View on map">
-          <MapPin className="w-4 h-4" />
+          <MapPin className="w-3.5 h-3.5" />
         </a>
       )}
     </div>
   );
+}
+
+function ProofCell({ a }) {
+  const inn = <ProofItem label="In" selfie={a?.clockInSelfie} lat={a?.clockInLat} lng={a?.clockInLng} skipped={a?.clockInProofSkipped} />;
+  const out = a?.clockOut && !a?.autoClosed
+    ? <ProofItem label="Out" selfie={a?.clockOutSelfie} lat={a?.clockOutLat} lng={a?.clockOutLng} skipped={a?.clockOutProofSkipped} />
+    : null;
+  const hasIn = a?.clockInSelfie || a?.clockInLat != null || a?.clockInProofSkipped;
+  const hasOut = out && (a?.clockOutSelfie || a?.clockOutLat != null || a?.clockOutProofSkipped);
+  if (!hasIn && !hasOut) return <span className="text-app-soft">—</span>;
+  return <div className="flex flex-col gap-1">{inn}{out}</div>;
+}
+
+// The clock-out cell: the time, a live timer while running, or what went wrong.
+function ClockOutCell({ a }) {
+  if (a?.clockOut) return (
+    <div className="flex flex-col gap-1">
+      <span className={`font-semibold ${a.autoClosed ? "text-amber-600" : "text-red-400"}`}>{fmtTime(a.clockOut)}</span>
+      {a.autoClosed
+        ? <span className="text-[10px] text-app-soft">closed automatically</span>
+        : <EarlyLeaveBadge isEarlyLeave={a.isEarlyLeave} earlyLeaveByMinutes={a.earlyLeaveByMinutes} />}
+    </div>
+  );
+  if (isRunning(a)) return <span className="text-green-500 font-bold"><LiveTimer since={a.clockIn} /></span>;
+  if (neverClosed(a)) return <span className="text-red-500 font-semibold">Not clocked out</span>;
+  return <span className="text-app-soft">-</span>;
 }
 
 export default function Attendance() {
@@ -171,6 +226,7 @@ export default function Attendance() {
 
   // Records list
   const [records, setRecords]     = useState([]);
+  const [summary, setSummary]     = useState(null);
   const [total, setTotal]         = useState(0);
   const [pages, setPages]         = useState(1);
   const [page, setPage]           = useState(1);
@@ -205,6 +261,8 @@ export default function Attendance() {
 
   // Export
   const [exporting, setExporting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting]     = useState(false);
 
   const fetchStatus = useCallback(async () => {
     setStatusLoading(true);
@@ -225,6 +283,7 @@ export default function Attendance() {
       if (filterUser) params.set("userId", filterUser);
       const r = await api.get(`/attendance?${params}`);
       setRecords(r.data.data || []);
+      setSummary(r.data.total ? r.data.summary || null : null);
       setTotal(r.data.total || 0);
       setPages(r.data.pages || 1);
     } catch { toast.error("Failed to load records"); }
@@ -320,9 +379,10 @@ export default function Attendance() {
     e.preventDefault();
     setEntrySaving(true);
     try {
-      const toIso = (date, time) => time ? new Date(`${date}T${time}:00`).toISOString() : null;
+      const toIso = (date, time) => time ? new Date(`${date}T${time}:00+05:30`).toISOString() : null;
       const clockOutDate = entryForm.nextDayClockOut ? addDays(entryForm.date, 1) : entryForm.date;
       await api.post("/attendance/admin-entry", {
+        ...(entryForm.id ? { id: entryForm.id } : {}),
         userId:   entryForm.userId,
         date:     entryForm.date,
         clockIn:  toIso(entryForm.date, entryForm.clockIn),
@@ -332,13 +392,26 @@ export default function Attendance() {
       toast.success("Attendance record saved");
       setEntryModal(false);
       setEntryForm(EMPTY_ENTRY);
-      fetchRecords(); fetchTeamToday();
+      fetchRecords(); fetchTeamToday(); fetchStatus();
     } catch (e) { toast.error(e.response?.data?.message || "Failed to save entry"); }
     finally { setEntrySaving(false); }
   };
 
+  const handleDeleteEntry = async () => {
+    setDeleting(true);
+    try {
+      await api.delete(`/attendance/${entryForm.id}`);
+      toast.success("Entry deleted");
+      setDeleteOpen(false); setEntryModal(false); setEntryForm(EMPTY_ENTRY);
+      fetchRecords(); fetchTeamToday(); fetchStatus();
+    } catch (e) { toast.error(e.response?.data?.message || "Could not delete the entry"); }
+    finally { setDeleting(false); }
+  };
+
   const handleSaveSettings = async (e) => {
     e.preventDefault();
+    if (shiftSettings.halfDayMinutes > shiftSettings.fullDayMinutes) { toast.error("A half day can't be longer than a full day."); return; }
+    if (shiftSettings.shiftStartTime === shiftSettings.shiftEndTime) { toast.error("The shift can't start and end at the same time."); return; }
     setSettingsSaving(true);
     try {
       const payload = { ...shiftSettings, requireSelfie };
@@ -351,18 +424,6 @@ export default function Attendance() {
 
   const isClockedIn  = status?.clockIn && !status?.clockOut;
   const isClockedOut = status?.clockIn && status?.clockOut;
-
-  // Summary from loaded records
-  const summary = (() => {
-    if (!records.length) return null;
-    const totalMins   = records.reduce((s, r) => s + (r.totalMinutes || 0), 0);
-    const daysPresent = records.filter(r => r.clockIn).length;
-    const lateCount   = records.filter(r => r.isLate).length;
-    const fullDays    = records.filter(r => r.dayType === "full").length;
-    const halfDays    = records.filter(r => r.dayType === "half").length;
-    const avgMins     = daysPresent ? Math.round(totalMins / daysPresent) : 0;
-    return { totalMins, daysPresent, lateCount, fullDays, halfDays, avgMins };
-  })();
 
   if (!canAccess(org, "growth")) {
     return <UpgradeWall org={org} feature="Attendance Tracking"
@@ -404,7 +465,7 @@ export default function Attendance() {
             <div className="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-medium"
               style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span className="text-app-soft">Done —</span>
+              <span className="text-app-soft">{status.autoClosed ? "Closed automatically —" : "Done —"}</span>
               <span className="text-app font-semibold">{fmtDuration(status.totalMinutes)}</span>
               {status.dayType && <DayTypeBadge dayType={status.dayType} clockIn={status.clockIn} clockOut={status.clockOut} />}
             </div>
@@ -413,7 +474,8 @@ export default function Attendance() {
               <div className="flex items-center gap-2 px-3 py-2 rounded-2xl text-sm"
                 style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
                 <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                {status.isLate && <LateBadge isLate={status.isLate} lateByMinutes={status.lateByMinutes} />}
+                {(status.isLate || status.outsideShift) && <LateBadge isLate={status.isLate} lateByMinutes={status.lateByMinutes} outsideShift={status.outsideShift} />}
+                {status.date !== todayStr() && <span className="text-xs text-app-soft">since {fmtTime(status.clockIn)} yesterday</span>}
                 <span className="text-green-500 font-bold text-sm"><LiveTimer since={status.clockIn} /></span>
               </div>
               <button onClick={handleClockOut} disabled={clocking} className="btn-danger py-2 px-4 text-sm">
@@ -479,7 +541,7 @@ export default function Attendance() {
                   </thead>
                   <tbody>
                     {teamToday.map(({ user: u, attendance: a }) => {
-                      const isIn  = a?.clockIn && !a?.clockOut;
+                      const isIn  = isRunning(a);
                       const isOut = a?.clockIn && a?.clockOut;
                       return (
                         <tr key={u._id} className="border-b hover:bg-orange-500/5 transition" style={{ borderColor: "var(--app-border)" }}>
@@ -498,17 +560,13 @@ export default function Attendance() {
                             {a?.clockIn ? (
                               <div className="flex flex-col gap-1">
                                 <span className="text-green-500 font-semibold">{fmtTime(a.clockIn)}</span>
-                                <LateBadge isLate={a?.isLate} lateByMinutes={a?.lateByMinutes} />
+                                {a.date !== todayStr() && <span className="text-[10px] text-app-soft">yesterday</span>}
+                                <LateBadge isLate={a?.isLate} lateByMinutes={a?.lateByMinutes} outsideShift={a?.outsideShift} />
                               </div>
                             ) : <span className="text-app-soft">-</span>}
                           </td>
                           <td className="px-5 py-3">
-                            {a?.clockOut ? (
-                              <div className="flex flex-col gap-1">
-                                <span className="text-red-400 font-semibold">{fmtTime(a.clockOut)}</span>
-                                <EarlyLeaveBadge isEarlyLeave={a?.isEarlyLeave} earlyLeaveByMinutes={a?.earlyLeaveByMinutes} />
-                              </div>
-                            ) : <span className="text-app-soft">-</span>}
+                            {a?.clockOut || neverClosed(a) ? <ClockOutCell a={a} /> : <span className="text-app-soft">-</span>}
                           </td>
                           <td className="px-5 py-3 font-bold text-app">
                             {isOut ? fmtDuration(a.totalMinutes)
@@ -525,7 +583,7 @@ export default function Attendance() {
                           </td>
                           <td className="px-5 py-3"><StatusBadge a={a} /></td>
                           <td className="px-5 py-3">
-                            <ProofCell selfie={a?.clockInSelfie} lat={a?.clockInLat} lng={a?.clockInLng} />
+                            <ProofCell a={a} />
                           </td>
                         </tr>
                       );
@@ -549,12 +607,12 @@ export default function Attendance() {
           {summary && (
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
               {[
-                { label: "Total Hours",   value: fmtDuration(summary.totalMins),  color: "text-orange-500" },
+                { label: "Total Hours",   value: fmtDuration(summary.totalMinutes), color: "text-orange-500" },
                 { label: "Days Present",  value: summary.daysPresent,             color: "text-green-500" },
-                { label: "Avg Hours/Day", value: fmtDuration(summary.avgMins),    color: "text-blue-500" },
+                { label: "Avg Hours/Day", value: fmtDuration(summary.avgMinutes), color: "text-blue-500" },
                 { label: "Full Days",     value: summary.fullDays,                color: "text-emerald-500" },
                 { label: "Half Days",     value: summary.halfDays,                color: "text-amber-500" },
-                { label: "Late",          value: summary.lateCount,               color: "text-red-500" },
+                { label: "Late",          value: summary.late,                    color: "text-red-500" },
               ].map(({ label, value, color }) => (
                 <div key={label} className="card px-4 py-3 text-center">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-1">{label}</p>
@@ -562,6 +620,15 @@ export default function Attendance() {
                 </div>
               ))}
             </div>
+          )}
+
+          {summary && (summary.autoClosed > 0 || summary.notClockedOut > 0 || summary.outsideShift > 0) && (
+            <p className="-mt-2 mb-4 text-xs text-app-soft flex flex-wrap gap-x-3 gap-y-1">
+              {summary.autoClosed > 0 && <span><b className="text-amber-600">{summary.autoClosed}</b> closed automatically (no clock-out)</span>}
+              {summary.notClockedOut > 0 && <span><b className="text-red-500">{summary.notClockedOut}</b> never clocked out</span>}
+              {summary.outsideShift > 0 && <span><b className="text-app">{summary.outsideShift}</b> clocked in after the shift</span>}
+              <span>Hours count only finished days.</span>
+            </p>
           )}
 
           {/* Filters + actions */}
@@ -634,7 +701,6 @@ export default function Attendance() {
                   </thead>
                   <tbody>
                     {records.map((rec) => {
-                      const isIn  = rec.clockIn && !rec.clockOut;
                       return (
                         <tr key={rec._id} className="border-b hover:bg-orange-500/5 transition" style={{ borderColor: "var(--app-border)" }}>
                           <td className="px-4 py-3">
@@ -656,19 +722,10 @@ export default function Attendance() {
                           <td className="px-4 py-3">
                             <div className="flex flex-col gap-1">
                               <span className="text-green-500 font-semibold">{fmtTime(rec.clockIn)}</span>
-                              <LateBadge isLate={rec.isLate} lateByMinutes={rec.lateByMinutes} />
+                              <LateBadge isLate={rec.isLate} lateByMinutes={rec.lateByMinutes} outsideShift={rec.outsideShift} />
                             </div>
                           </td>
-                          <td className="px-4 py-3">
-                            {rec.clockOut ? (
-                              <div className="flex flex-col gap-1">
-                                <span className="text-red-400 font-semibold">{fmtTime(rec.clockOut)}</span>
-                                <EarlyLeaveBadge isEarlyLeave={rec.isEarlyLeave} earlyLeaveByMinutes={rec.earlyLeaveByMinutes} />
-                              </div>
-                            ) : isIn
-                              ? <span className="text-green-500 font-bold"><LiveTimer since={rec.clockIn} /></span>
-                              : <span className="text-app-soft">-</span>}
-                          </td>
+                          <td className="px-4 py-3"><ClockOutCell a={rec} /></td>
                           <td className="px-4 py-3 font-semibold text-app">{fmtDuration(rec.totalMinutes)}</td>
                           <td className="px-4 py-3">
                             {rec.overtimeMinutes
@@ -681,22 +738,18 @@ export default function Attendance() {
                           <td className="px-4 py-3"><StatusBadge a={rec} /></td>
                           <td className="px-4 py-3 text-app-soft max-w-[140px] truncate">{rec.note || "-"}</td>
                           <td className="px-4 py-3">
-                            <ProofCell selfie={rec.clockInSelfie} lat={rec.clockInLat} lng={rec.clockInLng} />
+                            <ProofCell a={rec} />
                           </td>
                           {isAdmin && (
                             <td className="px-3 py-3">
                               <button
                                 onClick={() => {
-                                  const toLocalTime = (d) => {
-                                    if (!d) return "";
-                                    const dt = new Date(d);
-                                    return `${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
-                                  };
-                                  const toLocalDateStr = (d) => {
-                                    const dt = new Date(d);
-                                    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
-                                  };
+                                  // Times are shown and saved in IST, whatever the browser's zone.
+                                  const istIso = (d) => new Date(new Date(d).getTime() + 5.5 * 3600e3).toISOString();
+                                  const toLocalTime = (d) => (d ? istIso(d).slice(11, 16) : "");
+                                  const toLocalDateStr = (d) => istIso(d).slice(0, 10);
                                   setEntryForm({
+                                    id:       rec._id,
                                     userId:   rec.userId?._id || rec.userId || "",
                                     date:     rec.date,
                                     clockIn:  toLocalTime(rec.clockIn),
@@ -856,7 +909,7 @@ export default function Attendance() {
           <div className="w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl sm:p-6 p-4 shadow-2xl flex flex-col sm:max-h-[88vh] max-h-[92vh]" style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-bold text-app flex items-center gap-2">
-                <Edit3 className="w-4 h-4 text-orange-500" /> Manual Attendance Entry
+                <Edit3 className="w-4 h-4 text-orange-500" /> {entryForm.id ? "Edit Attendance Entry" : "Manual Attendance Entry"}
               </h2>
               <button onClick={() => setEntryModal(false)}
                 className="p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-app-soft cursor-pointer">
@@ -906,8 +959,14 @@ export default function Attendance() {
                 <input type="text" className="input" placeholder="e.g. Work from home" value={entryForm.note}
                   onChange={e => setEntryForm(f => ({ ...f, note: e.target.value }))} />
               </div>
-              <p className="text-xs text-app-soft">Late mark and day type are auto-calculated from the saved times against your shift settings.</p>
-              <div className="flex justify-end gap-3 pt-1">
+              <p className="text-xs text-app-soft">Late mark and day type are auto-calculated from the saved times against your shift settings. A past day needs both times.</p>
+              <div className="flex items-center justify-end gap-3 pt-1">
+                {entryForm.id && (
+                  <button type="button" onClick={() => setDeleteOpen(true)}
+                    className="mr-auto inline-flex items-center gap-1.5 text-xs font-semibold text-app-soft hover:text-red-500 transition cursor-pointer">
+                    <Trash2 className="w-3.5 h-3.5" /> Delete entry
+                  </button>
+                )}
                 <button type="button" className="btn-secondary" onClick={() => setEntryModal(false)}>Cancel</button>
                 <button type="submit" className="btn-primary" disabled={entrySaving}>
                   {entrySaving ? <Spinner size="sm" /> : null} Save Entry
@@ -917,6 +976,14 @@ export default function Attendance() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => !deleting && setDeleteOpen(false)}
+        onConfirm={handleDeleteEntry}
+        loading={deleting}
+        title="Delete this entry?"
+        message="The attendance entry is removed for good. Its photos stay in storage until you clear them."
+      />
     </div>
   );
 }

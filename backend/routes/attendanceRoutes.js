@@ -14,5 +14,6 @@ router.get  ("/",            ctrl.list);
 router.post ("/clockin",     ctrl.clockIn);
 router.post ("/clockout",    ctrl.clockOut);
 router.post ("/admin-entry", ctrl.adminEntry);
+router.delete("/:id",        ctrl.remove);
 
 module.exports = router;
