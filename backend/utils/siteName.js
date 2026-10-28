@@ -5,7 +5,7 @@
 const dns = require("dns").promises;
 const net = require("net");
 
-const GENERIC = /^(wordpress site|wordpress|website|my site|my website|just another wordpress site)( \d+)?$/i;
+const GENERIC = /^(new wordpress site|wordpress site|wordpress|website|my site|my website|just another wordpress site)( \d+)?$/i;
 const isGenericSiteName = (n) => !n || GENERIC.test(String(n).trim());
 
 function isPrivateIp(ip) {

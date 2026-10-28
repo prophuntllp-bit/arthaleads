@@ -129,6 +129,19 @@ test("Website: different numbers are still different leads", async () => {
   assert.equal(await Lead.countDocuments({ orgId: ORG, source: "Website" }), 2);
 });
 
+test("Website: a 'WordPress Site 5' connection labels leads with the site's own name", async () => {
+  await post("/webhook/website", { token: "site-token-5", name: "Asha", phone: "9822200005", page_url: "https://shaporjipallonji.com/treetopia/" });
+  const lead = await Lead.findOne({ orgId: ORG, phone: { $regex: "9822200005$" } }).lean();
+  assert.equal(lead.leadSourceLabel, "Shaporji Pallonji");
+});
+
+test("Website: the plugin's site name replaces a 'WordPress Site N' connection name", async () => {
+  const r = await post("/webhook/website/register", { token: "site-token-6", site_name: "Neoliv Developer", site_url: "https://neolivdeveloper.com" });
+  assert.equal(r.status, 200);
+  const a = await mongoose.connection.db.collection("automations").findOne({ verifyToken: "site-token-6" });
+  assert.equal(a.name, "Neoliv Developer");
+});
+
 test("bulk import treats 0-prefixed and +91 numbers as the same person", async () => {
   const leadService = require("../services/leadService");
   const user = { _id: ACTIVE, orgId: ORG, name: "Active Agent", role: "admin" };
@@ -194,6 +207,8 @@ test("a rule whose person was deleted outright also falls back", async () => {
     { _id: oid(), name: "FB", platform: "Facebook", pageId: FB_PAGE, accessToken: "tok", ...common },
     { _id: oid(), name: "Google Ads", platform: "Google", verifyToken: GOOGLE_KEY, ...common },
     { _id: oid(), name: "example.in", platform: "Website Form", verifyToken: SITE_TOKEN, ...common },
+    { _id: oid(), name: "WordPress Site 5", siteName: "Shaporji Pallonji", siteUrl: "https://shaporjipallonji.com", platform: "Website Form", verifyToken: "site-token-5", ...common },
+    { _id: oid(), name: "WordPress Site 6", platform: "Website Form", verifyToken: "site-token-6", ...common },
   ]);
   await db.collection("routingrules").insertOne({ _id: oid(), orgId: ORG, label: "Khopoli campaign", source: "google", matchField: "campaign_id", matchValue: "RULED", assignTo: GONE, assignToName: "Former Agent", assignToProject: PROJECT, assignToProjectName: "Khopoli Plots", isActive: true });
 

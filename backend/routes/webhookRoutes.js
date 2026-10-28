@@ -884,8 +884,16 @@ router.post("/website", express.json(), noOperators, websiteLeadLimiter, async (
       forminator_form: "Forminator", fluent_form: "Fluent Forms", manual_test: "Test Lead",
     };
     const pluginLabel = pluginLabels[form_plugin] || form_plugin || "";
-    // Priority: automation.name (user-defined connection name) > source_name > automation.siteName
-    const siteName = automation.name || source_name || automation.siteName || "Website";
+    // Priority: the connection's name > the site's own name > its address.
+    // A connection made with "Add Another WordPress Site" is called
+    // "WordPress Site 5" until someone renames it, so that placeholder never
+    // becomes the lead's label (28 Oct 2026: 120 Shapoorji leads read
+    // "WordPress Site 5" while the card showed "Shaporji Pallonji").
+    const { isGenericSiteName } = require("../utils/siteName");
+    const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; } };
+    const siteName = (!isGenericSiteName(automation.name) && automation.name)
+      || (!isGenericSiteName(automation.siteName) && automation.siteName)
+      || hostOf(automation.siteUrl) || hostOf(page_url) || source_name || automation.name || "Website";
     // Always show the connection/website name — form_name goes into notes only
     const sourceLabel = siteName;
 
@@ -1830,6 +1838,9 @@ router.post("/website/register", express.json(), noOperators, async (req, res) =
     if (!automation) return res.status(401).json({ success: false, message: "Invalid token" });
 
     if (site_name) automation.siteName = site_name;
+    // A placeholder connection name ("WordPress Site 5") takes the site's own name.
+    const { isGenericSiteName } = require("../utils/siteName");
+    if (site_name && isGenericSiteName(automation.name) && !isGenericSiteName(site_name)) automation.name = String(site_name).trim().slice(0, 120);
     // Shown as a link in the CRM, so only a real http(s) address is stored.
     if (typeof site_url === "string" && /^https?:\/\/[^\s<>"']+$/i.test(site_url.trim())) automation.siteUrl = site_url.trim().slice(0, 300);
     if (Array.isArray(forms)) automation.connectedForms = forms;
