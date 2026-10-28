@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+- [claude] 2026-10-28 IST: Website forms: Add a site asks for name + address then shows the key; Edit (name, address) on each site; new site shown first. backend controllers/automationController.js (updateWebsiteConnection, create takes siteUrl), routes/automationRoutes.js (PATCH /website/:id); frontend pages/integrations/WebsitesPage.jsx, utils/leadSource.js. Pushing live
 - [claude] 2026-10-28 IST: Website forms popup replaced by its own page /integrations/websites (site cards with icon, status, IST last lead, forms, key, remove; setup help). frontend pages/integrations/WebsitesPage.jsx, pages/Automation.jsx (WordPressWizard removed), components/integrations/IntegrationUI.jsx, App.jsx, Sidebar.jsx. Live 4c72d954 (staging 5a870cb6), checked on live with 6 real sites
 
 
