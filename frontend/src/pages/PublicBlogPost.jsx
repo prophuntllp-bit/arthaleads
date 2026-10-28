@@ -433,7 +433,7 @@ function BlogPostInner() {
               {/* Sanity image URLs end in -<width>x<height>.<ext>: give the browser the size up front so nothing shifts. */}
               <img src={sizedImage(post.featuredImage, 1400)} alt={post.featuredImageAlt || post.title} loading="eager" fetchpriority="high"
                 {...imageSize(post.featuredImage)}
-                className="block w-full h-auto object-cover max-h-[520px]" />
+                className="block w-full h-auto object-cover aspect-video" />
             </figure>
           )}
         </Container>

@@ -20,7 +20,7 @@ function card(p) {
     ? `<img src="${esc(sized(p.featuredImage, 720))}" alt="${esc(p.featuredImageAlt || p.title)}" loading="lazy" decoding="async" class="absolute inset-0 w-full h-full object-cover">`
     : `<div class="absolute inset-0" style="background:linear-gradient(135deg, rgba(255,107,0,0.16), rgba(255,170,0,0.05)), var(--site-chip)"></div>`;
   return `<a href="/blog/${esc(p.slug)}" class="site-card group h-full flex flex-col overflow-hidden">`
-    + `<div class="relative overflow-hidden" style="aspect-ratio:16 / 10">${cover}</div>`
+    + `<div class="relative overflow-hidden" style="aspect-ratio:16 / 9">${cover}</div>`
     + `<div class="flex flex-col flex-1 p-6">`
     + `<div class="flex items-center justify-between gap-3 mb-3">`
     + (p.category?.name ? `<span class="text-[11px] font-bold uppercase tracking-[0.14em]" style="color:var(--site-brand-ink)">${esc(p.category.name)}</span>` : "<span></span>")
