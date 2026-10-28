@@ -195,7 +195,7 @@ export default function Privacy() {
         <ul className="list-disc pl-5 space-y-1.5">
           <li><strong style={strong}>Database:</strong> MongoDB Atlas on AWS in Mumbai, India.</li>
           <li><strong style={strong}>Files:</strong> call recordings, attendance photos, logos, documents and other media are kept in a private Backblaze B2 storage bucket in the US East region (USA). Files are not public: they are served only through our API to signed-in users who are allowed to see them.</li>
-          <li><strong style={strong}>Backups:</strong> a daily encrypted backup of the database is stored in the same private Backblaze B2 bucket (USA).</li>
+          <li><strong style={strong}>Backups:</strong> a daily backup of the database is stored in the same private Backblaze B2 bucket (USA).</li>
           <li><strong style={strong}>Application servers:</strong> our API runs on Railway (outside India), and the web app and website are served by Vercel's global network.</li>
         </ul>
         <p>

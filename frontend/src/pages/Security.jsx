@@ -19,7 +19,7 @@ const PILLARS = [
       ["Encryption in transit", "All traffic is served over HTTPS/TLS. Data moving between your browser and our servers is always encrypted."],
       ["Encryption at rest", "Your database is stored on MongoDB Atlas (AWS, Mumbai, India) with encryption at rest. Stored access tokens get an extra layer of field-level encryption."],
       ["Tenant isolation", "Every organisation's data is strictly scoped by a unique org ID. One customer can never see another's leads."],
-      ["Backups", "The whole database is backed up every day, encrypted, into private Backblaze storage in the USA, and each backup is deleted after at most 12 months. Uploaded files (photos, documents, recordings) are kept separately in private storage and served only to signed-in users allowed to see them."],
+      ["Backups", "The whole database is backed up every day into private Backblaze storage in the USA, and each backup is deleted after at most 12 months. Uploaded files (photos, documents, recordings) are kept separately in private storage and served only to signed-in users allowed to see them."],
     ],
   },
   {
