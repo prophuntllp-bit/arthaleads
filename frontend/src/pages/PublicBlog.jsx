@@ -68,13 +68,15 @@ export function PostCategory({ post, className = "" }) {
 export function SiteBlogCard({ post, eager = false }) {
   return (
     <Card glow as={Link} to={`/blog/${post.slug}`}
-      className="group h-full flex flex-col overflow-hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--site-brand)] focus-visible:outline-offset-2">
-      <div className="relative overflow-hidden" style={{ aspectRatio: "16 / 10" }}>
+      className="blog-card group h-full flex flex-col overflow-hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--site-brand)] focus-visible:outline-offset-2">
+      <div className="p-3 pb-0">
+      <div className="blog-cover relative overflow-hidden" style={{ aspectRatio: "16 / 9" }}>
         {post.featuredImage ? (
           <img src={sizedImage(post.featuredImage, 720)} alt={post.featuredImageAlt || post.title}
             loading={eager ? "eager" : "lazy"} decoding="async"
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]" />
         ) : <CoverFallback />}
+      </div>
       </div>
       <div className="flex flex-col flex-1 p-6">
         <div className="flex items-center justify-between gap-3 mb-3">
@@ -99,7 +101,7 @@ export function SiteBlogCard({ post, eager = false }) {
 function FeaturedCard({ post }) {
   return (
     <Card glow as={Link} to={`/blog/${post.slug}`}
-      className="site-feature-glow group grid lg:grid-cols-[1.05fr_1fr] overflow-hidden !rounded-[28px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--site-brand)] focus-visible:outline-offset-2">
+      className="blog-card site-feature-glow group grid lg:grid-cols-[1.05fr_1fr] overflow-hidden !rounded-[28px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--site-brand)] focus-visible:outline-offset-2">
       <div className="flex flex-col justify-between p-6 sm:p-10 lg:p-12 order-2 lg:order-1">
         <div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6">
@@ -123,7 +125,8 @@ function FeaturedCard({ post }) {
           </span>
         </div>
       </div>
-      <div className="relative order-1 lg:order-2 min-h-[220px] sm:min-h-[300px] lg:min-h-[420px] overflow-hidden">
+      {/* Covers are designed 16:9 with text on them (outputs/blog-covers), so the image keeps that shape and is never cropped. */}
+      <div className="blog-cover relative order-1 lg:order-2 self-center overflow-hidden aspect-video m-3 sm:m-4 lg:m-6 !rounded-[18px] sm:!rounded-[22px]">
         {post.featuredImage ? (
           <img src={sizedImage(post.featuredImage, 1200)} alt={post.featuredImageAlt || post.title} loading="eager" fetchpriority="high" decoding="async"
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
@@ -139,7 +142,7 @@ function Skeleton() {
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7" aria-hidden="true">
       {[...Array(6)].map((_, i) => (
         <div key={i} className="site-card overflow-hidden animate-pulse">
-          <div style={{ aspectRatio: "16 / 10", ...block }} />
+          <div style={{ aspectRatio: "16 / 9", ...block }} />
           <div className="p-6 space-y-3">
             <div className="h-3 rounded w-1/3" style={block} />
             <div className="h-5 rounded w-5/6" style={block} />

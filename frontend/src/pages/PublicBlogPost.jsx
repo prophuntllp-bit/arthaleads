@@ -429,11 +429,11 @@ function BlogPostInner() {
           )}
 
           {post.featuredImage && (
-            <figure className="mt-10 max-w-5xl overflow-hidden rounded-[24px] sm:rounded-[28px] border" style={{ borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
+            <figure className="blog-cover mt-10 max-w-5xl overflow-hidden !rounded-[24px] sm:!rounded-[28px]" style={{ boxShadow: "var(--site-shadow-lg)" }}>
               {/* Sanity image URLs end in -<width>x<height>.<ext>: give the browser the size up front so nothing shifts. */}
               <img src={sizedImage(post.featuredImage, 1400)} alt={post.featuredImageAlt || post.title} loading="eager" fetchpriority="high"
                 {...imageSize(post.featuredImage)}
-                className="block w-full h-auto object-cover max-h-[520px]" />
+                className="block w-full h-auto object-cover aspect-video" />
             </figure>
           )}
         </Container>
