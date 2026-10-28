@@ -139,7 +139,7 @@ const COLS = "minmax(0,1.6fr) repeat(4, minmax(0,1fr))";
 
 function Cell({ val }) {
   if (val === "y") return <span><Check aria-hidden="true" className="w-4 h-4 mx-auto" style={{ color: "#16a34a" }} /><span className="sr-only">Yes</span></span>;
-  if (val === "e") return <span className="text-xs font-semibold" style={{ color: "#16a34a" }}>Enterprise</span>;
+  if (val === "e") return <span className="text-xs font-semibold" style={{ color: "var(--site-green)" }}>Enterprise</span>;
   if (val === "p") return <span className="text-xs font-semibold" style={{ color: PARTIAL }}>Partial</span>;
   if (val === "u") return <span className="text-sm site-muted" title="Not stated on their website"><span aria-hidden="true">–</span><span className="sr-only">Not stated</span></span>;
   return <span><X aria-hidden="true" className="w-4 h-4 mx-auto" style={{ color: "#ef4444" }} /><span className="sr-only">No</span></span>;

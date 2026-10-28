@@ -779,6 +779,8 @@ html[data-public-theme="dark"] { --brand-text: #ff6b00; }
   --site-dark-card: #181a25;
   --site-brand: #ff6b00;
   --site-brand-ink: #ad3a0a;   /* 4.7:1+ on the orange-tint chips */
+  --site-green: #15803d;        /* green text on white, 5:1 */
+  --site-green-ink: #166534;    /* green text on green-tint chips, 6:1 */
   --site-grid: rgba(15, 18, 34, 0.055);
   --site-card-shine: linear-gradient(transparent, transparent);
   --site-shadow-sm: 0 1px 2px rgba(15, 18, 34, 0.05), 0 6px 16px -6px rgba(15, 18, 34, 0.08);
@@ -802,6 +804,8 @@ html[data-public-theme="dark"] {
   --site-dark: #140e0a;
   --site-dark-card: #1f1a16;
   --site-brand-ink: #ff8a3d;
+  --site-green: #4ade80;
+  --site-green-ink: #4ade80;
   --site-grid: rgba(255, 255, 255, 0.045);
   --site-card-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0) 42%);
   --site-shadow-sm: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px -12px rgba(0, 0, 0, 0.7);
@@ -837,6 +841,8 @@ html[data-public-theme="dark"] .site-section.site-section--dark { box-shadow: in
   --site-line: rgba(255, 255, 255, 0.1);
   --site-line-strong: rgba(255, 255, 255, 0.2);
   --site-brand-ink: #ff8a3d;
+  --site-green: #4ade80;
+  --site-green-ink: #4ade80;
   --site-grid: rgba(255, 255, 255, 0.05);
   --site-card-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 42%);
   --site-shadow-sm: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px -12px rgba(0, 0, 0, 0.6);

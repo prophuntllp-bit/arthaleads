@@ -174,7 +174,7 @@ function PluginCard({ plugin }) {
         <p className={imgOk ? "text-[13px] font-bold site-ink leading-tight" : "font-display text-base font-bold site-ink leading-tight"}>{plugin.name}</p>
         <p className="text-xs site-muted mt-1">{plugin.users === "Premium" ? "Premium plugin" : `${plugin.users} installs`}</p>
       </div>
-      <span className="inline-flex items-center gap-1 text-[11px] font-semibold" style={{ color: "#16a34a" }}>
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold" style={{ color: "var(--site-green)" }}>
         <Check className="w-3.5 h-3.5" aria-hidden="true" /> Supported
       </span>
     </Card>
@@ -216,7 +216,7 @@ function LiveNotification() {
         <span className="block text-[13px] font-semibold site-ink leading-tight truncate">New lead: {lead.name}</span>
         <span className="block text-[11px] site-muted leading-tight mt-0.5 truncate">{lead.form} · {lead.site}</span>
       </span>
-      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0" style={{ background: "rgba(22,163,74,0.14)", color: "#16a34a" }}>Live</span>
+      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0" style={{ background: "rgba(22,163,74,0.14)", color: "var(--site-green-ink)" }}>Live</span>
     </div>
   );
 }

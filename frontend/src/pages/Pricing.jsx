@@ -147,7 +147,7 @@ export default function Pricing() {
             </div>
           </div>
         </Card>
-        <p className="mt-5 inline-flex items-center gap-2 text-sm font-medium" style={{ color: "#16a34a" }}>
+        <p className="mt-5 inline-flex items-center gap-2 text-sm font-medium" style={{ color: "var(--site-green)" }}>
           <CircleCheck className="w-4 h-4" aria-hidden="true" /> 14-day free trial with every Growth feature. No credit card.
         </p>
       </PageHero>

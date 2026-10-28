@@ -23,7 +23,7 @@ export default function PublicFooter() {
           <div className="col-span-2 md:col-span-4 lg:col-span-2">
             <div className="flex items-center gap-2.5 mb-4">
               <img
-                src={isDark ? "/logo-lockup-dark.png" : "/logo-lockup.png"}
+                src={isDark ? "/logo-lockup-dark.webp" : "/logo-lockup.webp"}
                 width={isDark ? 1515 : 1574} height={isDark ? 459 : 471}
                 alt="Arthaleads — Turning Opportunities Into Value"
                 className="h-8 w-auto"
