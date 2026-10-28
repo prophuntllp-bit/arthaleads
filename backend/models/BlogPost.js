@@ -75,6 +75,9 @@ const blogPostSchema = new mongoose.Schema(
     // services/sanityBlogSync.js. Posts without it were written in the CRM editor.
     sanityId:          { type: String, default: undefined },
     sanityUpdatedAt:   { type: Date, default: null },
+    // Bumped (SYNC_VERSION in services/sanityBlogSync.js) when the sync learns
+    // something new, so every post is copied once more even if Sanity is unchanged.
+    sanitySyncVersion: { type: Number, default: 0 },
     // Engagement
     readingTime:       { type: Number, default: 1 },
     views:             { type: Number, default: 0 },

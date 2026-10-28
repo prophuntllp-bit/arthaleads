@@ -17,6 +17,9 @@ const logger = require("../config/logger");
 const indexNow = require("./indexNow");
 const TOPICS = require("../config/blogCategories");
 
+// 2: topics with their own pages, key takeaways, FAQs, tables, step cards (28 Oct 2026).
+const SYNC_VERSION = 2;
+
 const PROJECT_ID = process.env.SANITY_PROJECT_ID || "2racdioq";
 const DATASET    = process.env.SANITY_DATASET    || "production";
 const API_VERSION = "2025-02-19";
@@ -212,7 +215,8 @@ async function sync() {
       }
       post = new BlogPost({ sanityId: d._id, slug, title: d.title, views: 0 });
       stats.created++;
-    } else if (post.sanityUpdatedAt && new Date(post.sanityUpdatedAt).getTime() === new Date(d._updatedAt).getTime() && post.status === "published") {
+    } else if (post.sanityUpdatedAt && new Date(post.sanityUpdatedAt).getTime() === new Date(d._updatedAt).getTime() && post.status === "published"
+      && (post.sanitySyncVersion || 0) >= SYNC_VERSION) {
       stats.unchanged++;
       continue;
     } else {
@@ -240,6 +244,7 @@ async function sync() {
     post.focusKeyword = String(d.focusKeyword || "").trim().slice(0, 100);
     applySeo(post, d);
     post.sanityUpdatedAt = new Date(d._updatedAt);
+    post.sanitySyncVersion = SYNC_VERSION;
     await post.save();
     if (post.robots?.index !== false) changed.push(`/blog/${post.slug}`);
   }

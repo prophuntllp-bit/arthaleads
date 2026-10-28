@@ -67,6 +67,14 @@ test("topics list in tab order with counts; posts filter by topic slug", async (
   assert.equal(unknown.total, 0, "an unknown topic shows nothing, not everything");
 });
 
+test("a post copied by an older sync is copied again, even if Sanity is unchanged", async () => {
+  await BlogPost.updateOne({ slug: "old-name" }, { $set: { sanitySyncVersion: 1, category: null } });
+  await sync();
+  const old = await BlogPost.findOne({ slug: "old-name" }).populate("category").lean();
+  assert.equal(old.category.slug, "whatsapp");
+  assert.equal(old.sanitySyncVersion, 2);
+});
+
 test("the sitemap lists topic pages that have an article", async () => {
   const xml = (await call(ctrl.getSitemap, { query: {} })).body;
   assert.ok(xml.includes("/blog/category/real-estate-crm</loc>"));
