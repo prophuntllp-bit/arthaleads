@@ -101,6 +101,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-28 IST main 3166a95f (pushed live, from staging 73d797e8 + 78ecc6e4): Hot Today thumbs-down button for a wrong AI reason; AI agent editor redesign (main card, setup checklist, tabs, sticky test panel and save bar, plain labels).
 - [claude] 2026-10-28 IST main 0aaf5069 (pushed live, from staging): Plivo incoming calls + phone matching/signature fix, Plivo settings (number from account), property portal leads (Growth), Integrations redesign (main card, tabs, one page per integration, real logos, telephony on/off incl. both off), SegmentTabs on every CRM tab/filter bar, rows 50 by default. Left out of cf80ba5d's pick: the website files it had swept in. LeadDetail on main keeps its Vistrow Voice / WhatsApp tab labels inside SegmentTabs. Website session's staging-only commits not pushed.
 - [claude] 2026-10-27 IST (main, released from staging df9a9d75..142497a0 by file copy): live hero cards (smooth crossfade), unique closing photo per page (17 cta-*.webp), no Home nav link, Android lock-screen phone on Download App, Book a Demo intro film, all site films on YouTube embeds (YouTubePlayer), CSP frame-src youtube-nocookie. Only these files; staging's other work (Integrations redesign etc.) not included.
 - [claude] 2026-10-27 IST (main, released from staging b318fa8b by file copy): Artha website chat always shows Book a Demo + Start Free Trial; prompt defaults cta to demo. Only backend/utils/openai.js and MarketingChatBot.jsx.
