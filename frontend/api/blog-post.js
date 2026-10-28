@@ -44,7 +44,8 @@ function robotsValue(r = {}) {
 }
 
 function setTag(html, pattern, tag) {
-  return pattern.test(html) ? html.replace(pattern, tag) : html.replace("</head>", `    ${tag}\n  </head>`);
+  // Function replacers throughout: "$" in a post's text must stay literal.
+  return pattern.test(html) ? html.replace(pattern, () => tag) : html.replace("</head>", () => `    ${tag}\n  </head>`);
 }
 
 function articleLd(post, { url, desc, image }) {
@@ -159,6 +160,7 @@ ${siteFooter()}`;
 // Placeholders come from renderBlogTemplate() in src/entry-prerender.jsx. Plain
 // split/join, never String.replace with a string, so "$" in a post is safe.
 const put = (s, token, value) => s.split(token).join(value);
+const TPL_COVER = "https://cdn.sanity.io/images/tpl/tpl/tplcover-2000x1125.png";
 const stripTags = (h) => String(h || "").replace(/<[^>]*>/g, "").trim();
 const dateIN = (d) => (d ? new Date(d).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" }) : "");
 
@@ -175,8 +177,17 @@ function fillTemplate(html, post, categories) {
   if (!post.featuredImage) html = html.replace(/<figure class="blog-cover[\s\S]*?<\/figure>/, "");
   else {
     const img = abs(post.featuredImage);
-    html = html.replace(/(<figure class="blog-cover[^>]*><img )src="[^"]*" alt="@@IMGALT@@"([^>]*?) width="2000" height="1125"/,
-      (_, start, mid) => `${start}src="${esc(sized(img, 1400))}" alt="${esc(post.featuredImageAlt || post.title)}"${mid}${sizeAttrs(img)}`);
+    if (img.includes("cdn.sanity.io") && !img.includes("?")) {
+      // Same widths and parameters as the template, so only the image path changes.
+      html = put(html, TPL_COVER, esc(img));
+      html = html.replace(/(<figure class="blog-cover[^>]*><img [^>]*?)alt="@@IMGALT@@"([^>]*?) width="2000" height="1125"/,
+        (_, start, mid) => `${start}alt="${esc(post.featuredImageAlt || post.title)}"${mid}${sizeAttrs(img)}`);
+      // Start the connection to Sanity's CDN while the page is still arriving.
+      html = html.replace("</head>", `    <link rel="preconnect" href="https://cdn.sanity.io">\n  </head>`);
+    } else {
+      html = html.replace(/(<figure class="blog-cover[^>]*><img )src="[^"]*" alt="@@IMGALT@@"([^>]*?) srcSet="[^"]*" sizes="[^"]*"([^>]*?) width="2000" height="1125"/,
+        (_, start, mid, rest) => `${start}src="${esc(img)}" alt="${esc(post.featuredImageAlt || post.title)}"${mid}${rest}${sizeAttrs(img)}`);
+    }
   }
   // Repeated parts: the template has one of each.
   html = html.replace(/<a class="site-chip[^"]*" href="\/blog\?tag=%40%40TAG%40%40">#<!-- -->@@TAG@@<\/a>/,
@@ -256,7 +267,7 @@ export default async function handler(req, res) {
     const twDesc = clip(post.twitterDescription || post.ogDescription || desc, 200);
     const twImage = abs(post.twitterImage) || image;
 
-    html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(full)}</title>`);
+    html = html.replace(/<title>[\s\S]*?<\/title>/, () => `<title>${esc(full)}</title>`);
     // Articles may be pinch-zoomed (the CRM shell this page is built from fixes the zoom).
     html = html.replace(/<meta name="viewport"[^>]*>/, `<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />`);
     html = setTag(html, /<meta name="description"[^>]*>/, `<meta name="description" content="${esc(desc)}" />`);
@@ -280,7 +291,7 @@ export default async function handler(req, res) {
     // Structured data in the source too; the app replaces it (same id) once it loads.
     // Every "<" is escaped so a title can never close the script tag early.
     const ld = articleLd(post, { url: `${SITE}/blog/${post.slug}`, desc, image });
-    html = html.replace("</head>", `    <script type="application/ld+json" id="blog-jsonld">${JSON.stringify(ld).replace(/</g, "\u005Cu003c")}</script>\n  </head>`);
+    html = html.replace("</head>", () => `    <script type="application/ld+json" id="blog-jsonld">${JSON.stringify(ld).replace(/</g, "\u005Cu003c")}</script>\n  </head>`);
     // Breadcrumb too, built exactly like PublicBlogPost's (same id, so the app replaces it).
     const crumbs = [
       { "@type": "ListItem", position: 1, name: "Home", item: SITE },
@@ -289,13 +300,13 @@ export default async function handler(req, res) {
     if (post.category?.name) crumbs.push({ "@type": "ListItem", position: 3, name: post.category.name, item: `${SITE}/blog?category=${post.category._id}` });
     crumbs.push({ "@type": "ListItem", position: crumbs.length + 1, name: post.breadcrumbTitle || post.title, item: `${SITE}/blog/${post.slug}` });
     const bc = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: crumbs };
-    html = html.replace("</head>", `    <script type="application/ld+json" id="breadcrumb-jsonld">${JSON.stringify(bc).replace(/</g, "\u005Cu003c")}</script>
+    html = html.replace("</head>", () => `    <script type="application/ld+json" id="breadcrumb-jsonld">${JSON.stringify(bc).replace(/</g, "\u005Cu003c")}</script>
   </head>`);
     if (!filled && html.includes('<div id="root"></div>')) {
       html = html
         .replace("</head>", `${HIDE_UNTIL_LIVE}
   </head>`)
-        .replace('<div id="root"></div>', `<div id="root" data-prerendered>${articleHtml(post)}</div>`);
+        .replace('<div id="root"></div>', () => `<div id="root" data-prerendered>${articleHtml(post)}</div>`);
     }
   } else {
     // Unknown or unreachable: keep the shell, but never claim the home canonical.
