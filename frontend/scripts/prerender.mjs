@@ -117,7 +117,10 @@ const deferBoot = (html) => html.replace(/<script type="module" crossorigin src=
 // "render-blocking", ~1 s). Its font and image URLs are absolute (/assets/...).
 const inlineCss = (html) => html.replace(/<link rel="stylesheet"(?: crossorigin)? href="(\/assets\/[^"]+\.css)"\s*\/?>/, (tag, href) => {
   const css = readFileSync(join(dist, href.slice(1)), "utf8");
-  return css.includes("</style") ? tag : `<style id="app-css">${css}</style>`;
+  // The disabled link is never fetched or applied; it is there so Vite's lazy
+  // chunk loader (which looks for link[href][rel=stylesheet]) knows the sheet
+  // is already on the page and does not add and re-parse it after the app starts.
+  return css.includes("</style") ? tag : `<style id="app-css">${css}</style><link rel="stylesheet" href="${href}" disabled>`;
 });
 
 // ── 3b. Render and inject ──────────────────────────────────────────────────
