@@ -280,7 +280,7 @@ function StepReply() {
           Yes, possession in March. Would you like to see it this Sunday?
         </p>
       </div>
-      <p className="self-center flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold" style={{ background: "rgba(22,163,74,0.12)", color: "#16a34a" }}>
+      <p className="self-center flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold" style={{ background: "rgba(22,163,74,0.12)", color: "var(--site-green-ink)" }}>
         <CircleCheck className="w-3.5 h-3.5" aria-hidden="true" /> Visit booked · Sun 11 AM
       </p>
     </div>
@@ -357,7 +357,7 @@ function TrustRow({ left, right, tone, live = false }) {
     </li>
   );
 }
-const T_GREEN = { background: "rgba(22,163,74,0.14)", color: "#16a34a" };
+const T_GREEN = { background: "rgba(22,163,74,0.14)", color: "var(--site-green-ink)" };
 const T_ORANGE = { background: "rgba(255,107,0,0.13)", color: "var(--site-brand-ink)" };
 const T_PLAIN = { background: "var(--site-chip)", color: "var(--site-text)" };
 

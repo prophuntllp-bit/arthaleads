@@ -38,7 +38,7 @@ const FAQS = [
 export default function BuilderCrm() {
   useSEO({
     title: "Builder CRM for Real Estate Developers in India | Arthaleads",
-    description: "Builder CRM for developers in India: project-wise leads from Facebook and Google ads, WhatsApp, portals and site QR codes, routed to telecallers, with site visits tracked.",
+    description: "Builder CRM for developers in India: project-wise leads from Facebook and Google ads, WhatsApp, portals and site QR codes, routed to your telecallers.",
     canonical: "https://www.arthaleads.com/builder-crm",
   });
 

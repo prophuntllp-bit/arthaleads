@@ -208,7 +208,7 @@ export function CopilotCard() {
 // fixed height, so every card in the grid lines up and none looks empty.
 const tile = "rounded-xl border";
 const tileStyle = { background: "var(--site-card)", borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-sm)" };
-const GREEN = { background: "rgba(22,163,74,0.12)", color: "#16a34a" };
+const GREEN = { background: "rgba(22,163,74,0.12)", color: "var(--site-green-ink)" };
 const ORANGE = { background: "rgba(255,107,0,0.12)", color: "var(--site-brand-ink)" };
 const RED = { background: "rgba(220,38,38,0.12)", color: "#dc2626" };
 const AVATAR_COLORS = ["#ff6b00", "#2563eb", "#16a34a", "#9333ea", "#db2777", "#0891b2"];
@@ -382,7 +382,7 @@ export function TeamViz() {
               </span>
             </div>
             <span className="text-[11.5px] font-bold site-ink w-6 text-right">{calls}</span>
-            <span className="text-[10px] font-medium flex items-center gap-0.5 shrink-0" style={{ color: "#16a34a" }}>
+            <span className="text-[10px] font-medium flex items-center gap-0.5 shrink-0" style={{ color: "var(--site-green)" }}>
               <CheckCheck className="w-3 h-3" aria-hidden="true" />{inAt}
             </span>
           </div>

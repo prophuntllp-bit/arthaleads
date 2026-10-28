@@ -169,6 +169,26 @@
       "destination": "/api/blog-post?slug=:slug"
     },
     {
+      "source": "/((?!assets/|api/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.arthaleads.com"
+        }
+      ],
+      "destination": "/api/spa?__p=$1"
+    },
+    {
+      "source": "/((?!assets/|api/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "staging.arthaleads.com"
+        }
+      ],
+      "destination": "/api/spa?__p=$1"
+    },
+    {
       "source": "/((?!assets/).*)",
       "destination": "/app.html"
     }

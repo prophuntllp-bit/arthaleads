@@ -103,7 +103,8 @@ function IntroFilm() {
     <div className="relative min-w-0">
       <div aria-hidden="true" className="hero-glass" />
       <div className="relative rounded-[22px] sm:rounded-[26px] p-1.5 sm:p-2" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
-        <YouTubePlayer videoId={INTRO_ID} poster={`https://i.ytimg.com/vi/${INTRO_ID}/maxresdefault.jpg`} name="intro"
+        <YouTubePlayer videoId={INTRO_ID} poster="/video/intro-film-poster-1280.webp"
+          posterSet="/video/intro-film-poster-640.webp 640w, /video/intro-film-poster-1280.webp 1280w" name="intro"
           title="What is Arthaleads? The real estate CRM, explained in 2 minutes" badge="1:47 · English"
           className="rounded-[17px] sm:rounded-[20px]" />
       </div>

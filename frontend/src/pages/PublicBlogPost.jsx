@@ -1,8 +1,9 @@
 // pages/PublicBlogPost.jsx - /blog/:slug on the shared marketing theme (components/site/*).
 // The article body is drawn from the post's blocks inside .blog-prose (styles.css).
-// api/blog-post.js writes a plain HTML copy of the same article into the shell
-// for crawlers, plus the blog-jsonld / breadcrumb-jsonld scripts this page
-// replaces (same ids) once it loads.
+// api/blog-post.js serves each post as this page's own HTML (built once by
+// scripts/prerender.mjs from `initial`, a placeholder post, and filled in per
+// post), plus the blog-jsonld / breadcrumb-jsonld scripts this page replaces
+// (same ids) once it loads. The live page always fetches the post itself.
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { CRM_SIGNUP_URL } from "../utils/crmLinks";
@@ -39,7 +40,7 @@ function useSEO(post) {
     const title = post.metaTitle || post.title;
     const desc  = post.metaDescription || post.excerpt;
     const url   = `${SITE}/blog/${post.slug}`;
-    const full  = `${title} - Arthaleads`;
+    const full  = title.length > 47 ? title : `${title} - Arthaleads`;   // same rule as api/blog-post.js
     const image = post.ogImage || post.featuredImage;
     const prevRobots = document.querySelector('meta[name="robots"]')?.getAttribute("content") || "index, follow";
 
@@ -131,6 +132,8 @@ function setMeta(name, content) {
 // ── HTML sanitizer - uses DOMPurify for robust XSS protection ─────────────────
 function sanitizeHtml(html) {
   if (!html) return "";
+  // Build time (renderBlogTemplate) has no DOM for DOMPurify; its content is our own placeholders.
+  if (typeof DOMPurify.sanitize !== "function") return html;
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: ["b", "strong", "i", "em", "u", "s", "a", "br", "span", "code", "mark"],
     ALLOWED_ATTR: ["href", "target", "rel", "class", "style"],
@@ -312,13 +315,13 @@ function ShareButtons({ post }) {
   );
 }
 
-function BlogPostInner() {
+function BlogPostInner({ initial }) {
   const { slug } = useParams();
-  const [post, setPost]         = useState(null);
-  const [loading, setLoading]   = useState(true);
+  const [post, setPost]         = useState(initial?.post || null);
+  const [loading, setLoading]   = useState(!initial);
   const [notFound, setNotFound] = useState(false);
   const [related, setRelated]   = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(initial?.categories || []);
 
   useSEO(post);
 
@@ -351,10 +354,11 @@ function BlogPostInner() {
     }).catch(() => setRelated([]));
   }, [post]);
 
-  const headings = useMemo(
+  const fromBlocks = useMemo(
     () => (post?.blocks || []).filter((b) => b.type === "h2").map((b) => ({ id: `sec-${b.id}`, text: stripTags(b.content) })).filter((h) => h.text),
     [post]
   );
+  const headings = initial?.headings || fromBlocks;
 
   // No nav/footer while loading: main.jsx swaps out the server's static copy
   // of the article once the live page renders its footer.
@@ -501,6 +505,6 @@ function BlogPostInner() {
 
 const imageSize = (url) => { const m = /-(\d+)x(\d+)\.\w+(?:\?|$)/.exec(url || ""); return m ? { width: Number(m[1]), height: Number(m[2]) } : {}; };
 
-export default function PublicBlogPost() {
-  return <BlogPostInner />;
+export default function PublicBlogPost({ initial }) {
+  return <BlogPostInner initial={initial} />;
 }

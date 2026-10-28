@@ -17,8 +17,10 @@ import { YOUTUBE_FILM } from "../utils/crmLinks";
 import YouTubePlayer from "./site/YouTubePlayer";
 
 export const INTRO_VIDEOS = {
-  en: { label: "English", youtubeId: "htXLDOPHzac", length: "2:18", poster: "/video/arthaleads-intro-en-poster.jpg" },
-  hi: { label: "हिन्दी",   youtubeId: "bAkgsfgfPKw", length: "2:28", poster: "/video/arthaleads-intro-hi-poster.jpg" },
+  en: { label: "English", youtubeId: "htXLDOPHzac", length: "2:18", poster: "/video/arthaleads-intro-en-poster-1280.webp",
+        posterSet: "/video/arthaleads-intro-en-poster-640.webp 640w, /video/arthaleads-intro-en-poster-1280.webp 1280w" },
+  hi: { label: "हिन्दी",   youtubeId: "bAkgsfgfPKw", length: "2:28", poster: "/video/arthaleads-intro-hi-poster-1280.webp",
+        posterSet: "/video/arthaleads-intro-hi-poster-640.webp 640w, /video/arthaleads-intro-hi-poster-1280.webp 1280w" },
 };
 
 export default function IntroVideo({ id = "tour", chapters = false, seek = null }) {
@@ -59,7 +61,7 @@ export default function IntroVideo({ id = "tour", chapters = false, seek = null 
         </div>
       </div>
       <div className="rounded-[22px] sm:rounded-[28px] p-1.5 sm:p-2" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
-        <YouTubePlayer videoId={v.youtubeId} poster={v.poster} name={`tour-${lang}`} startAt={startAt} seek={jump}
+        <YouTubePlayer videoId={v.youtubeId} poster={v.poster} posterSet={v.posterSet} name={`tour-${lang}`} startAt={startAt} seek={jump}
           title={`Arthaleads product tour (${v.label})`} badge={`${v.length} · ${v.label}`}
           className="rounded-[17px] sm:rounded-[23px]" />
       </div>
