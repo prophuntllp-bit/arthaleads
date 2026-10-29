@@ -646,7 +646,15 @@ class _CallsScreenState extends State<CallsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('ENABLEX TELEPHONY', style: AppText.kicker(context)),
+                    // The company's phone service (Telephony on the website, 28 Oct 2026).
+                    Text(
+                      switch ('${(context.read<AuthState>().org?['telephony'] as Map?)?['provider'] ?? 'enablex'}') {
+                        'plivo' => 'PLIVO TELEPHONY',
+                        'none' => 'COMPANY CALLING OFF',
+                        _ => 'ENABLEX TELEPHONY',
+                      },
+                      style: AppText.kicker(context),
+                    ),
                     const SizedBox(height: 2),
                     const Text(
                       'Calls',
