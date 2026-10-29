@@ -27,7 +27,7 @@ const _platformDefaults = {
   ),
 };
 
-const _serverBase = 'https://api.arthaleads.com';
+String get _serverBase => ApiClient.serverBase;
 
 /// Add / edit a non-Facebook lead source (Google, WhatsApp, Website, Custom).
 /// Facebook sources are created through the native System User Token wizard;

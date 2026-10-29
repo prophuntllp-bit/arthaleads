@@ -8,6 +8,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/integration_kit.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 
@@ -32,6 +33,12 @@ class _TelephonyIntegrationScreenState
   final _number = TextEditingController();
   bool _loaded = false;
   bool _connected = false;
+  // Which service calls go through (GET /plivo/settings) and EnableX's
+  // 7-day numbers (GET /plivo/call-stats?provider=enablex), as on the web's
+  // EnableX page (29 Oct 2026).
+  String? _provider;
+  Map<String, dynamic>? _stats;
+  bool _switching = false;
   bool _hasKey = false;
   bool _aiStatus = false;
   bool _busy = false;
@@ -69,6 +76,7 @@ class _TelephonyIntegrationScreenState
         _orgId = res.data['orgId']?.toString() ?? '';
         _loaded = true;
       });
+      _loadProvider();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -82,6 +90,39 @@ class _TelephonyIntegrationScreenState
       }
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _loadProvider() async {
+    try {
+      final r = await _api.dio.get('/plivo/settings');
+      _provider = '${r.data['provider'] ?? 'enablex'}';
+    } catch (_) {
+      _provider = null;
+    }
+    try {
+      final r = await _api.dio.get('/plivo/call-stats', queryParameters: {'provider': 'enablex'});
+      _stats = (r.data as Map).cast<String, dynamic>();
+    } catch (_) {}
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _useEnablex() async {
+    setState(() => _switching = true);
+    final auth = context.read<AuthState>();
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _api.dio.patch('/plivo/settings', data: {'provider': 'enablex'});
+      messenger.showSnackBar(const SnackBar(content: Text('Calls now go through EnableX.')));
+      auth.refresh().catchError((_) {});
+      await _loadProvider();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+        content: Text(ApiClient.errorMessage(e, 'Could not switch.')),
+        backgroundColor: AppColors.danger,
+      ));
+    } finally {
+      if (mounted) setState(() => _switching = false);
     }
   }
 
@@ -207,7 +248,7 @@ class _TelephonyIntegrationScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Telephony Integration')),
+      appBar: AppBar(title: const Text('EnableX')),
       body: _busy && !_loaded
           ? const Center(child: AppSpinner(size: 32))
           : _body(context),
@@ -216,8 +257,8 @@ class _TelephonyIntegrationScreenState
 
   Widget _body(BuildContext context) {
     final webhook = _orgId.isEmpty
-        ? 'https://api.arthaleads.com/api/calls/webhook'
-        : 'https://api.arthaleads.com/api/calls/webhook/$_orgId';
+        ? '${ApiClient.serverBase}/api/calls/webhook'
+        : '${ApiClient.serverBase}/api/calls/webhook/$_orgId';
 
     Widget copyRow(String label, String value) => Card(
       child: Padding(
@@ -258,30 +299,37 @@ class _TelephonyIntegrationScreenState
       ),
     );
 
-    // Which phone service is in use is chosen on the website (Integrations →
-    // Telephony, 27-28 Oct 2026: EnableX, Plivo, or both off). This screen
-    // only holds EnableX's settings, so say when it isn't the one in use.
-    final provider = '${(context.read<AuthState>().org?['telephony'] as Map?)?['provider'] ?? 'enablex'}';
+    final provider = _provider ?? '${(context.read<AuthState>().org?['telephony'] as Map?)?['provider'] ?? 'enablex'}';
+    final role = context.read<AuthState>().role;
+    final isAdmin = role == 'admin' || role == 'super_admin';
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        if (provider != 'enablex') ...[
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.warning.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.warning.withValues(alpha: 0.25)),
+        Row(children: [
+          provider == 'enablex'
+              ? StatusPill.on('In use')
+              : (_connected ? StatusPill.off('Off') : StatusPill.off('Not connected')),
+          const Spacer(),
+          if (isAdmin && _connected && provider != 'enablex')
+            GradientButton(
+              onPressed: _switching ? null : _useEnablex,
+              loading: _switching,
+              child: const Text('Use EnableX for calls'),
             ),
-            child: Text(
-              provider == 'plivo'
-                  ? 'Your company calls through Plivo, so these EnableX settings are not in use. Switch phone services on the website: Integrations → Telephony.'
-                  : 'Calling through the company number is switched off. Switch it on on the website: Integrations → Telephony.',
-              style: TextStyle(fontSize: 12.5, color: AppTheme.of(context).text),
-            ),
-          ),
-          const SizedBox(height: 12),
+        ]),
+        if (provider == 'plivo') ...[
+          const SizedBox(height: 8),
+          Text('Calls go through Plivo right now. Switch services under Integrations → Telephony.',
+              style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSoft)),
         ],
+        const SizedBox(height: 12),
+        MiniStatGrid([
+          MiniStat('Calls · 7 days', _stats == null ? '-' : '${_stats!['total'] ?? 0}'),
+          MiniStat('Answered · 7 days', _stats == null ? '-' : '${_stats!['answered'] ?? 0}'),
+          MiniStat('Incoming · 7 days', _stats == null ? '-' : '${_stats!['inbound'] ?? 0}'),
+          MiniStat('Last call', _stats?['lastAt'] != null ? agoText(_stats!['lastAt']) : 'None yet'),
+        ]),
+        const SizedBox(height: 16),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -397,7 +445,8 @@ class _TelephonyIntegrationScreenState
           ),
         ),
         const SizedBox(height: 12),
-        Row(
+        // Saving and testing are admin-only on the server.
+        if (isAdmin) Row(
           children: [
             Expanded(
               child: GradientButton(
@@ -432,7 +481,7 @@ class _TelephonyIntegrationScreenState
                 'Advance lead status automatically when call AI detects intent.',
               ),
               value: _aiStatus,
-              onChanged: (value) => _updateFlag('aiAutoStatus', value),
+              onChanged: isAdmin ? (value) => _updateFlag('aiAutoStatus', value) : null,
             ),
           ),
         const SizedBox(height: 24),
