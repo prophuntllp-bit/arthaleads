@@ -109,7 +109,8 @@ export function SiteButton({ variant = "primary", size, to, href, external = fal
  * Responsive site photo. Expects pre-sized WebP files named
  * `${name}-480.webp`, `-640`, `-768`, `-1024` and `-1600.webp` in
  * /public/img/site (made by scripts in outputs/site-images). `priority`
- * marks the one LCP image per page.
+ * marks the one LCP image per page; it decodes in step with the first paint
+ * (an async decode could slip behind the app starting up on a slow phone).
  */
 export function SiteImage({ name, alt, width, height, sizes = "100vw", priority = false, className, style }) {
   const base = `/img/site/${name}`;
@@ -122,7 +123,7 @@ export function SiteImage({ name, alt, width, height, sizes = "100vw", priority 
       height={height}
       alt={alt}
       loading={priority ? "eager" : "lazy"}
-      decoding="async"
+      decoding={priority ? "sync" : "async"}
       fetchpriority={priority ? "high" : undefined}
       className={className}
       style={style}

@@ -94,8 +94,9 @@ const HEAD_EXTRA = `    <style id="prerender-css">
 // after the app had finished starting: 3.5-5.5 s in Lighthouse's phone test.
 // Now the fonts the first screen uses are preloaded, and the app starts once
 // the static copy is on screen: fonts ready, the page's main image (the one
-// marked fetchpriority=high; measuring positions forced an early layout) loaded, one
-// frame painted (2.5 s at most; straight away in background tabs and for
+// marked fetchpriority=high; measuring positions forced an early layout) loaded
+// and decoded (30 Oct 2026: a decoded-later hero waited 1-2 s behind the app's
+// start-up on a slow phone), two frames painted (2.5 s at most; straight away in background tabs and for
 // dark-theme visitors, who see the splash, not the static copy). Links
 // in the static copy work as plain links in the meantime.
 const assets = readdirSync(join(dist, "assets"));
@@ -106,10 +107,10 @@ const FONT_PRELOADS = [/^inter-latin-400-normal-.*\.woff2$/, /^inter-latin-600-n
   .join("\n");
 const bootScript = (src) => `<script>(function(){var d=document,w=window,started=0;
       function boot(){if(started)return;started=1;w.__alBootStarted=Date.now();var s=d.createElement("script");s.type="module";s.crossOrigin="";s.src=${JSON.stringify(src)};d.head.appendChild(s)}
-      function painted(){requestAnimationFrame(function(){setTimeout(boot,0)});setTimeout(boot,500)}
+      function painted(){requestAnimationFrame(function(){requestAnimationFrame(function(){setTimeout(boot,0)})});setTimeout(boot,500)}
       function ready(){setTimeout(boot,2500);if(d.hidden||d.documentElement.hasAttribute("data-prerender-hide"))return boot();var waits=[];if(d.fonts&&d.fonts.ready)waits.push(d.fonts.ready);
         var imgs=d.querySelectorAll("#root img[fetchpriority=high]");for(var i=0;i<imgs.length;i++){var im=imgs[i];
-          if(!im.complete)waits.push(new Promise(function(r){im.addEventListener("load",r);im.addEventListener("error",r)}))}
+          waits.push(im.decode?im.decode().catch(function(){}):im.complete?0:new Promise(function(r){im.addEventListener("load",r);im.addEventListener("error",r)}))}
         Promise.all(waits).then(painted,painted)}
       if(d.readyState==="loading")d.addEventListener("DOMContentLoaded",ready);else ready()})()</script>`;
 const deferBoot = (html) => html.replace(/<script type="module" crossorigin src="(\/assets\/[^"]+\.js)"><\/script>/, (_, src) => bootScript(src));
