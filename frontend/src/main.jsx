@@ -87,6 +87,9 @@ import "./utils/analytics";   // GA4 on the live website, after cookie consent
 // app.arthaleads.com. On the marketing site the provider would still load
 // Google's ~100 KB client script on every page for nothing.
 const IS_MARKETING_HOST = isMarketingHost();
+// VITE_GOOGLE_CLIENT_ID is the "ArthaLeads Web" client in the Google Cloud project
+// "Arthaleads" (id arthaleads, account arhtalead@gmail.com) since 29 Oct 2026;
+// it was the PropCRM project's client before. Set per environment in Vercel.
 const GoogleAuth = ({ children }) => IS_MARKETING_HOST
   ? children
   : <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>{children}</GoogleOAuthProvider>;
