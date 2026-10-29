@@ -117,6 +117,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-30 IST: APK Attendance header in the Leads/Follow-ups style (title + shift note, Add entry, menu with Shift settings + Download report, view chips). staging 16411df9, main edffa84d. Not yet seen on the phone (disconnected). Not released.
 - [claude] 2026-10-29 IST: APK agent setup checklist (mirrors WaAgent.readiness, chips scroll to Identity / How it talks / projects) and Leads offline first-load state (Try again + pull to refresh). staging 65e6082a, main cb2b5aee. Checklist checked on the phone; offline state not (would need the phone's network switched off). Release 1.0.15 on hold per owner.
 - [claude] 2026-10-29 IST: APK Attendance 'Download Report' asks /attendance/export?format=xlsx (the web's themed workbook with selfies, ea12b5e4) and saves attendance_<range>.xlsx. staging fb114343, main 8d2b44dc. Not released.
 - [claude] 2026-10-29 IST: owner's phone now runs an unreleased live-server build of main (e4c66bcc, still versionName 1.0.14 / 2040) installed over com.arthaleads.crm, to show Plivo connected on the live account (owner chose this). View only, nothing saved. Plivo screen showed In use, Auth ID, +91 80 6549 2852, incoming connected, 2 calls in 7 days. The live login has no admin role in the app (no telephony switch / Settings tab).
