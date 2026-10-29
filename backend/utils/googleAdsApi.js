@@ -66,6 +66,8 @@ async function listAccounts(accessToken) {
   const direct = new Map(); // id -> account
   const viaManager = [];
   const managers = []; // "Name (123-456-7890)", to say where nothing was found
+  const closedClients = [];
+  const managerErrors = [];
   await Promise.all(ids.map(async (id) => {
     let customer;
     try {
@@ -81,21 +83,29 @@ async function listAccounts(accessToken) {
       return;
     }
     managers.push(`${customer.descriptiveName || "manager account"} (${String(id).replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3")})`);
+    // No status filter in the query: a brand-new account with no campaign yet
+    // is not ENABLED, but it can still be connected. Only closed ones are left out.
     try {
       const clients = await search(id, `
-        SELECT customer_client.id, customer_client.descriptive_name, customer_client.test_account
+        SELECT customer_client.id, customer_client.descriptive_name, customer_client.test_account, customer_client.status
         FROM customer_client
-        WHERE customer_client.manager = false AND customer_client.status = 'ENABLED'`, { accessToken, loginCustomerId: id });
+        WHERE customer_client.manager = false`, { accessToken, loginCustomerId: id });
       for (const { customerClient: c } of clients) {
-        if (c?.id) viaManager.push({ id: String(c.id), name: c.descriptiveName || String(c.id), loginCustomerId: id, managerName: customer.descriptiveName || id, testAccount: c.testAccount === true });
+        if (!c?.id) continue;
+        if (["CANCELED", "CLOSED"].includes(c.status)) { closedClients.push(`${c.descriptiveName || c.id} (${c.status.toLowerCase()})`); continue; }
+        viaManager.push({ id: String(c.id), name: c.descriptiveName || String(c.id), loginCustomerId: id, managerName: customer.descriptiveName || id, testAccount: c.testAccount === true, status: c.status || "" });
       }
-    } catch { /* a manager we can't read below: nothing to pick from it */ }
+    } catch (err) {
+      managerErrors.push(err.message);
+    }
   }));
 
   // An account reachable both directly and through a manager is listed once, as direct.
   for (const a of viaManager) if (!direct.has(a.id)) direct.set(a.id, a);
+  if (!direct.size && managerErrors.length) throw new Error(`Google Ads could not list the accounts under your manager account: ${managerErrors[0]}`);
   if (!direct.size && managers.length) {
-    throw new Error(`Your manager account ${managers.join(", ")} has no ad accounts under it yet. Link your ad account to it in Google Ads, then connect again.`);
+    const closedNote = closedClients.length ? ` (only closed ones: ${closedClients.join(", ")})` : "";
+    throw new Error(`Your manager account ${managers.join(", ")} has no ad accounts under it yet${closedNote}. Link your ad account to it in Google Ads, then connect again.`);
   }
   return [...direct.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
