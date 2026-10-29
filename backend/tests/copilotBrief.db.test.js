@@ -77,7 +77,7 @@ const check = (ok, msg, d = "") => {
   const pilot = { _id: org, copilot: { beta: true } };
   check(toolsFor(A, pilot).some((t) => t.function.name === "morning_brief"), "pilot companies get the brief tool");
   check(!toolsFor(A, { copilot: { beta: true, brief: false } }).some((t) => t.function.name === "morning_brief") && !toolsFor(A, { copilot: {} }).some((t) => t.function.name === "morning_brief"), "the brief switch and non-pilot companies hide it");
-  const r = await runTool("morning_brief", {}, { user: A, org: pilot, proposals: [], choices: [] });
+  const r = await runTool("morning_brief", {}, { user: A, org: pilot, proposals: [], choices: [], now });
   check(r.records.some((x) => x.name === "Priya" && x.kind === "lead"), "brief leads become links in the answer");
 
   console.log(failures ? `\n  ${failures} FAILED\n` : "\n  all morning brief checks passed\n");
