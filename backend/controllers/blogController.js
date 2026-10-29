@@ -36,7 +36,8 @@ const blogController = {
   async getPosts(req, res, next) {
     try {
       const { page = 1, limit = 12, category, tag, search } = req.query;
-      const filter = { status: "published" };
+      // A post redirected elsewhere (merged into another) is not listed.
+      const filter = { status: "published", $or: [{ redirectUrl: { $exists: false } }, { redirectUrl: "" }] };
       // A topic by id (CRM editor, older links) or by slug (/blog/category/<slug>).
       if (category) {
         if (/^[a-f0-9]{24}$/i.test(category)) filter.category = category;
@@ -86,7 +87,7 @@ const blogController = {
       // Every topic also carries `count`, its number of published posts (the
       // blog's topic tabs show it). Topics come in their tab order.
       const counts = await BlogPost.aggregate([
-        { $match: { status: "published", category: { $ne: null } } },
+        { $match: { status: "published", category: { $ne: null }, $or: [{ redirectUrl: { $exists: false } }, { redirectUrl: "" }] } },
         { $group: { _id: "$category", count: { $sum: 1 } } },
       ]);
       const countOf = new Map(counts.map((c) => [String(c._id), c.count]));
@@ -109,7 +110,7 @@ const blogController = {
         "robots.index": { $ne: false },
         $or: [{ redirectUrl: { $exists: false } }, { redirectUrl: "" }],
       })
-        .select("slug publishedAt updatedAt category")
+        .select("slug publishedAt updatedAt sanityUpdatedAt category")
         .sort({ publishedAt: -1 })
         .limit(1000);
 
@@ -119,44 +120,43 @@ const blogController = {
       // lastmod is the date the page's content last changed (git log of its
       // page file); bump it when you edit a page, Google ignores it if it lies.
       const staticPages = [
-        { url: "/",                 priority: "1.0", changefreq: "weekly", lastmod: "2026-10-27" },
-        { url: "/features",         priority: "0.9", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/pricing",          priority: "0.9", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/compare",          priority: "0.8", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/compare/sell-do-alternative", priority: "0.7", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/compare/leadrat-alternative", priority: "0.7", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/compare/kylas-alternative",   priority: "0.7", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/blog",             priority: "0.8", changefreq: "weekly"  },
-        { url: "/about-us",         priority: "0.7", changefreq: "monthly", lastmod: "2026-10-27" },
+        { url: "/", lastmod: "2026-10-27" },
+        { url: "/features", lastmod: "2026-10-29" },
+        { url: "/pricing", lastmod: "2026-10-27" },
+        { url: "/compare", lastmod: "2026-10-27" },
+        { url: "/compare/sell-do-alternative", lastmod: "2026-10-27" },
+        { url: "/compare/leadrat-alternative", lastmod: "2026-10-27" },
+        { url: "/compare/kylas-alternative", lastmod: "2026-10-27" },
+        { url: "/blog" },
+        { url: "/about-us", lastmod: "2026-10-27" },
         // /case-studies is noindex while it has no case studies (see pages/CaseStudies.jsx).
-        { url: "/product-updates",  priority: "0.7", changefreq: "weekly", lastmod: "2026-10-27" },
-        { url: "/help-guide",       priority: "0.6", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/wordpress-plugin", priority: "0.6", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/api-docs",         priority: "0.6", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/download-app",     priority: "0.6", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/ai-crm",           priority: "0.9", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/builder-crm",      priority: "0.9", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/whatsapp-crm",     priority: "0.9", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/product-tour",     priority: "0.8", changefreq: "monthly", video: true, lastmod: "2026-10-27" },
-        { url: "/refer",            priority: "0.5", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/careers",          priority: "0.5", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/contact",          priority: "0.6", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/book-demo",        priority: "0.7", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/security",         priority: "0.5", changefreq: "monthly", lastmod: "2026-10-27" },
-        { url: "/privacy",          priority: "0.3", changefreq: "yearly", lastmod: "2026-10-17" },
-        { url: "/terms",            priority: "0.3", changefreq: "yearly", lastmod: "2026-10-17" },
-        { url: "/refund",           priority: "0.3", changefreq: "yearly", lastmod: "2026-10-17" },
-        { url: "/cookie-policy",    priority: "0.3", changefreq: "yearly", lastmod: "2026-10-08" },
+        { url: "/product-updates", lastmod: "2026-10-27" },
+        { url: "/help-guide", lastmod: "2026-10-27" },
+        { url: "/wordpress-plugin", lastmod: "2026-10-27" },
+        { url: "/api-docs", lastmod: "2026-10-27" },
+        { url: "/download-app", lastmod: "2026-10-27" },
+        { url: "/ai-crm", lastmod: "2026-10-29" },
+        { url: "/builder-crm", lastmod: "2026-10-29" },
+        { url: "/whatsapp-crm", lastmod: "2026-10-29" },
+        { url: "/product-tour", video: true, lastmod: "2026-10-27" },
+        { url: "/refer", lastmod: "2026-10-27" },
+        { url: "/careers", lastmod: "2026-10-27" },
+        { url: "/contact", lastmod: "2026-10-27" },
+        { url: "/book-demo", lastmod: "2026-10-27" },
+        { url: "/security", lastmod: "2026-10-27" },
+        { url: "/privacy", lastmod: "2026-10-17" },
+        { url: "/terms", lastmod: "2026-10-17" },
+        { url: "/refund", lastmod: "2026-10-17" },
+        { url: "/cookie-policy", lastmod: "2026-10-08" },
       ];
 
       const blogEntries = posts.map((p) => ({
         url: `/blog/${p.slug}`,
-        priority: "0.8",
-        changefreq: "weekly",
-        // Deliberately UTC, not IST: sitemap lastmod is a W3C Datetime and
-        // crawlers read it as such. This is the one date here that is not
-        // customer-facing, so it stays off the IST helpers.
-        lastmod: (p.updatedAt || p.publishedAt || new Date()).toISOString().split("T")[0],
+        // The last real edit in Sanity, not updatedAt (a sync re-copy bumps that
+        // for every post at once). Deliberately UTC, not IST: sitemap lastmod is
+        // a W3C Datetime and crawlers read it as such. This is the one date here
+        // that is not customer-facing, so it stays off the IST helpers.
+        lastmod: (p.sanityUpdatedAt || p.updatedAt || p.publishedAt || new Date()).toISOString().split("T")[0],
       }));
 
       // The blog index changes whenever a post does.
@@ -172,7 +172,7 @@ const blogController = {
       });
       const topics = await BlogCategory.find({ _id: { $in: [...newestByTopic.keys()] } }).select("slug").lean();
       const topicEntries = topics.map((t) => ({
-        url: `/blog/category/${t.slug}`, priority: "0.7", changefreq: "weekly", lastmod: newestByTopic.get(String(t._id)),
+        url: `/blog/category/${t.slug}`, lastmod: newestByTopic.get(String(t._id)),
       }));
 
       const allEntries = [...staticPages, ...topicEntries, ...blogEntries];
@@ -198,9 +198,7 @@ const blogController = {
 ${allEntries
   .map(
     (e) => `  <url>
-    <loc>${baseUrl}${e.url}</loc>
-    <changefreq>${e.changefreq}</changefreq>
-    <priority>${e.priority}</priority>${e.lastmod ? `\n    <lastmod>${e.lastmod}</lastmod>` : ""}${e.video ? videoXml : ""}
+    <loc>${baseUrl}${e.url}</loc>${e.lastmod ? `\n    <lastmod>${e.lastmod}</lastmod>` : ""}${e.video ? videoXml : ""}
   </url>`
   )
   .join("\n")}

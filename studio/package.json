@@ -10,7 +10,7 @@
     "deploy": "sanity deploy"
   },
   "dependencies": {
-    "@sanity/vision": "^6.16.0",
+    "@sanity/vision": "^6.20.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "sanity": "^6.16.0",
