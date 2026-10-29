@@ -317,6 +317,22 @@ const attendanceController = {
         .populate("userId", "name email role")
         .lean();
 
+      // The web asks for the Excel report (owner, 29 Oct 2026): themed, with a
+      // summary per member and the selfies in their cells. Plain CSV below stays
+      // only for phone app versions that save the download as attendance.csv.
+      if (req.query.format === "xlsx") {
+        const { attendanceWorkbook, XLSX_TYPE } = require("../utils/exports/attendanceWorkbook");
+        const [org, member] = await Promise.all([
+          Organization.findById(req.user.orgId).select("name").lean(),
+          userId && mongoose.isValidObjectId(userId) ? User.findOne({ _id: userId, orgId: req.user.orgId }).select("name").lean() : null,
+        ]);
+        const buffer = await attendanceWorkbook(records, { from, to, memberName: member?.name, orgName: org?.name });
+        const label = from && to ? `${from}_to_${to}` : "all";
+        res.setHeader("Content-Type", XLSX_TYPE);
+        res.setHeader("Content-Disposition", `attachment; filename="attendance_${label}.xlsx"`);
+        return res.send(buffer);
+      }
+
       // Build CSV
       const fmtTime = (d) => {
         if (!d) return "";
