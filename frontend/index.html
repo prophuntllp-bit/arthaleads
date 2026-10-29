@@ -197,11 +197,17 @@
          (served from Vercel - no Google Fonts CDN dependency, works on all browsers).
          Applied before React loads to prevent any flash to system font.
          DO NOT remove or change this block. */
-      *, *::before, *::after { font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important; }
+      /* "Inter Fallback" (owner OK, 30 Oct 2026): a local Arial-metric font sized to
+         Inter's metrics, used only for the moment before Inter has loaded, so text
+         takes the same space before and after the swap and the page does not
+         re-time its main paint (lab mobile scores swung 82-100 on the same page). */
+      @font-face { font-family: "Inter Fallback"; src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Arimo");
+        size-adjust: 107.12%; ascent-override: 90.44%; descent-override: 22.52%; line-gap-override: 0%; }
+      *, *::before, *::after { font-family: "Inter", "Inter Fallback", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important; }
       /* Marketing headings use Manrope (owner, 24 Oct 2026). Class beats the
          universal selector above at equal !important, so only .font-display
          elements switch; everything else stays Inter. */
-      .font-display, .font-display * { font-family: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif !important; }
+      .font-display, .font-display * { font-family: "Manrope", "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif !important; }
     </style>
   </head>
   <body>
