@@ -1003,13 +1003,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
+              // The same rounded pill as Home's Clock In (30 Oct 2026: this
+              // was a flat square-cornered slab, unlike every other button).
+              child: FilledButton.icon(
                 onPressed: _acting || done
                     ? null
                     : (clockedIn ? _clockOut : _clockIn),
-                style: clockedIn
-                    ? ElevatedButton.styleFrom(backgroundColor: AppColors.danger)
-                    : null,
+                style: FilledButton.styleFrom(
+                  backgroundColor: clockedIn ? AppColors.danger : AppColors.primary,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(0, 50),
+                  shape: const StadiumBorder(),
+                  textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
                 icon: _acting
                     ? const SizedBox(
                         width: 16,
