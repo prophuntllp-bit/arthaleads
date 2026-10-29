@@ -9,12 +9,33 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Check, Sparkles, Phone } from "lucide-react";
 import { FEATURES, FEATURE_GROUPS } from "../data/features";
-import { SitePage, Section, Container, Card } from "../components/site/Site";
-import { PageHero, PhotoVisual, ClosingCta } from "../components/site/Blocks";
+import { SitePage, Section, Container, Card, SectionHeader } from "../components/site/Site";
+import { PageHero, PhotoVisual, FaqSection, ClosingCta } from "../components/site/Blocks";
 import { ScoreCard, CopilotCard, CaptureViz, PipelineViz, ProjectViz, TeamViz, BookingViz, VisitViz } from "../components/site/HomeVisuals";
 import { WhatsAppLogo } from "../components/site/BrandLogos";
 import { Reveal } from "../components/motion/Motion";
 import { useSEO } from "../utils/useSEO";
+import { PLAN_PRICING, formatINR } from "../utils/plan";
+
+// The questions buyers ask about the feature set. Shown on the page and sent to
+// search engines as FAQPage data, so keep the two the same text.
+const FAQS = [
+  ["Which lead sources does Arthaleads bring in automatically?",
+   "Facebook and Instagram lead ads, new WhatsApp chats, website forms (through the WordPress plugin or the API) and each project's QR code come in automatically. Google Ads lead forms come in on Enterprise. Leads from 99acres, MagicBricks and Housing.com are imported from the portal's CSV or Excel export."],
+  ["Does Arthaleads reply to buyers on WhatsApp by itself?",
+   "Yes, on Growth and above. A WhatsApp AI agent replies day and night, asks about budget, need and timeline, shares the brochure and location and can book the site visit. Your team works from one shared inbox and can take over any chat."],
+  ["Is there a mobile app?",
+   "Yes. An Android app is included, so your team can call leads, update follow-ups and see new leads from their phones."],
+  ["Can we move our existing leads in?",
+   "Yes. Import your current leads from a CSV or Excel file. Duplicate phone numbers are skipped, so the same buyer is not added twice."],
+  ["How much does it cost?",
+   `Starter is ${formatINR(PLAN_PRICING.starter.monthly)} and Growth is ${formatINR(PLAN_PRICING.growth.monthly)} per user per month, plus 18% GST, with a five-seat minimum. Enterprise is quoted on team size. Every team can start with a 14-day free trial.`],
+];
+const FAQ_JSONLD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": FAQS.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
+}).replace(/</g, "\\u003c");
 
 /** Coded visuals on a glass panel, stacked. */
 function VizPanel({ children }) {
@@ -147,6 +168,7 @@ export default function Features() {
 
   return (
     <SitePage>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_JSONLD }} />
       <PageHero
         eyebrow={`${FEATURES.length} features, one workspace`}
         title={<>From the first enquiry to the <span className="site-dim">paid invoice</span></>}
@@ -157,6 +179,17 @@ export default function Features() {
         ]}
         trust={["Android app included", "One workspace for the whole team", "14-day free trial"]}
       />
+
+      {/* Short answer first: what search snippets and AI answers quote */}
+      <Section tone="tint">
+        <Container className="grid lg:grid-cols-[0.8fr_1.2fr] gap-8 lg:gap-16">
+          <SectionHeader eyebrow="The short answer" title="What is a real estate CRM?" className="!mb-0" />
+          <Reveal delay={100} className="space-y-4 text-base sm:text-[17px] leading-relaxed">
+            <p className="site-ink font-medium">A real estate CRM keeps every property enquiry in one place, whether it came from an ad, WhatsApp, a portal or your website. It gives each lead an owner, reminds your team when to follow up, and tracks every buyer from the first message through the site visit to the booking.</p>
+            <p>Arthaleads is a real estate CRM built for Indian builders, developers and channel partners. The sections below walk through it in the order your team works.</p>
+          </Reveal>
+        </Container>
+      </Section>
 
       {/* Sticky workflow progress */}
       <div className="features-steps sticky z-30">
@@ -185,6 +218,8 @@ export default function Features() {
       </div>
 
       {FEATURE_GROUPS.map((g, i) => <Workflow key={g.id} group={g} index={i} />)}
+
+      <FaqSection title="Feature questions, answered" items={FAQS} />
 
       <ClosingCta title="See it running" dim="on your own leads."
         body="Book a 30-minute demo and we will set Arthaleads up on your real leads, or start the 14-day free trial and have your team calling the same day." />
