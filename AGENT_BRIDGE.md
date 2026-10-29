@@ -117,6 +117,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-30 IST: APK Attendance Clock In now a centred pill sized to its label (was full card width); checked light + dark. staging ed01dd90, main 673efeb1. Not released.
 - [claude] 2026-10-30 IST: APK Clock In buttons unified (Attendance status card + profile menu) as Home's orange pill; checked on the phone light + dark. staging 56c1ef22, main 1cd5563d. Not released.
 - [claude] 2026-10-30 IST: APK Attendance header: compact 'Add' button, note shortened to 'Shift 09:30 to 19:00 · 15 min grace'; checked on the phone light + dark, menu opens. staging 774a344b, main 40cadb47. Not released.
 - [claude] 2026-10-30 IST: APK Attendance header in the Leads/Follow-ups style (title + shift note, Add entry, menu with Shift settings + Download report, view chips). staging 16411df9, main edffa84d. Not yet seen on the phone (disconnected). Not released.
