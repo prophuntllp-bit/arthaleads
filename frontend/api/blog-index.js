@@ -156,6 +156,11 @@ export default async function handler(req, res) {
         // Swap the /blog page's own Home > Blog trail for this one: one BreadcrumbList per page.
         html = html.replace(/\s*<script type="application\/ld\+json">\{"@context":"https:\/\/schema\.org","@type":"BreadcrumbList"[\s\S]*?<\/script>/, "");
         html = html.replace("</head>", () => `    <script type="application/ld+json" id="topic-breadcrumb-jsonld">${JSON.stringify(bc).replace(/</g, "\\u003c")}</script>\n  </head>`);
+        // The topic page is its own collection, not /blog's.
+        const page = { "@context": "https://schema.org", "@type": "CollectionPage", "@id": `${url}#webpage`, url,
+          name: topic.name, inLanguage: "en-IN", isPartOf: { "@id": `${SITE}/#website` } };
+        html = html.replace(/<script type="application\/ld\+json" id="page-jsonld">[\s\S]*?<\/script>/,
+          () => `<script type="application/ld+json" id="page-jsonld">${JSON.stringify(page).replace(/</g, "\\u003c")}</script>`);
         html = fill(html, "header", "blog-head", headHtml(topic));
       }
       html = html.replace(/(<dl id="blog-stats"[^>]*>[\s\S]*?<dd class="font-display[^"]*">)\d+(<\/dd>[\s\S]*?<dd class="font-display[^"]*">)\d+(<\/dd>)/,

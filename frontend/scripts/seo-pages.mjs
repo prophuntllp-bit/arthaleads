@@ -83,6 +83,19 @@ function breadcrumbLd(path, title) {
   return `    <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>\n`;
 }
 
+// What kind of page a URL is, for search engines (WebPage subtypes). Linked to the
+// site and the company by @id so they read as one graph. api/blog-index.js swaps the
+// /blog one (id="page-jsonld") for the topic page's own on /blog/category/<slug>.
+const PAGE_TYPE = { "/about-us": "AboutPage", "/contact": "ContactPage", "/book-demo": "ContactPage", "/blog": "CollectionPage" };
+function pageLd(path, title, canonical) {
+  const type = PAGE_TYPE[path];
+  if (!type) return "";
+  const ld = { "@context": "https://schema.org", "@type": type, "@id": `${canonical}#webpage`, url: canonical,
+    name: String(title).split(/ \| /)[0].trim(), inLanguage: "en-IN", isPartOf: { "@id": `${SITE}/#website` },
+    ...(type === "AboutPage" ? { about: { "@id": `${SITE}/#organization` } } : {}) };
+  return `    <script type="application/ld+json" id="page-jsonld">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>\n`;
+}
+
 function render({ title, description, canonical, robots, ownCrumbs }) {
   let html = base
     .replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(title)}</title>`)
@@ -101,6 +114,7 @@ function render({ title, description, canonical, robots, ownCrumbs }) {
   // The blog and contact form talk to the API, blog images come from Sanity's CDN.
   const path = new URL(canonical).pathname.replace(/\/+$/, "");
   if (path && !ownCrumbs && !/noindex/.test(robots || "")) html = html.replace("</head>", `${breadcrumbLd(path, title)}  </head>`);
+  if (!/noindex/.test(robots || "")) html = html.replace("</head>", () => `${pageLd(path, title, canonical)}  </head>`);
   html = html.replace("</head>", `    <link rel="preconnect" href="https://api.arthaleads.com" crossorigin />\n    <link rel="preconnect" href="https://cdn.sanity.io" />\n  </head>`);
   return html;
 }
