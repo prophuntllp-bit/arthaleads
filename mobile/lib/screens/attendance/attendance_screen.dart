@@ -752,79 +752,87 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     return SectionSkeleton(loading: _loading, child: Column(
       children: [
-        if (_shiftSummary != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Text(
-              _shiftSummary!,
-              style: Theme.of(context).textTheme.bodySmall,
+        // Same header as Leads and Follow-ups (30 Oct 2026, owner): title
+        // and a one-line note, the main action and a menu on the right, the
+        // views as chips underneath.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+          child: Row(children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Attendance',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                Text(_shiftSummary ?? 'Clock-ins, hours and selfies',
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall),
+              ]),
             ),
-          ),
-        if (auth.isAdmin)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      // "Team Today" / "All Records" do not fit on narrower
-                      // phones (or at a larger system font scale) and get
-                      // clipped mid-word. Shorten them once space is tight
-                      // instead of letting the segments misalign.
-                      final tight = constraints.maxWidth < 320;
-                      return SegmentedButton<String>(
-                        // The selected-segment check icon costs ~24px per
-                        // segment — with three segments that alone is enough
-                        // to push the labels out of the bar.
-                        showSelectedIcon: false,
-                        style: SegmentedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        segments: [
-                          const ButtonSegment(
-                            value: 'my',
-                            label: Text('My', maxLines: 1, overflow: TextOverflow.ellipsis),
-                          ),
-                          ButtonSegment(
-                            value: 'team',
-                            label: Text(tight ? 'Team' : 'Team Today',
-                                maxLines: 1, overflow: TextOverflow.ellipsis),
-                          ),
-                          ButtonSegment(
-                            value: 'records',
-                            label: Text(tight ? 'Records' : 'All Records',
-                                maxLines: 1, overflow: TextOverflow.ellipsis),
-                          ),
-                        ],
-                        selected: {_view},
-                        onSelectionChanged: (sel) {
-                          setState(() => _view = sel.first);
-                          if (_view == 'team' && _team.isEmpty) _loadTeam();
-                          if (_view == 'records') {
-                            if (_team.isEmpty) _loadTeam();
-                            _load();
-                          } else if (_view == 'my') {
-                            _load();
-                          }
-                        },
-                      );
-                    },
+            if (auth.isAdmin) ...[
+              const SizedBox(width: 8),
+              GradientButton(
+                onPressed: _addAttendanceEntry,
+                icon: Icons.add_rounded,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: const Text('Add entry'),
+              ),
+              const SizedBox(width: 6),
+              PopupMenuButton<String>(
+                tooltip: 'Shift settings and report',
+                onSelected: (v) {
+                  switch (v) {
+                    case 'shift':
+                      _editShiftSettings();
+                    case 'report':
+                      _exportCsv();
+                  }
+                },
+                itemBuilder: (_) => [
+                  // Only admins can save shift settings (PATCH is admin-only).
+                  if (auth.isWaAdmin)
+                    const PopupMenuItem(
+                      value: 'shift',
+                      child: ListTile(leading: Icon(Icons.schedule_rounded), title: Text('Shift settings'), dense: true),
+                    ),
+                  const PopupMenuItem(
+                    value: 'report',
+                    child: ListTile(leading: Icon(Icons.table_chart_outlined), title: Text('Download report'), dense: true),
                   ),
+                ],
+                child: IgnorePointer(
+                  child: IconButton.outlined(onPressed: () {}, icon: const Icon(Icons.more_horiz_rounded, size: 20)),
                 ),
-                IconButton(
-                  tooltip: 'Add attendance entry',
-                  icon: const Icon(Icons.add_circle_outline_rounded),
-                  onPressed: _addAttendanceEntry,
-                ),
-                // Only admins can save shift settings (PATCH is admin-only).
-                if (auth.isWaAdmin)
-                  IconButton(
-                    tooltip: 'Shift settings',
-                    icon: const Icon(Icons.settings_outlined),
-                    onPressed: _editShiftSettings,
+              ),
+            ],
+          ]),
+        ),
+        if (auth.isAdmin)
+          SizedBox(
+            height: 44,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              children: [
+                for (final (value, label) in const [('my', 'My'), ('team', 'Team today'), ('records', 'All records')])
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: ChoiceChip(
+                      selected: _view == value,
+                      showCheckmark: false,
+                      visualDensity: VisualDensity.compact,
+                      label: Text(label),
+                      onSelected: (_) {
+                        if (_view == value) return;
+                        setState(() => _view = value);
+                        if (_view == 'team' && _team.isEmpty) _loadTeam();
+                        if (_view == 'records') {
+                          if (_team.isEmpty) _loadTeam();
+                          _load();
+                        } else if (_view == 'my') {
+                          _load();
+                        }
+                      },
+                    ),
                   ),
               ],
             ),
