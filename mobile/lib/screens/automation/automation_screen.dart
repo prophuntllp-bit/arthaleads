@@ -15,13 +15,19 @@ import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 import 'automation_form.dart';
 import 'connection_card.dart';
-import 'routing_section.dart';
-import 'telephony_integration_screen.dart';
+import 'conversion_tracking_screen.dart';
+import 'portals_screen.dart';
+import 'routing_screen.dart';
+import 'telephony_hub_screen.dart';
+import 'websites_screen.dart';
+import '../../widgets/glass.dart';
+import '../../widgets/integration_kit.dart';
 import 'vistrow_autocall_screen.dart';
 import '../inbox/wa_settings_page.dart';
-import '../../widgets/adaptive_grid.dart';
 
-const _serverBase = 'https://api.arthaleads.com';
+// Staging builds show staging's own addresses (29 Oct 2026: this was fixed
+// to the live server, so the staging app's connect links went to production).
+String get _serverBase => ApiClient.serverBase;
 
 /// Automation — GET/POST/PATCH/DELETE /automations, plus Lead Routing Rules.
 /// Includes generic sources, WordPress/Google/Vistrow token managers, routing
@@ -43,11 +49,28 @@ class _AutomationScreenState extends State<AutomationScreen> {
   // 3rd-party bot's webhook. Only a live status badge is fetched here; the
   // actual connect/disconnect form is not duplicated on this screen.
   bool? _waConnected;
+  // Status for the telephony, portal, routing and conversion cards (29 Oct
+  // 2026, as the web's Integrations page). Each call may be refused by plan or
+  // role; the card then just shows "Not set up yet".
+  final Map<String, dynamic> _extra = {};
+  String _group = 'All';
+
+  void _loadExtra() {
+    void put(String key, String path) => _api.dio.get(path).then((r) {
+          if (mounted) setState(() => _extra[key] = r.data);
+        }).catchError((_) {});
+    put('telephony', '/plivo/settings');
+    put('enablex', '/calls/settings');
+    put('portals', '/portal-leads/settings');
+    put('capi', '/meta-conversions');
+    put('rules', '/routing-rules');
+  }
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadExtra();
     _api.dio.get('/whatsapp/status').then((r) {
       if (mounted) setState(() => _waConnected = r.data['connected'] == true);
     }).catchError((_) {
@@ -1476,150 +1499,10 @@ class _AutomationScreenState extends State<AutomationScreen> {
     );
   }
 
-  Widget _statCard(String label, int value, String subtitle, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppTheme.of(context).surfaceSolid,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.of(context).border),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.5,
-              color: AppTheme.of(context).textSoft,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '$value',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppTheme.of(context).textSoft,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // Google Ads, Vistrow Voice and the Custom webhook / API are Enterprise.
   bool get _enterpriseOk {
     final a = context.read<AuthState>();
     return a.role == 'super_admin' || canAccess(a.org, 'enterprise');
-  }
-
-  Widget _sourceCard({
-    required Widget icon,
-    required String title,
-    required String description,
-    required VoidCallback onTap,
-    String? badge,
-    bool locked = false,
-  }) {
-    return InkWell(
-      onTap: locked
-          ? () => ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(content: Text('$title is part of the Enterprise plan.')))
-          : onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppTheme.of(context).surfaceSolid,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppTheme.of(context).border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: .08),
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                  child: icon,
-                ),
-                const Spacer(),
-                if (locked)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: .12),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.lock_rounded, size: 10, color: AppColors.primary),
-                        SizedBox(width: 3),
-                        Text('Enterprise',
-                            style: TextStyle(fontSize: 9, color: AppColors.primary, fontWeight: FontWeight.w700)),
-                      ],
-                    ),
-                  )
-                else if (badge != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.info.withValues(alpha: .1),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      badge,
-                      style: const TextStyle(
-                        fontSize: 9,
-                        color: AppColors.info,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              description,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                color: AppTheme.of(context).textSoft,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _connectionCard(Map<String, dynamic> a) {
@@ -1660,271 +1543,213 @@ class _AutomationScreenState extends State<AutomationScreen> {
     );
   }
 
+  void _push(Widget screen) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+    if (!mounted) return;
+    _load();
+    _loadExtra();
+  }
+
+  void _locked(String plan) => ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text('This is part of the $plan plan.')));
+
+  List<Map<String, dynamic>> _byPlatform(String p) => _automations.where((a) => a['platform'] == p).toList();
+  int _liveOf(String p) => _byPlatform(p).where((a) => a['status'] == 'connected' && a['isActive'] != false).length;
+  String _footerFor(String p, String noun) {
+    final list = _byPlatform(p);
+    if (list.isEmpty) return 'Not set up yet';
+    final lasts = [for (final a in list) if (a['lastSyncAt'] != null) '${a['lastSyncAt']}']..sort();
+    return '${list.length} $noun${list.length == 1 ? '' : 's'}${lasts.isEmpty ? '' : ' · last lead ${agoText(lasts.last)}'}';
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: AppSpinner(size: 32));
-    final connected = _automations
-        .where(
-          (item) => item['isActive'] != false && item['status'] == 'connected',
-        )
-        .length;
-    final facebook = _automations
-        .where((item) => item['platform'] == 'Facebook')
-        .length;
-    final other = _automations.length - facebook;
+    final auth = context.read<AuthState>();
+    final growthOk = planAllows(auth, 'growth');
+    final isAdmin = const ['admin', 'super_admin'].contains(auth.role);
+
+    final tel = (_extra['telephony'] as Map?) ?? const {};
+    final telProvider = tel['provider'] as String?;
+    final plivo = (tel['plivo'] as Map?) ?? const {};
+    final telReady = telProvider == 'none'
+        ? false
+        : telProvider == 'plivo'
+            ? plivo['hasAuthToken'] == true && '${plivo['number'] ?? ''}'.isNotEmpty
+            : (_extra['enablex'] as Map?)?['connected'] == true;
+    final portals = [for (final p in ((_extra['portals'] as Map?)?['portals'] as List?) ?? const []) if (p is Map && p['lastLeadAt'] != null) p];
+    final portalsLast = ([for (final p in portals) '${p['lastLeadAt']}']..sort()).lastOrNull;
+    final housingOn = (((_extra['portals'] as Map?)?['housing'] as Map?)?['enabled']) == true;
+    final rules = _extra['rules'] is Map ? ((_extra['rules'] as Map)['rules'] as List? ?? const []) : (_extra['rules'] as List? ?? const []);
+    final rulesActive = rules.where((r) => r is Map && r['isActive'] != false).length;
+    final capi = _extra['capi'] as Map?;
+
+    final sections = <_Section>[
+      _Section('Lead sources', 'Where your leads come from. Each one drops new leads straight into Leads.', [
+        _Card(
+          logo: _tile(const FaIcon(FontAwesomeIcons.facebookF, color: Colors.white, size: 20), const Color(0xFF1877F2)),
+          name: 'Facebook Lead Ads',
+          category: 'Facebook & Instagram',
+          description: 'Every Instant Form lead from your Facebook and Instagram ads, in one click. No technical setup.',
+          on: _liveOf('Facebook') > 0,
+          footer: _footerFor('Facebook', 'page'),
+          onOpen: _openFacebookWizard,
+        ),
+        _Card(
+          logo: _tile(const FaIcon(FontAwesomeIcons.whatsapp, color: AppColors.whatsapp, size: 22), AppColors.whatsapp.withValues(alpha: 0.12)),
+          name: 'WhatsApp Business',
+          category: 'Messaging',
+          description: 'Your own number for WhatsApp chats, templates, campaigns and the AI agent. Chats become leads.',
+          on: _waConnected == true,
+          footer: _waConnected == true ? 'Number connected' : 'Not set up yet',
+          onOpen: () => _push(Scaffold(appBar: AppBar(title: const Text('WhatsApp Business')), body: const WaSettingsPage())),
+        ),
+        _Card(
+          logo: _tile(const FaIcon(FontAwesomeIcons.wordpress, color: Colors.white, size: 21), const Color(0xFF21759B)),
+          name: 'Website forms',
+          category: 'Lead sources',
+          description: 'Capture enquiries from WordPress contact forms with our plugin, or any site form.',
+          on: _liveOf('Website Form') > 0,
+          footer: _footerFor('Website Form', 'site'),
+          onOpen: () => _push(const WebsitesScreen()),
+        ),
+        _Card(
+          logo: const BrandLogo('99acres', size: 44),
+          name: 'Property portals',
+          category: '99acres · Housing.com · MagicBricks',
+          description: 'Portal enquiries arrive in Leads by themselves, tagged with the portal and project.',
+          on: portals.isNotEmpty || housingOn,
+          footer: portals.isNotEmpty ? '${portals.length} of 3 sending · last ${agoText(portalsLast)}' : 'Not set up yet',
+          lock: growthOk ? null : 'Growth',
+          onOpen: () => growthOk ? _push(const PortalsScreen()) : _locked('Growth'),
+        ),
+        _Card(
+          logo: _tile(const FaIcon(FontAwesomeIcons.google, color: Color(0xFFEF4444), size: 20), Colors.white),
+          name: 'Google Ads lead forms',
+          category: 'Lead sources',
+          description: 'Leads from Google Ads lead form assets, sent in as they are submitted.',
+          on: _liveOf('Google') > 0,
+          footer: _footerFor('Google', 'connection'),
+          lock: _enterpriseOk ? null : 'Enterprise',
+          onOpen: () => _enterpriseOk ? _openGoogleWizard() : _locked('Enterprise'),
+        ),
+        _Card(
+          logo: _tile(const Icon(Icons.link_rounded, color: AppColors.primary), AppColors.primary.withValues(alpha: 0.10)),
+          name: 'Custom / API',
+          category: 'Developer',
+          description: 'Any partner, broker or vendor that can post a lead to a link: send it straight into your CRM.',
+          on: _liveOf('Custom') > 0,
+          footer: _footerFor('Custom', 'connection'),
+          lock: _enterpriseOk ? null : 'Enterprise',
+          onOpen: () => _enterpriseOk ? _openForm(initialPlatform: 'Custom') : _locked('Enterprise'),
+        ),
+      ]),
+      _Section('Calling', 'Click-to-call, recordings, AI call summaries and AI calling.', [
+        _Card(
+          logo: telProvider == 'plivo' || telProvider == 'enablex'
+              ? BrandLogo(telProvider!, size: 44)
+              : _tile(const Icon(Icons.phone_in_talk_rounded, color: AppColors.primary), AppColors.primary.withValues(alpha: 0.10)),
+          name: 'Telephony',
+          category: 'Calling',
+          description: 'Call leads from the CRM and the app; every call is logged, recorded and summarised.',
+          on: telReady,
+          footer: telProvider == 'none'
+              ? 'Calling switched off'
+              : telProvider != null
+                  ? 'Calls through ${telProvider == 'plivo' ? 'Plivo' : 'EnableX'}'
+                  : 'Not set up yet',
+          onOpen: () => _push(const TelephonyHubScreen()),
+        ),
+        _Card(
+          logo: _tile(const Icon(Icons.mic_none_rounded, color: Color(0xFF8B5CF6)), const Color(0xFF8B5CF6).withValues(alpha: 0.10)),
+          name: 'Vistrow Voice',
+          category: 'AI calling',
+          description: 'AI calls your new leads in seconds and sends back qualified leads with the full transcript.',
+          on: _liveOf('Vistrow Voice') > 0,
+          footer: _liveOf('Vistrow Voice') > 0 ? 'Connected' : 'Not set up yet',
+          lock: _enterpriseOk ? null : 'Enterprise',
+          onOpen: () => _enterpriseOk ? _openTokenManager('voice') : _locked('Enterprise'),
+        ),
+        // Which new leads Vistrow's AI agents phone (admins; the server
+        // allows only them).
+        if (isAdmin)
+          _Card(
+            logo: _tile(const Icon(Icons.phone_forwarded_rounded, color: Color(0xFF8B5CF6)), const Color(0xFF8B5CF6).withValues(alpha: 0.10)),
+            name: 'Vistrow auto-call',
+            category: 'AI calling',
+            description: 'Let Vistrow AI agents call new leads within moments of arriving.',
+            on: null,
+            footer: 'Sources, hours and agents',
+            lock: _enterpriseOk ? null : 'Enterprise',
+            onOpen: () => _enterpriseOk ? _push(const VistrowAutoCallScreen()) : _locked('Enterprise'),
+          ),
+      ]),
+      _Section('Ads and routing', 'Send leads to the right person, and tell Meta which leads turn into buyers.', [
+        _Card(
+          logo: _tile(const Icon(Icons.alt_route_rounded, color: AppColors.primary), AppColors.primary.withValues(alpha: 0.10)),
+          name: 'Lead routing rules',
+          category: 'Routing',
+          description: 'Leads from a chosen campaign, WhatsApp ad or website page go straight to a team member or project.',
+          on: rulesActive > 0,
+          status: rulesActive > 0 ? '$rulesActive active' : 'No rules',
+          footer: rulesActive > 0 ? 'Everything else follows the rotation' : 'Not set up yet',
+          lock: growthOk ? null : 'Growth',
+          onOpen: () => growthOk ? _push(const RoutingScreen()) : _locked('Growth'),
+        ),
+        _Card(
+          logo: const BrandLogo('meta', size: 44),
+          name: 'Meta conversion tracking',
+          category: 'Ads',
+          description: 'Tells Meta which ad leads become serious buyers, so your ads find more people like them.',
+          on: capi?['enabled'] == true,
+          status: capi?['enabled'] == true ? 'On' : 'Off',
+          footer: capi != null ? '${(capi['stats'] as Map?)?['sent'] ?? 0} events sent' : 'Not set up yet',
+          lock: growthOk ? null : 'Growth',
+          onOpen: () => growthOk ? _push(const ConversionTrackingScreen()) : _locked('Growth'),
+        ),
+      ]),
+    ];
+    final all = [for (final sec in sections) ...sec.cards];
+    final live = all.where((c) => c.lock == null && c.on == true).length;
+    final t = AppTheme.of(context);
+    final tabs = ['All', for (final sec in sections) sec.title, if (_automations.isNotEmpty) 'Your connections'];
+    if (!tabs.contains(_group)) _group = 'All';
 
     return RefreshIndicator(
       color: AppColors.primary,
-      onRefresh: _load,
+      onRefresh: () async {
+        _loadExtra();
+        await _load();
+      },
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.of(context).surfaceSolid,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: AppTheme.of(context).border),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: .08),
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'LEAD SOURCES',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 2,
-                    color: AppTheme.of(context).textSoft,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Connect Your Accounts',
-                  style: TextStyle(
-                    fontSize: 29,
-                    height: 1.05,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Connect Facebook Lead Ads, Google, WhatsApp, and more. Leads flow directly into your CRM automatically.',
-                  style: TextStyle(
-                    height: 1.4,
-                    color: AppTheme.of(context).textSoft,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                FilledButton.icon(
-                  onPressed: _openFacebookWizard,
-                  icon: const FaIcon(FontAwesomeIcons.facebookF, size: 17),
-                  label: const Text('Connect Facebook'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _openForm(initialPlatform: 'Custom'),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Other Source'),
-                ),
-              ],
-            ),
-          ),
+          Text('Integrations', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: t.text)),
+          const SizedBox(height: 4),
+          Text('Connect where your leads come from, how you call them, and how your ads learn from them.',
+              style: TextStyle(fontSize: 12.5, color: t.textSoft)),
           const SizedBox(height: 14),
-          AdaptiveGrid(
- columns: 2,
- spacing: 10,
- children: [
-              _statCard(
-                'Connected',
-                connected,
-                'Live channels',
-                AppColors.success,
-              ),
-              _statCard(
-                'Total Sources',
-                _automations.length,
-                'All connections',
-                Theme.of(context).colorScheme.onSurface,
-              ),
-              _statCard('Facebook', facebook, 'Meta Lead Ads', AppColors.info),
-              _statCard(
-                'Other',
-                other,
-                'Google · WhatsApp · Web',
-                Theme.of(context).colorScheme.onSurface,
-              ),
+          MiniStatGrid([
+            MiniStat('Connected', '$live'),
+            MiniStat('Available', '${all.length}'),
+            MiniStat('Your connections', '${_automations.length}'),
+          ]),
+          const SizedBox(height: 14),
+          ChipTabs(tabs: tabs, value: _group, onChanged: (v) => setState(() => _group = v)),
+          const SizedBox(height: 12),
+          for (final sec in sections)
+            if (_group == 'All' || _group == sec.title) ...[
+              Text(sec.title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: t.text)),
+              const SizedBox(height: 2),
+              Text(sec.note, style: TextStyle(fontSize: 12, color: t.textSoft)),
+              const SizedBox(height: 10),
+              for (final c in sec.cards) ...[_integrationCard(c), const SizedBox(height: 10)],
+              const SizedBox(height: 8),
             ],
-          ),
-          const SizedBox(height: 22),
-          const Text(
-            'Quick connect',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 10),
-          AdaptiveGrid(
- columns: 2,
- spacing: 10,
- children: [
-              _sourceCard(
-                icon: const FaIcon(
-                  FontAwesomeIcons.facebookF,
-                  color: Color(0xFF1877F2),
-                  size: 24,
-                ),
-                title: 'Facebook',
-                description: 'Lead Ads · One click',
-                badge: 'Popular',
-                onTap: _openFacebookWizard,
-              ),
-              _sourceCard(
-                icon: const FaIcon(
-                  FontAwesomeIcons.whatsapp,
-                  color: AppColors.whatsapp,
-                  size: 25,
-                ),
-                title: 'WhatsApp Business',
-                description: _waConnected == true
-                    ? 'Connected · manage provider & profile'
-                    : 'Connect your number for WhatsApp chats, templates & the AI agent',
-                badge: _waConnected == true ? 'Connected' : null,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => Scaffold(
-                      appBar: AppBar(title: const Text('WhatsApp Business')),
-                      body: const WaSettingsPage(),
-                    ),
-                  ),
-                ),
-              ),
-              _sourceCard(
-                icon: const FaIcon(
-                  FontAwesomeIcons.google,
-                  color: Color(0xFFEF4444),
-                  size: 23,
-                ),
-                title: 'Google',
-                description:
-                    'Google Ads Lead Form — sign in or use a webhook URL and key',
-                locked: !_enterpriseOk,
-                onTap: _openGoogleWizard,
-              ),
-              _sourceCard(
-                icon: const FaIcon(
-                  FontAwesomeIcons.wordpress,
-                  color: Color(0xFF21759B),
-                  size: 25,
-                ),
-                title: 'WordPress / Website Forms',
-                description:
-                    'Auto-capture leads from any WordPress contact form',
-                onTap: () => _openTokenManager('website'),
-              ),
-              _sourceCard(
-                icon: const Icon(
-                  Icons.link_rounded,
-                  color: AppColors.primary,
-                  size: 27,
-                ),
-                title: 'Custom',
-                description:
-                    'Connect any other partner, broker, or vendor lead source',
-                locked: !_enterpriseOk,
-                onTap: () => _openForm(initialPlatform: 'Custom'),
-              ),
-              _sourceCard(
-                icon: const Icon(
-                  Icons.mic_none_rounded,
-                  color: Color(0xFF8B5CF6),
-                  size: 27,
-                ),
-                title: 'Vistrow Voice',
-                description:
-                    'Qualified leads from the Vistrow Voice AI calling platform',
-                locked: !_enterpriseOk,
-                onTap: () => _openTokenManager('voice'),
-              ),
-              // Which new leads Vistrow's AI agents phone (admins; the
-              // server allows only them).
-              if (const ['admin', 'super_admin'].contains(context.read<AuthState>().role))
-                _sourceCard(
-                  icon: const Icon(
-                    Icons.phone_forwarded_rounded,
-                    color: Color(0xFF8B5CF6),
-                    size: 26,
-                  ),
-                  title: 'Vistrow auto-call',
-                  description:
-                      'Let Vistrow AI agents call new leads within moments of arriving',
-                  locked: !_enterpriseOk,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const VistrowAutoCallScreen(),
-                    ),
-                  ),
-                ),
-              _sourceCard(
-                icon: const Icon(
-                  Icons.phone_in_talk_outlined,
-                  color: AppColors.success,
-                  size: 26,
-                ),
-                title: 'Telephony',
-                description:
-                    'Connect EnableX so agents can call leads straight from the CRM',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const TelephonyIntegrationScreen(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          if (_automations.isEmpty)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 30,
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'No connections yet',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      'Connect Facebook Lead Ads in one click — no technical setup needed.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: AppTheme.of(context).textSoft),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: _openFacebookWizard,
-                      icon: const FaIcon(FontAwesomeIcons.facebookF, size: 16),
-                      label: const Text('Connect Facebook'),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else ...[
-            Text(
-              'Your connections (${_automations.length})',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-            ),
+          if ((_group == 'All' || _group == 'Your connections') && _automations.isNotEmpty) ...[
+            Text('Your connections (${_automations.length})',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: t.text)),
             const SizedBox(height: 8),
             for (final g in groupConnections(_automations)) ...[
               ConnectionGroupHeader(g),
@@ -1932,16 +1757,98 @@ class _AutomationScreenState extends State<AutomationScreen> {
               const SizedBox(height: 8),
             ],
           ],
-          // Routing rules are Growth on the server (24 Oct 2026).
-          if (planAllows(context.read<AuthState>(), 'growth')) ...[
-            const SizedBox(height: 14),
-            const LeadRoutingSection(),
-          ],
         ],
       ),
     );
   }
 
+  Widget _tile(Widget child, Color bg) => Container(
+        width: 44,
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: AppTheme.of(context).border),
+        ),
+        child: child,
+      );
+
+  Widget _integrationCard(_Card c) {
+    final t = AppTheme.of(context);
+    final locked = c.lock != null;
+    return InkWell(
+      onTap: c.onOpen,
+      borderRadius: BorderRadius.circular(18),
+      child: SoftSurface(
+        radius: 18,
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            c.logo,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(c.name, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: t.text)),
+                Text(c.category, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: t.textSoft)),
+              ]),
+            ),
+            if (locked)
+              StatusPill(c.lock!, color: AppColors.primary)
+            else if (c.on != null)
+              c.on! ? StatusPill.on(c.status ?? 'Connected') : StatusPill.off(c.status ?? 'Not connected'),
+          ]),
+          const SizedBox(height: 8),
+          Text(c.description, style: TextStyle(fontSize: 12.5, color: t.textSoft)),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(
+              child: Text(locked ? 'Part of the ${c.lock} plan' : c.footer,
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t.text)),
+            ),
+            Text(locked ? 'See plans' : (c.on == true ? 'Manage' : 'Set up'),
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.primary)),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.primary, size: 18),
+          ]),
+        ]),
+      ),
+    );
+  }
+}
+
+class _Section {
+  final String title;
+  final String note;
+  final List<_Card> cards;
+  const _Section(this.title, this.note, this.cards);
+}
+
+class _Card {
+  final Widget logo;
+  final String name;
+  final String category;
+  final String description;
+
+  /// Connected or not; null for a card with no status (a settings screen).
+  final bool? on;
+  final String? status;
+  final String footer;
+
+  /// The plan that unlocks it, when the company's plan doesn't.
+  final String? lock;
+  final VoidCallback onOpen;
+  const _Card({
+    required this.logo,
+    required this.name,
+    required this.category,
+    required this.description,
+    required this.on,
+    this.status,
+    required this.footer,
+    this.lock,
+    required this.onOpen,
+  });
 }
 
 /// Facebook's Graph API can't tell us a Lead Form's own name with the

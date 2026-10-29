@@ -22,6 +22,10 @@ class ApiClient {
   /// (android/app/build.gradle.kts).
   static bool get isStaging => _baseUrl.contains('api-staging');
 
+  /// The server's own address without /api ("https://api.arthaleads.com"),
+  /// for webhook URLs and connect links, so a staging build shows staging's.
+  static String get serverBase => _baseUrl.replaceFirst(RegExp(r'/api/?$'), '');
+
   String? _token;
   bool authInProgress = false;
 
