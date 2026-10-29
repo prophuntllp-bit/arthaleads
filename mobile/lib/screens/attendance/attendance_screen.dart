@@ -159,9 +159,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final start = s['shiftStartTime'] as String? ?? '09:30';
     final end = s['shiftEndTime'] as String? ?? '19:00';
     final buffer = s['bufferMinutes'] ?? 15;
-    final half = _fmtMinutes((s['halfDayMinutes'] as num?)?.toInt() ?? 240);
-    final full = _fmtMinutes((s['fullDayMinutes'] as num?)?.toInt() ?? 480);
-    return 'Shift: $start - $end · ${buffer}m grace · $half half · $full full';
+    // Short enough for the header's one line; half and full day lengths are
+    // in Shift settings.
+    return 'Shift $start to $end · $buffer min grace';
   }
 
   /// The record's day ("2026-07-25") as "Sat, 25 Jul 2026".
@@ -770,11 +770,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             ),
             if (auth.isAdmin) ...[
               const SizedBox(width: 8),
+              // Compact, so the title and shift note keep the room.
               GradientButton(
                 onPressed: _addAttendanceEntry,
                 icon: Icons.add_rounded,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                child: const Text('Add entry'),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: const Text('Add'),
               ),
               const SizedBox(width: 6),
               PopupMenuButton<String>(
