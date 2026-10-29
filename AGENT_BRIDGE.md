@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+- [claude] 2026-10-29 IST: Google sign-in now uses the Google Cloud project 'Arthaleads' (arhtalead@gmail.com), client 'ArthaLeads Web' 873987593442-r22ld76csqe0rq3sbonnp31nk70gb2kf, on staging and live. Vercel VITE_GOOGLE_CLIENT_ID: Production+Development and Preview·staging = new client; old PropCRM all-environments entry deleted (old client still exists in PropCRM, retire later). Phone app unaffected (Firebase arthaleads-a77fe)
 - [claude] 2026-10-29 IST: SEO audit fixes LIVE 0af461a4 (staging a9bffa93): topic canonical from URL, h1 labels, TOC entity decoding, GSC-matched titles (Leadrat/Kylas/SellDo/About//blog). Audit in outputs/www.arthaleads.com-audit/
 - [claude] 2026-10-29 IST: LIVE d21c8eff (main ea12b5e4, d5e140bd, 98a01da0, d21c8eff): attendance Excel report on the web, checked live (2 sheets, 23 selfies + logo embedded). Phone app still gets CSV until the APK switches to ?format=xlsx
 - [claude] 2026-10-29 IST: Pushing live: attendance report as themed Excel for the web (?format=xlsx): Summary per member, newest-first records, IST times, pills, map links, selfies embedded (112 px, up to 1000 records) with links to the full photo; CSV kept for older phone app builds. Staging fc0286e6, 6989d4cb, 1bfa1897, 2d95e597. APK session: switch the app to ?format=xlsx + attendance.xlsx
