@@ -1066,6 +1066,7 @@ function GoogleWizard({ open, onClose, onChanged }) {
         name: pendingName.trim(),
         customerId: pendingCustomerId,
         customerName: chosen?.name || pendingCustomerId,
+        loginCustomerId: chosen?.loginCustomerId || "",
         accessToken: pendingOAuth.accessToken,
         refreshToken: pendingOAuth.refreshToken,
       });
@@ -1141,7 +1142,10 @@ function GoogleWizard({ open, onClose, onChanged }) {
                 <CustomSelect
                   value={pendingCustomerId}
                   onChange={setPendingCustomerId}
-                  options={pendingOAuth.customers.map((c) => ({ value: c.id, label: c.name !== c.id ? `${c.name} (${c.id})` : c.id }))}
+                  options={pendingOAuth.customers.map((c) => ({
+                    value: c.id,
+                    label: `${c.name !== c.id ? `${c.name} (${c.id})` : c.id}${c.managerName ? `, via ${c.managerName}` : ""}`,
+                  }))}
                   style={{ width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 }}
                 />
               </div>
@@ -1187,7 +1191,7 @@ function GoogleWizard({ open, onClose, onChanged }) {
                 {oauthConnecting ? "Waiting for Google…" : "Sign in with Google"}
               </button>
               <p className="text-xs text-app-soft text-center -mt-2">
-                Requires a Google Ads Developer Token on the account — ask your admin if this isn't set up yet.
+                Use the Google login that has your ad account. A manager account login works too: you then pick the ad account under it.
               </p>
 
               <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--app-border)" }}>
@@ -1201,7 +1205,7 @@ function GoogleWizard({ open, onClose, onChanged }) {
                 </button>
                 {showManual && (
                   <div className="px-4 py-4 space-y-4" style={{ borderTop: "1px solid var(--app-border)" }}>
-                    <p className="text-xs text-app-soft">No sign-in or Developer Token needed — Google pushes leads to a URL you paste into the Lead Form extension.</p>
+                    <p className="text-xs text-app-soft">No sign-in needed. Google sends each lead to a URL you paste into your lead form.</p>
 
                     <button
                       type="button"

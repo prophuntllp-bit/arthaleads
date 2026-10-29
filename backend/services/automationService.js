@@ -25,7 +25,6 @@ const TOKEN_INGEST_WEBHOOK_PATH = {
 const TOKEN_INGEST_PLATFORMS = Object.keys(TOKEN_INGEST_WEBHOOK_PATH);
 
 const META_GRAPH_VERSION = "v23.0";
-const GOOGLE_ADS_API_VERSION = "v17";
 
 const DEFAULTS = {
   Facebook: {
@@ -629,9 +628,9 @@ const automationService = {
   // ── Google Ads OAuth ─────────────────────────────────────────────────────────
   // "Sign in with Google" -> Ads API polling, as an alternative to the manual
   // webhook (URL+Key pasted into Google Ads' UI). Requires the org to have set
-  // up a Google Cloud OAuth Client and been granted a Google Ads Developer
-  // Token — both are external approvals only the account owner can request;
-  // see GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_ADS_DEVELOPER_TOKEN.
+  // up a Google Cloud OAuth Client whose project has Google Ads API access
+  // (Explorer or higher; developer tokens were retired in Sep 2026);
+  // see GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET.
   createGoogleState({ userId, mobile = false, origin = "" }) {
     return jwt.sign(
       { userId, mobile, origin, type: "google_oauth" },
@@ -717,49 +716,14 @@ const automationService = {
     return json.access_token;
   },
 
-  // Lists the Ads accounts (customer IDs) reachable from this Google login,
-  // then best-effort resolves each one's descriptive name via a GAQL query.
-  // A customer that fails the name lookup (e.g. no direct access, MCC-only)
-  // still appears, just labeled by its bare ID.
+  // The ad accounts this Google login can read leads from, client accounts of a
+  // manager included (see utils/googleAdsApi.js listAccounts).
   async fetchGoogleAdsAccounts(accessToken) {
-    if (!process.env.GOOGLE_ADS_DEVELOPER_TOKEN) {
-      throw new AppError("GOOGLE_ADS_DEVELOPER_TOKEN is not configured", 500);
+    try {
+      return await require("../utils/googleAdsApi").listAccounts(accessToken);
+    } catch (err) {
+      throw new AppError(err.message || "Failed to list Google Ads accounts", 400);
     }
-    const headers = {
-      Authorization: `Bearer ${accessToken}`,
-      "developer-token": process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
-    };
-
-    const listResp = await fetch(
-      `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers:listAccessibleCustomers`,
-      { headers }
-    );
-    const listJson = await listResp.json();
-    if (!listResp.ok) {
-      throw new AppError(listJson.error?.message || "Failed to list Google Ads accounts", 400);
-    }
-
-    const customerIds = (listJson.resourceNames || []).map((rn) => rn.split("/")[1]).filter(Boolean);
-
-    const customers = await Promise.all(customerIds.map(async (id) => {
-      try {
-        const gaqlResp = await fetch(
-          `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers/${id}/googleAds:search`,
-          {
-            method: "POST",
-            headers: { ...headers, "Content-Type": "application/json" },
-            body: JSON.stringify({ query: "SELECT customer.id, customer.descriptive_name FROM customer LIMIT 1" }),
-          }
-        );
-        const gaqlJson = await gaqlResp.json();
-        const name = gaqlJson.results?.[0]?.customer?.descriptiveName;
-        return { id, name: name || id };
-      } catch {
-        return { id, name: id };
-      }
-    }));
-
-    return customers;
   },
 
   async getGoogleConnectionData(code) {
