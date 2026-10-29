@@ -288,7 +288,9 @@ class _ShellState extends State<Shell> {
   @override
   void initState() {
     super.initState();
-    PushService.instance.init();
+    // Not while an admin is switched into a teammate's account: the phone
+    // stays registered for its own person's notifications.
+    if (context.read<AuthState>().switchedFrom == null) PushService.instance.init();
     PushService.instance.pendingRoute.addListener(_onPendingRoute);
     PushService.instance.pendingTarget.addListener(_onPendingTarget);
     // A cold start from a tapped notification can set it before we listen.
@@ -734,7 +736,13 @@ class _ShellState extends State<Shell> {
           ),
           body: Stack(
             children: [
-              currentScreen,
+              if (auth.switchedFrom != null)
+                Column(children: [
+                  _SwitchedBanner(auth: auth),
+                  Expanded(child: currentScreen),
+                ])
+              else
+                currentScreen,
               // Persistent, user-draggable AI avatar — defaults to bottom-right
               // (matching the web app's floating HelpBot bubble) but can be
               // dragged anywhere and remembers where it was left.
@@ -842,6 +850,53 @@ class _BottomTabs extends StatelessWidget {
             ]),
           ),
         ),
+      ),
+    );
+  }
+}
+
+
+/// "Viewing as …" while an admin is switched into a teammate's account, with
+/// the way back (web: ImpersonationBanner).
+class _SwitchedBanner extends StatefulWidget {
+  final AuthState auth;
+  const _SwitchedBanner({required this.auth});
+
+  @override
+  State<_SwitchedBanner> createState() => _SwitchedBannerState();
+}
+
+class _SwitchedBannerState extends State<_SwitchedBanner> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = '${widget.auth.user?['name'] ?? ''}';
+    return Material(
+      color: AppColors.primary,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+        child: Row(children: [
+          const Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text('Viewing as $name',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+            onPressed: _busy
+                ? null
+                : () async {
+                    setState(() => _busy = true);
+                    await widget.auth.switchBack();
+                    if (mounted) setState(() => _busy = false);
+                  },
+            child: Text(_busy ? 'Switching…' : 'Switch back'),
+          ),
+        ]),
       ),
     );
   }

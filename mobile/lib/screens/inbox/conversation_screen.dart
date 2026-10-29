@@ -12,6 +12,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/plan.dart';
 import '../../core/theme.dart';
+import '../../widgets/wa_media.dart';
 import '../../widgets/day_divider.dart';
 import '../../widgets/motion.dart';
 import '../leads/lead_detail_sheet.dart';
@@ -643,9 +644,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Widget _mediaContent(Map<String, dynamic> message, WaTheme wa) {
     final type = message['mediaType'] as String?;
     final url = message['mediaUrl'] as String?;
-    final body = message['body'] as String? ?? '';
+    // The caption without the "[Image]" tag the server keeps in front of it.
+    final body = waMessageText(message);
     if (url == null || url.isEmpty) {
-      return Text(body, style: TextStyle(color: wa.bubbleText, fontSize: 14.5));
+      final missing = waMissingMedia(message);
+      if (missing == null) return Text(body, style: TextStyle(color: wa.bubbleText, fontSize: 14.5));
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(missing, style: TextStyle(color: wa.timeText, fontSize: 12.5, fontStyle: FontStyle.italic)),
+        if (body.isNotEmpty) Text(body, style: TextStyle(color: wa.bubbleText, fontSize: 14.5)),
+      ]);
+    }
+
+    if (type == 'audio') {
+      return WaVoiceNote(url: url, transcript: message['transcript'] as String?, ink: wa.bubbleText, soft: wa.timeText);
     }
 
     if (type == 'image') {

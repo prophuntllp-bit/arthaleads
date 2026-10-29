@@ -10,6 +10,7 @@ import '../core/api_client.dart';
 import '../core/auth_state.dart';
 import '../core/plan.dart';
 import '../core/theme.dart';
+import '../screens/inbox/conversation_screen.dart';
 
 /// Green "Chat on WhatsApp" bottom sheet — pre-filled message (editable),
 /// an AI Draft button, and a choice of personal vs Business WhatsApp.
@@ -112,6 +113,53 @@ class _WhatsAppSendSheetState extends State<_WhatsAppSendSheet> {
   late final _ctrl = TextEditingController(text: _buildDefaultMessage(context, widget.name));
   bool _drafting = false;
   bool _wabNotInstalled = false;
+  // The CRM's own WhatsApp (connected number): open or start this lead's chat
+  // there, as the web's contact menu does (23 Oct 2026). Only a plain lead can
+  // hold a chat; a project lead can't yet.
+  bool _waConnected = false;
+  bool _starting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.leadId != null && widget.projectId == null) {
+      _api.dio.get('/whatsapp/status').then((r) {
+        if (mounted) setState(() => _waConnected = r.data['connected'] == true);
+      }).catchError((_) {});
+    }
+  }
+
+  Future<void> _openInCrm() async {
+    if (_starting) return;
+    setState(() => _starting = true);
+    final nav = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final r = await _api.dio.post('/whatsapp/conversations/start', data: {'leadId': widget.leadId});
+      final conv = (r.data['conversation'] as Map).cast<String, dynamic>();
+      widget.onSent?.call();
+      nav.pop();
+      if (r.data['consent'] == 'denied') {
+        messenger.showSnackBar(const SnackBar(
+          duration: Duration(seconds: 6),
+          content: Text('This lead has refused WhatsApp marketing. A direct reply is still fine; a campaign will skip them.'),
+        ));
+      }
+      nav.push(MaterialPageRoute(
+        builder: (_) => ConversationScreen(
+          conversationId: '${conv['_id']}',
+          contactName: '${conv['contactName'] ?? widget.name ?? ''}',
+        ),
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+        content: Text(ApiClient.errorMessage(e, 'Could not open this conversation')),
+        backgroundColor: AppColors.danger,
+      ));
+    } finally {
+      if (mounted) setState(() => _starting = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -227,6 +275,18 @@ class _WhatsAppSendSheetState extends State<_WhatsAppSendSheet> {
               ),
             ),
             const Divider(height: 1),
+            if (_waConnected)
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                  child: _starting
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : Icon(FontAwesomeIcons.whatsapp.data, color: AppColors.primary, size: 18),
+                ),
+                title: const Text('Open chat in the CRM', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                subtitle: const Text("From your company's WhatsApp number, kept on the lead", style: TextStyle(fontSize: 11)),
+                onTap: _openInCrm,
+              ),
             ListTile(
               leading: CircleAvatar(
                 backgroundColor: Colors.green.withValues(alpha: 0.15),

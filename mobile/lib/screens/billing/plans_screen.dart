@@ -10,6 +10,7 @@ import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/storage_card.dart';
+import 'storage_manage_screen.dart';
 
 const String _whatsappNumber = '919067097779';
 const String _upgradeMessage = "Hi, I'd like to upgrade my Arthaleads plan.";
@@ -371,6 +372,19 @@ class _PlansScreenState extends State<PlansScreen> {
                   if (_storage != null) ...[
                     const SizedBox(height: 14),
                     StorageMeter(_storage!),
+                    // See what uses the space, free some up, or buy more (web: StorageManageModal).
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StorageManageScreen()));
+                          final v = await StorageInfo.load(force: true);
+                          if (mounted) setState(() => _storage = v);
+                        },
+                        icon: const Icon(Icons.storage_rounded, size: 18),
+                        label: const Text('Manage storage'),
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -841,6 +855,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
           _seats = _seats.clamp(minSeats, maxSeats);
         }
       });
+      _loadPreview();
     } catch (_) {
       if (mounted) setState(() => _error = 'Could not load pricing. Please try again.');
     }
@@ -856,7 +871,24 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   num get _rate => _cycle == 'annual'
       ? (_plan?['annual'] as num? ?? 0)
       : (_plan?['monthly'] as num? ?? 0);
-  num get _total => _rate * _seats;
+  // What the server will actually charge, including credit for unused time
+  // when this changes plan or seats mid-term (GET /billing/preview, as the
+  // web's checkout). The local estimate shows until it answers.
+  Map<String, dynamic>? _preview;
+  int _previewSeq = 0;
+  num get _total => (_preview?['subtotal'] as num?) ?? _rate * _seats;
+  num get _credit => (_preview?['credit'] as num?) ?? 0;
+
+  Future<void> _loadPreview() async {
+    final seq = ++_previewSeq;
+    setState(() => _preview = null);
+    await Future.delayed(const Duration(milliseconds: 250));
+    if (seq != _previewSeq || !mounted) return;
+    try {
+      final r = await _api.dio.get('/billing/preview', queryParameters: {'plan': widget.planId, 'seats': _seats, 'cycle': _cycle});
+      if (seq == _previewSeq && mounted) setState(() => _preview = (r.data['quote'] as Map?)?.cast<String, dynamic>());
+    } catch (_) {}
+  }
 
   int? _freeMonths() {
     final monthly = _plan?['monthly'] as num?;
@@ -1004,14 +1036,20 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                   label: 'Monthly',
                   sub: 'Pay as you go',
                   selected: _cycle == 'monthly',
-                  onTap: () => setState(() => _cycle = 'monthly'),
+                  onTap: () {
+                    setState(() => _cycle = 'monthly');
+                    _loadPreview();
+                  },
                 )),
                 const SizedBox(width: 8),
                 Expanded(child: _CycleOption(
                   label: 'Annual',
                   sub: free != null ? '$free months free' : 'Pay as you go',
                   selected: _cycle == 'annual',
-                  onTap: () => setState(() => _cycle = 'annual'),
+                  onTap: () {
+                    setState(() => _cycle = 'annual');
+                    _loadPreview();
+                  },
                 )),
               ],
             ),
@@ -1024,7 +1062,10 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                 _StepperButton(
                   icon: Icons.remove_rounded,
                   onTap: _seats > ((_plan!['minSeats'] as num?)?.toInt() ?? 5)
-                      ? () => setState(() => _seats = _clampSeats(_seats - 1))
+                      ? () {
+                          setState(() => _seats = _clampSeats(_seats - 1));
+                          _loadPreview();
+                        }
                       : null,
                 ),
                 Expanded(
@@ -1042,7 +1083,10 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                 _StepperButton(
                   icon: Icons.add_rounded,
                   onTap: _seats < ((_plan!['maxSeats'] as num?)?.toInt() ?? 30)
-                      ? () => setState(() => _seats = _clampSeats(_seats + 1))
+                      ? () {
+                          setState(() => _seats = _clampSeats(_seats + 1));
+                          _loadPreview();
+                        }
                       : null,
                 ),
               ],
@@ -1076,6 +1120,13 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
                     ],
                   ),
+                  if (_credit > 0) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Includes ${_formatINR(_credit)} credit for the unused time on your current plan. Your new term starts today.',
+                      style: const TextStyle(fontSize: 11.5, color: AppColors.success),
+                    ),
+                  ],
                   const SizedBox(height: 4),
                   Text(
                     'Billed ${_cycle == 'annual' ? 'yearly' : 'monthly'}. Taxes extra where applicable.',

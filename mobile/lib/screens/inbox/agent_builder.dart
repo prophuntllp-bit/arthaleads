@@ -6,6 +6,7 @@ import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
+import 'closing_step_editor.dart';
 import 'wa_ui.dart';
 
 const _languages = {
@@ -76,12 +77,6 @@ const _presetMenuOptions = [
   {'label': '📍 Location Details', 'action': 'location'},
   {'label': '🏡 Book Site Visit', 'action': 'site_visit'},
   {'label': '📞 Talk to Advisor', 'action': 'advisor'},
-];
-
-/// Mirrors ctwaFlowService.js's CLOSING_OPTIONS — fixed, not configurable.
-const _closingButtons = [
-  {'id': 'advisor', 'label': 'Talk to Advisor'},
-  {'id': 'site_visit', 'label': 'Book Site Visit'},
 ];
 
 /// The one non-question value an option's `next` may point to — matches
@@ -162,6 +157,8 @@ Map<String, dynamic> _defaultFlow() => jsonDecode(jsonEncode({
       ],
       'closingPrompt': 'Would you like to talk to our advisor, or book a site visit?',
       'closingSiteVisitNext': '',
+      'closingButtons': closingPresets.first.buttons().map(closingButton).toList(),
+      'closingTemplate': '',
       'nudgesEnabled': false,
       'nudgeText': '',
       'testPhones': [],
@@ -287,6 +284,10 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
   final _descCtrl = TextEditingController();
   String _status = 'draft';
   final _greetingCtrl = TextEditingController();
+  // The name customers see when they ask, and whether a first message goes
+  // out at all (web, 23 Oct 2026).
+  final _personaCtrl = TextEditingController();
+  bool _greetingEnabled = true;
   final _businessContextCtrl = TextEditingController();
   final _groundRulesCtrl = TextEditingController();
   String _language = 'auto';
@@ -414,7 +415,7 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
   @override
   void dispose() {
     for (final c in [
-      _nameCtrl, _descCtrl, _greetingCtrl, _businessContextCtrl, _groundRulesCtrl,
+      _nameCtrl, _descCtrl, _greetingCtrl, _personaCtrl, _businessContextCtrl, _groundRulesCtrl,
       _systemPromptCtrl, _adIdCtrl, _welcomeCtrl,
       _closingPromptCtrl, _nudgeTextCtrl, _testPhoneCtrl, _tryCtrl,
     ]) {
@@ -448,6 +449,8 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
         _descCtrl.text = a['description'] as String? ?? '';
         _status = a['status'] as String? ?? 'draft';
         _greetingCtrl.text = a['greeting'] as String? ?? '';
+        _personaCtrl.text = a['personaName'] as String? ?? '';
+        _greetingEnabled = a['greetingEnabled'] != false;
         _businessContextCtrl.text = a['businessContext'] as String? ?? '';
         _groundRulesCtrl.text = a['groundRules'] as String? ?? '';
         _language = a['language'] as String? ?? 'auto';
@@ -473,6 +476,9 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
                 .toList();
           }
           merged['testPhones'] = (c['testPhones'] as List? ?? const []).map((e) => e.toString()).toList();
+          // Buttons set up on the web (any action, up to three) or the old
+          // fixed pair, read the way the server reads them.
+          merged['closingButtons'] = resolveClosingButtons(c);
           _flow = merged;
           _applyFlowToControllers();
         }
@@ -498,6 +504,8 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
       'description': _descCtrl.text.trim(),
       'status': _status,
       'greeting': _greetingCtrl.text.trim(),
+      'greetingEnabled': _greetingEnabled,
+      'personaName': _personaCtrl.text.trim(),
       'businessContext': _businessContextCtrl.text.trim(),
       'groundRules': _groundRulesCtrl.text.trim(),
       'projectIds': _projectIds.toList(),
@@ -522,6 +530,11 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
   Future<void> _save() async {
     if (_nameCtrl.text.trim().isEmpty) {
       _toast('Give the assistant a name first.');
+      return;
+    }
+    final closing = _ctwaEnabled ? closingProblem(_flow) : null;
+    if (closing != null) {
+      _toast(closing, err: true);
       return;
     }
     setState(() => _saving = true);
@@ -653,7 +666,20 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
               title: 'Identity',
               icon: Icons.auto_awesome,
               children: [
-                WaField(label: 'Name', controller: _nameCtrl, hint: 'e.g. Arohi', onChanged: (_) => setState(() {})),
+                WaField(
+                  label: 'Agent name',
+                  controller: _nameCtrl,
+                  hint: 'e.g. Green Valley site visits',
+                  help: 'For your team, e.g. the project or campaign it handles.',
+                  onChanged: (_) => setState(() {}),
+                ),
+                WaField(
+                  label: 'Name customers see',
+                  controller: _personaCtrl,
+                  maxLength: 40,
+                  hint: 'e.g. Riya',
+                  help: 'Used when a customer asks its name. Leave blank for a friendly name.',
+                ),
                 WaSelect<String>(
                   label: 'Status',
                   value: _status,
@@ -677,14 +703,38 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
             WaCard(
               title: 'How it talks',
               children: [
-                WaField(
-                  label: 'Greeting',
-                  note: '(optional)',
-                  controller: _greetingCtrl,
-                  maxLines: 3,
-                  hint: 'Hi {{name}} 👋 Thanks for reaching out — how can I help you find your next home?',
-                  help: 'Sent automatically as the first message when someone new writes in. Use {{name}}.',
+                WaCheckRow(
+                  value: _greetingEnabled,
+                  onChanged: (v) => setState(() => _greetingEnabled = v),
+                  title: 'Send a first message',
+                  subtitle: "Sent once when someone new writes in. Turn it off if your WhatsApp ad already greets people, so they aren't welcomed twice.",
                 ),
+                if (_greetingEnabled)
+                  WaField(
+                    label: 'First message',
+                    note: '(optional)',
+                    controller: _greetingCtrl,
+                    maxLines: 3,
+                    hint: 'Hi {{name}} 👋 Thanks for reaching out, how can I help you find your next home?',
+                    help: "{{name}} becomes the customer's name. Leave it empty and the agent greets in its own words.",
+                  )
+                else
+                  WaHelp('No first message: it answers the customer\'s message straight away, without saying hello.'),
+                // Works for every chat now, not only button flows (web, 23 Oct 2026).
+                WaCheckRow(
+                  value: _flow['nudgesEnabled'] == true,
+                  onChanged: (v) => setState(() => _flow['nudgesEnabled'] = v),
+                  title: 'Follow up if they go quiet',
+                  subtitle: "One reminder after about 15 minutes, one more before WhatsApp's 24-hour reply window closes. Office hours only, and it stops as soon as they reply or your team steps in.",
+                ),
+                if (_flow['nudgesEnabled'] == true)
+                  WaField(
+                    label: 'Reminder wording',
+                    controller: _nudgeTextCtrl,
+                    maxLength: 200,
+                    hint: 'Just checking in 🙂',
+                    onChanged: (_) => setState(() {}),
+                  ),
                 WaField(
                   label: 'Business context',
                   note: '(optional)',
@@ -880,6 +930,10 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
               children: [for (final ad in _adIds) WaChip(ad, mono: true, onDelete: () => setState(() => _adIds.remove(ad)))],
             ),
           ),
+        if (!_isNew && _adIds.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _AdMessages(agentId: widget.agentId!, adIds: List.of(_adIds)),
+        ],
       ],
     );
   }
@@ -1014,46 +1068,15 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
                   })),
         ),
         const SizedBox(height: 14),
-        WaField(
-          label: 'Closing prompt',
-          controller: _closingPromptCtrl,
-          hint: 'Would you like to talk to our advisor, or book a site visit?',
-          help: 'Use {{name}}. The one fixed ending — sent once every question above has been asked (or straight away if the lead already answered all of them elsewhere). Its two buttons, "Talk to Advisor" and "Book Site Visit", are not editable — but where "Book Site Visit" leads is:',
-          onChanged: (_) => setState(() {}),
-        ),
-        WaSelect<String>(
-          label: '',
-          value: (_flow['closingSiteVisitNext'] as String?) ?? '',
-          options: {
-            '': 'Auto-detect (a question where every option books a visit)',
-            _kBookImmediately: 'Book immediately — no question asked',
-            for (final q in _questions)
-              if (_mapList(q['options']).isNotEmpty)
-                q['id'] as String: 'Ask: ${(q['questionText'] as String? ?? '').isEmpty ? "(untitled question)" : (q['questionText'] as String).substring(0, (q['questionText'] as String).length > 50 ? 50 : (q['questionText'] as String).length)}',
-          },
-          onChanged: (v) => setState(() => _flow['closingSiteVisitNext'] = v ?? ''),
+        Text('Closing step', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: t.text)),
+        const SizedBox(height: 6),
+        ClosingStepEditor(
+          flow: _flow,
+          promptCtrl: _closingPromptCtrl,
+          questions: _questions,
+          onChanged: () => setState(() {}),
         ),
         const SizedBox(height: 14),
-        _bordered(
-          children: [
-            WaCheckRow(
-              value: _flow['nudgesEnabled'] == true,
-              onChanged: (v) => setState(() => _flow['nudgesEnabled'] = v),
-              title: 'Follow up if they go quiet',
-              subtitle: 'If someone stops answering mid-flow, send one gentle reminder after about 15 minutes and one last reminder shortly before the 24-hour reply window closes, each with the question and its buttons again. Business hours only, never more than two, and they stop as soon as the customer writes back.',
-            ),
-            if (_flow['nudgesEnabled'] == true) ...[
-              const SizedBox(height: 8),
-              WaField(
-                label: 'First reminder wording',
-                controller: _nudgeTextCtrl,
-                hint: 'Just checking in 🙂',
-                help: 'Use {{name}}. Keep this to a short "just checking in" — it\'s sent directly above the pending question and its buttons, so don\'t ask anything here yourself. A lead who answers a question posed in THIS text instead of tapping one of the real buttons below it won\'t match any option, and the whole button flow ends right there.',
-                onChanged: (_) => setState(() {}),
-              ),
-            ],
-          ],
-        ),
         if (!_isNew && _ctwaEnabled) ...[
           const SizedBox(height: 14),
           _funnelCard(),
@@ -1923,10 +1946,86 @@ class _CtwaPreviewState extends State<_CtwaPreview> {
     _step = q['id'] as String?;
   }
 
+  List<Map<String, dynamic>> get _closing => resolveClosingButtons(_f);
+  Map<String, String> get _allVars => {..._vars, ...closingEventVars(_f['event'] as Map?)};
+
   void _sendClosing() {
     final c = (_f['closingPrompt'] as String? ?? '');
-    _push({'from': 'bot', 'text': c.isEmpty ? 'Would you like to talk to our advisor, or book a site visit?' : c, 'buttons': _closingButtons});
+    final buttons = _closing;
+    final stock = buttons.every((b) => b['id'] == 'advisor' || b['id'] == 'site_visit');
+    _push({
+      'from': 'bot',
+      'text': c.isEmpty ? (stock ? kDefaultClosingPrompt : kCustomClosingPrompt) : _fillVars(c, _allVars),
+      'buttons': buttons,
+    });
     _step = 'closing';
+  }
+
+  /// A closing button tapped: what the server does for its action.
+  void _closingTap(Map<String, dynamic> b) {
+    final action = '${b['action']}';
+    final ask = b['askText'] as Map?;
+    if (ask != null && '${ask['prompt'] ?? ''}'.trim().isNotEmpty) {
+      _push({'from': 'bot', 'text': _fillVars('${ask['prompt']}', _allVars)});
+      _push({'from': 'bot', 'note': true, 'text': '⌨️ Waits for their typed answer and saves it to the lead (${ask['saveTo'] ?? 'notes'}), then carries on.'});
+    }
+    String reply() {
+      final r = '${b['reply'] ?? ''}'.trim();
+      return _fillVars(r.isNotEmpty ? r : (closingReplyDefault[action] ?? ''), _allVars);
+    }
+
+    final extras = [
+      if ('${b['tag'] ?? ''}'.isNotEmpty) 'tag "${b['tag']}"',
+      if ('${b['status'] ?? ''}'.isNotEmpty) 'status → ${b['status']}',
+    ];
+    void note(String text) => _push({'from': 'bot', 'note': true, 'text': [text, if (extras.isNotEmpty) 'Lead: ${extras.join(', ')}.'].join(' ')});
+
+    switch (action) {
+      case 'handoff':
+        final r = reply();
+        _push({'from': 'bot', 'text': r.isEmpty ? "Connecting you with our advisor, they'll reach out to you shortly." : r});
+        note('✅ Bot pauses and your team is alerted.');
+        _step = null;
+      case 'site_visit':
+        final configured = '${b['next'] ?? ''}'.isNotEmpty ? '${b['next']}' : ((_f['closingSiteVisitNext'] as String?) ?? '');
+        if (configured == _kBookImmediately) {
+          _bookSiteVisit();
+          return;
+        }
+        final qs = _qs;
+        final target = configured.isNotEmpty
+            ? qs.cast<Map<String, dynamic>?>().firstWhere((q) => q!['id'] == configured, orElse: () => null)
+            : qs.cast<Map<String, dynamic>?>().firstWhere((q) {
+                final options = _mapList(q!['options']);
+                return options.isNotEmpty && options.every((o) => o['action'] == 'site_visit');
+              }, orElse: () => null);
+        target != null ? _sendQuestion(target) : _bookSiteVisit();
+      case 'question':
+        final target = _qs.cast<Map<String, dynamic>?>().firstWhere((q) => q!['id'] == b['next'], orElse: () => null);
+        if (target != null) {
+          _sendQuestion(target);
+        } else {
+          _push({'from': 'bot', 'text': _fillVars(closingReplyDefault['end']!, _allVars)});
+          _step = null;
+        }
+      case 'register':
+        _push({'from': 'bot', 'text': reply()});
+        note('🎟️ Registered. The joining link goes to them ${_allVars['minutes'] ?? '30'} minutes before it starts.');
+        _step = null;
+      case 'photos' || 'docs' || 'location':
+        note(action == 'photos'
+            ? '🖼️ Sends up to 3 project photos and all uploaded videos.'
+            : action == 'docs'
+                ? '📄 Sends the floor plan PDF and the brochure PDF.'
+                : "📍 Sends the project's location.");
+        final r = reply();
+        if (r.isNotEmpty) _push({'from': 'bot', 'text': r});
+        _step = null;
+      default:
+        _push({'from': 'bot', 'text': reply()});
+        if (extras.isNotEmpty) note('');
+        _step = null;
+    }
   }
 
   void _bookSiteVisit() {
@@ -1946,7 +2045,8 @@ class _CtwaPreviewState extends State<_CtwaPreview> {
       _push({'from': 'user', 'text': opt['label']});
       final qs = _qs;
       final qIndex = qs.indexWhere((q) => _mapList(q['options']).any((o) => o['id'] == opt['id']));
-      final inClosing = _closingButtons.any((o) => o['id'] == opt['id']);
+      final closingHit = _closing.where((o) => o['id'] == opt['id']).firstOrNull;
+      final inClosing = closingHit != null;
 
       if (qIndex != -1) {
         final action = (opt['action'] as String?) ?? 'none';
@@ -1990,34 +2090,7 @@ class _CtwaPreviewState extends State<_CtwaPreview> {
       }
 
       if (inClosing) {
-        if (opt['id'] == 'advisor') {
-          _push({'from': 'bot', 'text': "Connecting you with our advisor, they'll reach out to you shortly. You can also reach them directly on <their phone number>."});
-          _push({'from': 'bot', 'note': true, 'text': '✅ Uses this project\'s "Talk to Advisor" contact if one is set (Projects page) — real name and phone number included so the lead can call directly; otherwise falls back to normal round-robin assignment with no number shown. Bot pauses and that person is notified.'});
-          _step = null;
-          return;
-        }
-        // "Book Site Visit" from the closing prompt — a configured target
-        // wins outright, else auto-detect a question where every option
-        // books a visit, else book immediately. Mirrors ctwaFlowService.js.
-        final configured = (_f['closingSiteVisitNext'] as String?) ?? '';
-        if (configured == _kBookImmediately) {
-          _bookSiteVisit();
-          return;
-        }
-        final target = configured.isNotEmpty
-            ? qs.cast<Map<String, dynamic>?>().firstWhere((q) => q!['id'] == configured, orElse: () => null)
-            : qs.cast<Map<String, dynamic>?>().firstWhere(
-                (q) {
-                  final options = _mapList(q!['options']);
-                  return options.isNotEmpty && options.every((o) => o['action'] == 'site_visit');
-                },
-                orElse: () => null,
-              );
-        if (target != null) {
-          _sendQuestion(target);
-        } else {
-          _bookSiteVisit();
-        }
+        _closingTap(closingHit);
       }
     });
   }
@@ -2173,5 +2246,163 @@ class _CtwaPreviewState extends State<_CtwaPreview> {
         ),
       ),
     );
+  }
+}
+
+
+/// The pre-filled message of each of this agent's ads. Meta sometimes sends
+/// an ad click with no ad details; the chat is then placed by this text
+/// (backend utils/adPrefill.js). Learned from real clicks, or added here.
+/// Mirrors AdMessages in frontend/src/pages/conversations/AgentBuilder.jsx.
+class _AdMessages extends StatefulWidget {
+  final String agentId;
+  final List<String> adIds;
+  const _AdMessages({required this.agentId, required this.adIds});
+
+  @override
+  State<_AdMessages> createState() => _AdMessagesState();
+}
+
+class _AdMessagesState extends State<_AdMessages> {
+  final _api = ApiClient.instance;
+  final _text = TextEditingController();
+  List<Map<String, dynamic>>? _rows;
+  late String _adId = widget.adIds.first;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant _AdMessages old) {
+    super.didUpdateWidget(old);
+    if (!widget.adIds.contains(_adId)) _adId = widget.adIds.first;
+    if (old.adIds.join(',') != widget.adIds.join(',')) _load();
+  }
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final r = await _api.dio.get('/whatsapp/agents/${widget.agentId}/ad-messages');
+      _rows = _mapList(r.data['messages']);
+    } catch (_) {
+      _rows = [];
+    }
+    if (mounted) setState(() {});
+  }
+
+  void _toast(String m, {bool err = false}) => ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(m), backgroundColor: err ? AppColors.danger : null));
+
+  Future<void> _add() async {
+    final text = _text.text.trim();
+    if (text.isEmpty || _busy) return;
+    setState(() => _busy = true);
+    try {
+      final r = await _api.dio.post('/whatsapp/agents/${widget.agentId}/ad-messages', data: {'adId': _adId, 'text': text});
+      final m = Map<String, dynamic>.from(r.data['message'] as Map);
+      setState(() => _rows = [m, ...(_rows ?? []).where((x) => x['id'] != m['id'])]);
+      _text.clear();
+      _toast('Saved. Chats that open with this message now reach this assistant.');
+    } catch (e) {
+      _toast(ApiClient.errorMessage(e, 'Could not save that message'), err: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _remove(Map<String, dynamic> row) async {
+    try {
+      await _api.dio.delete('/whatsapp/agents/${widget.agentId}/ad-messages/${row['id']}');
+      setState(() => _rows = (_rows ?? []).where((x) => x['id'] != row['id']).toList());
+    } catch (e) {
+      _toast(ApiClient.errorMessage(e, 'Could not remove it'), err: true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTheme.of(context);
+    final rows = _rows;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text('Ad messages', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: t.text)),
+      const SizedBox(height: 3),
+      Text(
+        "Meta sometimes sends an ad click without the ad's details. When a chat opens with one of these messages, it still reaches this assistant and its buttons start. They are learned from real clicks; add one yourself if the ad is new (paste the ad's pre-filled message exactly).",
+        style: TextStyle(fontSize: 11.5, color: t.textSoft),
+      ),
+      const SizedBox(height: 8),
+      if (rows == null)
+        Text('Loading…', style: TextStyle(fontSize: 12, color: t.textSoft))
+      else if (rows.isEmpty)
+        Text('None yet. They appear after the first clicks on these ads.', style: TextStyle(fontSize: 12, color: t.textSoft))
+      else
+        for (final r in rows)
+          Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
+            decoration: BoxDecoration(
+              color: t.surfaceLow,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: t.border),
+            ),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('${r['text'] ?? ''}', style: TextStyle(fontSize: 12.5, color: t.text)),
+                  const SizedBox(height: 2),
+                  Text(
+                    [
+                      '${r['adId'] ?? ''}',
+                      r['manual'] == true ? 'added by you' : '${r['count'] ?? 0} click${r['count'] == 1 ? '' : 's'}',
+                      if (r['active'] == false) 'used once two clicks open with it',
+                    ].join(' · '),
+                    style: TextStyle(fontSize: 11, color: t.textSoft),
+                  ),
+                ]),
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Stop using this message',
+                onPressed: () => _remove(r),
+                icon: const Icon(Icons.close_rounded, size: 18),
+              ),
+            ]),
+          ),
+      const SizedBox(height: 6),
+      TextField(
+        controller: _text,
+        minLines: 1,
+        maxLines: 3,
+        style: const TextStyle(fontSize: 13),
+        decoration: waDecoration(context, hint: "e.g. Hi, I'd like details of the Green Valley plots."),
+        onChanged: (_) => setState(() {}),
+      ),
+      if (widget.adIds.length > 1) ...[
+        const SizedBox(height: 6),
+        WaSelect<String>(
+          label: 'For ad',
+          value: _adId,
+          options: {for (final a in widget.adIds) a: a},
+          onChanged: (v) => setState(() => _adId = v ?? _adId),
+        ),
+      ],
+      const SizedBox(height: 6),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: WaAddButton(onPressed: _text.text.trim().isEmpty || _busy ? null : _add),
+      ),
+      const SizedBox(height: 4),
+      Text('Save the assistant after adding a new ad ID, then add its message.', style: TextStyle(fontSize: 11, color: t.textSoft)),
+    ]);
   }
 }

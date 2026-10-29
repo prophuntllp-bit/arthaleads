@@ -35,6 +35,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Map<String, dynamic>? _today;
   bool _requireSelfie = true;
   final List<Map<String, dynamic>> _history = [];
+  // The server's own totals for the loaded range (28 Oct 2026): it counts
+  // every entry, not just the page the app has, plus auto-closed,
+  // never-clocked-out and outside-shift entries.
+  Map<String, dynamic>? _summary;
   List<Map<String, dynamic>> _team = [];
   bool _loading = true;
   bool _acting = false;
@@ -94,6 +98,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             (results[1].data['data'] as List? ?? [])
                 .cast<Map<String, dynamic>>(),
           );
+        _summary = ((results[1].data['total'] as num?) ?? 0) > 0
+            ? (results[1].data['summary'] as Map?)?.cast<String, dynamic>()
+            : null;
       });
     } catch (e) {
       if (mounted) {
@@ -263,20 +270,42 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     }
   }
 
-  Future<void> _addAttendanceEntry() async {
+  /// India time of an ISO timestamp, whatever the phone's own time zone.
+  static DateTime _ist(String iso) => DateTime.parse(iso).toUtc().add(const Duration(hours: 5, minutes: 30));
+
+  /// "2026-10-28" + "09:30" in India time, as the UTC instant the server wants
+  /// (web: new Date(`${date}T${time}:00+05:30`)).
+  static String _istIso(DateTime date, int hour, int minute) =>
+      DateTime.utc(date.year, date.month, date.day, hour, minute)
+          .subtract(const Duration(hours: 5, minutes: 30))
+          .toIso8601String();
+
+  /// Add an entry, or with [entry] correct or delete one (28 Oct 2026, as the
+  /// web): a missing or automatic clock-out can be set to the real time.
+  Future<void> _addAttendanceEntry([Map<String, dynamic>? entry]) async {
     if (_team.isEmpty) await _loadTeam();
     if (!mounted || _team.isEmpty) return;
     final members = _team
         .map((row) => (row['user'] as Map).cast<String, dynamic>())
         .toList();
-    String selectedUser = members.first['_id'].toString();
+    final editing = entry != null && entry['_id'] != null;
+    final entryUser = entry?['userId'] is Map ? '${(entry!['userId'] as Map)['_id']}' : '${entry?['userId'] ?? ''}';
+    String selectedUser = members.any((m) => '${m['_id']}' == entryUser) ? entryUser : members.first['_id'].toString();
+    final inIso = '${entry?['clockIn'] ?? ''}';
+    final outIso = '${entry?['clockOut'] ?? ''}';
+    final inIst = inIso.isEmpty ? null : _ist(inIso);
+    final outIst = outIso.isEmpty ? null : _ist(outIso);
     final dateCtrl = TextEditingController(
-      text: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      text: editing && '${entry['date'] ?? ''}'.length >= 10
+          ? '${entry['date']}'.substring(0, 10)
+          : DateFormat('yyyy-MM-dd').format(DateTime.now().toUtc().add(const Duration(hours: 5, minutes: 30))),
     );
-    final inCtrl = TextEditingController(text: '09:30');
-    final outCtrl = TextEditingController(text: '19:00');
-    final noteCtrl = TextEditingController();
-    var nextDay = false;
+    final inCtrl = TextEditingController(text: inIst != null ? DateFormat('HH:mm').format(inIst) : (editing ? '' : '09:30'));
+    // An automatic clock-out is a guess: leave it for the real time.
+    final outCtrl = TextEditingController(
+        text: outIst != null && entry?['autoClosed'] != true ? DateFormat('HH:mm').format(outIst) : (editing ? '' : '19:00'));
+    final noteCtrl = TextEditingController(text: '${entry?['note'] ?? ''}');
+    var nextDay = inIst != null && outIst != null && outIst.day != inIst.day;
     var saving = false;
 
     await showModalBottomSheet<void>(
@@ -301,7 +330,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 Row(
                   children: [
                     Text(
-                      'Add Attendance Entry',
+                      editing ? 'Edit Attendance Entry' : 'Add Attendance Entry',
                       style: Theme.of(sheetContext).textTheme.titleMedium
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
@@ -349,7 +378,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: LabeledField(
-                        label: 'Clock Out',
+                        label: 'Clock Out (optional)',
                         child: TextField(
                           controller: outCtrl,
                           keyboardType: TextInputType.datetime,
@@ -378,7 +407,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       : () async {
                           final date = DateTime.tryParse(dateCtrl.text.trim());
                           final inParts = inCtrl.text.trim().split(':');
-                          final outParts = outCtrl.text.trim().split(':');
+                          // No clock-out yet is allowed (still at work, or
+                          // to be set later); the server says when it isn't.
+                          final noOut = outCtrl.text.trim().isEmpty;
+                          final outParts = noOut ? ['0', '0'] : outCtrl.text.trim().split(':');
                           if (date == null ||
                               inParts.length != 2 ||
                               outParts.length != 2) {
@@ -412,32 +444,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             );
                             return;
                           }
-                          final clockIn = DateTime(
-                            date.year,
-                            date.month,
-                            date.day,
-                            inHour,
-                            inMinute,
-                          );
                           final outDate = nextDay
                               ? date.add(const Duration(days: 1))
                               : date;
-                          final clockOut = DateTime(
-                            outDate.year,
-                            outDate.month,
-                            outDate.day,
-                            outHour,
-                            outMinute,
-                          );
                           setSheet(() => saving = true);
                           try {
                             await _api.dio.post(
                               '/attendance/admin-entry',
                               data: {
+                                if (editing) 'id': entry['_id'],
                                 'userId': selectedUser,
                                 'date': DateFormat('yyyy-MM-dd').format(date),
-                                'clockIn': clockIn.toUtc().toIso8601String(),
-                                'clockOut': clockOut.toUtc().toIso8601String(),
+                                'clockIn': _istIso(date, inHour, inMinute),
+                                'clockOut': noOut ? null : _istIso(outDate, outHour, outMinute),
                                 'note': noteCtrl.text.trim(),
                               },
                             );
@@ -466,6 +485,49 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   icon: Icons.save_outlined,
                   child: const Text('Save Entry'),
                 ),
+                if (editing) ...[
+                  const SizedBox(height: 8),
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              final ok = await showDialog<bool>(
+                                context: sheetContext,
+                                builder: (d) => AlertDialog(
+                                  title: const Text('Delete this entry?'),
+                                  content: const Text('The clock-in and clock-out for this day are removed.'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(d, true),
+                                      child: const Text('Delete', style: TextStyle(color: AppColors.danger)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (ok != true) return;
+                              setSheet(() => saving = true);
+                              try {
+                                await _api.dio.delete('/attendance/${entry['_id']}');
+                                if (sheetContext.mounted) Navigator.pop(sheetContext);
+                                await _load();
+                                await _loadTeam();
+                              } catch (error) {
+                                if (sheetContext.mounted) {
+                                  ScaffoldMessenger.of(sheetContext).showSnackBar(SnackBar(
+                                    content: Text(ApiClient.errorMessage(error, 'Could not delete the entry')),
+                                    backgroundColor: AppColors.danger,
+                                  ));
+                                  setSheet(() => saving = false);
+                                }
+                              }
+                            },
+                      icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
+                      label: const Text('Delete entry', style: TextStyle(color: AppColors.danger)),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -637,6 +699,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final m = d.inMinutes % 60;
     final s = d.inSeconds % 60;
     return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
+  /// Clocked in over a day ago and never out (web: neverClosed).
+  bool _neverClosed(Map<String, dynamic> r) {
+    final inn = DateTime.tryParse('${r['clockIn'] ?? ''}');
+    return inn != null && r['clockOut'] == null && DateTime.now().difference(inn) > const Duration(hours: 24);
+  }
+
+  /// The clock-out time, or what went wrong with it.
+  String _outText(Map<String, dynamic> r, DateTime? outT) {
+    if (outT != null) return r['autoClosed'] == true ? '${_fmtTime(outT)} (closed automatically)' : _fmtTime(outT);
+    if (_neverClosed(r)) return 'Not clocked out';
+    return _fmtTime(outT);
   }
 
   String _fmtMinutes(int? mins) {
@@ -1111,6 +1186,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   attendance['clockOutLat'],
                   attendance['clockOutLng'],
                 ),
+                if (attendance['autoClosed'] == true) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Nobody clocked out, so it was closed at the shift's end. Edit the entry to set the real time.",
+                    style: TextStyle(fontSize: 12, color: Color(0xFFD97706)),
+                  ),
+                ],
+                if (context.read<AuthState>().isAdmin && attendance['_id'] != null) ...[
+                  const SizedBox(height: 12),
+                  SecondaryButton(
+                    fullWidth: true,
+                    icon: Icons.edit_rounded,
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+                      _addAttendanceEntry({...attendance, 'userId': attendance['userId'] ?? user['_id']});
+                    },
+                    child: const Text('Edit entry'),
+                  ),
+                ],
               ],
             ],
           ),
@@ -1191,15 +1285,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     bool done, {
     bool recordsOnly = false,
   }) {
-    final totalMins = _historyRows.fold<int>(
-      0,
-      (s, r) => s + ((r['totalMinutes'] as int?) ?? 0),
-    );
-    final daysPresent = _historyRows.where((r) => r['clockIn'] != null).length;
-    final avgMins = daysPresent > 0 ? totalMins ~/ daysPresent : 0;
-    final lateCount = _historyRows.where((r) => r['isLate'] == true).length;
-    final fullDays = _historyRows.where((r) => r['dayType'] == 'full').length;
-    final halfDays = _historyRows.where((r) => r['dayType'] == 'half').length;
+    final sum = _loading ? null : _summary;
+    int n(String k) => ((sum?[k] as num?) ?? 0).toInt();
+    final totalMins = sum != null
+        ? n('totalMinutes')
+        : _historyRows.fold<int>(0, (s, r) => s + ((r['totalMinutes'] as int?) ?? 0));
+    final daysPresent = sum != null ? n('daysPresent') : _historyRows.where((r) => r['clockIn'] != null).length;
+    final avgMins = sum != null ? n('avgMinutes') : (daysPresent > 0 ? totalMins ~/ daysPresent : 0);
+    final lateCount = sum != null ? n('late') : _historyRows.where((r) => r['isLate'] == true).length;
+    final fullDays = sum != null ? n('fullDays') : _historyRows.where((r) => r['dayType'] == 'full').length;
+    final halfDays = sum != null ? n('halfDays') : _historyRows.where((r) => r['dayType'] == 'half').length;
 
     return RefreshIndicator(
       color: AppColors.primary,
@@ -1282,6 +1377,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ],
             ],
           ),
+          if (sum != null && (n('autoClosed') > 0 || n('notClockedOut') > 0 || n('outsideShift') > 0)) ...[
+            const SizedBox(height: 10),
+            Text(
+              [
+                if (n('autoClosed') > 0) '${n('autoClosed')} closed automatically (no clock-out)',
+                if (n('notClockedOut') > 0) '${n('notClockedOut')} never clocked out',
+                if (n('outsideShift') > 0) '${n('outsideShift')} clocked in after the shift',
+              ].join(' · '),
+              style: TextStyle(fontSize: 12, color: AppTheme.of(context).textSoft),
+            ),
+          ],
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 8),
@@ -1330,8 +1436,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     children: [
                       Text(
                         recordsOnly
-                            ? '${_fmtDay(r['date'])}  ·  ${_fmtTime(inT)} → ${_fmtTime(outT)}'
-                            : '${_fmtTime(inT)} → ${_fmtTime(outT)}',
+                            ? '${_fmtDay(r['date'])}  ·  ${_fmtTime(inT)} → ${_outText(r, outT)}'
+                            : '${_fmtTime(inT)} → ${_outText(r, outT)}',
                       ),
                       if ((r['note'] as String? ?? '').isNotEmpty)
                         Text(
@@ -1355,7 +1461,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       Wrap(
                         spacing: 4,
                         children: [
-                          if (r['isLate'] == true)
+                          if (r['autoClosed'] == true)
+                            _badge('Auto closed', const Color(0xFFD97706))
+                          else if (_neverClosed(r))
+                            _badge('No clock-out', AppColors.danger),
+                          if (r['outsideShift'] == true)
+                            _badge('Outside shift', const Color(0xFF6366F1))
+                          else if (r['isLate'] == true)
                             _badge('Late', AppColors.warning),
                           if (r['isEarlyLeave'] == true)
                             _badge('Early leave', AppColors.danger),
