@@ -36,7 +36,7 @@ export default function PublicFooter() {
             <a
               href="mailto:contact@arthaleads.com"
               style={{ color: text }}
-              className="block text-sm mt-4 hover:text-[color:var(--brand-text)] transition-colors"
+              className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm mt-2 md:mt-4 hover:text-[color:var(--brand-text)] transition-colors"
             >
               contact@arthaleads.com
             </a>
@@ -77,7 +77,7 @@ export default function PublicFooter() {
           {/* Product */}
           <div>
             <p style={{ color: heading }} className="font-semibold text-sm mb-4">Product</p>
-            <div className="space-y-2.5">
+            <div className="md:space-y-2.5">
               {[
                 ["Features",           "/features"],
                 ["Pricing",            "/pricing"],
@@ -89,7 +89,7 @@ export default function PublicFooter() {
                 ["API Docs",           "/api-docs"],
                 ["Refer & Earn",       "/refer"],
               ].map(([label, href]) => (
-                <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
+                <Link key={label} to={href} style={{ color: text }} className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
               ))}
             </div>
           </div>
@@ -97,14 +97,14 @@ export default function PublicFooter() {
           {/* Compare */}
           <div>
             <p style={{ color: heading }} className="font-semibold text-sm mb-4">Compare</p>
-            <div className="space-y-2.5">
+            <div className="md:space-y-2.5">
               {[
                 ["All comparisons",        "/compare"],
                 ["Arthaleads vs Sell.Do",  "/compare/sell-do-alternative"],
                 ["Arthaleads vs Leadrat",  "/compare/leadrat-alternative"],
                 ["Arthaleads vs Kylas",    "/compare/kylas-alternative"],
               ].map(([label, href]) => (
-                <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
+                <Link key={label} to={href} style={{ color: text }} className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
               ))}
             </div>
           </div>
@@ -112,7 +112,7 @@ export default function PublicFooter() {
           {/* Company */}
           <div>
             <p style={{ color: heading }} className="font-semibold text-sm mb-4">Company</p>
-            <div className="space-y-2.5">
+            <div className="md:space-y-2.5">
               {[
                 ["About Us",      "/about-us"],
                 ["Careers",       "/careers"],
@@ -123,7 +123,7 @@ export default function PublicFooter() {
                 ["Book a Demo",   "/book-demo"],
                 ["Contact Us",    "/contact"],
               ].map(([label, href]) => (
-                <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
+                <Link key={label} to={href} style={{ color: text }} className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
               ))}
             </div>
           </div>
@@ -131,14 +131,14 @@ export default function PublicFooter() {
           {/* Legal */}
           <div>
             <p style={{ color: heading }} className="font-semibold text-sm mb-4">Legal</p>
-            <div className="space-y-2.5">
+            <div className="md:space-y-2.5">
               {[
                 ["Privacy Policy",   "/privacy"],
                 ["Terms of Service", "/terms"],
                 ["Refund Policy",    "/refund"],
                 ["Cookie Policy",    "/cookie-policy"],
               ].map(([label, href]) => (
-                <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
+                <Link key={label} to={href} style={{ color: text }} className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
               ))}
             </div>
           </div>

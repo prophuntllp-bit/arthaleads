@@ -444,7 +444,7 @@ function Trust() {
               <ul className="mt-auto space-y-1.5">
                 {[["Sell.Do", "/compare/sell-do-alternative"], ["Leadrat", "/compare/leadrat-alternative"], ["Kylas", "/compare/kylas-alternative"]].map(([n, to]) => (
                   <li key={n}>
-                    <Link to={to} className="flex items-center justify-between rounded-xl px-3 py-2 text-[13px] font-medium site-ink transition-colors hover:border-[var(--site-brand)]"
+                    <Link to={to} className="flex items-center justify-between rounded-xl px-3 py-3 text-[13px] font-medium site-ink transition-colors hover:border-[var(--site-brand)]"
                       style={{ background: "var(--site-chip)", border: "1px solid var(--site-line)" }}>
                       Arthaleads vs {n} <ArrowUpRight className="w-4 h-4 site-muted" aria-hidden="true" />
                     </Link>

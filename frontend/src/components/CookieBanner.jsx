@@ -77,12 +77,12 @@ export default function CookieBanner() {
       </div>
       <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-4">
         <button type="button" onClick={() => choose("declined")}
-          className="min-h-[40px] rounded-xl px-3 py-2 text-xs font-semibold text-app transition hover:bg-black/5 dark:hover:bg-white/5"
+          className="min-h-[44px] rounded-xl px-3 py-2 text-xs font-semibold text-app transition hover:bg-black/5 dark:hover:bg-white/5"
           style={{ border: "1px solid var(--app-border-strong)" }}>
           Essential only
         </button>
         <button type="button" onClick={() => choose("accepted")}
-          className="min-h-[40px] rounded-xl px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90"
+          className="min-h-[44px] rounded-xl px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90"
           style={{ background: "var(--brand-btn)" }}>
           Accept all
         </button>

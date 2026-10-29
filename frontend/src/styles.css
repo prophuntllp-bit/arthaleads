@@ -904,6 +904,12 @@ html[data-public-theme="dark"] .site-section.site-section--dark { box-shadow: in
 }
 .site-link { font-weight: 600; color: var(--site-brand-ink); display: inline-flex; align-items: center; gap: 0.25rem; }
 .site-link:hover { text-decoration: underline; text-underline-offset: 4px; }
+/* Touch screens: a standalone text link is a full 44px tap target (audit, 29 Oct
+   2026). Links inside a sentence keep the line height. */
+@media (pointer: coarse) {
+  a.site-link, button.site-link { min-height: 44px; }
+  p a.site-link, span a.site-link, li a.site-link { min-height: 0; }
+}
 
 .site-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;

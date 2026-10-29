@@ -38,7 +38,7 @@ export default function FilmSection() {
             <div role="group" aria-label="Film language" className="site-card inline-flex p-1 !rounded-full">
               {Object.entries(INTRO_VIDEOS).map(([k, item]) => (
                 <button key={k} type="button" onClick={() => switchLang(k)} aria-pressed={k === lang}
-                  className="px-4 py-2 rounded-full text-sm font-semibold transition-colors"
+                  className="px-4 py-3 sm:py-2 rounded-full text-sm font-semibold transition-colors"
                   style={k === lang ? { background: "var(--brand-btn)", color: "#fff" } : { color: "var(--site-text)" }}>
                   {item.label}
                 </button>
@@ -57,7 +57,7 @@ export default function FilmSection() {
             {CHIPS.map(({ t, label }) => (
               <li key={t}>
                 <button type="button" onClick={() => { if (lang !== "en") setLang("en"); play(t); }}
-                  className="site-chip rounded-full px-3.5 py-2 text-[13px] font-medium hover:text-[color:var(--site-ink)] transition-colors">
+                  className="site-chip rounded-full px-3.5 py-3 sm:py-2 text-[13px] font-medium hover:text-[color:var(--site-ink)] transition-colors">
                   <span className="font-semibold site-ink mr-1.5">{Math.floor(t / 60)}:{String(t % 60).padStart(2, "0")}</span>{label}
                 </button>
               </li>
@@ -65,7 +65,7 @@ export default function FilmSection() {
           </ul>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm shrink-0">
             <Link to="/product-tour" className="site-link">Chapters and transcript <ArrowRight className="w-4 h-4" /></Link>
-            <a href={YOUTUBE_FILM[lang]} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 font-semibold site-ink hover:underline underline-offset-4">
+            <a href={YOUTUBE_FILM[lang]} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-0 font-semibold site-ink hover:underline underline-offset-4">
               <Youtube className="w-[18px] h-[18px]" style={{ color: "#FF0000" }} aria-hidden="true" /> Watch on YouTube
             </a>
           </div>
