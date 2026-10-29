@@ -77,8 +77,10 @@ export function PageHero({ eyebrow, crumb, title, lede, visual, actions, trust, 
       <Container className={cx("relative", two && "grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-center")}>
         <div className={two ? "text-center lg:text-left" : "text-center max-w-3xl mx-auto"}>
           {crumb}
+          {/* The label sits above the H1, not inside it: inside, search engines read
+              "About usBuilt for ..." as one heading (audit, 29 Oct 2026). */}
+          {eyebrow && <p className="font-display site-eyebrow mb-4 sm:mb-5">{eyebrow}</p>}
           <h1 className="font-display site-ink font-extrabold tracking-[-0.03em]">
-            {eyebrow && <span className="site-eyebrow block mb-4 sm:mb-5">{eyebrow}</span>}
             <span className="block text-[34px] leading-[1.08] sm:text-[46px] lg:text-[52px]" style={{ textWrap: "balance" }}>{title}</span>
           </h1>
           {lede && (

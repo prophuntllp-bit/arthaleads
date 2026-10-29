@@ -180,7 +180,9 @@ const faqLd = (faqs) => ({
   mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.question, acceptedAnswer: { "@type": "Answer", text: f.answer } })),
 });
 const TPL_COVER = "https://cdn.sanity.io/images/tpl/tpl/tplcover-2000x1125.png";
-const stripTags = (h) => String(h || "").replace(/<[^>]*>/g, "").trim();
+// Entities decoded, as on the live page; esc() encodes once when the text is written.
+const decodeEntities = (s) => String(s).replace(/&(amp|quot|#39|apos|lt|gt|nbsp);/g, (_, e) => ({ amp: "&", quot: '"', "#39": "'", apos: "'", lt: "<", gt: ">", nbsp: " " })[e]);
+const stripTags = (h) => decodeEntities(String(h || "").replace(/<[^>]*>/g, "")).trim();
 const dateIN = (d) => (d ? new Date(d).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" }) : "");
 
 function fillTemplate(html, post, categories) {

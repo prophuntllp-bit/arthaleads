@@ -158,7 +158,9 @@ function sanitizeHtml(html) {
   });
 }
 
-const stripTags = (html) => String(html || "").replace(/<[^>]*>/g, "").trim();
+// Heading text for "In this article": tags out, entities decoded (React escapes it again).
+const decodeEntities = (s) => String(s).replace(/&(amp|quot|#39|apos|lt|gt|nbsp);/g, (_, e) => ({ amp: "&", quot: '"', "#39": "'", apos: "'", lt: "<", gt: ">", nbsp: " " })[e]);
+const stripTags = (html) => decodeEntities(String(html || "").replace(/<[^>]*>/g, "")).trim();
 
 // ── Block renderer ─────────────────────────────────────────────────────────────
 // Plain semantic elements; .blog-prose (styles.css) gives them their look.

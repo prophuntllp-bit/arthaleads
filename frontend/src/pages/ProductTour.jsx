@@ -45,7 +45,7 @@ export default function ProductTour() {
         <Container className="relative">
           <div className="max-w-4xl">
             <h1 className="font-display site-ink font-extrabold tracking-[-0.03em]">
-              <span className="site-eyebrow block mb-4 sm:mb-5">Product tour</span>
+              <span className="site-eyebrow block mb-4 sm:mb-5">Product tour</span>{" "}
               <span className="block text-[32px] leading-[1.1] sm:text-[44px] lg:text-[50px]" style={{ textWrap: "balance" }}>
                 Arthaleads in 2 minutes: <span className="site-dim">the real estate CRM that answers buyers at 1 AM</span>
               </span>

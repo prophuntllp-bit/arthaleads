@@ -50,8 +50,9 @@ function Hero() {
       <Container className="relative grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-center">
         <div className="text-center lg:text-left">
           <h1 className="font-display site-ink font-extrabold tracking-[-0.03em]">
-            <span className="site-eyebrow block mb-4 sm:mb-5">Real estate CRM software for India</span>
-            <span className="block text-[35px] leading-[1.06] sm:text-[48px] lg:text-[52px] xl:text-[58px] min-[1700px]:text-[64px]">Every enquiry answered.</span>
+            {/* The keyword label stays in the H1; the spaces keep the words apart for search engines (audit, 29 Oct 2026). */}
+            <span className="site-eyebrow block mb-4 sm:mb-5">Real estate CRM software for India</span>{" "}
+            <span className="block text-[35px] leading-[1.06] sm:text-[48px] lg:text-[52px] xl:text-[58px] min-[1700px]:text-[64px]">Every enquiry answered.</span>{" "}
             <span className="block text-[35px] leading-[1.1] sm:text-[48px] lg:text-[52px] xl:text-[58px] min-[1700px]:text-[64px]"><span className="site-gradient-text">Even at 1 AM.</span></span>
           </h1>
           <p className="mt-5 text-base sm:text-[17px] min-[1700px]:text-lg leading-relaxed max-w-[35rem] mx-auto lg:mx-0" style={{ textWrap: "pretty" }}>
