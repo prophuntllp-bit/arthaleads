@@ -61,9 +61,11 @@ async function listAccounts(accessToken) {
   const json = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(errorMessage(json, resp.status));
   const ids = (json.resourceNames || []).map((rn) => rn.split("/")[1]).filter(Boolean);
+  if (!ids.length) throw new Error("This Google login has no Google Ads account. Sign in with the login you use for Google Ads.");
 
   const direct = new Map(); // id -> account
   const viaManager = [];
+  const managers = []; // "Name (123-456-7890)", to say where nothing was found
   await Promise.all(ids.map(async (id) => {
     let customer;
     try {
@@ -78,6 +80,7 @@ async function listAccounts(accessToken) {
       direct.set(id, { id, name: customer?.descriptiveName || id, loginCustomerId: "", testAccount: customer?.testAccount === true });
       return;
     }
+    managers.push(`${customer.descriptiveName || "manager account"} (${String(id).replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3")})`);
     try {
       const clients = await search(id, `
         SELECT customer_client.id, customer_client.descriptive_name, customer_client.test_account
@@ -91,6 +94,9 @@ async function listAccounts(accessToken) {
 
   // An account reachable both directly and through a manager is listed once, as direct.
   for (const a of viaManager) if (!direct.has(a.id)) direct.set(a.id, a);
+  if (!direct.size && managers.length) {
+    throw new Error(`Your manager account ${managers.join(", ")} has no ad accounts under it yet. Link your ad account to it in Google Ads, then connect again.`);
+  }
   return [...direct.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 

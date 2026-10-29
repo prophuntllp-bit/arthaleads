@@ -33,7 +33,7 @@ global.fetch = async (url, opts = {}) => {
     ] });
   }
   if (/FROM customer /.test(q + " ")) {
-    return reply({ results: [{ customer: id === "999" ? { id, descriptiveName: "Arthaleads MCC", manager: true } : { id, descriptiveName: "Own Account" } }] });
+    return reply({ results: [{ customer: (id === "999" || id === "6989269947") ? { id, descriptiveName: "Arthaleads MCC", manager: true } : { id, descriptiveName: "Own Account" } }] });
   }
   if (/FROM lead_form_submission_data/.test(q)) {
     if (h["login-customer-id"] !== "999") {
@@ -74,6 +74,16 @@ test("account list: a manager is replaced by its clients, each remembering the m
   assert.equal(accounts[1].managerName, "Arthaleads MCC");
   assert.ok(calls.every((c) => c.url.includes("/v26/") || c.url.includes("oauth2")), "every call on v26");
   assert.ok(calls.every((c) => c.devToken === undefined), "no developer token needed");
+});
+
+test("a manager with no ad accounts under it says so", async () => {
+  const realClients = global.fetch;
+  global.fetch = async (url, opts) => (/FROM customer_client/.test(opts?.body || "") ? reply({ results: [] }) : realClients(url, opts));
+  const realList = global.fetch;
+  global.fetch = async (url, opts) => (String(url).endsWith(":listAccessibleCustomers") ? reply({ resourceNames: ["customers/6989269947"] }) : realList(url, opts));
+  try {
+    await assert.rejects(automationService.fetchGoogleAdsAccounts("tok"), /manager account Arthaleads MCC \(698-926-9947\) has no ad accounts under it yet/);
+  } finally { global.fetch = realClients; }
 });
 
 test("connect saves the manager it goes through", async () => {
