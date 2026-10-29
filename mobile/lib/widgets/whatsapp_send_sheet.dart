@@ -118,6 +118,7 @@ class _WhatsAppSendSheetState extends State<_WhatsAppSendSheet> {
   // hold a chat; a project lead can't yet.
   bool _waConnected = false;
   bool _starting = false;
+  String _startError = '';
 
   @override
   void initState() {
@@ -131,7 +132,10 @@ class _WhatsAppSendSheetState extends State<_WhatsAppSendSheet> {
 
   Future<void> _openInCrm() async {
     if (_starting) return;
-    setState(() => _starting = true);
+    setState(() {
+      _starting = true;
+      _startError = '';
+    });
     final nav = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -152,10 +156,8 @@ class _WhatsAppSendSheetState extends State<_WhatsAppSendSheet> {
         ),
       ));
     } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(ApiClient.errorMessage(e, 'Could not open this conversation')),
-        backgroundColor: AppColors.danger,
-      ));
+      // Shown in the sheet: a SnackBar would sit behind it.
+      if (mounted) setState(() => _startError = ApiClient.errorMessage(e, 'Could not open this conversation'));
     } finally {
       if (mounted) setState(() => _starting = false);
     }
@@ -284,7 +286,10 @@ class _WhatsAppSendSheetState extends State<_WhatsAppSendSheet> {
                       : Icon(FontAwesomeIcons.whatsapp.data, color: AppColors.primary, size: 18),
                 ),
                 title: const Text('Open chat in the CRM', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                subtitle: const Text("From your company's WhatsApp number, kept on the lead", style: TextStyle(fontSize: 11)),
+                subtitle: Text(
+                  _startError.isNotEmpty ? _startError : "From your company's WhatsApp number, kept on the lead",
+                  style: TextStyle(fontSize: 11, color: _startError.isNotEmpty ? AppColors.danger : null),
+                ),
                 onTap: _openInCrm,
               ),
             ListTile(

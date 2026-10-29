@@ -444,9 +444,12 @@ class _ProfileMenuState extends State<ProfileMenu> {
                           icon: Icons.swap_horiz_rounded,
                           label: 'Switch account',
                           onTap: () {
+                            // The drawer closes first, so the sheet opens from
+                            // the app's own navigator, not this menu.
+                            final rootContext = Navigator.of(context, rootNavigator: true).context;
                             _toggleOpen(attendanceEnabled);
                             widget.onClose();
-                            showSwitchAccountSheet(context);
+                            showSwitchAccountSheet(rootContext);
                           },
                         ),
                       _actionRow(

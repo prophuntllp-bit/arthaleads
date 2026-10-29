@@ -563,11 +563,15 @@ class LeadsScreenState extends State<LeadsScreen> {
   }
 
   Future<void> _whatsapp(Map<String, dynamic> lead) async {
+    // A project lead's AI draft goes to its project's route, and it can't
+    // hold a CRM chat yet (the sheet hides that option when projectId is set).
+    final isProject = lead['_type'] == 'project' && lead['projectId'] != null;
     await showWhatsAppSendSheet(
       context,
       phone: lead['phone'] as String?,
       name: lead['name'] as String?,
       leadId: lead['_id'] as String?,
+      projectId: isProject ? '${lead['projectId'] is Map ? (lead['projectId'] as Map)['_id'] : lead['projectId']}' : null,
       onSent: () => _markContacted(lead),
     );
   }
