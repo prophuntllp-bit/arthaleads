@@ -361,15 +361,16 @@ export default function Attendance() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const params = new URLSearchParams();
+      // An Excel report in the ArthaLeads look, with the selfies in it (29 Oct 2026).
+      const params = new URLSearchParams({ format: "xlsx" });
       if (from) params.set("from", from);
       if (to)   params.set("to", to);
       if (filterUser) params.set("userId", filterUser);
-      const r = await api.get(`/attendance/export?${params}`, { responseType: "blob" });
-      const url = URL.createObjectURL(new Blob([r.data], { type: "text/csv" }));
+      const r = await api.get(`/attendance/export?${params}`, { responseType: "blob", timeout: 120000 });
+      const url = URL.createObjectURL(new Blob([r.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
       const a = document.createElement("a");
       const label = from && to ? `${from}_to_${to}` : "all";
-      a.href = url; a.download = `attendance_${label}.csv`;
+      a.href = url; a.download = `attendance_${label}.xlsx`;
       a.click(); URL.revokeObjectURL(url);
       toast.success("Report downloaded");
     } catch { toast.error("Export failed"); }
