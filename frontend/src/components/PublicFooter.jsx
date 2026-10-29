@@ -36,13 +36,13 @@ export default function PublicFooter() {
             <a
               href="mailto:contact@arthaleads.com"
               style={{ color: text }}
-              className="block text-sm mt-4 hover:text-[color:var(--brand-text)] transition-colors"
+              className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm mt-2 md:mt-4 hover:text-[color:var(--brand-text)] transition-colors"
             >
               contact@arthaleads.com
             </a>
             {/* The phone number is the fastest way to reach sales: shown as a highlighted call chip. */}
             <a href={PHONE_TEL}
-              className="inline-flex items-center gap-2 mt-3 pl-1.5 pr-3.5 py-1.5 rounded-full text-[15px] font-bold transition-transform duration-200 hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 mt-3 pl-1.5 pr-3.5 py-2 rounded-full text-[15px] font-bold transition-transform duration-200 hover:-translate-y-0.5"
               style={{ color: isDark ? "#ffffff" : "#111827", background: "rgba(255,107,0,0.10)", border: "1px solid rgba(255,107,0,0.35)" }}>
               <span className="w-7 h-7 rounded-full flex items-center justify-center text-white" style={{ background: "var(--brand-btn)" }}>
                 <Phone className="w-3.5 h-3.5" aria-hidden="true" />
@@ -64,7 +64,7 @@ export default function PublicFooter() {
               ].map(({ label, href, Icon, hover }) => (
                 <a key={label} href={href} aria-label={label} title={label}
                   {...(href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-200 hover:-translate-y-0.5"
+                  className="w-11 h-11 rounded-xl flex items-center justify-center border transition-all duration-200 hover:-translate-y-0.5"
                   style={{ color: text, borderColor: border, background: isDark ? "rgba(255,255,255,0.03)" : "#ffffff" }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = hover; e.currentTarget.style.borderColor = hover; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = text; e.currentTarget.style.borderColor = border; }}>
@@ -77,7 +77,7 @@ export default function PublicFooter() {
           {/* Product */}
           <div>
             <p style={{ color: heading }} className="font-semibold text-sm mb-4">Product</p>
-            <div className="space-y-2.5">
+            <div className="md:space-y-2.5">
               {[
                 ["Features",           "/features"],
                 ["Pricing",            "/pricing"],
@@ -89,7 +89,7 @@ export default function PublicFooter() {
                 ["API Docs",           "/api-docs"],
                 ["Refer & Earn",       "/refer"],
               ].map(([label, href]) => (
-                <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
+                <Link key={label} to={href} style={{ color: text }} className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
               ))}
             </div>
           </div>
@@ -97,14 +97,14 @@ export default function PublicFooter() {
           {/* Compare */}
           <div>
             <p style={{ color: heading }} className="font-semibold text-sm mb-4">Compare</p>
-            <div className="space-y-2.5">
+            <div className="md:space-y-2.5">
               {[
                 ["All comparisons",        "/compare"],
                 ["Arthaleads vs Sell.Do",  "/compare/sell-do-alternative"],
                 ["Arthaleads vs Leadrat",  "/compare/leadrat-alternative"],
                 ["Arthaleads vs Kylas",    "/compare/kylas-alternative"],
               ].map(([label, href]) => (
-                <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
+                <Link key={label} to={href} style={{ color: text }} className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
               ))}
             </div>
           </div>
@@ -112,7 +112,7 @@ export default function PublicFooter() {
           {/* Company */}
           <div>
             <p style={{ color: heading }} className="font-semibold text-sm mb-4">Company</p>
-            <div className="space-y-2.5">
+            <div className="md:space-y-2.5">
               {[
                 ["About Us",      "/about-us"],
                 ["Careers",       "/careers"],
@@ -123,7 +123,7 @@ export default function PublicFooter() {
                 ["Book a Demo",   "/book-demo"],
                 ["Contact Us",    "/contact"],
               ].map(([label, href]) => (
-                <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
+                <Link key={label} to={href} style={{ color: text }} className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
               ))}
             </div>
           </div>
@@ -131,14 +131,14 @@ export default function PublicFooter() {
           {/* Legal */}
           <div>
             <p style={{ color: heading }} className="font-semibold text-sm mb-4">Legal</p>
-            <div className="space-y-2.5">
+            <div className="md:space-y-2.5">
               {[
                 ["Privacy Policy",   "/privacy"],
                 ["Terms of Service", "/terms"],
                 ["Refund Policy",    "/refund"],
                 ["Cookie Policy",    "/cookie-policy"],
               ].map(([label, href]) => (
-                <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
+                <Link key={label} to={href} style={{ color: text }} className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
               ))}
             </div>
           </div>

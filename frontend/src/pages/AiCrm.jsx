@@ -85,7 +85,7 @@ export default function AiCrm() {
       }}
       features={{
         visual: <MiniChat messages={[
-          ["buyer", "Is the 2 BHK at Aurum Heights still available?"],
+          ["buyer", "Is the 2 BHK at Riverview Heights still available?"],
           ["ai", "Yes, 2 BHK homes start at ₹82 L. Can you visit this Saturday, 11 AM or 4 PM?"],
           ["buyer", "11 AM works"],
         ]} />,

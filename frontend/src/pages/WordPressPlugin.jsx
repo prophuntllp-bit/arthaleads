@@ -183,10 +183,10 @@ function PluginCard({ plugin }) {
 
 // ── Live notification widget (illustrative leads, cycles after mount) ────────
 const FAKE_LEADS = [
-  { name: "Rahul Sharma",    form: "Contact Form",    site: "Aurum Heights website" },
+  { name: "Rahul Sharma",    form: "Contact Form",    site: "Riverview Heights website" },
   { name: "Priya Desai",     form: "Enquiry Form",    site: "Skyline Residency website" },
   { name: "Suresh Patil",    form: "Site Visit Form", site: "Green Acres website" },
-  { name: "Anita Kulkarni",  form: "Callback Form",   site: "Aurum Heights website" },
+  { name: "Anita Kulkarni",  form: "Callback Form",   site: "Riverview Heights website" },
 ];
 
 function LiveNotification() {
@@ -223,7 +223,7 @@ function LiveNotification() {
 
 /** A coded WordPress enquiry form sending a lead to Arthaleads (an illustration, not a screenshot). */
 function FormToCrmViz() {
-  const fields = [["Full name", "Rahul Sharma"], ["Phone", "98765 43210"], ["Interested in", "2 BHK, Aurum Heights"]];
+  const fields = [["Full name", "Rahul Sharma"], ["Phone", "98765 43210"], ["Interested in", "2 BHK, Riverview Heights"]];
   return (
     <div className="relative mx-auto w-full max-w-[460px] px-3 sm:px-6 lg:px-0 pb-16 sm:pb-12">
       <div aria-hidden="true" className="hero-glass" />

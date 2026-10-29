@@ -1,24 +1,6 @@
 User-agent: *
-Allow: /
-Allow: /blog
-Allow: /about-us
-Allow: /careers
-Allow: /contact
-Allow: /case-studies
-Allow: /product-updates
-Allow: /help-guide
-Allow: /wordpress-plugin
-Allow: /privacy
-Allow: /terms
-Allow: /refund
-Allow: /cookie-policy
-Allow: /security
-Allow: /refer
-Allow: /api-docs
-Allow: /compare
-Allow: /pricing
-
-# Internal CRM pages - not for indexing
+# Everything is allowed except the CRM pages below (on www they redirect to
+# app.arthaleads.com) and the API.
 Disallow: /dashboard
 Disallow: /leads
 Disallow: /pipeline

@@ -57,11 +57,11 @@ const FAQS = [
   },
   {
     q: "Do I need a separate mobile account?",
-    a: "No — one account covers both. You can create it on this site or in the app itself; either way the same email and password sign you in everywhere, and your role and permissions carry across, so an agent sees their leads and an admin sees the whole team.",
+    a: "No, one account covers both. You can create it on this site or in the app itself; either way the same email and password sign you in everywhere, and your role and permissions carry across, so an agent sees their leads and an admin sees the whole team.",
   },
   {
     q: "Will it work on my phone?",
-    a: "Any phone running Android 7.0 or later, which covers effectively every device still receiving updates. There is one download for every phone — you do not have to work out which processor yours has.",
+    a: "Any phone running Android 7.0 or later, which covers effectively every device still receiving updates. There is one download for every phone, so you do not have to work out which processor yours has.",
   },
 ];
 

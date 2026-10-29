@@ -359,6 +359,9 @@ function BlogPageInner() {
               </>
             )}
           </section>
+
+          {/* ── A topic page's short guide and common questions (api/blog-index.js fills this too) ── */}
+          <div id="blog-topic-guide">{topic && !filtering && <TopicGuide topic={topic} />}</div>
         </Container>
       </Section>
 
@@ -382,6 +385,38 @@ function BlogPageInner() {
         </Container>
       </Section>
     </SitePage>
+  );
+}
+
+/** A topic page's guide (paragraphs) and its common questions, under the articles.
+ *  Same markup as topicGuideHtml in api/blog-index.js. */
+function TopicGuide({ topic }) {
+  const guide = topic.guide || [], faqs = topic.faqs || [];
+  if (!guide.length && !faqs.length) return null;
+  return (
+    <div className="mt-16 lg:mt-20 grid lg:grid-cols-[1fr_1fr] gap-10 lg:gap-16">
+      {guide.length > 0 && (
+        <div>
+          <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] text-[24px] sm:text-[28px] mb-4">About {topic.name}</h2>
+          <div className="space-y-4 text-base leading-relaxed">{guide.map((p, i) => <p key={i}>{p}</p>)}</div>
+        </div>
+      )}
+      {faqs.length > 0 && (
+        <div>
+          <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] text-[24px] sm:text-[28px] mb-4">Common questions</h2>
+          <div className="space-y-3">
+            {faqs.map((f, i) => (
+              <details key={i} className="site-card px-5 py-4 group" open={i === 0}>
+                <summary className="cursor-pointer list-none font-semibold site-ink flex items-start justify-between gap-4">
+                  <span>{f.question}</span><span aria-hidden="true" className="site-muted transition-transform group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-3 text-[15px] leading-relaxed">{f.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

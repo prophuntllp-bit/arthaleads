@@ -14,6 +14,28 @@
       "permanent": true
     },
     {
+      "source": "/:path((?:login|signup|forgot-password|reset-password|admin-login|dashboard|leads|pipeline|settings|help-support|referrals|projects|followups|conversations|calls|tasks|attendance|bookings|invoices|developers|plans|team|integrations|automation|performance|dump-leads|super-admin)(?:/.*)?)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.arthaleads.com"
+        }
+      ],
+      "destination": "https://app.arthaleads.com/:path",
+      "permanent": true
+    },
+    {
+      "source": "/:path((?:login|signup|forgot-password|reset-password|admin-login|dashboard|leads|pipeline|settings|help-support|referrals|projects|followups|conversations|calls|tasks|attendance|bookings|invoices|developers|plans|team|integrations|automation|performance|dump-leads|super-admin)(?:/.*)?)",
+      "has": [
+        {
+          "type": "host",
+          "value": "staging.arthaleads.com"
+        }
+      ],
+      "destination": "https://app-staging.arthaleads.com/:path",
+      "permanent": false
+    },
+    {
       "source": "/robots.txt",
       "has": [
         {

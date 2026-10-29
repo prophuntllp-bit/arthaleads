@@ -10,6 +10,10 @@ const blogCategorySchema = new mongoose.Schema(
     // by services/sanityBlogSync.js; `order` is the order of the blog's topic tabs.
     seoTitle:    { type: String, default: "", maxlength: 70 },
     intro:       { type: String, default: "", maxlength: 600 },
+    // A short guide to the topic (paragraphs) and its common questions, shown
+    // under the topic's articles and sent to search engines as FAQ data.
+    guide:       { type: [String], default: [] },
+    faqs:        { type: [{ _id: false, question: String, answer: String }], default: [] },
     order:       { type: Number, default: 100 },
   },
   { timestamps: true }

@@ -136,7 +136,7 @@ function AiBand() {
             Phones: heading, then the phone, then the cards (DOM order). */}
         <div className="grid lg:grid-cols-[minmax(0,1fr)_auto] lg:grid-rows-[auto_1fr] gap-x-10 xl:gap-x-16 gap-y-8">
           <SectionHeader eyebrow="AI that works the night shift" title={<>Your best salesperson <span className="site-dim">never sleeps.</span></>}
-            lede="Most enquiries arrive after office hours. Arthaleads answers every one and tells your team who to call first. On Growth and above."
+            lede="Enquiries often arrive after office hours. Arthaleads answers every one and tells your team who to call first. On Growth and above."
             className="!mb-0 lg:col-start-1 lg:row-start-1">
             <Link to="/ai-crm" className="site-link text-[15px] mt-4">See everything the AI does <ArrowRight className="w-4 h-4" /></Link>
           </SectionHeader>
@@ -318,7 +318,7 @@ function HowItWorks() {
     <Section tone="tint">
       <Container>
         <SectionHeader eyebrow="How it works" title={<>Live in a day,<br className="hidden sm:block" /> <span className="site-dim">not a quarter.</span></>}
-          lede="No setup project and no consultants. Most teams connect their lead sources and see the AI reply on the same day."
+          lede="No setup project and no consultants. You can connect your lead sources and see the AI reply on the same day."
           action={<Link to="/download-app" className="site-link text-[15px]"><Download className="w-4 h-4" /> Get the Android app</Link>} />
         <ol className="relative grid md:grid-cols-3 gap-5">
           {/* The line joining the three numbers (desktop). */}
@@ -444,7 +444,7 @@ function Trust() {
               <ul className="mt-auto space-y-1.5">
                 {[["Sell.Do", "/compare/sell-do-alternative"], ["Leadrat", "/compare/leadrat-alternative"], ["Kylas", "/compare/kylas-alternative"]].map(([n, to]) => (
                   <li key={n}>
-                    <Link to={to} className="flex items-center justify-between rounded-xl px-3 py-2 text-[13px] font-medium site-ink transition-colors hover:border-[var(--site-brand)]"
+                    <Link to={to} className="flex items-center justify-between rounded-xl px-3 py-3 text-[13px] font-medium site-ink transition-colors hover:border-[var(--site-brand)]"
                       style={{ background: "var(--site-chip)", border: "1px solid var(--site-line)" }}>
                       Arthaleads vs {n} <ArrowUpRight className="w-4 h-4 site-muted" aria-hidden="true" />
                     </Link>
@@ -472,7 +472,7 @@ const HOME_FAQS = [
   ["Which is the best real estate CRM in India?",
    "It depends on your team size, lead sources and budget. Look for automatic Facebook and Google lead capture, WhatsApp follow-up, site visit tracking, an app for agents and clear per-user pricing. Arthaleads is built for Indian builders, brokers and channel partners whose buyers enquire on WhatsApp."],
   ["How much does a real estate CRM cost in India?",
-   `Most real estate CRMs in India charge per user per month. Arthaleads Starter is ${formatINR(PLAN_PRICING.starter.monthly)} and Growth is ${formatINR(PLAN_PRICING.growth.monthly)} per user per month, plus 18% GST, with a five-seat minimum. Enterprise is quoted on team size. Every team can start with a 14-day free trial, no credit card needed.`],
+   `Many real estate CRMs in India charge per user per month. Arthaleads Starter is ${formatINR(PLAN_PRICING.starter.monthly)} and Growth is ${formatINR(PLAN_PRICING.growth.monthly)} per user per month, plus 18% GST, with a five-seat minimum. Enterprise is quoted on team size. Every team can start with a 14-day free trial, no credit card needed.`],
   ["Is there a mobile app for my sales team?",
    "Yes. Agents get an Android app for calling leads, logging outcomes, checking in and seeing today's follow-ups, and the web app works on any phone or computer."],
 ];
@@ -559,7 +559,7 @@ function FinalCta() {
                 </span>
                 <div>
                   <p className="text-[13px] font-semibold site-ink leading-tight">Booking confirmed</p>
-                  <p className="text-[11px] site-muted leading-tight">Flat 1204 · Aurum Heights</p>
+                  <p className="text-[11px] site-muted leading-tight">Flat 1204 · Riverview Heights</p>
                 </div>
               </FloatCard>
             </div>

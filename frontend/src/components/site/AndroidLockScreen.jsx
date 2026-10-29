@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { Bell, Phone, MapPin, Fingerprint, Camera } from "lucide-react";
 
 const ALERTS = [
-  { Icon: MapPin, tint: "#2563eb", title: "Clocked in on site", body: "Aurum Heights · selfie" },
+  { Icon: MapPin, tint: "#2563eb", title: "Clocked in on site", body: "Riverview Heights · selfie" },
   { Icon: Phone, tint: "#16a34a", title: "Call logged · 4 min", body: "Raj Patil · recording saved" },
   { Icon: Bell, tint: "#ea580c", title: "New lead · Ananya Iyer", body: "2 BHK · Facebook ad" },
 ];
