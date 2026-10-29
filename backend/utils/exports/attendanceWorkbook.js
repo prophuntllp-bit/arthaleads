@@ -116,9 +116,10 @@ function addSummary(wb, records, { title, periodText, generatedText, logo }) {
   ws.columns = [{ width: 26 }, { width: 13 }, ...Array(13).fill({ width: 13 })];
   if (logo) {
     const id = wb.addImage({ base64: logo, extension: "png" });
-    ws.addImage(id, { tl: { col: 0.2, row: 0.2 }, ext: { width: 150, height: 40 } });
+    // Same size as the leads Summary: the logo is 1116 x 220, kept in proportion.
+    ws.addImage(id, { tl: { col: 0.1, row: 0.15 }, ext: { width: 233, height: 46 }, editAs: "absolute" });
   }
-  ws.getRow(1).height = 36;
+  ws.getRow(1).height = 46;
   ws.getCell("C1").value = title;
   ws.getCell("C1").font = { bold: true, size: 18, color: { argb: argb(INK) } };
   ws.getCell("C1").alignment = { vertical: "middle" };
@@ -195,9 +196,10 @@ function addRecords(wb, records, photos) {
     pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: "1:1" },
   });
   const cols = [
-    ["Date", 15], ["Day", 7], ["Team member", 22], ["Role", 11], ["Clock in", 11], ["Clock out", 11], ["Hours", 9],
-    ["Day type", 12], ["Status", 14], ["Late by", 10], ["Left early by", 12], ["Overtime", 10], ["Outside shift", 12],
-    ["Photo in", 18], ["Photo out", 18], ["Location in", 14], ["Location out", 14], ["Note", 30], ["Email", 28],
+    // Each at least its heading plus room for the filter button, so nothing wraps.
+    ["Date", 15], ["Day", 9], ["Team member", 22], ["Role", 13], ["Clock in", 13], ["Clock out", 14], ["Hours", 11],
+    ["Day type", 14], ["Status", 15], ["Late by", 12], ["Left early by", 18], ["Overtime", 14], ["Outside shift", 18],
+    ["Photo in", 18], ["Photo out", 18], ["Location in", 17], ["Location out", 18], ["Note", 30], ["Email", 30],
   ];
   ws.columns = cols.map(([header, width]) => ({ header, width }));
   header(ws, 1, cols.map((c) => c[0]));
@@ -297,6 +299,8 @@ async function attendanceWorkbook(records, { from, to, memberName, orgName } = {
   const fmt = (ymd) => new Date(`${ymd}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
   const period = from && to ? `${fmt(from)} to ${fmt(to)}` : from ? `From ${fmt(from)}` : to ? `Up to ${fmt(to)}` : "All time";
   const generated = new Date().toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" });
+  // Newest first (owner, 29 Oct 2026), whatever order the caller used.
+  records = [...records].sort((a, b) => String(b.date).localeCompare(String(a.date)) || new Date(b.clockIn || 0) - new Date(a.clockIn || 0));
   const photos = await loadPhotos(records);
   addSummary(wb, records, {
     title: `Attendance report${orgName ? `, ${orgName}` : ""}`,
