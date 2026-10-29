@@ -254,7 +254,13 @@ function addRecords(wb, records, photos) {
       const img = embed && url ? photos.get(url) : null;
       if (img) {
         const id = wb.addImage({ buffer: img.buffer, extension: img.extension });
-        ws.addImage(id, { tl: { col: C[h] - 1 + 0.08, row: rowNo - 1 + 0.06 }, ext: { width: PHOTO_PX, height: PHOTO_PX }, editAs: "oneCell" });
+        // The picture stays in the cell; clicking it, or the link under it,
+        // opens the full-size photo (owner, 29 Oct 2026).
+        ws.addImage(id, { tl: { col: C[h] - 1 + 0.08, row: rowNo - 1 + 0.04 }, ext: { width: PHOTO_PX, height: PHOTO_PX }, editAs: "oneCell",
+          hyperlinks: { hyperlink: url, tooltip: "Open the full-size photo" } });
+        cell.value = { text: "Open full photo", hyperlink: url };
+        cell.font = { color: { argb: "FF2563EB" }, underline: true, size: 9 };
+        cell.alignment = { vertical: "bottom", horizontal: "center" };
       } else if (url) {
         // Not loaded, or past the photo limit: say so plainly rather than link out.
         cell.value = embed ? "Photo not available" : "Narrow the dates to see";
@@ -272,7 +278,7 @@ function addRecords(wb, records, photos) {
       cell.font = { color: { argb: "FF2563EB" }, underline: true, size: 10 };
     }
     row.getCell(C.Note).alignment = { vertical: "middle", indent: 1, wrapText: true };
-    row.height = hasPhoto ? 90 : 22; // points; fits the 112 px photo with a margin
+    row.height = hasPhoto ? 104 : 22; // points: the 112 px photo, then its link underneath
   });
 
   ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: cols.length } };
