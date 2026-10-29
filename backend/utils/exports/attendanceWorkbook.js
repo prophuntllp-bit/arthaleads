@@ -14,10 +14,12 @@ const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.s
 const BRAND = "FF6B00", BRAND_DEEP = "A04100", INK = "1F2937", MUTED = "6B7280";
 const ZEBRA = "FFF7F0", RULE = "E2CDB9", HEAD_RULE = "D45A00";
 const IST_MS = 5.5 * 3600000;
-// Photos are embedded for up to this many records; past it the cell links to
-// the photo instead, so a year of a big team still downloads quickly.
-const MAX_PHOTO_ROWS = 400;
-const PHOTO_PX = 64;
+// The selfies are shown in their cells, large enough to recognise the person
+// without opening anything (owner, 29 Oct 2026). Up to this many records carry
+// pictures; past it a cell says to narrow the dates, so a year of a big team
+// still downloads in a reasonable time and size.
+const MAX_PHOTO_ROWS = 1000;
+const PHOTO_PX = 112;
 
 const argb = (hex) => `FF${hex}`;
 const solid = (hex) => ({ type: "pattern", pattern: "solid", fgColor: { argb: argb(hex) } });
@@ -195,7 +197,7 @@ function addRecords(wb, records, photos) {
   const cols = [
     ["Date", 15], ["Day", 7], ["Team member", 22], ["Role", 11], ["Clock in", 11], ["Clock out", 11], ["Hours", 9],
     ["Day type", 12], ["Status", 14], ["Late by", 10], ["Left early by", 12], ["Overtime", 10], ["Outside shift", 12],
-    ["Photo in", 12], ["Photo out", 12], ["Location in", 14], ["Location out", 14], ["Note", 30], ["Email", 28],
+    ["Photo in", 18], ["Photo out", 18], ["Location in", 14], ["Location out", 14], ["Note", 30], ["Email", 28],
   ];
   ws.columns = cols.map(([header, width]) => ({ header, width }));
   header(ws, 1, cols.map((c) => c[0]));
@@ -252,10 +254,12 @@ function addRecords(wb, records, photos) {
       const img = embed && url ? photos.get(url) : null;
       if (img) {
         const id = wb.addImage({ buffer: img.buffer, extension: img.extension });
-        ws.addImage(id, { tl: { col: C[h] - 1 + 0.12, row: rowNo - 1 + 0.08 }, ext: { width: PHOTO_PX, height: PHOTO_PX }, hyperlinks: { hyperlink: url, tooltip: "Open the full photo" } });
+        ws.addImage(id, { tl: { col: C[h] - 1 + 0.08, row: rowNo - 1 + 0.06 }, ext: { width: PHOTO_PX, height: PHOTO_PX }, editAs: "oneCell" });
       } else if (url) {
-        cell.value = { text: "View photo", hyperlink: url };
-        cell.font = { color: { argb: "FF2563EB" }, underline: true, size: 10 };
+        // Not loaded, or past the photo limit: say so plainly rather than link out.
+        cell.value = embed ? "Photo not available" : "Narrow the dates to see";
+        cell.font = { italic: true, color: { argb: argb(MUTED) }, size: 9 };
+        cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
       } else if (skipped) {
         cell.value = "No photo";
         pill(cell, ["FEE2E2", "B91C1C"]);
@@ -268,7 +272,7 @@ function addRecords(wb, records, photos) {
       cell.font = { color: { argb: "FF2563EB" }, underline: true, size: 10 };
     }
     row.getCell(C.Note).alignment = { vertical: "middle", indent: 1, wrapText: true };
-    row.height = hasPhoto ? 54 : 22;
+    row.height = hasPhoto ? 90 : 22; // points; fits the 112 px photo with a margin
   });
 
   ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: cols.length } };
@@ -291,7 +295,7 @@ async function attendanceWorkbook(records, { from, to, memberName, orgName } = {
   addSummary(wb, records, {
     title: `Attendance report${orgName ? `, ${orgName}` : ""}`,
     periodText: `Period: ${period} · ${memberName ? `Member: ${memberName}` : "All members"} · ${records.length} record${records.length === 1 ? "" : "s"}`,
-    generatedText: `Generated ${generated} IST. Times are in IST.${records.length > MAX_PHOTO_ROWS ? ` Photos are shown for the first ${MAX_PHOTO_ROWS} records; the rest link to them.` : ""}`,
+    generatedText: `Generated ${generated} IST. Times are in IST.${records.length > MAX_PHOTO_ROWS ? ` Photos are shown for the first ${MAX_PHOTO_ROWS} records; choose a shorter date range to see the rest.` : ""}`,
     logo: logoBase64(),
   });
   addRecords(wb, records, photos);
