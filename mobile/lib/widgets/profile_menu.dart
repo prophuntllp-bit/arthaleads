@@ -355,16 +355,14 @@ class _ProfileMenuState extends State<ProfileMenu> {
                             ),
                           )
                         : InkWell(
-                            borderRadius: BorderRadius.circular(99),
+                            borderRadius: BorderRadius.circular(12),
                             onTap: _acting ? null : () => _punch(true),
-                            // Orange pill, like Clock In on Home and Attendance
-                            // (30 Oct 2026: it was green and square-cornered).
                             child: Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.symmetric(vertical: 11),
-                              decoration: const ShapeDecoration(
-                                color: AppColors.primary,
-                                shape: StadiumBorder(),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: AppColors.success,
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -376,7 +374,7 @@ class _ProfileMenuState extends State<ProfileMenu> {
                                   ),
                                   SizedBox(width: 6),
                                   Text(
-                                    'Clock In',
+                                    'Clock IN',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
