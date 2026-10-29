@@ -80,6 +80,17 @@ test("the sitemap lists topic pages that have an article", async () => {
   assert.ok(xml.includes("/blog/category/real-estate-crm</loc>"));
   assert.ok(xml.includes("/blog/category/whatsapp</loc>"));
   assert.ok(!xml.includes("/blog/category/channel-partners"), "empty topics stay out");
+  assert.ok(!xml.includes("<priority>") && !xml.includes("<changefreq>"), "no priority or changefreq (Google ignores them)");
+});
+
+test("a post merged into another (redirected) is not listed or counted", async () => {
+  await BlogPost.updateOne({ slug: "lead-mgmt" }, { $set: { redirectUrl: "/blog/crm-guide" } });
+  const posts = (await call(ctrl.getPosts, { query: {} })).body.posts.map((p) => p.slug);
+  assert.ok(!posts.includes("lead-mgmt"));
+  const all = (await call(ctrl.getCategories, { query: {} })).body.categories;
+  assert.equal(all.find((c) => c.slug === "lead-management").count, 0);
+  const xml = (await call(ctrl.getSitemap, { query: {} })).body;
+  assert.ok(!xml.includes("/blog/lead-mgmt<") && !xml.includes("/blog/category/lead-management<"));
 });
 
 (async () => {

@@ -283,7 +283,7 @@ export default async function handler(req, res) {
   }
 
   if (post?.redirectUrl) {
-    res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=86400");
+    res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=604800");
     res.redirect(post.redirectPermanent === false ? 302 : 301, post.redirectUrl);
     return;
   }
@@ -349,6 +349,6 @@ export default async function handler(req, res) {
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   // Edge-cache for 5 minutes; a post edit shows up in previews within that.
-  res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=86400");
+  res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=604800");
   res.status(status).send(html);
 }

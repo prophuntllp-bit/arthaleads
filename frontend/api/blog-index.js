@@ -153,6 +153,8 @@ export default async function handler(req, res) {
           { "@type": "ListItem", position: 2, name: "Blog", item: `${SITE}/blog` },
           { "@type": "ListItem", position: 3, name: topic.name, item: url },
         ] };
+        // Swap the /blog page's own Home > Blog trail for this one: one BreadcrumbList per page.
+        html = html.replace(/\s*<script type="application\/ld\+json">\{"@context":"https:\/\/schema\.org","@type":"BreadcrumbList"[\s\S]*?<\/script>/, "");
         html = html.replace("</head>", () => `    <script type="application/ld+json" id="topic-breadcrumb-jsonld">${JSON.stringify(bc).replace(/</g, "\\u003c")}</script>\n  </head>`);
         html = fill(html, "header", "blog-head", headHtml(topic));
       }
@@ -166,6 +168,6 @@ export default async function handler(req, res) {
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   // Edge-cache for 5 minutes; a newly published post appears within that.
-  res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=86400");
+  res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=604800");
   res.status(status).send(html);
 }

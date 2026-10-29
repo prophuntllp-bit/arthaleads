@@ -196,6 +196,12 @@ export default function Features() {
             <Link to="/compare/leadrat-alternative" className="font-semibold underline underline-offset-4" style={{ color: "var(--site-brand-ink)" }}>Leadrat</Link> and{" "}
             <Link to="/compare/kylas-alternative" className="font-semibold underline underline-offset-4" style={{ color: "var(--site-brand-ink)" }}>Kylas</Link>.
           </p>
+          <p className="text-sm text-center mt-3">
+            <span className="site-muted">Guides: </span>
+            <Link to="/blog/real-estate-lead-management-enquiry-to-site-visit" className="font-semibold underline underline-offset-4" style={{ color: "var(--site-brand-ink)" }}>real estate lead management, enquiry to site visit</Link>
+            <span className="site-muted"> · </span>
+            <Link to="/blog/best-real-estate-crm-software-india" className="font-semibold underline underline-offset-4" style={{ color: "var(--site-brand-ink)" }}>choosing a real estate CRM in India</Link>
+          </p>
         </Container>
       </Section>
     </SitePage>
