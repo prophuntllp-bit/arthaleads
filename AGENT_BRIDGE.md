@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+- [claude] 2026-10-29 IST: LIVE d21c8eff (main ea12b5e4, d5e140bd, 98a01da0, d21c8eff): attendance Excel report on the web, checked live (2 sheets, 23 selfies + logo embedded). Phone app still gets CSV until the APK switches to ?format=xlsx
 - [claude] 2026-10-29 IST: Pushing live: attendance report as themed Excel for the web (?format=xlsx): Summary per member, newest-first records, IST times, pills, map links, selfies embedded (112 px, up to 1000 records) with links to the full photo; CSV kept for older phone app builds. Staging fc0286e6, 6989d4cb, 1bfa1897, 2d95e597. APK session: switch the app to ?format=xlsx + attendance.xlsx
 - [claude] 2026-10-29 IST: APK Integrations parity with the live web: Telephony hub (Plivo/EnableX cards + on/off switch), Plivo screen, Property portals, Website forms (name/address/edit/favicon), Meta conversion tracking, Routing screen, main Integrations sections. mobile/lib/screens/automation/* + new widgets/integration_kit.dart, mobile/assets/images/brand_*. Plus the rest-of-CRM parity list.
 - [claude] 2026-10-28 IST: LIVE 2139824a (staging 194dea31): org closure keeps billing records + ClosedOrgBilling (8-year TTL) and AuditLog (~400-day TTL); Privacy/Terms/DeleteAccount wording checked live. Open: Backblaze encryption confirmation; WordPress plugin page and intro film still say Vistrow
