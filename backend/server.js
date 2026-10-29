@@ -360,6 +360,8 @@ app.use(["/api", "/webhook", "/health"], (req, res, next) => {
 // The credential limiter is attached per-route inside authRoutes, so that
 // /auth/me, /auth/agents and the rest are not counted as login attempts.
 // Activity log (DPDP Rules 2025): writes a row after each response; see the file.
+// No AI vendor error text ever reaches a screen (middlewares/hideAiErrors.js).
+app.use("/api", require("./middlewares/hideAiErrors").hideAiErrors);
 app.use("/api", require("./middlewares/auditTrail").auditTrail);
 app.use("/api/audit-log", require("./routes/auditRoutes"));
 app.use("/api/auth",  authRoutes);

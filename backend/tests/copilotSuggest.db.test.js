@@ -19,6 +19,7 @@ const check = (ok, msg, d = "") => { console.log(`  ${ok ? "ok  " : "FAIL"}  ${m
   const axios = require("axios");
   let reply = {};
   axios.post = async () => ({ data: { choices: [{ message: { content: JSON.stringify(reply) } }], usage: {} } });
+  require("../utils/ai/gateway").createChatCompletion = async (body) => (await axios.post("https://api.openai.com/v1/chat/completions", body)).data;
   const { enrichWhatsAppLead } = require("../routes/whatsappRoutes")._leadCapture;
   const Organization = require("../models/Organization"), User = require("../models/User"), Lead = require("../models/Lead"), WaMessage = require("../models/WaMessage");
   const oid = () => new mongoose.Types.ObjectId();

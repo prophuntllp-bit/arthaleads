@@ -28,6 +28,7 @@ globalThis.fetch = async (url, opts = {}) => {
   return realFetch(url, opts);
 };
 const axios = require("axios");
+require("../utils/ai/gateway").createChatCompletion = async (body) => (await axios.post("https://api.openai.com/v1/chat/completions", body)).data; // chat calls reach the axios fake
 const metaSends = [];
 axios.post = async (url, body) => {
   if (String(url).startsWith("https://graph.facebook.com/")) {

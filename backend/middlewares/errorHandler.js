@@ -43,6 +43,14 @@ const errorHandler = (err, req, res, next) => {
     message = "Token expired. Please log in again.";
   }
 
+  // An AI vendor's error (out of credits, bad key, outage) is never shown as-is.
+  const ai = require("../utils/ai/gateway");
+  if (ai.isVendorError(err)) {
+    logger.error(`[ai] ${err.detail || err.message}`);
+    statusCode = 503;
+    message = ai.PUBLIC_MESSAGE;
+  }
+
   // Log server errors (not client errors)
   if (statusCode >= 500) {
     logger.error(err.stack || err.message);

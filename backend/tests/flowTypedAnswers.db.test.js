@@ -21,6 +21,9 @@ const metaSends = [], aiRequests = [], matchCalls = [];
 let aiText = "The plots are near Khopoli, about 1.5 hours from Mumbai.";
 let matchAnswer = null;
 
+// Chat-model calls go through the AI gateway; send them to the same fake (axios.post is
+// looked up at call time, so the per-test swaps below still apply).
+require("../utils/ai/gateway").createChatCompletion = async (body) => (await axios.post("https://api.openai.com/v1/chat/completions", body)).data;
 axios.post = async (url, body) => {
   if (String(url).startsWith("https://graph.facebook.com/")) {
     metaSends.push(body);

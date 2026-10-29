@@ -1231,7 +1231,7 @@ router.post("/:leadId/:activityId/summarize", require("../middlewares/planGate")
     if (idx < 0) return res.status(404).json({ success: false, message: "Activity not found" });
     const recordingUrl = lead.activities[idx].meta?.recordingUrl;
     if (!recordingUrl) return res.status(400).json({ success: false, message: "No recording available for this call." });
-    if (!process.env.OPENAI_API_KEY) return res.status(400).json({ success: false, message: "OpenAI not configured on this server." });
+    if (!process.env.OPENAI_API_KEY) return res.status(400).json({ success: false, message: "AI isn't available right now. Please try again shortly." });
     await transcribeAndSummarize(String(lead._id), activityMatch(lead.activities[idx]), recordingUrl, Model);
     const updated = await Model.findById(lead._id).lean();
     res.json({ success: true, meta: updated.activities[idx]?.meta || {} });

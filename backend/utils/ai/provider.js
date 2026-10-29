@@ -10,7 +10,7 @@
 // a model or a vendor: swap COPILOT_MODEL (or one company's
 // Organization.copilot.model during a pilot) and nothing else changes.
 // Usage and cost are recorded per company per IST month for the allowance.
-const OpenAI = require("openai");
+const { chatClient, isAvailable } = require("./gateway");
 const AiUsage = require("../../models/AiUsage");
 
 const DEFAULT_MODEL = process.env.COPILOT_MODEL || "gpt-5-mini";
@@ -25,16 +25,18 @@ const PRICES = {
   "gpt-5-nano":  [0.05, 0.005, 0.40],
   "gpt-4o-mini": [0.15, 0.075, 0.60],
   "gpt-6-luna":  [0.10, 0.01, 0.50],
+  "claude-haiku-5-5": [0.10, 0.01, 0.50], // the fallback (Anthropic pricing, 29 Oct 2026)
 };
 
 let client = null;
 function getClient() {
-  if (!process.env.OPENAI_API_KEY) {
+  if (!isAvailable()) {
     const err = new Error("Artha is not configured on this server (OPENAI_API_KEY is missing).");
     err.statusCode = 503;
     throw err;
   }
-  if (!client) client = new OpenAI({ timeout: TIMEOUT_MS, maxRetries: 1 });
+  // OpenAI first; Claude Haiku only when OpenAI cannot serve (utils/ai/gateway.js).
+  if (!client) client = chatClient({ timeout: TIMEOUT_MS });
   return client;
 }
 
@@ -97,8 +99,9 @@ async function recordUsage(orgId, model, usage) {
 async function chat({ org, messages, tools, maxOutputTokens, signal }) {
   const model = modelFor(org);
   const res = await getClient().chat.completions.create(requestFor(model, { messages, tools, maxOutputTokens }), { signal });
-  recordUsage(org?._id, model, res.usage);
-  return { message: res.choices[0].message, usage: res.usage, model, finishReason: res.choices[0].finish_reason };
+  const used = res.provider === "anthropic" ? res.model : model;
+  recordUsage(org?._id, used, res.usage);
+  return { message: res.choices[0].message, usage: res.usage, model: used, finishReason: res.choices[0].finish_reason };
 }
 
 /**

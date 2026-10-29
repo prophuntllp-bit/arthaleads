@@ -20,7 +20,6 @@
 // Runs from a 5-minute job (utils/scheduler.js): a lead is scored once the
 // customer has been quiet for 10 minutes since their last message, so a burst
 // of eight messages is read once, and again only after new activity.
-const OpenAI = require("openai");
 const Lead = require("../models/Lead");
 const Organization = require("../models/Organization");
 const WaConversation = require("../models/WaConversation");
@@ -55,7 +54,7 @@ const CLOSED = ["Closed Won", "Closed Lost"];
 // ── The model call (replaceable in tests) ───────────────────────────────────
 let client = null;
 async function defaultModel(messages) {
-  if (!client) client = new OpenAI({ timeout: 30000, maxRetries: 1 });
+  if (!client) client = require("../utils/ai/gateway").chatClient({ timeout: 30000 });
   const res = await client.chat.completions.create({
     model: MODEL, messages, temperature: 0.1, max_tokens: 300, response_format: { type: "json_object" },
   });

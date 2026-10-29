@@ -68,6 +68,7 @@ async function saveWebsiteChat(req, question, result) {
 // No auth, no access to any customer data — pre-sales Q&A only. Rate limited
 // by its own chatLimiter in server.js (30 req / 15 min / IP), the abuse guard
 // for this AI-cost-incurring endpoint since it's reachable by anyone.
+const CHAT_DOWN = "Chat isn't available right now. Email contact@arthaleads.com or WhatsApp +91 90670 97779 and we'll reply quickly.";
 router.post("/chat", async (req, res, next) => {
   try {
     const question = (req.body.question || "").toString().trim().slice(0, 500);
@@ -83,7 +84,7 @@ router.post("/chat", async (req, res, next) => {
     if (!process.env.OPENAI_API_KEY) {
       return res.status(503).json({
         success: false,
-        message: "Chat isn't available right now — email contact@arthaleads.com or WhatsApp +91 90670 97779.",
+        message: CHAT_DOWN,
       });
     }
 
@@ -91,10 +92,10 @@ router.post("/chat", async (req, res, next) => {
     res.json({ success: true, answer: result.answer, cta: result.cta });
     saveWebsiteChat(req, question, result).catch((e) => console.error("website chat save:", e.message));
   } catch (err) {
-    if (err.message?.includes("OPENAI_API_KEY")) {
-      return res.status(503).json({ success: false, message: "Chat isn't available right now." });
-    }
-    next(err);
+    // Out of AI credits, a vendor outage, anything: the visitor gets a way to reach us,
+    // never the AI company's own error text.
+    console.error("website chat failed:", err.detail || err.message);
+    return res.status(503).json({ success: false, message: CHAT_DOWN });
   }
 });
 

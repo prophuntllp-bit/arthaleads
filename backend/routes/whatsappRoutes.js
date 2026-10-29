@@ -1,6 +1,9 @@
 const express = require("express");
 const { shouldAutoAssign } = require("../utils/autoAssign");
 const axios   = require("axios");
+// Chat-model calls go through the AI gateway (OpenAI first, Claude when OpenAI cannot serve).
+const aiGateway = require("../utils/ai/gateway");
+const aiPost = async (body) => ({ data: await aiGateway.createChatCompletion(body) });
 const mongoose = require("mongoose");
 const router  = express.Router();
 const { protect, authorize } = require("../middlewares/auth");
@@ -2440,9 +2443,7 @@ async function readLeadDetailsFromChat(conversation, recentMsgs, { org } = {}) {
       .join("\n").slice(0, 4000);
     if (!transcript.trim()) return;
 
-    const aiRes = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
-      {
+    const aiRes = await aiPost({
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content:
@@ -2459,8 +2460,7 @@ async function readLeadDetailsFromChat(conversation, recentMsgs, { org } = {}) {
         ],
         max_tokens: 150, temperature: 0,
         response_format: { type: "json_object" },
-      },
-      { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" } }
+      }
     );
     recordAiUsage(conversation.orgId, aiRes.data?.usage, "botEnrich");
 
@@ -2538,9 +2538,7 @@ async function inferAnsweredFromTranscript(org, agent, conversation, questions) 
     const qList = mappable
       .map((q) => `${q.id} [maps to: ${q.mapsTo}]: "${q.questionText}" — options: ${q.options.map((o) => `${o.id}=${o.label}`).join(", ")}`)
       .join("\n");
-    const aiRes = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
-      {
+    const aiRes = await aiPost({
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content:
@@ -2556,8 +2554,7 @@ async function inferAnsweredFromTranscript(org, agent, conversation, questions) 
         ],
         max_tokens: 150, temperature: 0,
         response_format: { type: "json_object" },
-      },
-      { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" } }
+      }
     );
     recordAiUsage(org._id, aiRes.data?.usage, "botEnrich");
 
@@ -2731,10 +2728,7 @@ async function triggerBotReply(org, agent, conversation, inboundText, opts = {})
       )}` },
     ];
 
-    const aiRes = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
-      { model: "gpt-4o-mini", messages, max_tokens: 200, temperature: 0.7 },
-      { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" } }
+    const aiRes = await aiPost({ model: "gpt-4o-mini", messages, max_tokens: 200, temperature: 0.7 }
     );
 
     recordAiUsage(org._id, aiRes.data?.usage, "botReply");
@@ -3823,7 +3817,7 @@ router.delete("/agents/:id", authorize("admin", "super_admin"), async (req, res)
 router.post("/agents/preview", authorize("admin", "super_admin"), async (req, res) => {
   try {
     if (!process.env.OPENAI_API_KEY) {
-      return res.status(503).json({ message: "AI is not configured. Ask your admin to set the OPENAI_API_KEY." });
+      return res.status(503).json({ message: "AI isn't available right now. Please try again shortly." });
     }
     const { message, history = [], agent: draft } = req.body || {};
     if (!String(message || "").trim()) return res.status(400).json({ message: "Type a message to try first." });
@@ -3852,15 +3846,12 @@ router.post("/agents/preview", authorize("admin", "super_admin"), async (req, re
       .filter((m) => m && typeof m.body === "string")
       .map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.body.slice(0, 2000) }));
 
-    const aiRes = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
-      {
+    const aiRes = await aiPost({
         model: "gpt-4o-mini",
         messages: [{ role: "system", content: systemPrompt }, ...turns,
                    { role: "user", content: String(message).slice(0, 2000) }],
         max_tokens: 200, temperature: 0.7,
-      },
-      { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" } }
+      }
     );
     recordAiUsage(req.orgId, aiRes.data?.usage, "botReply");
 
@@ -4340,7 +4331,7 @@ router.post("/templates/generate",
   async (req, res) => {
     try {
       if (!process.env.OPENAI_API_KEY) {
-        return res.status(503).json({ message: "AI generation is not configured. Ask your admin to set the OPENAI_API_KEY." });
+        return res.status(503).json({ message: "AI generation isn't available right now. Please try again shortly." });
       }
       const { prompt, category, tone, optimizeFor } = req.body || {};
       if (!String(prompt || "").trim()) return res.status(400).json({ message: "Describe what the message should say." });

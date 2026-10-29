@@ -8,6 +8,7 @@ const { test, run, assert } = require("./helpers/harness");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 const mongoose = require("mongoose");
 const axios = require("axios");
+require("../utils/ai/gateway").createChatCompletion = async (body) => (await axios.post("https://api.openai.com/v1/chat/completions", body)).data; // chat calls reach the axios fake
 
 const oid = () => new mongoose.Types.ObjectId();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

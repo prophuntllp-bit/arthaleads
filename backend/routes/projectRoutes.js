@@ -318,7 +318,7 @@ router.post("/:id/leads/:leadId/draft-message", require("../middlewares/planGate
     const ProjectLead = require("../models/ProjectLead");
 
     if (!process.env.OPENAI_API_KEY) {
-      return res.status(503).json({ success: false, message: "AI drafting is not configured. Ask your admin to set the OPENAI_API_KEY." });
+      return res.status(503).json({ success: false, message: "AI drafting isn't available right now. Please try again shortly." });
     }
 
     // Confirm the project belongs to the caller's org before reading a lead

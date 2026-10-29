@@ -13,7 +13,6 @@
 //   aiMatch(...)                a small model call mapping other typed replies
 //                               to one on-screen option, only when clear
 //   looksLikeQuestion(text)     the customer asked something
-const OpenAI = require("openai");
 const { parseIndianCurrencyRange } = require("./formFieldMapper");
 
 const CR = 1e7, LAKH = 1e5;
@@ -109,7 +108,7 @@ function looksLikeQuestion(text) {
 const MODEL = process.env.FLOW_MATCH_MODEL || "gpt-4o-mini";
 let client = null;
 async function defaultModel(messages, { maxTokens = 60 } = {}) {
-  if (!client) client = new OpenAI({ timeout: 15000, maxRetries: 1 });
+  if (!client) client = require("./ai/gateway").chatClient({ timeout: 15000 });
   const res = await client.chat.completions.create({ model: MODEL, messages, temperature: 0, max_tokens: maxTokens, response_format: { type: "json_object" } });
   return { text: res.choices[0]?.message?.content || "", usage: res.usage };
 }
