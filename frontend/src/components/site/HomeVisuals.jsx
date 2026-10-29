@@ -63,7 +63,7 @@ export function Cycle({ items, children, interval = 4200, offset = 0 }) {
 // Each enquiry and the AI's reply to it; the reply card swaps half a second
 // after the enquiry card, so it reads like the answer arriving.
 const HERO_ENQUIRIES = [
-  { src: "Facebook ad · 1:04 AM", msg: "Is the 2 BHK at Aurum Heights still available?", reply: "Yes, it is. 2 BHK homes start at ₹82 L. Would you like to visit this Saturday?" },
+  { src: "Facebook ad · 1:04 AM", msg: "Is the 2 BHK at Riverview Heights still available?", reply: "Yes, it is. 2 BHK homes start at ₹82 L. Would you like to visit this Saturday?" },
   { src: "Google ad · 11:42 PM", msg: "What is the price of a 3 BHK at Skyline Residency?", reply: "3 BHK homes at Skyline Residency start at ₹1.2 Cr. Shall I send you the floor plan?" },
   { src: "Website · 6:15 AM", msg: "Can I visit Green Acres this Sunday?", reply: "Yes, Sunday works. Would 11 AM or 4 PM suit you?" },
 ];
@@ -138,7 +138,7 @@ export function ScoreCard() {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold site-ink truncate">Raj Patil</p>
-          <p className="text-xs site-muted truncate">Aurum Heights · 2 BHK · ₹80 L – 1 Cr</p>
+          <p className="text-xs site-muted truncate">Riverview Heights · 2 BHK · ₹80 L – 1 Cr</p>
         </div>
         <div className="relative w-16 h-16 shrink-0" aria-label="Lead score 87 out of 100">
           <svg viewBox="0 0 64 64" className="w-16 h-16 -rotate-90" aria-hidden="true">
@@ -234,7 +234,7 @@ export function Stage({ children, className }) {
 
 export function CaptureViz() {
   const rows = [
-    [FacebookLogo, "Ananya Iyer", "2 BHK · Aurum Heights", "Facebook ad", "1:04 AM", "Neha"],
+    [FacebookLogo, "Ananya Iyer", "2 BHK · Riverview Heights", "Facebook ad", "1:04 AM", "Neha"],
     [GoogleLogo, "Kabir Jain", "3 BHK · Skyline Residency", "Google form", "1:12 AM", "Rohit"],
     [WhatsAppLogo, "Rohan Patil", "Plot · Green Acres", "WhatsApp", "6:40 AM", "Sana"],
   ];
@@ -306,7 +306,7 @@ export function ProjectViz() {
         </div>
         <div className="px-3 py-2.5">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[12.5px] font-semibold site-ink truncate">Aurum Heights</p>
+            <p className="text-[12.5px] font-semibold site-ink truncate">Riverview Heights</p>
             <span className="text-[11px] font-semibold site-ink shrink-0">₹82 L+</span>
           </div>
           <p className="text-[11px] site-muted flex items-center gap-1"><MapPin className="w-3 h-3" /> Baner, Pune</p>
@@ -327,7 +327,7 @@ export function ProjectViz() {
 export function VisitViz() {
   const days = [["Mon", 20, 1], ["Tue", 21, 0], ["Wed", 22, 2], ["Thu", 23, 1], ["Fri", 24, 0], ["Sat", 25, 3], ["Sun", 26, 2]];
   const visits = [
-    ["11:00 AM", "Raj Patil", "Aurum Heights · 2 BHK", "Booked by AI", ORANGE],
+    ["11:00 AM", "Raj Patil", "Riverview Heights · 2 BHK", "Booked by AI", ORANGE],
     ["4:00 PM", "Meera Shah", "Skyline Residency · 3 BHK", "Confirmed", GREEN],
   ];
   return (
@@ -399,7 +399,7 @@ export function BookingViz() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="font-semibold site-ink flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" style={{ color: "var(--site-brand-ink)" }} /> Invoice AL-0142</p>
-            <p className="text-[11px] site-muted mt-0.5 truncate">Flat 1204 · Aurum Heights · Asha Kulkarni</p>
+            <p className="text-[11px] site-muted mt-0.5 truncate">Flat 1204 · Riverview Heights · Asha Kulkarni</p>
           </div>
           <div className="flex gap-1.5 shrink-0">
             <Badge tone={GREEN}>PDF ready</Badge>

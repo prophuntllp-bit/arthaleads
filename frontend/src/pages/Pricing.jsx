@@ -18,7 +18,7 @@ const FAQS = [
   ["Is there a setup or onboarding fee?", "No. There is no setup fee on any plan. You can start on a 14-day free trial and only pay the per-seat price once you subscribe."],
   ["Can I change plans later?", "Absolutely. You can upgrade or downgrade at any time. When you upgrade, you get instant access to the new features; when you downgrade, the change applies from your next billing cycle."],
   ["What happens to my data if I cancel?", "Your data stays yours. On Growth and Enterprise you can export all your leads as CSV or Excel at any time. After cancellation we retain your data per our Refund & Cancellation Policy before secure deletion."],
-  ["Do you offer annual billing discounts?", "Yes. Annual billing is ten months’ rate for twelve months — two months free, a saving of 16.7%. Starter is ₹5,990 per user per year and Growth is ₹9,990 per user per year."],
+  ["Do you offer annual billing discounts?", "Yes. Annual billing is ten months’ rate for twelve months: two months free, a saving of 16.7%. Starter is ₹5,990 per user per year and Growth is ₹9,990 per user per year."],
   ["Which payment methods do you accept?", "We accept all major credit/debit cards, UPI, and net banking for Indian businesses. Enterprise customers can also pay via invoice."],
 ];
 

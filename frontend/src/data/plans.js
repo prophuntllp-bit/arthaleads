@@ -10,7 +10,7 @@ export const PLANS = [
   {
     id: "starter",
     name: "Starter",
-    tagline: "For solo brokers and small channel partner teams",
+    tagline: "For small broker and channel partner teams",
     color: "#3b82f6",
     maxMembers: PLAN_PRICING.starter.maxSeats,
     userLimit: "5 to 10 members",

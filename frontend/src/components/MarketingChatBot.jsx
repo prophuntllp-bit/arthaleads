@@ -144,7 +144,7 @@ export default function MarketingChatBot() {
     <>
       {/* Floating button with pulse ring — exact match to the in-app HelpBot launcher */}
       {!open && (
-        <div className="mkt-chat-launcher fixed z-[997] transition-[bottom,opacity] duration-300" style={{ right: 20, bottom: `calc(20px + var(--mcta-h, 0px) + env(safe-area-inset-bottom, 0px))` }}>
+        <div className="mkt-chat-launcher fixed z-[997] transition-[bottom,opacity] duration-300" style={{ right: 20, bottom: `calc(20px + max(var(--mcta-h, 0px), var(--cookie-h-full, 0px)) + env(safe-area-inset-bottom, 0px))` }}>
           {/* "Ask Artha" pill: a label says what the face is for. */}
           <button
             type="button"

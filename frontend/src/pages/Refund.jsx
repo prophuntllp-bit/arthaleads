@@ -125,7 +125,7 @@ export default function Refund() {
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
           <li>Your account stays active until the end of your paid billing cycle.</li>
-          <li>You can export all your leads and data (CSV / Excel) before the cycle ends.</li>
+          <li>On Growth and Enterprise, you can export all your leads and data (CSV / Excel) before the cycle ends.</li>
           <li>We retain your data for 30 days after cancellation in case you wish to reactivate, then it is permanently deleted.</li>
         </ul>
       </Section>

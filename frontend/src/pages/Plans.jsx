@@ -17,7 +17,7 @@ const PLANS = [
     // Seat count reads from PLAN_PRICING so this can never drift from the
     // enforced cap again the way the pre-2026 "Up to 3 members" text did.
     userLimit: `${PLAN_PRICING.starter.minSeats} to ${PLAN_PRICING.starter.maxSeats} members`,
-    tagline: "For solo brokers and small channel partner teams",
+    tagline: "For small broker and channel partner teams",
     groups: [
       {
         label: "Lead Management",

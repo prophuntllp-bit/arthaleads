@@ -33,7 +33,7 @@ const VISUAL = {
   talk:       () => (
     <PhotoVisual name="broker" priority={false} alt="A property broker replying to a buyer on WhatsApp from the office"
       cards={[
-        { Icon: WhatsAppLogo, iconColor: "#25D366", iconBg: "rgba(37,211,102,0.12)", title: "AI agent replied in 4 sec", sub: "Shared team inbox", cycle: [{ title: "Neha took over the chat", sub: "Shared team inbox" }, { title: "Brochure sent", sub: "Aurum Heights · PDF" }] },
+        { Icon: WhatsAppLogo, iconColor: "#25D366", iconBg: "rgba(37,211,102,0.12)", title: "AI agent replied in 4 sec", sub: "Shared team inbox", cycle: [{ title: "Neha took over the chat", sub: "Shared team inbox" }, { title: "Brochure sent", sub: "Riverview Heights · PDF" }] },
         { Icon: Sparkles, title: "Follow-up drafted", sub: "Ready to send" },
         { Icon: Phone, iconColor: "#16a34a", iconBg: "rgba(22,163,74,0.12)", title: "Call logged · 4 min 12 sec", sub: "Recording on the lead", cycle: [{ title: "Call logged · 2 min 48 sec", sub: "Site visit discussed" }, { title: "Missed call returned", sub: "Logged on the lead" }] },
       ]} />

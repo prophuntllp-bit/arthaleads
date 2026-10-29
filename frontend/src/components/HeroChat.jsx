@@ -12,7 +12,7 @@ import { CheckCheck, CalendarCheck2, Sparkles, ChevronLeft, Video, Phone, Plus, 
 
 // who: "buyer" (incoming, left) | "ai" (our reply, right) | "booked" (system card)
 const SCRIPT = [
-  { who: "buyer", text: "Hi, is the 2 BHK at Aurum Heights still available? What's the price?", time: "1:04 AM" },
+  { who: "buyer", text: "Hi, is the 2 BHK at Riverview Heights still available? What's the price?", time: "1:04 AM" },
   { who: "ai", text: "Hi Raj, yes it is. 2 BHK homes start at ₹82 L. Are you buying to live in or as an investment?", time: "1:04 AM", options: ["To live in", "Investment"] },
   { who: "buyer", text: "To live in", time: "1:05 AM" },
   { who: "ai", text: "What budget are you looking at?", time: "1:05 AM", options: ["Under ₹80 L", "₹80 L – 1 Cr", "₹1 Cr +"] },
@@ -126,7 +126,7 @@ export default function HeroChat() {
                 style={{ background: "linear-gradient(135deg,#7dd3a8,#1fa463)" }}>RP</span>
               <div className="min-w-0 flex-1 ml-0.5">
                 <p className="text-[15px] font-semibold leading-tight text-[#0b0b0c] truncate">Raj Patil</p>
-                <p className="text-[11.5px] leading-tight text-[#667781] truncate">Facebook ad · Aurum Heights</p>
+                <p className="text-[11.5px] leading-tight text-[#667781] truncate">Facebook ad · Riverview Heights</p>
               </div>
               <Video className="w-[22px] h-[22px] text-[#0b0b0c] shrink-0" strokeWidth={1.8} aria-hidden="true" />
               <Phone className="w-[19px] h-[19px] text-[#0b0b0c] shrink-0 ml-3" strokeWidth={1.8} aria-hidden="true" />
@@ -147,7 +147,7 @@ export default function HeroChat() {
                       <div className="flex items-center gap-2 text-[13px] font-bold text-[#15803d]">
                         <CalendarCheck2 className="w-4 h-4" aria-hidden="true" /> Site visit booked
                       </div>
-                      <p className="text-[12px] text-[#111b21] mt-0.5">Sat, 11:00 AM · Aurum Heights</p>
+                      <p className="text-[12px] text-[#111b21] mt-0.5">Sat, 11:00 AM · Riverview Heights</p>
                       <p className="text-[11.5px] text-[#667781] mt-1 leading-snug">Sent to Neha with budget, purpose and visit time. Nobody on the team was awake.</p>
                     </div>
                   );

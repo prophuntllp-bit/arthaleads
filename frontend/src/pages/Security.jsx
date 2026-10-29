@@ -52,7 +52,7 @@ const PILLARS = [
       ["DPDP Act and Rules", "Built to follow India's Digital Personal Data Protection Act, 2023 and DPDP Rules, 2025, with a published sub-processor list, breach notification and a Grievance Officer."],
       ["No data selling", "We never sell or rent your leads. They are shared only with the service providers that run the CRM, and used only to run it for you."],
       ["Facebook reviewed", "Our Meta app is App-Review approved for lead retrieval and held to Meta's data-use standards."],
-      ["Full data export", "Export all your leads anytime in CSV/Excel. Your data belongs to you."],
+      ["Full data export", "On Growth and Enterprise, export all your leads as CSV or Excel at any time. Your data belongs to you."],
     ],
   },
 ];
