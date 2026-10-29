@@ -89,6 +89,14 @@ const automationSchema = new mongoose.Schema(
       maxlength: 200,
       default: "",
     },
+    // The manager account the ad account is reached through, sent to Google as
+    // login-customer-id. Empty when the Google login has direct access.
+    googleLoginCustomerId: {
+      type: String,
+      trim: true,
+      maxlength: 40,
+      default: "",
+    },
     externalSourceUrl: {
       type: String,
       trim: true,

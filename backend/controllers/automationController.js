@@ -693,7 +693,7 @@ const automationController = {
   // connections, which don't carry an accessToken/refreshToken at all.
   async createGoogleOAuthConnection(req, res, next) {
     try {
-      const { name, customerId, customerName, accessToken, refreshToken, editingId } = req.body || {};
+      const { name, customerId, customerName, loginCustomerId, accessToken, refreshToken, editingId } = req.body || {};
       if (!customerId) return next(new AppError("customerId is required", 400));
       if (!refreshToken && !editingId) return next(new AppError("refreshToken is required", 400));
 
@@ -705,6 +705,7 @@ const automationController = {
         leadSourceLabel: "Google",
         googleCustomerId: customerId,
         googleCustomerName: customerName || "",
+        googleLoginCustomerId: /^\d{1,20}$/.test(String(loginCustomerId || "")) ? String(loginCustomerId) : "",
         accessToken: accessToken || "",
         isActive: true,
       };

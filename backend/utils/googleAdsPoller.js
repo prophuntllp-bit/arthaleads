@@ -4,15 +4,10 @@
 // POST /webhook/google — same destination (a Lead with source "Google"),
 // different delivery mechanism.
 //
-// IMPORTANT: the exact GAQL resource/field names below (lead_form_submission_data,
-// its sub-fields, and the REST JSON shape Google returns for them) are built from
-// Google Ads API's documented schema, but have not been exercised against a live
-// account from this environment — there is no Developer Token available here to
-// test against. Treat the query/field-mapping as the first thing to verify (and
-// adjust if needed) once real credentials exist; everything around it — token
-// refresh, dedup, lead creation, assignment, notifications — follows the same
-// tested pattern as the rest of this file's siblings (webhookRoutes.js, the
-// Facebook token-refresh cron) and needs no such caveat.
+// The query fields were checked against Google's v26 field reference on
+// 29 Oct 2026 (lead_form_submission_data has no campaign_id, asset_id or test
+// flag; the campaign comes as a resource name). Not yet run against a live
+// account: the first real sync is the thing to watch.
 
 const Automation = require("../models/Automation");
 const { shouldAutoAssign } = require("./autoAssign");
@@ -27,8 +22,8 @@ const { mapGoogleLeadFields, fromApiFields } = require("./googleLeadFields");
 const { mapCustomFieldsToLead } = require("./formFieldMapper");
 const { matchRoutingRule, fileLeadInRoutedProject } = require("./routingRules");
 const { levelOf } = require("../middlewares/planGate");
+const googleAds = require("./googleAdsApi");
 
-const GOOGLE_ADS_API_VERSION = "v17";
 // First-ever sync for a freshly connected account: look back this far rather
 // than pulling full history or (if lastSyncAt were left null) nothing at all.
 const INITIAL_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -39,39 +34,30 @@ function toGaqlDatetime(date) {
   return date.toISOString().slice(0, 19).replace("T", " ");
 }
 
-async function fetchSubmissions(customerId, accessToken, since) {
+async function fetchSubmissions(automation, accessToken, since) {
   const query = `
     SELECT
       lead_form_submission_data.resource_name,
-      lead_form_submission_data.campaign_id,
-      lead_form_submission_data.asset_id,
+      lead_form_submission_data.campaign,
+      lead_form_submission_data.asset,
       lead_form_submission_data.gclid,
       lead_form_submission_data.submission_date_time,
       lead_form_submission_data.lead_form_submission_fields,
-      lead_form_submission_data.custom_lead_form_submission_fields,
-      lead_form_submission_data.is_test_lead
+      lead_form_submission_data.custom_lead_form_submission_fields
     FROM lead_form_submission_data
     WHERE lead_form_submission_data.submission_date_time > '${toGaqlDatetime(since)}'
     ORDER BY lead_form_submission_data.submission_date_time ASC
   `.trim();
+  return googleAds.search(automation.googleCustomerId, query, { accessToken, loginCustomerId: automation.googleLoginCustomerId });
+}
 
-  const resp = await fetch(
-    `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers/${customerId}/googleAds:search`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "developer-token": process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ query, pageSize: 200 }),
-    }
-  );
-  const json = await resp.json();
-  if (!resp.ok) {
-    throw new Error(json.error?.message || `Google Ads API error (${resp.status})`);
-  }
-  return json.results || [];
+// Standard questions (name, phone, email, ...) and the advertiser's own
+// questions arrive in two lists; custom ones are keyed by their question text.
+function submissionEntries(sub) {
+  const custom = (sub.customLeadFormSubmissionFields || []).map((f) => ({
+    id: f?.questionText, label: f?.questionText, value: f?.fieldValue,
+  }));
+  return [...fromApiFields(sub.leadFormSubmissionFields), ...custom];
 }
 
 // Runs one connection's sync. Exported separately so the manual "Sync now"
@@ -80,9 +66,6 @@ async function pollOneGoogleAdsConnection(automation) {
   if (!automation.userToken) {
     logger.warn(`[google-ads-poll] "${automation.name}" (${automation._id}): no refresh token stored — skipping`);
     return { created: 0, skipped: 0, error: "No refresh token stored. Reconnect Google." };
-  }
-  if (!process.env.GOOGLE_ADS_DEVELOPER_TOKEN) {
-    return { created: 0, skipped: 0, error: "GOOGLE_ADS_DEVELOPER_TOKEN is not configured." };
   }
 
   const orgId = automation.orgId;
@@ -109,7 +92,7 @@ async function pollOneGoogleAdsConnection(automation) {
   const since = automation.lastSyncAt || new Date(Date.now() - INITIAL_LOOKBACK_MS);
   let rows;
   try {
-    rows = await fetchSubmissions(customerId, accessToken, since);
+    rows = await fetchSubmissions(automation, accessToken, since);
   } catch (err) {
     logger.error(`[google-ads-poll] "${automation.name}" (${automation._id}): fetch failed — ${err.message}`);
     return { created: 0, skipped: 0, error: err.message };
@@ -140,44 +123,37 @@ async function pollOneGoogleAdsConnection(automation) {
     const already = await Lead.findOne({ orgId, externalId: resourceName }).select("_id").lean();
     if (already) { skipped++; advance(); continue; }
 
-    const fields = sub.leadFormSubmissionFields || sub.customLeadFormSubmissionFields || [];
     const { fullName, phone, email, formResponses: allFormResponses, requirements, customFields } =
-      mapGoogleLeadFields(fromApiFields(fields));
+      mapGoogleLeadFields(submissionEntries(sub));
     const { leadUpdates: mappedLeadFields, remaining: formResponses } = mapCustomFieldsToLead(allFormResponses);
 
-    const isTestLead = sub.isTestLead === true;
-    const name = isTestLead ? "Test Lead (Google)" : (fullName || "Google Lead");
-
-    if (!isTestLead && (!phone || phone.length < 7)) {
+    // The API has no test-lead flag (Google's "Send test data" only reaches the webhook).
+    const name = fullName || "Google Lead";
+    if (!phone || phone.length < 7) {
       skipped++; advance();
       continue;
     }
-    const cleanPhone = phone || "N/A (test)";
+    const cleanPhone = phone;
+    const campaignId = googleAds.idFromResourceName(sub.campaign);
 
-    const ruleMatch = !isTestLead
-      ? await matchRoutingRule(orgId, "google", { campaign_id: sub.campaignId || "" })
-      : null;
+    const ruleMatch = await matchRoutingRule(orgId, "google", { campaign_id: campaignId });
 
     let assignee = null;
     if (ruleMatch?.assignTo) {
       assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
-    } else if (!isTestLead && shouldAutoAssign(org)) {
+    } else if (shouldAutoAssign(org)) {
       try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
     }
 
-    const sourceLabel = isTestLead
-      ? `${automation.name || "Google Ads"} - Test`
-      : (automation.name || automation.googleCustomerName || "Google");
+    const sourceLabel = automation.name || automation.googleCustomerName || "Google";
 
-    const noteText = isTestLead
-      ? `⚠️ Google Test Lead — pulled via the Google Ads API.\n\nSubmission: ${resourceName}`
-      : [
-          `✅ Lead imported from Google Ads (via account sync).`,
-          `Name: ${name || "-"}`,
-          `Phone: ${cleanPhone}`,
-          `Email: ${email || "-"}`,
-          requirements ? `\nForm Answers:\n${customFields.map((e) => `${e.label || e.id}: ${e.value}`).join("\n")}` : "",
-        ].filter(Boolean).join("\n");
+    const noteText = [
+      `✅ Lead imported from Google Ads (via account sync).`,
+      `Name: ${name || "-"}`,
+      `Phone: ${cleanPhone}`,
+      `Email: ${email || "-"}`,
+      requirements ? `\nForm Answers:\n${customFields.map((e) => `${e.label || e.id}: ${e.value}`).join("\n")}` : "",
+    ].filter(Boolean).join("\n");
 
     try {
       const lead = await Lead.create({
@@ -186,9 +162,9 @@ async function pollOneGoogleAdsConnection(automation) {
         email,
         source: "Google",
         status: "New",
-        requirements: isTestLead ? "" : requirements,
-        formResponses: isTestLead ? [] : formResponses,
-        ...(isTestLead ? {} : mappedLeadFields),
+        requirements,
+        formResponses,
+        ...mappedLeadFields,
         externalId: resourceName,
         orgId,
         createdBy: assignee?._id || automation.createdBy || null,
@@ -203,18 +179,18 @@ async function pollOneGoogleAdsConnection(automation) {
             : "Lead pulled from Google Ads account sync - unassigned",
           performedBy: assignee?._id || null,
           performedByName: assignee?.name || "",
-          meta: { automationId: automation._id?.toString(), campaignId: sub.campaignId || "", gclid: sub.gclid || "" },
+          meta: { automationId: automation._id?.toString(), campaignId, gclid: sub.gclid || "" },
         }],
       });
       created++; advance();
       // A rule that names a project files the lead there too, as the other sources do.
-      if (ruleMatch && !isTestLead) await fileLeadInRoutedProject(ruleMatch, lead);
+      if (ruleMatch) await fileLeadInRoutedProject(ruleMatch, lead);
       // New-lead hand-off to Vistrow (no-op unless the owner enabled it). submittedAt is when
       // the person actually enquired: the first sync reaches back 7 days, and an enquiry that
       // old must not be phoned as if it had just arrived (the age guard uses this, not createdAt).
       emitLeadCreated(lead, {
-        origin: "poller-google", routeSource: "google", isTest: isTestLead, submittedAt, project: routedProject(ruleMatch),
-        attribution: { campaign_id: sub.campaignId || "" },
+        origin: "poller-google", routeSource: "google", isTest: false, submittedAt, project: routedProject(ruleMatch),
+        attribution: { campaign_id: campaignId },
       });
 
       if (assignee?._id) {
@@ -224,7 +200,7 @@ async function pollOneGoogleAdsConnection(automation) {
           body: [cleanPhone, sourceLabel].filter(Boolean).join(" · "),
           data: { url: "/leads", leadId: String(lead._id) },
         }).catch(() => {});
-      } else if (!isTestLead) {
+      } else {
         sendPushToAll({
           type: "new_lead",
           title: "New Google Lead 🔍",
