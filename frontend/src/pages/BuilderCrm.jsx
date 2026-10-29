@@ -110,6 +110,9 @@ export default function BuilderCrm() {
       }}
       faqs={{ title: "Builder CRM questions", items: FAQS }}
       related={[
+        { to: "/blog/crm-for-builders-and-developers", label: "how builders choose a CRM" },
+        { to: "/blog/real-estate-lead-management-enquiry-to-site-visit", label: "lead management from enquiry to site visit" },
+        { to: "/blog/measure-real-estate-sales-team-without-micromanaging", label: "measuring a sales team" },
         { to: "/ai-crm", label: "the AI features" },
         { to: "/whatsapp-crm", label: "the WhatsApp CRM" },
         { to: "/features", label: "every feature" },

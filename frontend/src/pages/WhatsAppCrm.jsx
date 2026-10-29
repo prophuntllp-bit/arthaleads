@@ -126,6 +126,7 @@ export default function WhatsAppCrm() {
       faqs={{ title: "WhatsApp CRM questions", items: FAQS }}
       related={[
         { to: "/blog/reply-to-property-enquiries-on-whatsapp-fast", label: "Replying to enquiries at 1 AM" },
+        { to: "/blog/whatsapp-crm-integration-real-estate", label: "Connecting WhatsApp to your CRM" },
         { to: "/features", label: "All features" },
         { to: "/pricing", label: "Plans and pricing" },
         { to: "/compare", label: "How to choose a real estate CRM" },

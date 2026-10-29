@@ -117,6 +117,8 @@ export default function AiCrm() {
       }}
       faqs={{ title: "AI CRM questions", items: FAQS }}
       related={[
+        { to: "/blog/reply-to-property-enquiries-on-whatsapp-fast", label: "replying to property enquiries at night" },
+        { to: "/blog/real-estate-follow-up-system-that-works", label: "a follow-up system that works" },
         { to: "/whatsapp-crm", label: "how the WhatsApp CRM works" },
         { to: "/builder-crm", label: "Arthaleads for builders and developers" },
         { to: "/features", label: "every feature" },
