@@ -1001,10 +1001,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
             ],
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              // The same rounded pill as Home's Clock In (30 Oct 2026: this
-              // was a flat square-cornered slab, unlike every other button).
+            Center(
+              // The same rounded pill as Home's Clock In, sized to its label
+              // rather than the card's width (30 Oct 2026, owner).
               child: FilledButton.icon(
                 onPressed: _acting || done
                     ? null
@@ -1012,7 +1011,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 style: FilledButton.styleFrom(
                   backgroundColor: clockedIn ? AppColors.danger : AppColors.primary,
                   foregroundColor: Colors.white,
-                  minimumSize: const Size(0, 50),
+                  minimumSize: const Size(0, 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 36),
                   shape: const StadiumBorder(),
                   textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
