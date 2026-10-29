@@ -187,13 +187,20 @@ class LeadsScreenState extends State<LeadsScreen> {
     if (mounted) setState(() {});
   }
 
+  /// Why the first page didn't load (offline, server down), shown in place
+  /// of "No leads found".
+  String? _loadError;
+
   Future<void> _load({bool reset = false}) async {
     if (reset) {
       _page = 1;
       _leads.clear();
       _selected.clear();
     }
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
     final seq = ++_loadSeq;
     try {
       final res = await _api.dio.get(
@@ -226,7 +233,12 @@ class LeadsScreenState extends State<LeadsScreen> {
       // The failed page is asked for again on the next scroll, not skipped.
       if (!reset && _page > 1) _page -= 1;
       if (mounted && seq == _loadSeq) {
-        _snack(ApiClient.errorMessage(e, 'Failed to load leads'), error: true);
+        // With nothing on screen yet, say so in place of "No leads found".
+        if (_leads.isEmpty) {
+          _loadError = ApiClient.errorMessage(e, "Couldn't load your leads");
+        } else {
+          _snack(ApiClient.errorMessage(e, 'Failed to load leads'), error: true);
+        }
       }
     } finally {
       if (mounted && seq == _loadSeq) {
@@ -1073,7 +1085,37 @@ class LeadsScreenState extends State<LeadsScreen> {
                 // list and keep their own inline spinner.
                 ? CardsSkeleton(itemBuilder: (_, i) => _leadCard(SampleData.lead(i)))
                 : _leads.isEmpty && !_loading
-                ? const Center(child: Text('No leads found'))
+                // Pull down to try again, offline or empty alike.
+                ? RefreshIndicator(
+                    color: AppColors.primary,
+                    onRefresh: () => _load(reset: true),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(24, 80, 24, 24),
+                      children: [
+                        if (_loadError != null) ...[
+                          Icon(Icons.wifi_off_rounded, size: 40, color: AppTheme.of(context).textSoft),
+                          const SizedBox(height: 10),
+                          Text("Couldn't load your leads",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.of(context).text)),
+                          const SizedBox(height: 4),
+                          Text('$_loadError\nCheck your internet, then pull down or tap Try again.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 12.5, color: AppTheme.of(context).textSoft)),
+                          const SizedBox(height: 14),
+                          Center(
+                            child: SecondaryButton(
+                              onPressed: () => _load(reset: true),
+                              icon: Icons.refresh_rounded,
+                              child: const Text('Try again'),
+                            ),
+                          ),
+                        ] else
+                          const Center(child: Text('No leads found')),
+                      ],
+                    ),
+                  )
                 : RefreshIndicator(
                     color: AppColors.primary,
                     onRefresh: () => _load(reset: true),

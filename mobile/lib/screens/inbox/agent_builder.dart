@@ -316,6 +316,9 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
   final List<Map<String, dynamic>> _tryLog = [];
   final _tryCtrl = TextEditingController();
   final _tryScroll = ScrollController();
+  final _identityKey = GlobalKey();
+  final _talksKey = GlobalKey();
+  final _projectsKey = GlobalKey();
   bool _trying = false;
   Map<String, dynamic>? _tryMeta;
   bool _showPrompt = false;
@@ -324,7 +327,15 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
   void initState() {
     super.initState();
     _applyFlowToControllers();
+    // The setup checklist follows these as they are typed.
+    for (final c in [_descCtrl, _greetingCtrl, _businessContextCtrl, _groundRulesCtrl, _systemPromptCtrl]) {
+      c.addListener(_onChecklistField);
+    }
     _load();
+  }
+
+  void _onChecklistField() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadFunnel() async {
@@ -662,7 +673,9 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
               child: Text('What this assistant knows, how it talks, and which messages reach it',
                   style: TextStyle(fontSize: 12.5, color: t.textSoft)),
             ),
+            _setupChecklist(),
             WaCard(
+              key: _identityKey,
               title: 'Identity',
               icon: Icons.auto_awesome,
               children: [
@@ -701,6 +714,7 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
               ],
             ),
             WaCard(
+              key: _talksKey,
               title: 'How it talks',
               children: [
                 WaCheckRow(
@@ -751,7 +765,7 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
                 ),
               ],
             ),
-            _discussCard(narrowScope),
+            KeyedSubtree(key: _projectsKey, child: _discussCard(narrowScope)),
             WaCard(
               title: 'What it can send',
               icon: Icons.image_outlined,
@@ -1127,6 +1141,81 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
           ),
         ],
       ],
+    );
+  }
+
+  /// The setup checklist, from what is on screen now. Same rules as the
+  /// server's WaAgent.readiness (so it agrees with the agents list); each
+  /// unfinished step jumps to its section, as the web's checklist does.
+  List<(String, String, bool, GlobalKey)> get _checks {
+    final custom = _systemPromptCtrl.text.trim().isNotEmpty;
+    return [
+      ('name', 'Give it a name', _nameCtrl.text.trim().isNotEmpty, _identityKey),
+      ('purpose', "Say what it's for", _descCtrl.text.trim().isNotEmpty, _identityKey),
+      ('greeting', 'Write its first message', !_greetingEnabled || _greetingCtrl.text.trim().isNotEmpty, _talksKey),
+      ('context', 'Tell it about your business', custom || _businessContextCtrl.text.trim().isNotEmpty, _talksKey),
+      ('rules', 'Set what it must never do', custom || _groundRulesCtrl.text.trim().isNotEmpty, _talksKey),
+      ('knowledge', 'Add projects it can talk about', custom || _projectIds.isNotEmpty || _projects.isNotEmpty, _projectsKey),
+    ];
+  }
+
+  Widget _setupChecklist() {
+    final t = AppTheme.of(context);
+    final checks = _checks;
+    final done = checks.where((c) => c.$3).length;
+    final all = done == checks.length;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: t.surfaceLow,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: t.borderStrong),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Text('Setup $done of ${checks.length}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: t.text)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(99),
+              child: LinearProgressIndicator(
+                value: done / checks.length,
+                minHeight: 6,
+                color: all ? AppColors.success : AppColors.primary,
+                backgroundColor: t.border,
+              ),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 4),
+        Text(
+          _status == 'active' ? 'Live: answering customers' : _status == 'paused' ? 'Paused: not answering' : 'Draft: not answering yet',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _status == 'active' ? AppColors.success : t.textSoft),
+        ),
+        const SizedBox(height: 8),
+        if (!all)
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final c in checks.where((c) => !c.$3))
+              ActionChip(
+                avatar: const Icon(Icons.add_rounded, size: 15, color: AppColors.primary),
+                label: Text(c.$2, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.25)),
+                onPressed: () {
+                  final ctx = c.$4.currentContext;
+                  if (ctx != null) Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 350), alignment: 0.05);
+                },
+              ),
+          ])
+        else
+          Text(
+            _status == 'active'
+                ? 'All set. Use Try it below to check its replies any time.'
+                : "All set. Switch it to Live when you're happy with its test replies.",
+            style: TextStyle(fontSize: 12, color: t.textSoft),
+          ),
+      ]),
     );
   }
 
