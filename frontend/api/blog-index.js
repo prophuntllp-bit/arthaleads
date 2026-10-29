@@ -102,6 +102,19 @@ function headHtml(topic) {
     + `<p class="mt-5 text-base sm:text-[17px] leading-relaxed max-w-[38rem]" style="text-wrap:pretty">${esc(topic.intro || topic.description)}</p>`;
 }
 
+// TopicGuide in pages/PublicBlog.jsx
+function topicGuideHtml(topic) {
+  const guide = topic.guide || [], faqs = topic.faqs || [];
+  if (!guide.length && !faqs.length) return "";
+  const h2 = (t) => `<h2 class="font-display site-ink font-extrabold tracking-[-0.02em] text-[24px] sm:text-[28px] mb-4">${esc(t)}</h2>`;
+  return `<div class="mt-16 lg:mt-20 grid lg:grid-cols-[1fr_1fr] gap-10 lg:gap-16">`
+    + (guide.length ? `<div>${h2(`About ${topic.name}`)}<div class="space-y-4 text-base leading-relaxed">${guide.map((p) => `<p>${esc(p)}</p>`).join("")}</div></div>` : "")
+    + (faqs.length ? `<div>${h2("Common questions")}<div class="space-y-3">${faqs.map((f, i) => `<details class="site-card px-5 py-4 group"${i === 0 ? " open" : ""}>`
+      + `<summary class="cursor-pointer list-none font-semibold site-ink flex items-start justify-between gap-4"><span>${esc(f.question)}</span><span aria-hidden="true" class="site-muted transition-transform group-open:rotate-45">+</span></summary>`
+      + `<p class="mt-3 text-[15px] leading-relaxed">${esc(f.answer)}</p></details>`).join("")}</div></div>` : "")
+    + `</div>`;
+}
+
 function setTag(html, pattern, tag) {
   return pattern.test(html) ? html.replace(pattern, () => tag) : html.replace("</head>", () => `    ${tag}\n  </head>`);
 }
@@ -162,6 +175,11 @@ export default async function handler(req, res) {
         html = html.replace(/<script type="application\/ld\+json" id="page-jsonld">[\s\S]*?<\/script>/,
           () => `<script type="application/ld+json" id="page-jsonld">${JSON.stringify(page).replace(/</g, "\\u003c")}</script>`);
         html = fill(html, "header", "blog-head", headHtml(topic));
+        html = fill(html, "div", "blog-topic-guide", topicGuideHtml(topic));
+        if (topic.faqs?.length) {
+          const faq = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: topic.faqs.map((f) => ({ "@type": "Question", name: f.question, acceptedAnswer: { "@type": "Answer", text: f.answer } })) };
+          html = html.replace("</head>", () => `    <script type="application/ld+json" id="topic-faq-jsonld">${JSON.stringify(faq).replace(/</g, "\\u003c")}</script>\n  </head>`);
+        }
       }
       html = html.replace(/(<dl id="blog-stats"[^>]*>[\s\S]*?<dd class="font-display[^"]*">)\d+(<\/dd>[\s\S]*?<dd class="font-display[^"]*">)\d+(<\/dd>)/,
         (_, a, b, c) => `${a}${totalAll}${b}${categories.length}${c}`);

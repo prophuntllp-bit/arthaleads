@@ -123,12 +123,12 @@ function toBlocks(body) {
   return out;
 }
 
-// The topics in config/blogCategories.js, with their page titles and intros,
+// The topics in config/blogCategories.js, with their page titles, intros, guides and FAQs,
 // kept in step on every sync (creating any that are missing).
 async function ensureTopics() {
   await Promise.all(TOPICS.map((t, i) => BlogCategory.updateOne(
     { slug: t.slug },
-    { $set: { name: t.name, description: t.description, seoTitle: t.seoTitle, intro: t.intro, order: i } },
+    { $set: { name: t.name, description: t.description, seoTitle: t.seoTitle, intro: t.intro, guide: t.guide || [], faqs: t.faqs || [], order: i } },
     { upsert: true }
   )));
 }

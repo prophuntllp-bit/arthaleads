@@ -59,6 +59,8 @@ test("topics list in tab order with counts; posts filter by topic slug", async (
   assert.equal(all[0].slug, "real-estate-crm", "tab order from the config");
   assert.equal(all.find((c) => c.slug === "whatsapp").count, 1);
   assert.equal(all.find((c) => c.slug === "channel-partners").count, 0);
+  const crmTopic = all.find((c) => c.slug === "real-estate-crm");
+  assert.ok(crmTopic.guide.length >= 2 && crmTopic.faqs.length >= 2 && crmTopic.faqs[0].question, "each topic carries its guide and FAQs");
   const inUse = (await call(ctrl.getCategories, { query: { inUse: "1" } })).body.categories;
   assert.deepEqual(inUse.map((c) => c.slug).sort(), ["lead-management", "real-estate-crm", "whatsapp"]);
   const bySlug = (await call(ctrl.getPosts, { query: { category: "lead-management" } })).body;
