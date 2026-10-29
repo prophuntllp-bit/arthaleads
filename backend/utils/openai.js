@@ -2,12 +2,22 @@ const OpenAI = require("openai");
 
 let _client = null;
 
+// Chat calls go through the AI gateway (OpenAI first, Claude Haiku when OpenAI
+// cannot serve); speech-to-text (audio) stays on OpenAI, which Claude can't do.
 function getClient() {
   if (!_client) {
-    if (!process.env.OPENAI_API_KEY) {
+    const { chatClient, isAvailable } = require("./ai/gateway");
+    if (!isAvailable()) {
       throw new Error("OPENAI_API_KEY environment variable is not set.");
     }
-    _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const real = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
+    _client = {
+      chat: chatClient().chat,
+      get audio() {
+        if (!real) throw new Error("OPENAI_API_KEY environment variable is not set.");
+        return real.audio;
+      },
+    };
   }
   return _client;
 }

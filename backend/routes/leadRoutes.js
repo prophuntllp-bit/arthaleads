@@ -389,7 +389,7 @@ router.post("/:id/draft-message", planGate("growth"), async (req, res, next) => 
     if (!lead || !require("../utils/visibility").canSeeLead(req.user, lead)) return res.status(404).json({ success: false, message: "Lead not found." });
 
     if (!process.env.OPENAI_API_KEY) {
-      return res.status(503).json({ success: false, message: "AI drafting is not configured. Ask your admin to set the OPENAI_API_KEY." });
+      return res.status(503).json({ success: false, message: "AI drafting isn't available right now. Please try again shortly." });
     }
 
     const agentName = req.user.name || "";
@@ -410,7 +410,7 @@ router.post("/:id/draft-message", planGate("growth"), async (req, res, next) => 
     res.json({ success: true, message: result.message });
   } catch (err) {
     if (err.message?.includes("OPENAI_API_KEY")) {
-      return res.status(503).json({ success: false, message: "AI drafting is not configured. Ask your admin to set the OPENAI_API_KEY." });
+      return res.status(503).json({ success: false, message: "AI drafting isn't available right now. Please try again shortly." });
     }
     next(err);
   }
