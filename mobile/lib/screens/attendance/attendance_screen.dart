@@ -245,10 +245,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Future<void> _exportCsv() async {
     try {
+      // An Excel report in the ArthaLeads look, with a summary per member and
+      // the selfies in it, as the web's (29 Oct 2026).
       final res = await _api.dio.get(
         '/attendance/export',
-        options: Options(responseType: ResponseType.bytes),
+        options: Options(responseType: ResponseType.bytes, receiveTimeout: const Duration(minutes: 2)),
         queryParameters: {
+          'format': 'xlsx',
           if (_view == 'records' && _recordUserId != null)
             'userId': _recordUserId,
           if (_from != null) 'from': DateFormat('yyyy-MM-dd').format(_from!),
@@ -257,7 +260,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       );
       final bytes = res.data as List<int>;
       if (!mounted) return;
-      await FileOutput.saveAndOpen(context, Uint8List.fromList(bytes), 'attendance.csv', 'text/csv');
+      final label = _from != null && _to != null
+          ? '${DateFormat('yyyy-MM-dd').format(_from!)}_to_${DateFormat('yyyy-MM-dd').format(_to!)}'
+          : 'all';
+      await FileOutput.saveAndOpen(context, Uint8List.fromList(bytes), 'attendance_$label.xlsx',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
