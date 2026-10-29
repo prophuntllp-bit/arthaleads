@@ -18,7 +18,7 @@ const apiFor = (host) => (/staging/.test(String(host)) ? "https://api-staging.ar
 const SITE = "https://www.arthaleads.com";
 
 // Same as BLOG_TITLE, BLOG_DESCRIPTION and topicTitle in pages/PublicBlog.jsx.
-const BLOG_TITLE = "Real Estate CRM Blog: Lead Management and Sales Guides | Arthaleads";
+const BLOG_TITLE = "Real Estate CRM Blog: Lead and Sales Guides | Arthaleads";
 const BLOG_DESCRIPTION = "Practical guides for Indian real estate teams on CRM software, lead generation, WhatsApp, follow-ups, site visits and running a sales floor.";
 const topicTitle = (t) => (t.seoTitle && t.seoTitle.length > 47 ? t.seoTitle : `${t.seoTitle || t.name} | Arthaleads`);
 const PAGE_SIZE = 12;

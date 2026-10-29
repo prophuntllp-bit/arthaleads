@@ -42,7 +42,7 @@ const entries = readdirSync(pages).filter((f) => f.endsWith(".jsx")).map(readSeo
 // The blog index sets its tags with its own hook; add it by hand.
 entries.push({
   file: "PublicBlog.jsx",
-  title: "Blog - Arthaleads Real Estate CRM",
+  title: "Real Estate CRM Blog: Lead and Sales Guides | Arthaleads",
   description: "Practical guides on real estate lead management, WhatsApp follow-up, Facebook lead ads and CRM habits that help Indian sales teams close more deals.",
   canonical: `${SITE}/blog`,
 });

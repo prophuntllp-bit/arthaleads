@@ -79,8 +79,9 @@ const LEADRAT = {
 
 export default function LeadratAlternative() {
   useSEO({
-    title: "Leadrat Pricing & Alternative: Arthaleads vs Leadrat CRM",
-    description: "Leadrat pricing explained and compared with Arthaleads for Indian real estate teams: per-user prices, billing, free trial, WhatsApp and who each suits.",
+    // Searches are "leadrat pricing" / "leadrat crm pricing": the price leads (GSC, 29 Oct 2026).
+    title: "Leadrat Pricing 2026: ₹2,299 per User vs Arthaleads",
+    description: "Leadrat costs ₹2,299 per user a month at 10 users, falling to ₹1,499 at 100, billed yearly. The full price table, refund terms and how Arthaleads compares.",
     canonical: "https://www.arthaleads.com/compare/leadrat-alternative",
   });
   return <CompetitorComparison c={LEADRAT} />;

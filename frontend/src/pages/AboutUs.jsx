@@ -33,8 +33,8 @@ const iconTile = { background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1
 
 export default function AboutUs() {
   useSEO({
-    title: "About Arthaleads - Real Estate CRM Built for India",
-    description: "Arthaleads is a real estate CRM built in Pune for developers, brokers and channel partners. Learn our mission to simplify property lead management.",
+    title: "About Arthaleads: Real Estate CRM Made in Pune, India",
+    description: "Arthaleads is a real estate CRM made in Pune by Prophunt LLP for builders, brokers and channel partners. Who we are, what we build and how to reach us.",
     canonical: "https://www.arthaleads.com/about-us",
   });
 

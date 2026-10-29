@@ -82,8 +82,9 @@ const KYLAS = {
 
 export default function KylasAlternative() {
   useSEO({
-    title: "Kylas Pricing & Alternative: Arthaleads vs Kylas CRM",
-    description: "Kylas CRM pricing explained and compared with Arthaleads for real estate teams: flat fee vs per user, free plan, WhatsApp and who each one suits best.",
+    // Searches are "kylas pricing": the price leads (GSC, 29 Oct 2026).
+    title: "Kylas Pricing 2026: ₹12,999 a Month Flat vs Arthaleads",
+    description: "Kylas Elevate is ₹12,999 a month flat for unlimited users, with a free Embark plan. What each plan includes and how Arthaleads compares for real estate teams.",
     canonical: "https://www.arthaleads.com/compare/kylas-alternative",
   });
   return <CompetitorComparison c={KYLAS} />;

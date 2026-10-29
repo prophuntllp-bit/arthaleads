@@ -22,14 +22,14 @@ import { authorOf, fmtDate, sizedImage } from "../components/BlogCard";
 const SITE = "https://www.arthaleads.com";
 
 // The blog's own title and description; topics use their own (backend/config/blogCategories.js).
-export const BLOG_TITLE = "Real Estate CRM Blog: Lead Management and Sales Guides | Arthaleads";
+export const BLOG_TITLE = "Real Estate CRM Blog: Lead and Sales Guides | Arthaleads";
 export const BLOG_DESCRIPTION = "Practical guides for Indian real estate teams on CRM software, lead generation, WhatsApp, follow-ups, site visits and running a sales floor.";
 export const topicTitle = (t) => (t.seoTitle && t.seoTitle.length > 47 ? t.seoTitle : `${t.seoTitle || t.name} | Arthaleads`);
 
 // ── SEO meta updater ───────────────────────────────────────────────────────────
 function useSEO({ title, description, url }) {
   useEffect(() => {
-    document.title = title;
+    if (title) document.title = title;
     setMeta("description", description);
     setMeta("og:title", title);
     setMeta("og:description", description);
@@ -190,8 +190,11 @@ function BlogPageInner() {
   const topic = categories.find((c) => c.slug === topicSlug) || null;
   const totalAll = categories.reduce((n, c) => n + (c.count || 0), 0);
 
-  useSEO(topic
-    ? { title: topicTitle(topic), description: topic.description, url: `${SITE}/blog/category/${topic.slug}` }
+  // A topic page's canonical comes from its URL straight away: waiting for the
+  // topic list left the /blog canonical in place, and Google, which runs this
+  // code, read topic pages as copies of /blog (audit, 29 Oct 2026).
+  useSEO(topicSlug
+    ? { title: topic ? topicTitle(topic) : null, description: topic?.description, url: `${SITE}/blog/category/${topicSlug}` }
     : { title: BLOG_TITLE, description: BLOG_DESCRIPTION, url: `${SITE}/blog` });
 
   useEffect(() => {

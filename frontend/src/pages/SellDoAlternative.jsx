@@ -73,8 +73,9 @@ const SELLDO = {
 
 export default function SellDoAlternative() {
   useSEO({
-    title: "Sell.Do Pricing & Alternative: Arthaleads vs Sell.Do",
-    description: "Sell.Do pricing explained and compared with Arthaleads for Indian real estate teams: published prices, free trial, AI, WhatsApp and who each suits.",
+    // Searches are "sell.do alternative(s)": that phrase leads (GSC, 29 Oct 2026).
+    title: "Sell.Do Alternative: Pricing and Features vs Arthaleads",
+    description: "A Sell.Do alternative with published prices, a 14-day free trial and a WhatsApp AI agent. Sell.Do quotes on request. Both compared, with sources and dates.",
     canonical: "https://www.arthaleads.com/compare/sell-do-alternative",
   });
   return <CompetitorComparison c={SELLDO} />;
