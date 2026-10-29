@@ -254,7 +254,7 @@ async function runTool(name, args, ctx) {
 
     case "morning_brief": {
       if (!briefOn(ctx.org)) return { result: { error: "Not available." }, records };
-      const brief = briefForModel(await buildBrief(user));
+      const brief = briefForModel(await buildBrief(user, ctx.now)); // ctx.now: tests only
       remember([...brief.needsAttention, ...brief.callFirst].filter((x) => x.kind !== "chat"));
       return { result: brief, records };
     }
