@@ -54,7 +54,8 @@ export const post = defineType({
     }),
     defineField({
       name: "category", title: "Category", type: "string", group: "content",
-      options: { list: CATEGORIES, layout: "dropdown" },
+      // Exact titles: a plain string list is shown re-cased ("Real estate crm").
+      options: { list: CATEGORIES.map((c) => ({ title: c, value: c })), layout: "dropdown" },
       validation: (r) => r.required(),
     }),
     defineField({
