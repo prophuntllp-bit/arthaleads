@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
+import '../../widgets/wa_media.dart';
 import '../../widgets/day_divider.dart';
 import '../inbox/wa_theme.dart';
 
@@ -84,11 +85,19 @@ class _LeadChatPanelState extends State<LeadChatPanel> {
     final name = (m['senderName'] as String?) ?? '';
     final type = m['mediaType'] as String?;
     final url = (m['mediaUrl'] as String?) ?? '';
-    final body = (m['body'] as String?) ?? '';
+    final body = waMessageText(m);
     final ink = wa.bubbleText;
+    final missing = waMissingMedia(m);
 
     Widget content;
-    if (url.isNotEmpty && type == 'image') {
+    if (url.isNotEmpty && type == 'audio') {
+      content = WaVoiceNote(url: url, transcript: m['transcript'] as String?, ink: ink, soft: wa.timeText);
+    } else if (url.isEmpty && missing != null) {
+      content = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(missing, style: TextStyle(color: wa.timeText, fontSize: 12.5, fontStyle: FontStyle.italic)),
+        if (body.isNotEmpty) Text(body, style: TextStyle(color: ink, fontSize: 14)),
+      ]);
+    } else if (url.isNotEmpty && type == 'image') {
       content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

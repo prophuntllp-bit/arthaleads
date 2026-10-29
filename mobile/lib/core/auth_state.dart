@@ -29,6 +29,11 @@ class AuthState extends ChangeNotifier {
 
   AuthState() {
     _api.onSessionExpired = () {
+      if (switchedFrom != null) {
+        // The 2-hour "Switch account" session ran out: back to the admin.
+        switchBack();
+        return;
+      }
       if (user != null) {
         user = null;
         org = null;
@@ -66,6 +71,63 @@ class AuthState extends ChangeNotifier {
       debugPrint('[auth] session restore failed: $e');
     } finally {
       restoring = false;
+      notifyListeners();
+    }
+  }
+
+  /// "Switch account" (admins, 29 Oct 2026, as the web's AccountSwitcher):
+  /// signed in as a teammate for up to 2 hours (POST /auth/switch-user/:id).
+  /// The admin's own token waits on the phone for "Switch back".
+  static const _switchKey = 'auth_switch_back_v1';
+  String? switchedFrom; // the admin's name while switched
+  String? _switchBackToken;
+
+  Future<void> _loadSwitch() async {
+    try {
+      final raw = (await SharedPreferences.getInstance()).getString(_switchKey);
+      if (raw == null) return;
+      final m = (jsonDecode(raw) as Map).cast<String, dynamic>();
+      _switchBackToken = m['token'] as String?;
+      switchedFrom = _switchBackToken == null ? null : '${m['name'] ?? ''}';
+    } catch (_) {}
+  }
+
+  Future<void> _clearSwitch() async {
+    switchedFrom = null;
+    _switchBackToken = null;
+    try {
+      (await SharedPreferences.getInstance()).remove(_switchKey);
+    } catch (_) {}
+  }
+
+  /// Sign in as [userId] from the admin's team. Throws with the server's message.
+  Future<void> switchTo(String userId) async {
+    final adminName = '${user?['name'] ?? ''}';
+    final res = await _api.dio.post('/auth/switch-user/$userId');
+    final token = res.data['token'] as String?;
+    final original = (res.data['originalToken'] as String?) ?? _api.token;
+    if (token == null || original == null) throw Exception("Couldn't switch account");
+    (await SharedPreferences.getInstance()).setString(_switchKey, jsonEncode({'token': original, 'name': adminName}));
+    _switchBackToken = original;
+    switchedFrom = adminName;
+    await _api.setToken(token);
+    await refresh();
+  }
+
+  /// Back to the admin's own account.
+  Future<void> switchBack() async {
+    final token = _switchBackToken;
+    await _clearSwitch();
+    if (token == null) return;
+    await _api.setToken(token);
+    try {
+      await refresh();
+    } catch (_) {
+      // The admin's own session ended too: sign in again.
+      await _api.clearToken();
+      await _forget();
+      user = null;
+      org = null;
       notifyListeners();
     }
   }
@@ -109,6 +171,7 @@ class AuthState extends ChangeNotifier {
 
   Future<void> _restore() async {
     await _api.loadToken();
+    await _loadSwitch();
     if (_api.hasToken) {
       final openedFromSaved = await _openFromSaved();
       restoringKnownSession = true;
@@ -208,6 +271,7 @@ class AuthState extends ChangeNotifier {
     }
     await _api.clearToken();
     await _forget();
+    await _clearSwitch();
     user = null;
     org = null;
     // A blocked company's screen sits above the login screen; signing out

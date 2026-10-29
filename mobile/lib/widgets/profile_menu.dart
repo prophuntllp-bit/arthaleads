@@ -437,6 +437,18 @@ class _ProfileMenuState extends State<ProfileMenu> {
                           widget.onClose();
                         },
                       ),
+                      // Admins: sign in as a teammate for up to 2 hours (web: AccountSwitcher).
+                      if (context.read<AuthState>().role == 'admin' && context.read<AuthState>().switchedFrom == null)
+                        _actionRow(
+                          context,
+                          icon: Icons.swap_horiz_rounded,
+                          label: 'Switch account',
+                          onTap: () {
+                            _toggleOpen(attendanceEnabled);
+                            widget.onClose();
+                            showSwitchAccountSheet(context);
+                          },
+                        ),
                       _actionRow(
                         context,
                         icon: Icons.card_giftcard_rounded,
@@ -577,4 +589,94 @@ class _ProfileMenuState extends State<ProfileMenu> {
       ),
     );
   }
+}
+
+
+/// Pick a teammate to view the CRM as, for up to 2 hours.
+Future<void> showSwitchAccountSheet(BuildContext context) async {
+  final auth = context.read<AuthState>();
+  final messenger = ScaffoldMessenger.of(context);
+  List<Map<String, dynamic>> people;
+  try {
+    final r = await ApiClient.instance.dio.get('/auth/users');
+    final me = '${auth.user?['_id']}';
+    people = [
+      for (final u in (r.data['users'] as List?) ?? const [])
+        if (u is Map && u['isActive'] != false && u['role'] != 'super_admin' && '${u['_id']}' != me) u.cast<String, dynamic>(),
+    ]..sort((a, b) => '${a['name']}'.compareTo('${b['name']}'));
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(ApiClient.errorMessage(e, "Couldn't load your team")), backgroundColor: AppColors.danger));
+    return;
+  }
+  if (!context.mounted) return;
+  if (people.isEmpty) {
+    messenger.showSnackBar(const SnackBar(content: Text('There is no one else on your team to switch to.')));
+    return;
+  }
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: true,
+    builder: (ctx) {
+      var query = '';
+      var busy = '';
+      return StatefulBuilder(builder: (ctx, setSheet) {
+        final t = AppTheme.of(ctx);
+        final shown = people
+            .where((p) => query.isEmpty || '${p['name']} ${p['email']}'.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+        return Padding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + MediaQuery.viewInsetsOf(ctx).bottom),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text('Switch account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: t.text)),
+            const SizedBox(height: 4),
+            Text('See the CRM as this person sees it, for up to 2 hours. An orange bar at the top takes you back.',
+                style: TextStyle(fontSize: 12.5, color: t.textSoft)),
+            if (people.length > 4) ...[
+              const SizedBox(height: 10),
+              TextField(
+                decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Find a teammate', isDense: true),
+                onChanged: (v) => setSheet(() => query = v),
+              ),
+            ],
+            const SizedBox(height: 8),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.5),
+              child: ListView(shrinkWrap: true, children: [
+                for (final p in shown)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                      child: Text(
+                        '${p['name'] ?? ''}'.trim().isEmpty ? '?' : '${p['name']}'.trim()[0].toUpperCase(),
+                        style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    title: Text('${p['name'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text(busy == '${p['_id']}' ? 'Switching…' : '${p['role'] ?? ''}'.replaceAll('_', ' ')),
+                    onTap: busy.isNotEmpty
+                        ? null
+                        : () async {
+                            setSheet(() => busy = '${p['_id']}');
+                            try {
+                              await auth.switchTo('${p['_id']}');
+                              if (ctx.mounted) Navigator.pop(ctx);
+                            } catch (e) {
+                              setSheet(() => busy = '');
+                              messenger.showSnackBar(SnackBar(
+                                content: Text(ApiClient.errorMessage(e, "Couldn't switch account")),
+                                backgroundColor: AppColors.danger,
+                              ));
+                            }
+                          },
+                  ),
+              ]),
+            ),
+          ]),
+        );
+      });
+    },
+  );
 }

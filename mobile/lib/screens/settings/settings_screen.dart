@@ -108,6 +108,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       'address',
       'phone',
       'email',
+      'privacyUrl',
       'gstNo',
       'pan',
       'cin',
@@ -358,7 +359,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await _api.dio.patch(
         '/org/me/billing',
-        data: {for (final k in _billing.keys) k: _billing[k]!.text.trim()},
+        // privacyUrl only when the server sent it, so an older server's
+        // profile (without it) can't wipe the saved link.
+        data: {
+          for (final k in _billing.keys)
+            if (k != 'privacyUrl' || (context.read<AuthState>().org?.containsKey('privacyUrl') ?? false))
+              k: _billing[k]!.text.trim(),
+        },
       );
       if (mounted) await context.read<AuthState>().refresh();
       if (mounted) {
@@ -912,6 +919,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _billingField('address', 'Registered Address'),
         _billingField('phone', 'Contact Number'),
         _billingField('email', 'Official Email'),
+        // Linked under the consent box on QR enquiry forms (DPDP notice).
+        _billingField('privacyUrl', 'Privacy Policy Link (shown on your QR enquiry forms)'),
         const SizedBox(height: 8),
         Text(
           'TAX & COMPLIANCE',

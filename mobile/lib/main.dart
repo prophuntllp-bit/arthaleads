@@ -88,7 +88,9 @@ class _AuthGate extends StatelessWidget {
     if (auth.orgBlockReason != null) {
       return _OrgBlockedScreen(reason: auth.orgBlockReason!);
     }
-    return auth.loggedIn ? const Shell() : const LoginScreen();
+    // Keyed by who is signed in, so "Switch account" starts every screen
+    // afresh for that person instead of showing the admin's cached lists.
+    return auth.loggedIn ? Shell(key: ValueKey('${auth.user?['_id']}')) : const LoginScreen();
   }
 }
 
