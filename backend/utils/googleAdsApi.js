@@ -13,6 +13,7 @@
 
 const GOOGLE_ADS_API_VERSION = "v26";
 const BASE = `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}`;
+const logger = require("../config/logger");
 
 function headers(accessToken, loginCustomerId) {
   const h = { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" };
@@ -61,6 +62,7 @@ async function listAccounts(accessToken) {
   const json = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(errorMessage(json, resp.status));
   const ids = (json.resourceNames || []).map((rn) => rn.split("/")[1]).filter(Boolean);
+  logger.info(`[google-ads] accessible customers: ${ids.join(", ") || "none"}`);
   if (!ids.length) throw new Error("This Google login has no Google Ads account. Sign in with the login you use for Google Ads.");
 
   const direct = new Map(); // id -> account
@@ -73,7 +75,8 @@ async function listAccounts(accessToken) {
     try {
       const [row] = await search(id, "SELECT customer.id, customer.descriptive_name, customer.manager, customer.test_account FROM customer LIMIT 1", { accessToken });
       customer = row?.customer;
-    } catch {
+    } catch (err) {
+      logger.info(`[google-ads] customer ${id} not readable directly: ${err.message}`);
       // No direct read access (or a cancelled account): still listed, by its bare ID.
       direct.set(id, { id, name: id, loginCustomerId: "" });
       return;
@@ -90,6 +93,7 @@ async function listAccounts(accessToken) {
         SELECT customer_client.id, customer_client.descriptive_name, customer_client.test_account, customer_client.status
         FROM customer_client
         WHERE customer_client.manager = false`, { accessToken, loginCustomerId: id });
+      logger.info(`[google-ads] manager ${id} clients: ${clients.map(({ customerClient: c }) => `${c?.id}:${c?.status || "?"}`).join(", ") || "none"}`);
       for (const { customerClient: c } of clients) {
         if (!c?.id) continue;
         if (["CANCELED", "CLOSED"].includes(c.status)) { closedClients.push(`${c.descriptiveName || c.id} (${c.status.toLowerCase()})`); continue; }
