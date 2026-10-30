@@ -314,7 +314,6 @@ function NavInner({ onScrollTo }) {
           {/* Desktop nav links */}
           <div className="hidden xl:flex items-center gap-6">
             <NavLink href="/features" label="Features" />
-            <NavLink href="/about-us" label="About Us" />
             <NavLink href="/pricing"  label="Pricing" />
 
             {/* Compare dropdown */}
@@ -371,6 +370,7 @@ function NavInner({ onScrollTo }) {
               />
             </div>
 
+            <NavLink href="/about-us" label="About Us" />
             <NavLink href="/contact" label="Contact" />
           </div>
 
