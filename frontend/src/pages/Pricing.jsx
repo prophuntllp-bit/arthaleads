@@ -15,6 +15,7 @@ import { PLANS } from "../data/plans";
 const FAQS = [
   ["Is there a free trial?", "Yes. The Growth plan comes with a 14-day free trial that includes every Growth feature, with 1 GB of file storage during the trial (15 GB once you subscribe to Growth). No credit card is required, and you can upgrade or cancel anytime."],
   ["How is pricing calculated?", "Pricing is per team member, per month, with a five-seat minimum on every plan. Starter is ₹599 and Growth is ₹999 per user per month, plus 18% GST. There is no setup fee. Enterprise is custom-quoted for large or multi-branch organisations."],
+  ["Are WhatsApp message charges included in the plan price?", "No. The plan price covers Arthaleads. WhatsApp itself charges per message, at rates set by Meta: marketing messages cost more than replies and service messages. Depending on how your number is set up, Meta bills these to your own account, or they come from prepaid credits you add in Arthaleads."],
   ["Is there a setup or onboarding fee?", "No. There is no setup fee on any plan. You can start on a 14-day free trial and only pay the per-seat price once you subscribe."],
   ["Can I change plans later?", "Absolutely. You can upgrade or downgrade at any time. When you upgrade, you get instant access to the new features; when you downgrade, the change applies from your next billing cycle."],
   ["What happens to my data if I cancel?", "Your data stays yours. On Growth and Enterprise you can export all your leads as CSV or Excel at any time. After cancellation we retain your data per our Refund & Cancellation Policy before secure deletion."],
@@ -68,7 +69,7 @@ export default function Pricing() {
 
   useSEO({
     title:       "Pricing | Arthaleads Real Estate CRM Plans",
-    description: "Simple, transparent Arthaleads pricing. Starter, Growth and Enterprise plans for real estate teams of every size. 14-day free trial, no credit card needed.",
+    description: "Arthaleads pricing: Starter ₹599 and Growth ₹999 per user a month plus GST, five-seat minimum; Enterprise on quote. 14-day free trial, no credit card.",
     canonical:   "https://www.arthaleads.com/pricing",
   });
 

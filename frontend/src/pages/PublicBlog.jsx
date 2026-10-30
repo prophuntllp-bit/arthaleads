@@ -387,6 +387,18 @@ function BlogPageInner() {
   );
 }
 
+// Each topic page links to the product page it belongs to (SEO audit, 30 Oct 2026).
+const TOPIC_HUB = {
+  "real-estate-crm": ["/features", "See everything Arthaleads does"],
+  "lead-generation": ["/features", "How Arthaleads brings every lead into one list"],
+  "lead-management": ["/features", "Lead management in Arthaleads"],
+  "whatsapp": ["/whatsapp-crm", "WhatsApp CRM for real estate"],
+  "ai-automation": ["/ai-crm", "The AI real estate CRM"],
+  "sales-team": ["/features", "Team performance in Arthaleads"],
+  "site-visits": ["/builder-crm", "CRM for builders and developers"],
+  "channel-partners": ["/builder-crm", "CRM for builders and developers"],
+};
+
 /** A topic page's guide (paragraphs) and its common questions, under the articles.
  *  Same markup as topicGuideHtml in api/blog-index.js. */
 function TopicGuide({ topic }) {
@@ -397,7 +409,7 @@ function TopicGuide({ topic }) {
       {guide.length > 0 && (
         <div>
           <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] text-[24px] sm:text-[28px] mb-4">About {topic.name}</h2>
-          <div className="space-y-4 text-base leading-relaxed">{guide.map((p, i) => <p key={i}>{p}</p>)}</div>
+          <div className="space-y-4 text-base leading-relaxed">{guide.map((p, i) => <p key={i}>{p}</p>)}{TOPIC_HUB[topic.slug] && <p><Link to={TOPIC_HUB[topic.slug][0]} className="font-semibold site-ink underline underline-offset-4">{TOPIC_HUB[topic.slug][1]}</Link></p>}</div>
         </div>
       )}
       {faqs.length > 0 && (

@@ -405,7 +405,7 @@ function Trust() {
             <Card glow className="h-full p-7 flex flex-col">
               <TrustIcon Icon={Lock} />
               <h3 className="font-display text-lg font-bold site-ink mb-2">Your data stays yours</h3>
-              <p className="text-[15px] leading-relaxed mb-5">Each company's data is kept apart, and you can export everything or delete your account any time.</p>
+              <p className="text-[15px] leading-relaxed mb-5">Each company's data is kept apart. On Growth and Enterprise you can export all your leads, and you can delete your account any time.</p>
               <ul className="mt-auto space-y-1.5">
                 <TrustRow left="All leads as Excel" right="Export" tone={T_ORANGE} />
                 <TrustRow left="Delete account" right="Self-serve" tone={T_PLAIN} />

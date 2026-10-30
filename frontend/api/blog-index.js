@@ -102,13 +102,25 @@ function headHtml(topic) {
     + `<p class="mt-5 text-base sm:text-[17px] leading-relaxed max-w-[38rem]" style="text-wrap:pretty">${esc(topic.intro || topic.description)}</p>`;
 }
 
+// Each topic page links to the product page it belongs to (SEO audit, 30 Oct 2026); same as PublicBlog.jsx.
+const TOPIC_HUB = {
+  "real-estate-crm": ["/features", "See everything Arthaleads does"],
+  "lead-generation": ["/features", "How Arthaleads brings every lead into one list"],
+  "lead-management": ["/features", "Lead management in Arthaleads"],
+  "whatsapp": ["/whatsapp-crm", "WhatsApp CRM for real estate"],
+  "ai-automation": ["/ai-crm", "The AI real estate CRM"],
+  "sales-team": ["/features", "Team performance in Arthaleads"],
+  "site-visits": ["/builder-crm", "CRM for builders and developers"],
+  "channel-partners": ["/builder-crm", "CRM for builders and developers"],
+};
+
 // TopicGuide in pages/PublicBlog.jsx
 function topicGuideHtml(topic) {
   const guide = topic.guide || [], faqs = topic.faqs || [];
   if (!guide.length && !faqs.length) return "";
   const h2 = (t) => `<h2 class="font-display site-ink font-extrabold tracking-[-0.02em] text-[24px] sm:text-[28px] mb-4">${esc(t)}</h2>`;
   return `<div class="mt-16 lg:mt-20 grid lg:grid-cols-[1fr_1fr] gap-10 lg:gap-16">`
-    + (guide.length ? `<div>${h2(`About ${topic.name}`)}<div class="space-y-4 text-base leading-relaxed">${guide.map((p) => `<p>${esc(p)}</p>`).join("")}</div></div>` : "")
+    + (guide.length ? `<div>${h2(`About ${topic.name}`)}<div class="space-y-4 text-base leading-relaxed">${guide.map((p) => `<p>${esc(p)}</p>`).join("")}${TOPIC_HUB[topic.slug] ? `<p><a href="${TOPIC_HUB[topic.slug][0]}" class="font-semibold site-ink underline underline-offset-4">${esc(TOPIC_HUB[topic.slug][1])}</a></p>` : ""}</div></div>` : "")
     + (faqs.length ? `<div>${h2("Common questions")}<div class="space-y-3">${faqs.map((f, i) => `<details class="site-card px-5 py-4 group"${i === 0 ? " open" : ""}>`
       + `<summary class="cursor-pointer list-none font-semibold site-ink flex items-start justify-between gap-4"><span>${esc(f.question)}</span><span aria-hidden="true" class="site-muted transition-transform group-open:rotate-45">+</span></summary>`
       + `<p class="mt-3 text-[15px] leading-relaxed">${esc(f.answer)}</p></details>`).join("")}</div></div>` : "")

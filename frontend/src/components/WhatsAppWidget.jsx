@@ -3,7 +3,9 @@
 // Same shape as the Artha pill, mirrored: icon first, then the label. Opens a
 // WhatsApp chat with the sales number. Hidden while the phone menu is open and
 // on the Book a Demo page on phones (styles.css), like the Artha pill. On
-// phones it is just the round icon. Sits above the cookie banner while that is open.
+// phones it is just the round icon. Sits above the phone's full-width cookie bar;
+// on wider screens it stays in its corner, under the cookie card, until that is
+// answered (lifted above the card it covered the hero's "Book a Demo" button).
 import WhatsAppLogo from "./WhatsAppLogo";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { waLink, WA_MESSAGES } from "../utils/crmLinks";
@@ -12,11 +14,11 @@ export default function WhatsAppWidget() {
   const { isDark } = usePublicTheme();
   return (
     <a href={waLink(WA_MESSAGES.sales)} target="_blank" rel="noopener noreferrer"
-      aria-label="Chat with Arthaleads on WhatsApp"
+      aria-label="Chat on WhatsApp with Arthaleads"
       className="wa-widget fixed z-[996] flex items-center gap-2.5 rounded-full p-1.5 sm:pr-4 transition hover:-translate-y-0.5"
       style={{
         left: 20,
-        bottom: "calc(20px + var(--cookie-h, 0px) + env(safe-area-inset-bottom, 0px))",   // above the cookie banner while it is open
+        bottom: "calc(20px + var(--cookie-h-full, 0px) + env(safe-area-inset-bottom, 0px))",   // above the phone cookie bar
         background: isDark ? "#111318" : "#ffffff",
         border: `1px solid ${isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb"}`,
         boxShadow: "0 14px 34px -12px rgba(0,0,0,0.35), 0 0 0 4px rgba(37,211,102,0.12)",

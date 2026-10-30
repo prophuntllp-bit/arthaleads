@@ -77,7 +77,7 @@ export default function WhatsAppCrm() {
       answer={{
         q: "Why property teams need a WhatsApp CRM",
         paras: [
-          "In Indian real estate, most enquiries now start on WhatsApp. A buyer taps an ad, messages at 10 PM, and expects an answer before they message the next builder. If that chat sits on one agent's phone, it is answered late, the buyer's budget and timeline live only in that chat, and nobody else on the team knows it exists.",
+          "In Indian real estate, many enquiries now start on WhatsApp. A buyer taps an ad, messages at 10 PM, and expects an answer before they message the next builder. If that chat sits on one agent's phone, it is answered late, the buyer's budget and timeline live only in that chat, and nobody else on the team knows it exists.",
           <>A WhatsApp CRM fixes that. The chat, the buyer's details and the next step all live in one lead record the whole team can see. Replies go out in seconds, even at night, and the manager knows which ads produce real buyers. It is the same lead management discipline described in our guide to{" "}
             <Link to="/blog/real-estate-lead-management-enquiry-to-site-visit" className={linkCls} style={brandInk}>real estate lead management</Link>, applied to the channel your buyers use most.</>,
         ],

@@ -296,7 +296,7 @@ export default function Compare() {
       <Section tone="white">
         <Container>
           <SectionHeader eyebrow="How to choose" title="Six questions that decide it"
-            lede="A feature table only tells part of the story. These six questions decide whether a CRM actually helps your team close more bookings, whichever product you pick." />
+            lede={<>A feature table only tells part of the story. These six questions decide whether a CRM actually helps your team close more bookings, whichever product you pick. For a wider look that adds Privyr, see <Link to="/blog/best-real-estate-crm-software-india" className="font-semibold site-ink underline underline-offset-4">five real estate CRMs compared</Link>.</>} />
           <ol className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {CHOOSING.map((c, i) => (
               <Reveal as="li" key={c.title} delay={(i % 3) * 80} className="min-w-0 flex">
