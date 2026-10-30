@@ -10,9 +10,14 @@ const RATE = 8000;
 const BY_AMP = { 3000: "Hello, Sheetal from PropHunt.", 6000: "Haan bataiye.", 9000: "Site visit kab karenge?" };
 let sttCalls = 0;
 let chatReply = () => ({});
+let sttMode = "normal"; // "urdu": answers in Urdu letters unless asked for Hindi; "down": the service refuses
+const sttRequests = [];
 const fake = {
-  audio: { transcriptions: { create: async ({ file }) => {
+  audio: { transcriptions: { create: async ({ file, language }) => {
     sttCalls++;
+    sttRequests.push({ language });
+    if (sttMode === "down") { const e = new Error("429 You have no credits remaining"); e.status = 429; throw e; }
+    if (sttMode === "urdu") return { text: language === "hi" ? "नहीं, मेरा कोई इंटरेस्ट नहीं है।" : "نہیں میرا بالکل انٹرسٹ نہیں ہے۔" };
     const buf = Buffer.from(await file.arrayBuffer());
     if (buf.toString("ascii", 0, 4) !== "RIFF") return { text: "मोनो कॉल का पूरा पाठ। हाँ बताइए।" };
     let max = 0;
@@ -101,6 +106,33 @@ test("mono: the AI split is kept only when it copies the text exactly", async ()
   assert.equal(changed.method, "plain", "a rewritten split is dropped");
   assert.equal(changed.turns.length, 0);
   assert.equal(changed.text, "मोनो कॉल का पूरा पाठ। हाँ बताइए।");
+});
+
+test("a quick 0.3 s 'hello' counts as speech; a 0.15 s click does not", () => {
+  const w = ct.parseWav(stereoWav(4, [{ ch: 1, from: 1, to: 1.3, amp: 4000 }, { ch: 0, from: 2.5, to: 2.65, amp: 4000 }]));
+  assert.equal(ct.speechSegments(w.channels[1], RATE).length, 1, "the short hello is kept");
+  assert.equal(ct.speechSegments(w.channels[0], RATE).length, 0, "the click is not");
+});
+
+test("Hindi that comes back in Urdu letters is asked again as Hindi (Devanagari)", async () => {
+  sttMode = "urdu"; sttRequests.length = 0;
+  try {
+    const r = await ct.transcribeCall(stereoWav(6, [{ ch: 0, from: 0.5, to: 2.5, amp: 3000 }, { ch: 1, from: 3, to: 5, amp: 6000 }]), { agentChannel: "left" });
+    assert.doesNotMatch(r.text, /[؀-ۿ]/, "no Urdu letters left");
+    assert.match(r.text, /मेरा कोई इंटरेस्ट/);
+    assert.ok(sttRequests.some((x) => x.language === "hi"), "asked again with language hi");
+  } finally { sttMode = "normal"; }
+});
+
+test("the speech service refusing (out of credits) is a failure, not a silent call", async () => {
+  sttMode = "down";
+  try {
+    await assert.rejects(
+      ct.transcribeCall(stereoWav(6, [{ ch: 0, from: 0.5, to: 2.5, amp: 3000 }, { ch: 1, from: 3, to: 5, amp: 6000 }]), { agentChannel: "left" }),
+      (err) => err instanceof ct.TranscriptionFailed,
+    );
+    await assert.rejects(ct.transcribeCall(Buffer.from("not a wav, an mp3"), { filename: "x.mp3" }), (err) => err instanceof ct.TranscriptionFailed);
+  } finally { sttMode = "normal"; }
 });
 
 run("Call transcripts by speaker");

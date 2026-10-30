@@ -73,6 +73,9 @@ function wavBuffer(samples, rate) {
 // ── Finding speech on one channel ─────────────────────────────────────────────
 // 20 ms frames; speech is well above the channel's own noise floor. Pauses up
 // to 0.9 s stay in one utterance; utterances are capped at 25 s for the model.
+// Anything from 0.25 s counts: a customer's quick "hello?" is about 0.3 s and was
+// lost at the old 0.4 s (real call, 28 Oct 2026); clicks that slip through come
+// back as filler and are dropped below.
 function speechSegments(samples, rate) {
   const frame = Math.max(1, Math.round(rate * 0.02));
   const n = Math.floor(samples.length / frame);
@@ -98,17 +101,34 @@ function speechSegments(samples, rate) {
     const tooLong = start >= 0 && f - start >= MAX;
     if (start >= 0 && ((!loud && f - lastLoud > GAP) || tooLong || f === n - 1)) {
       const end = tooLong ? f : lastLoud;
-      if ((end - start + 1) * 0.02 >= 0.4) segs.push({ start: Math.max(0, start - 8) * 0.02, end: Math.min(n, end + 9) * 0.02 });
+      if ((end - start + 1) * 0.02 >= 0.25) segs.push({ start: Math.max(0, start - 8) * 0.02, end: Math.min(n, end + 9) * 0.02 });
       start = -1;
     }
   }
   return segs;
 }
 
+// Arabic script (Urdu) for what was Hindi: "nahi mera bilkul interest nahi hai"
+// came back in Urdu letters on a real call (29 Oct 2026). Such a piece is asked
+// again as Hindi, which keeps it in Devanagari.
+const ARABIC = /[\u0600-\u06FF]/;
+const DEVANAGARI = /[\u0900-\u097F]/;
+
 async function transcribeBuffer(buf, filename, prompt) {
   const client = getClient();
-  const out = await client.audio.transcriptions.create({ file: await toFile(buf, filename), model: STT_MODEL, ...(prompt ? { prompt } : {}) });
-  return String(out.text || "").trim();
+  const ask = async (extra) => String((await client.audio.transcriptions.create({ file: await toFile(buf, filename), model: STT_MODEL, ...(prompt ? { prompt } : {}), ...extra })).text || "").trim();
+  const text = await ask({});
+  if (ARABIC.test(text) && !DEVANAGARI.test(text)) {
+    const again = await ask({ language: "hi" }).catch(() => "");
+    if (again && !ARABIC.test(again)) return again;
+  }
+  return text;
+}
+
+// The speech-to-text service did not answer (out of credits, outage). Not the same
+// as a silent call: the caller saves it as "couldn't transcribe, try again".
+class TranscriptionFailed extends Error {
+  constructor(cause) { super(`transcription failed: ${cause?.message || cause}`); this.name = "TranscriptionFailed"; }
 }
 
 // Words a model invents on a breath or a click; a whole utterance of only these is dropped.
@@ -146,16 +166,21 @@ async function stereoTranscript(wav, opts) {
   // their own drifted between Marathi and Hindi (real call, 27 Oct 2026). The
   // two sides run side by side. A piece that only repeats its context is dropped.
   const texts = new Array(pieces.length).fill("");
+  let failed = 0, lastError = null;
   await Promise.all([0, 1].map(async (ch) => {
     let context = "";
     for (let i = 0; i < pieces.length; i++) {
       if (pieces[i].ch !== ch) continue;
-      const text = await transcribeBuffer(wavBuffer(pieces[i].samples, wav.rate), `seg-${i}.wav`, context.slice(-300)).catch(() => "");
+      const text = await transcribeBuffer(wavBuffer(pieces[i].samples, wav.rate), `seg-${i}.wav`, context.slice(-300))
+        .catch((err) => { failed++; lastError = err; return ""; });
       if (text && context && context.includes(text) && text.length > 12) continue;
       texts[i] = text;
       if (text) context = `${context} ${text}`.trim();
     }
   }));
+  // Speech was there but the service did not answer for most of it: a failure,
+  // not an empty call (29 Oct 2026, out-of-credits calls were saved as silent).
+  if (failed && failed * 2 >= pieces.length) throw new TranscriptionFailed(lastError);
   const lines = pieces.map((p, i) => ({ ch: p.ch, start: p.start, end: p.end, text: texts[i] }))
     .filter((l) => l.text && !FILLER_ONLY.test(l.text))
     .sort((a, b) => a.start - b.start);
@@ -181,7 +206,7 @@ async function stereoTranscript(wav, opts) {
 const norm = (s) => String(s).replace(/[\s\p{P}]+/gu, "").toLowerCase();
 
 async function monoTranscript(buf, filename, opts) {
-  const text = await transcribeBuffer(buf, filename);
+  const text = await transcribeBuffer(buf, filename).catch((err) => { throw new TranscriptionFailed(err); });
   // Letters plus combining marks: Devanagari vowel signs are marks, so
   // without \p{M} real Hindi and Marathi words did not count as words.
   const realWords = text.split(/\s+/).filter((t) => /[\p{L}\p{M}]{2,}/u.test(t));
@@ -220,4 +245,4 @@ async function transcribeCall(buf, opts = {}) {
   return monoTranscript(buf, opts.filename || "recording.wav", opts);
 }
 
-module.exports = { transcribeCall, parseWav, speechSegments, wavBuffer, formatTurns, _norm: norm };
+module.exports = { transcribeCall, parseWav, speechSegments, wavBuffer, formatTurns, TranscriptionFailed, _norm: norm };

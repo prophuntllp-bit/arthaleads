@@ -1320,7 +1320,10 @@ async function transcribeAndSummarize(leadId, match, recordingUrl, Model = Lead)
   const ownerDoc = await Model.findOne({ _id: leadId, activities: { $elemMatch: match } }, { "activities.$": 1, orgId: 1 }).lean();
   const callAct  = ownerDoc?.activities?.[0];
   const orgInfo  = ownerDoc?.orgId ? await Organization.findById(ownerDoc.orgId).select("name plivo.agentChannel").lean() : null;
-  const result = await require("../utils/callTranscript").transcribeCall(buf, {
+  const { transcribeCall, TranscriptionFailed } = require("../utils/callTranscript");
+  let result;
+  try {
+    result = await transcribeCall(buf, {
     filename:     /\.wav(\?|$)/i.test(recordingUrl) ? "recording.wav" : "recording.mp3",
     agentName:    callAct?.performedByName || "",
     company:      orgInfo?.name || "",
@@ -1330,7 +1333,23 @@ async function transcribeAndSummarize(leadId, match, recordingUrl, Model = Lead)
     agentChannel: callAct?.meta?.provider === "plivo"
       ? (() => { const out = orgInfo?.plivo?.agentChannel || "left"; return callAct?.meta?.direction === "inbound" ? (out === "left" ? "right" : "left") : out; })()
       : "",
-  });
+    });
+  } catch (err) {
+    if (!(err instanceof TranscriptionFailed)) throw err;
+    // The speech-to-text service did not answer: say so (the refresh button on the
+    // call retries), instead of calling a real conversation silent.
+    console.error(`[call transcript] lead ${leadId}: ${err.message}`);
+    await updateCallActivity(Model, leadId, match, { set: {
+      "meta.summary":         "This call couldn't be transcribed just now. Tap refresh to try again.",
+      "meta.keyPoints":       [],
+      "meta.nextAction":      null,
+      "meta.intent":          "unclear",
+      "meta.sentiment":       "neutral",
+      "meta.noSpeech":        false,
+      "meta.transcriptError": true,
+    } });
+    return;
+  }
   const transcript = (result.text || "").trim();
 
   // No real conversation (ringing, voicemail, silence): say so instead of
@@ -1346,6 +1365,7 @@ async function transcribeAndSummarize(leadId, match, recordingUrl, Model = Lead)
       "meta.intent":     "unclear",
       "meta.sentiment":  "neutral",
       "meta.noSpeech":   true,
+      "meta.transcriptError": false,
     } });
     return;
   }
@@ -1401,6 +1421,8 @@ ${transcript.slice(0, 3000)}`,
     "meta.nextAction": nextAction,
     "meta.intent":     intent,
     "meta.sentiment":  sentiment,
+    "meta.noSpeech":   false,
+    "meta.transcriptError": false,
   } });
   // The customer talked on this call: the AI lead score reads it next sweep.
   if (Model.modelName === "Lead" && transcript) await require("../services/aiLeadScore").markSignal(leadId);
