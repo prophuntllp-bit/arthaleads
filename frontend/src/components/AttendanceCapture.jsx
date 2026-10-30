@@ -160,7 +160,7 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
       style={{ background: "rgba(0,0,0,0.75)" }}
       onClick={(e) => { if (e.target === e.currentTarget && !submitting) onClose(); }}>
       <div className="w-full md:max-w-sm md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-y-auto"
-        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+        style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-3 flex-shrink-0">

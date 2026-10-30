@@ -251,7 +251,7 @@ export default function BlogManager() {
       {/* Delete confirmation modal */}
       {deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
-          <div className="card p-6 max-w-sm w-full">
+          <div className="modal-panel rounded-[1.5rem] p-6 max-w-sm w-full">
             <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-6 h-6 text-red-500" />
             </div>

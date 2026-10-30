@@ -158,6 +158,17 @@
     transition: box-shadow 200ms ease, border-color 200ms ease;
   }
 
+  /* ── Popup panel: always solid ──
+     Dialogs, sheets and pop-out menus sit over the page, so a glass surface let
+     the page behind bleed through (owner, 30 Oct 2026). Every popup panel uses
+     this class (the shared Modal in components/UI.jsx does), or the same
+     var(--app-surface-solid) background. */
+  .modal-panel {
+    background: var(--app-surface-solid);
+    border: 1px solid var(--app-border);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+  }
+
   .card:hover {
     border-color: var(--app-border-strong);
     box-shadow: var(--app-shadow-lg);

@@ -314,7 +314,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel: sheet-style on mobile (slides from bottom), dialog on sm+ */}
-      <div className="relative w-full sm:max-w-md sm:rounded-[1.75rem] rounded-t-[1.75rem] shell-panel flex flex-col"
+      <div className="relative w-full sm:max-w-md sm:rounded-[1.75rem] rounded-t-[1.75rem] modal-panel flex flex-col"
         style={{ maxHeight: "92dvh" }}>
 
         {/* ── Header ── */}
@@ -1138,7 +1138,7 @@ function GoogleWizard({ open, onClose, onChanged }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full sm:max-w-lg sm:rounded-[1.75rem] rounded-t-[1.75rem] shell-panel overflow-hidden">
+      <div className="relative w-full sm:max-w-lg sm:rounded-[1.75rem] rounded-t-[1.75rem] modal-panel overflow-hidden">
         <div className="flex items-center gap-3 p-6" style={{ borderBottom: "1px solid var(--app-border)" }}>
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-red-500">
             <SearchCheck className="h-5 w-5 text-white" />

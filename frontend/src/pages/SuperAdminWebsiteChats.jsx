@@ -17,7 +17,7 @@ const CTA_LABEL = { demo: "Book a Demo", signup: "Free trial", pricing: "Pricing
 function Conversation({ chat, onClose }) {
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
-      <div className="card w-full max-w-xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-panel rounded-[1.5rem] w-full max-w-xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3 p-5 border-b" style={{ borderColor: "var(--app-border)" }}>
           <div>
             <h2 className="text-lg font-black text-app">Conversation</h2>

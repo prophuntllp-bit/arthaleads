@@ -68,7 +68,7 @@ function LeadPicker({ initialLabel, onSelect, onClear }) {
       )}
       {open && (results.length > 0 || loading) && (
         <div className="absolute z-20 mt-1 w-full rounded-2xl border overflow-hidden shadow-xl"
-          style={{ background: "var(--app-surface)", borderColor: "var(--app-border)", maxHeight: 220, overflowY: "auto" }}>
+          style={{ background: "var(--app-surface-solid)", borderColor: "var(--app-border)", maxHeight: 220, overflowY: "auto" }}>
           {loading && results.length === 0 ? (
             <div className="px-4 py-3 text-xs text-app-soft">Searching…</div>
           ) : results.map((l) => (

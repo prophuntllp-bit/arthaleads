@@ -28,6 +28,9 @@ Every page's root element must use `className="stitch-page"` — nothing else. T
 - NEVER add `max-w-*`, `mx-auto`, extra `px-*`, or `container` to the page root — it creates uneven side padding compared to other pages.
 - Exception: full-bleed layouts (chat panels, kanban boards) use `stitch-page !p-0` and handle their own internal padding.
 
+### Popups are solid
+Every dialog, sheet and pop-out menu panel is solid: use the shared `Modal` from `components/UI.jsx`, or put `className="modal-panel"` (styles.css) on the panel, or `background: "var(--app-surface-solid)"`. Never `var(--app-surface)`, `.card`, `.shell-panel` or `bg-app-surface` on something that floats over the page: those are see-through glass (58% in light mode) and the page bleeds through (owner, 30 Oct 2026). Glass stays for cards on the page and the top bars.
+
 ### Mobile sidebar
 The mobile drawer sidebar uses `.sidebar-glass` which has a CSS override below 1024px to be fully solid (no glass transparency). Do NOT add glass/blur to the mobile sidebar.
 

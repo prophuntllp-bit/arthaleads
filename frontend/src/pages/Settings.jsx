@@ -60,7 +60,7 @@ function BankSearchInput({ value, onChange, className, style }) {
       />
       {open && matches.length > 0 && (
         <div className="absolute z-50 left-0 right-0 top-full mt-1 rounded-2xl shadow-xl overflow-hidden overflow-y-auto"
-          style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", maxHeight: 220 }}>
+          style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)", maxHeight: 220 }}>
           {matches.map(bank => (
             <button
               key={bank}

@@ -170,7 +170,7 @@ export default function QrModal({ type, id, name, onClose }) {
     >
       <div
         className="relative w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden"
-        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
+        style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-3">
