@@ -767,8 +767,7 @@ export function WhatsAppLink({ phone, name, leadId, projectId, onContact }) {
         left: dropPos.left,
         width: 288,
         zIndex: 99999,
-        background: "var(--app-surface-high)",
-        backdropFilter: "blur(24px) saturate(140%)",
+        background: "var(--app-surface-solid)", // popups are solid (CLAUDE.md)
         border: "1px solid var(--app-border-strong, var(--app-border))",
         borderRadius: 12,
         boxShadow: "0 12px 40px rgba(0,0,0,0.40), 0 2px 8px rgba(0,0,0,0.20)",

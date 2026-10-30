@@ -11,7 +11,28 @@ import DateRangePicker from "../DateRangePicker";
 //   3. one row: search, dates, My Leads, Filters
 //   4. everything else (agent, project, source, priority, outcome) behind Filters
 //   5. what's applied, as removable chips, with Clear all
+// Phones keep just search + Filters on screen; status, dates and My Leads
+// move into the Filters panel there so the list starts near the top.
 // Every filter works exactly as before; only where they live changed.
+
+// Same names the date picker shows, for the phone chip.
+const DATE_LABELS = {
+  today: "Today", yesterday: "Yesterday", last7days: "Last 7 days", last14days: "Last 14 days", last28days: "Last 28 days",
+  last30days: "Last 30 days", thisweek: "This week", lastweek: "Last week", thismonth: "This month", lastmonth: "Last month",
+  thisyear: "This year", lastyear: "Last year",
+};
+
+const usePhone = () => {
+  const q = "(max-width: 639px)"; // below Tailwind sm
+  const [phone, setPhone] = useState(() => typeof window !== "undefined" && window.matchMedia(q).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(q);
+    const on = () => setPhone(mq.matches);
+    mq.addEventListener?.("change", on);
+    return () => mq.removeEventListener?.("change", on);
+  }, []);
+  return phone;
+};
 
 const SECONDARY_KEYS = ["assignedTo", "projectId", "source", "siteFilter", "sitePage", "sourceSel", "priority", "booking", "consent", "followUpToday"];
 
@@ -41,6 +62,7 @@ export default function LeadFilters({
   dateRangeValue, onDateRangeChange, onToggleMyOnly, onClearAll,
 }) {
   const [open, setOpen] = useState(false);
+  const isPhone = usePhone();
   const [pos, setPos] = useState({ top: 0, right: 0 });
   const btnRef = useRef(null);
   const searchRef = useRef(null);
@@ -112,8 +134,21 @@ export default function LeadFilters({
   if (filters.booking) chips.push({ key: "booking", text: `Outcome: ${label(bookingOptions, filters.booking)}` });
   if (filters.consent) chips.push({ key: "consent", text: `WhatsApp: ${label(CONSENT_OPTIONS, filters.consent)}` });
   if (filters.followUpToday) chips.push({ key: "followUpToday", text: "Follow-ups due today" });
+  const dateOn = !!(filters.dateRange || filters.from || filters.to);
+  const myOn = filters.myOnly === "true";
+  // On phones the panel also holds status, dates and My Leads, so they count
+  // (and show as chips) there.
+  if (isPhone) {
+    if (filters.status) chips.unshift({ key: "status", text: `Status: ${filters.status}` });
+    if (dateOn) chips.unshift({
+      key: "date", clear: ["dateRange", "from", "to"],
+      text: `Date: ${filters.from || filters.to ? `${filters.from || "…"} to ${filters.to || "today"}` : DATE_LABELS[filters.dateRange] || filters.dateRange}`,
+    });
+    if (myOn) chips.unshift({ key: "myOnly", text: "My leads only", onClear: onToggleMyOnly });
+  }
   const panelCount = SECONDARY_KEYS.filter((k) => filters[k] && !["siteFilter", "sitePage", "sourceSel"].includes(k)).length
-    + (!filters.source && filters.siteFilter ? 1 : 0) + ticked.length;
+    + (!filters.source && filters.siteFilter ? 1 : 0) + ticked.length
+    + (isPhone ? (filters.status ? 1 : 0) + (dateOn ? 1 : 0) + (myOn ? 1 : 0) : 0);
   const anything = Object.entries(filters).some(([k, v]) => v && k !== "myOnly") || filters.myOnly === "true";
 
   const clearChip = (c) => (c.onClear ? c.onClear() : (c.clear || [c.key]).forEach((k) => setFilter(k, "")));
@@ -125,7 +160,7 @@ export default function LeadFilters({
       {/* 3. One row */}
       <div className="flex flex-wrap items-center gap-2">
         {/* Same look as the header search, but it searches these leads only. */}
-        <label className="relative min-w-[220px] flex-1">
+        <label className="relative min-w-0 flex-1 sm:min-w-[220px]">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-[15px] w-[15px] -translate-y-1/2 text-app-soft" />
           <input
             ref={searchRef}
@@ -148,7 +183,7 @@ export default function LeadFilters({
           )}
         </label>
 
-        <div className="w-[170px]">
+        <div className="hidden w-[170px] sm:block">
           <DateRangePicker
             compact
             value={dateRangeValue}
@@ -160,7 +195,7 @@ export default function LeadFilters({
 
         {isAdmin && (
           <button type="button" onClick={onToggleMyOnly} aria-pressed={filters.myOnly === "true"}
-            className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition"
+            className="hidden items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition sm:inline-flex"
             style={{ border: EDGE, background: "var(--app-surface-solid)", boxShadow: LIFT, color: filters.myOnly === "true" ? "var(--app-primary)" : "var(--app-text)" }}>
             <User className="h-4 w-4" />
             My Leads
@@ -215,12 +250,6 @@ export default function LeadFilters({
           })}
         </div>
       </div>
-      {/* Phones: the same choice as a dropdown */}
-      <select aria-label="Status" value={filters.status || ""} onChange={(e) => setFilter("status", e.target.value)}
-        className="w-full rounded-xl px-3 py-2 text-sm font-semibold text-app sm:hidden"
-        style={{ border: EDGE, background: "var(--app-surface-solid)", boxShadow: LIFT }}>
-        {tabs.map((t) => <option key={t.label} value={t.value}>{t.label}{t.count != null ? ` (${t.count})` : ""}</option>)}
-      </select>
 
       {/* 5. What's applied */}
       {(chips.length > 0 || anything) && (
@@ -255,6 +284,38 @@ export default function LeadFilters({
               </button>
             </div>
             <div className="space-y-3">
+              {/* Phones: the controls that sit in the main row on wider screens */}
+              {isPhone && (
+                <>
+                  <Field label="Status">
+                    <select value={filters.status || ""} onChange={(e) => setFilter("status", e.target.value)}
+                      className="w-full rounded-xl px-3 py-2 text-sm font-semibold text-app"
+                      style={{ border: EDGE, background: "var(--app-surface-solid)", boxShadow: LIFT }}>
+                      {tabs.map((t) => <option key={t.label} value={t.value}>{t.label}{t.count != null ? ` (${t.count})` : ""}</option>)}
+                    </select>
+                  </Field>
+                  <div>
+                    <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-app-soft">Date added</span>
+                    <DateRangePicker
+                      value={dateRangeValue}
+                      onChange={onDateRangeChange}
+                      triggerClassName="w-full"
+                      triggerStyle={{ width: "100%", padding: "8px 12px", borderRadius: 12, fontSize: 13, backdropFilter: "none", WebkitBackdropFilter: "none", border: EDGE, background: "var(--app-surface-solid)", boxShadow: LIFT }}
+                    />
+                  </div>
+                  {isAdmin && (
+                    <button type="button" onClick={onToggleMyOnly} aria-pressed={myOn}
+                      className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium transition"
+                      style={{ border: EDGE, background: "var(--app-surface-solid)", boxShadow: LIFT, color: myOn ? "var(--app-primary)" : "var(--app-text)" }}>
+                      <span className="inline-flex items-center gap-2"><User className="h-4 w-4" /> My leads only</span>
+                      <span className="relative inline-flex h-[18px] w-8 items-center rounded-full transition"
+                        style={{ background: myOn ? "var(--app-primary)" : "rgba(128,128,128,0.25)" }}>
+                        <span className="absolute h-3.5 w-3.5 rounded-full bg-white shadow transition-all" style={{ left: myOn ? 16 : 2 }} />
+                      </span>
+                    </button>
+                  )}
+                </>
+              )}
               {isAdmin && agents.length > 0 && (
                 <Field label="Agent">
                   <CustomSelect value={filters.assignedTo || ""} onChange={(v) => setFilter("assignedTo", v)} placeholder="All agents"
@@ -291,7 +352,10 @@ export default function LeadFilters({
               )}
             </div>
             <div className="mt-4 flex items-center justify-between border-t pt-3" style={{ borderColor: "var(--app-border)" }}>
-              <button type="button" disabled={!panelCount} onClick={() => SECONDARY_KEYS.forEach((k) => setFilter(k, ""))}
+              <button type="button" disabled={!panelCount} onClick={() => {
+                SECONDARY_KEYS.forEach((k) => setFilter(k, ""));
+                if (isPhone) { ["status", "dateRange", "from", "to"].forEach((k) => setFilter(k, "")); if (myOn) onToggleMyOnly(); }
+              }}
                 className="text-xs font-semibold text-app-soft hover:text-app disabled:opacity-40">Reset these</button>
               <button type="button" onClick={() => setOpen(false)} className="btn-primary rounded-xl px-4 py-1.5 text-xs font-semibold">Done</button>
             </div>

@@ -8,7 +8,8 @@ import useAppRefresh from "../hooks/useAppRefresh";
 import ArthaSuggestCard from "./ArthaSuggestCard";
 import VistrowVoicePanel, { useVistrowCall } from "./VistrowVoicePanel";
 import fetchLeadToOpen from "../utils/fetchLeadToOpen";
-import { ConfirmDialog, Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
+import { ConfirmDialog, Modal, PriorityBadge, Spinner, PhoneActions, WhatsAppLink, toWaNumber, isAiCallStatus } from "./UI";
+import { SoftSourceBadge, EmptyValue, isBlank } from "./leads/LeadBits";
 import { useSoftPhone } from "../context/SoftPhoneContext";
 import CustomSelect from "./CustomSelect";
 import CopyButton from "./CopyButton";
@@ -103,12 +104,21 @@ const cleanRequirements = (text) => {
   return text.split("\n").filter(l => !/^Field\s+[a-f0-9]{5,}\s*:/i.test(l.trim())).join("\n").trim();
 };
 
-function Info({ label, value }) {
+// A compact label / value list, two columns on wider screens. Rows marked
+// `wide` (long notes) take the full width. An empty value shows "—".
+function DetailList({ items }) {
   return (
-    <div className="rounded-[1.35rem] p-4 stitch-surface-muted">
-      <p className="stitch-kicker mb-2">{label}</p>
-      <p className="text-sm font-medium text-app">{value}</p>
-    </div>
+    <dl className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
+      {items.map((item, i) => (
+        <div key={`${item.label}-${i}`} className={`flex gap-3 border-b py-2.5 ${item.wide ? "sm:col-span-2" : ""}`}
+          style={{ borderColor: "var(--app-border)" }}>
+          <dt className="w-36 shrink-0 text-xs leading-5 text-app-soft">{item.label}</dt>
+          <dd className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm leading-5 text-app">
+            {isBlank(item.value) ? <EmptyValue /> : item.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -184,18 +194,11 @@ function ConsentCard({ lead, onUpdated }) {
 }
 
 // Small labelled pill used for voice-call metadata (duration, channel, …)
-// Vistrow Voice purple, matching the "Vistrow Voice" source pill, so every
-// voice element reads as coming from Vistrow Voice at a glance.
-const VISTROW_PURPLE = "#9333ea";
-const VISTROW_GRADIENT = "linear-gradient(90deg, #9333ea, #d946ef, #ec4899)";
-
-function MetaPill({ icon: Icon, children, vistrow = false }) {
+function MetaPill({ icon: Icon, children }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${vistrow ? "" : "text-app-soft"}`}
-      style={vistrow
-        ? { borderColor: "rgba(147,51,234,0.35)", color: VISTROW_PURPLE, background: "rgba(147,51,234,0.06)" }
-        : { borderColor: "var(--app-border)" }}
+      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium text-app-soft"
+      style={{ borderColor: "var(--app-border)" }}
     >
       {Icon && <Icon className="h-3 w-3" />}
       {children}
@@ -238,6 +241,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   const [waMessages, setWaMessages] = useState(null);
   const [waConversation, setWaConversation] = useState(null);
   const [waLoading, setWaLoading] = useState(false);
+  // Info tab: empty fields stay folded away until asked for.
+  const [showEmpty, setShowEmpty] = useState(false);
 
   const handleRetryFacebook = async () => {
     setRetrying(true);
@@ -263,6 +268,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     setNote("");
     setWaMessages(null);
     setWaConversation(null);
+    setShowEmpty(false);
   }, [lead?._id, open]);
 
   // Artha (or a background sync) changed data while this window is open:
@@ -421,12 +427,6 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   const voiceCalls = Array.isArray(lead.voiceCalls)
     ? [...lead.voiceCalls].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
     : [];
-  // What the latest Vistrow Voice call captured, shown first on the Info tab
-  // (owner, 21 Oct 2026: it sat at the bottom of the call transcript).
-  const latestCall = voiceCalls[0];
-  const captured = latestCall?.extractedData && typeof latestCall.extractedData === "object" && !Array.isArray(latestCall.extractedData)
-    ? Object.entries(latestCall.extractedData).filter(([, v]) => v !== "" && v != null)
-    : [];
   const hasVoice = voiceCalls.some((c) =>
     c.transcript?.length || c.sentiment || c.channel || c.durationSeconds || c.agentName || c.recordingUrl);
   // Chat tab: read-only WhatsApp history, for leads that came in (or were
@@ -500,7 +500,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                 <h3 className="text-2xl font-black tracking-tight text-app">{lead.name}</h3>
                 <CopyButton value={[lead.name, lead.phone].filter(Boolean).join("\n")} label="Copy name and number" done="Name and number copied" />
               </div>
-              <div className="mt-1 flex flex-wrap items-center gap-3">
+              {lead.email && <p className="mt-0.5 text-sm text-app-soft break-all">{lead.email}</p>}
+              <div className="mt-2 flex flex-wrap items-center gap-3">
                 <PhoneActions phone={lead.phone} />
                 <WhatsAppLink phone={lead.phone} name={lead.name} leadId={!isProjectLead ? lead._id : undefined} />
                 {lead.phone && (
@@ -576,7 +577,6 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                     {b.label}
                   </button>
                 ))}
-                {lead.email && <span className="text-sm text-app-soft">{lead.email}</span>}
               </div>
               {aiDraft !== null && (
                 <div className="mt-3 rounded-xl p-3" style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.2)" }}>
@@ -613,15 +613,31 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                 </div>
               )}
             </div>
-            <div className="flex flex-wrap items-start gap-2">
-              <SourceBadge source={lead.source} lead={lead} />
-              <PriorityBadge priority={lead.priority} />
-              <StatusBadge status={lead.status} lead={lead} />
+            <div className="flex flex-wrap items-center gap-2">
+              {/* The one status control for this lead (it used to show twice:
+                  a pill here and a dropdown by the tabs). */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-app-soft">Status</span>
+                <CustomSelect
+                  value={status}
+                  onChange={handleStatus}
+                  options={STATUS_OPTIONS}
+                  style={{ minWidth: 150, fontWeight: 600 }}
+                />
+              </div>
+              {isAiCallStatus(lead) && (
+                <span className="badge inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-300" title="Updated by Vistrow Voice call">
+                  <PhoneOutgoing className="h-3 w-3" aria-hidden="true" /> Set by AI call
+                </span>
+              )}
+              <SoftSourceBadge source={lead.source} />
+              {lead.priority && <PriorityBadge priority={lead.priority} />}
               {onEdit && (
                 <button
                   type="button"
                   onClick={() => { onClose(); onEdit(lead); }}
                   title="Edit lead"
+                  aria-label="Edit lead"
                   className="p-1.5 rounded-xl transition-colors"
                   style={{ color: "var(--app-text-soft)" }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(249,115,22,0.10)"; e.currentTarget.style.color = "var(--app-primary)"; }}
@@ -648,82 +664,80 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
             onChange={setTab}
             tabs={tabList.map((item) => ({
               value: item,
-              label: item === "transcript"
-                ? <span className="inline-flex items-center gap-1.5"><Mic className="h-3.5 w-3.5" style={{ color: VISTROW_PURPLE }} />Vistrow Voice</span>
-                : item === "chat"
-                ? <span className="inline-flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5" style={{ color: "#2AB540" }} />WhatsApp</span>
-                : item[0].toUpperCase() + item.slice(1),
+              label: item[0].toUpperCase() + item.slice(1),
               count: item === "notes" ? lead.notes?.length || 0 : item === "calls" && callHistory.length ? callHistory.length : undefined,
             }))}
           />
-          <CustomSelect
-            value={status}
-            onChange={handleStatus}
-            options={STATUS_OPTIONS}
-            style={{ marginLeft: "auto", minWidth: 160 }}
-          />
         </div>
 
-        {tab === "info" && (
-          <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-            {captured.length > 0 && (
-              <div className="md:col-span-2 rounded-[1.35rem] p-4"
-                style={{ background: "rgba(147,51,234,0.06)", border: "1px solid rgba(147,51,234,0.25)" }}>
-                <p className="stitch-kicker mb-3 inline-flex items-center gap-1.5" style={{ color: VISTROW_PURPLE }}>
-                  <Mic className="h-3.5 w-3.5" />
-                  Captured on the Vistrow Voice call{latestCall?.createdAt ? ` · ${fmtDateTime(latestCall.createdAt)}` : ""}
-                </p>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {captured.map(([k, v]) => (
-                    <Info key={k} label={k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())} value={String(v)} />
-                  ))}
-                </div>
-              </div>
-            )}
-            {originalSourceLabel(lead) && <Info label="Source Detail" value={originalSourceLabel(lead)} />}
-            <Info label="Property Type" value={lead.propertyType} />
-            <Info label="BHK" value={lead.bhk} />
-            <Info label="Purpose" value={lead.purpose} />
-            <Info label="Preferred Location" value={lead.preferredLocation || "-"} />
-            <Info label="Street Address" value={lead.streetAddress || "-"} />
-            <Info label="City" value={lead.city || "-"} />
-            <Info label="Budget" value={
-              lead.budget?.min || lead.budget?.max
-                ? (lead.budget?.min === lead.budget?.max
-                  ? fmtCurrency(lead.budget.max)
-                  : `${fmtCurrency(lead.budget?.min)} - ${fmtCurrency(lead.budget?.max)}`)
-                : "Not captured"
-            } />
-            {lead.timeline && <Info label="Timeline" value={lead.timeline} />}
-            <Info label="Assigned To" value={lead.assignedToName || lead.assignedTo?.name || "-"} />
-            <Info label="Follow-up Date" value={fmtDate(lead.followUpDate)} />
-            <Info label="Created On" value={fmtDateTime(lead.createdAt)} />
-            {/* Project leads have no consent field and campaigns never reach them. */}
-            {!isProjectLead && (
-              <div className="md:col-span-2">
-                <ConsentCard lead={lead} onUpdated={onUpdated} />
-              </div>
-            )}
-            <div className="md:col-span-2">
-              <Info label="Follow-up Note" value={lead.followUpNote || "-"} />
+        {tab === "info" && (() => {
+          // Every field, in reading order. Filled ones show; empty ones fold
+          // under "Show empty fields" so the window shows information, not
+          // a wall of blank boxes.
+          const budget = lead.budget?.min || lead.budget?.max
+            ? (!lead.budget?.min || !lead.budget?.max || lead.budget.min === lead.budget.max
+              ? fmtCurrency(lead.budget.max || lead.budget.min)
+              : `${fmtCurrency(lead.budget.min)} – ${fmtCurrency(lead.budget.max)}`)
+            : "";
+          const fields = [
+            { label: "Source detail",      value: originalSourceLabel(lead) },
+            { label: "Property type",      value: lead.propertyType },
+            { label: "BHK",                value: lead.bhk },
+            { label: "Purpose",            value: lead.purpose },
+            { label: "Budget",             value: budget },
+            { label: "Timeline",           value: lead.timeline },
+            { label: "Preferred location", value: lead.preferredLocation },
+            { label: "Street address",     value: lead.streetAddress },
+            { label: "City",               value: lead.city },
+            { label: "Assigned to",        value: lead.assignedToName || lead.assignedTo?.name },
+            { label: "Follow-up date",     value: lead.followUpDate ? fmtDate(lead.followUpDate) : "" },
+            { label: "Created on",         value: lead.createdAt ? fmtDateTime(lead.createdAt) : "" },
+            { label: "Follow-up note",     value: lead.followUpNote, wide: true },
+            { label: "Remark / imported info", value: lead.remarkNote, wide: true },
+          ];
+          const filled = fields.filter((f) => !isBlank(f.value));
+          const empty = fields.filter((f) => isBlank(f.value));
+          const answers = (lead.formResponses || []).filter((r) => !isBlank(r.value));
+          return (
+            <div className="space-y-5">
+              <section>
+                {filled.length > 0
+                  ? <DetailList items={filled} />
+                  : <p className="text-sm text-app-soft">No details recorded yet.</p>}
+                {empty.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <button type="button" onClick={() => setShowEmpty((v) => !v)}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-app-soft transition hover:text-app"
+                      aria-expanded={showEmpty}>
+                      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showEmpty ? "rotate-180" : ""}`} />
+                      {showEmpty ? "Hide empty fields" : `Show ${empty.length} empty field${empty.length !== 1 ? "s" : ""}`}
+                    </button>
+                    {onEdit && (
+                      <button type="button" onClick={() => { onClose(); onEdit(lead); }}
+                        className="inline-flex items-center gap-1 text-xs font-semibold transition hover:underline"
+                        style={{ color: "var(--app-primary)" }}>
+                        <Pencil className="h-3 w-3" /> Add details
+                      </button>
+                    )}
+                  </div>
+                )}
+                {showEmpty && empty.length > 0 && (
+                  <div className="mt-2"><DetailList items={empty} /></div>
+                )}
+              </section>
+
+              {answers.length > 0 && (
+                <section>
+                  <p className="stitch-kicker mb-1">Form answers</p>
+                  <DetailList items={answers.map((r) => ({ label: r.label || r.fieldKey, value: r.value }))} />
+                </section>
+              )}
+
+              {/* Project leads have no consent field and campaigns never reach them. */}
+              {!isProjectLead && <ConsentCard lead={lead} onUpdated={onUpdated} />}
             </div>
-            {lead.remarkNote && (
-              <div className="md:col-span-2">
-                <Info label="Remark / Imported Info" value={lead.remarkNote} />
-              </div>
-            )}
-            {!!lead.formResponses?.length && (
-              <div className="md:col-span-2 rounded-[1.35rem] p-4 stitch-surface-muted">
-                <p className="stitch-kicker mb-3">Additional Questions</p>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {lead.formResponses.map((item, index) => (
-                    <Info key={`${item.fieldKey}-${index}`} label={item.label} value={item.value || "-"} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+          );
+        })()}
 
         <ConfirmDialog
           open={!!deletingNote}
@@ -1055,6 +1069,9 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
               const dur = secs > 0 ? `${Math.floor(secs / 60)}m ${Math.round(secs % 60)}s`.replace(/^0m /, "") : null;
               const langLabel = vc.language ? (LANG_NAMES[vc.language] || String(vc.language).toUpperCase()) : null;
               const turns = vc.transcript || [];
+              const extracted = vc.extractedData && typeof vc.extractedData === "object" && !Array.isArray(vc.extractedData)
+                ? Object.entries(vc.extractedData).filter(([, v]) => v !== "" && v != null)
+                : [];
 
               return (
                 <div key={callKey} className="rounded-[1.25rem] overflow-hidden stitch-surface-muted">
@@ -1064,8 +1081,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                     className="w-full text-left px-4 py-3 flex items-center gap-3"
                   >
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: VISTROW_GRADIENT }}>
-                      <Mic className="w-3.5 h-3.5 text-white" />
+                      style={{ background: "rgba(99,102,241,0.10)" }}>
+                      <Mic className="w-3.5 h-3.5" style={{ color: "#6366f1" }} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-app">
@@ -1089,11 +1106,11 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                     <div className="px-4 pb-4 space-y-4">
                       {/* Metadata row */}
                       <div className="flex flex-wrap items-center gap-2">
-                        {dur && <MetaPill vistrow icon={Clock}>{dur}</MetaPill>}
-                        {vc.channel && <MetaPill vistrow>{vc.channel}</MetaPill>}
-                        {langLabel && <MetaPill vistrow>{langLabel}</MetaPill>}
-                        {vc.agentName && <MetaPill vistrow icon={Mic}>{vc.agentName}</MetaPill>}
-                        {vc.pagePath && <MetaPill vistrow icon={MapPin}>{vc.pagePath}</MetaPill>}
+                        {dur && <MetaPill icon={Clock}>{dur}</MetaPill>}
+                        {vc.channel && <MetaPill>{vc.channel}</MetaPill>}
+                        {langLabel && <MetaPill>{langLabel}</MetaPill>}
+                        {vc.agentName && <MetaPill icon={Mic}>{vc.agentName}</MetaPill>}
+                        {vc.pagePath && <MetaPill icon={MapPin}>{vc.pagePath}</MetaPill>}
                       </div>
 
                       {/* Recording */}
@@ -1101,6 +1118,17 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                         <div>
                           <p className="stitch-kicker mb-2">Recording</p>
                           <RecordingPlayer url={vc.recordingUrl} mimeType={vc.recordingMimeType} />
+                        </div>
+                      )}
+
+                      {/* Captured details (extracted_data) */}
+                      {extracted.length > 0 && (
+                        <div>
+                          <p className="stitch-kicker mb-1">Captured details</p>
+                          <DetailList items={extracted.map(([k, v]) => ({
+                            label: k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+                            value: String(v),
+                          }))} />
                         </div>
                       )}
 
@@ -1119,11 +1147,11 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                               <div key={i} className={`flex ${isCaller ? "justify-start" : "justify-end"}`}>
                                 <div className="max-w-[82%] rounded-2xl px-3.5 py-2"
                                   style={{
-                                    background: isCaller ? "var(--app-surface-low)" : "rgba(147,51,234,0.08)",
-                                    border: `1px solid ${isCaller ? "var(--app-border)" : "rgba(147,51,234,0.25)"}`,
+                                    background: isCaller ? "var(--app-surface-low)" : "rgba(249,115,22,0.10)",
+                                    border: `1px solid ${isCaller ? "var(--app-border)" : "rgba(249,115,22,0.22)"}`,
                                   }}>
                                   <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5"
-                                    style={{ color: isCaller ? "var(--app-text-soft)" : VISTROW_PURPLE }}>
+                                    style={{ color: isCaller ? "var(--app-text-soft)" : "var(--app-primary)" }}>
                                     {turn.speaker || "—"}
                                   </p>
                                   <p className="text-sm text-app whitespace-pre-wrap break-words">{turn.text}</p>

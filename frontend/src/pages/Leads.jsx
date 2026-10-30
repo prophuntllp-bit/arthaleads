@@ -5,9 +5,10 @@ import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
-  StatusBadge, PriorityBadge, SourceBadge,
+  StatusBadge, PriorityBadge,
   PageLoader, EmptyState, ConfirmDialog, Spinner, PhoneActions, WhatsAppLink, toWaNumber, ImportResultModal,
 } from "../components/UI";
+import { SoftSourceBadge, EmptyValue, isBlank } from "../components/leads/LeadBits";
 import LeadForm from "../components/LeadForm";
 import LeadDetail from "../components/LeadDetail";
 import CustomSelect from "../components/CustomSelect";
@@ -124,7 +125,9 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
     finally { setSaving(false); }
   };
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
-  return <DateTimePicker value={value} onChange={save} />;
+  // Compact table trigger, filling its column; "Set date" instead of a
+  // dd-mm-yyyy mask so an empty cell reads like the other inline cells.
+  return <DateTimePicker value={value} onChange={save} placeholder="Set date" triggerStyle={{ width: "100%", minWidth: 0 }} />;
 }
 
 // ── Inline booking select ─────────────────────────────────────────────────────
@@ -167,7 +170,7 @@ function InlineBooking({ value, leadId, projectId, onSaved }) {
       onChange={save}
       placeholder="- None -"
       options={BOOKING_OPTIONS.filter((o) => o.value !== "").map((o) => ({ value: o.value, label: o.label, color: o.color }))}
-      style={{ minWidth: 130, fontWeight: 600 }}
+      style={{ width: "100%", minWidth: 0, fontWeight: 600 }}
     />
   );
 }
@@ -276,7 +279,7 @@ function ContactStatusCell({ lead, projectId, onUpdated }) {
         { value: "Contacted",     label: "Contacted"     },
         { value: "Not Contacted", label: "Not Contacted" },
       ]}
-      style={{ minWidth: 140, width: "100%", ...triggerStyle }}
+      style={{ minWidth: 0, width: "100%", ...triggerStyle }}
     />
   );
 }
@@ -287,6 +290,37 @@ function pagePath(url) {
   if (!url) return "";
   try { return new URL(url).pathname.replace(/\/+$/, ""); } catch { return ""; }
 }
+
+// The table's columns, in order, with default widths (px).
+const LEAD_COLUMNS = [
+  { key: "lead",         label: "Lead",          width: 210 },
+  { key: "phone",        label: "Phone",         width: 150 },
+  { key: "whatsapp",     label: "WhatsApp",      width: 124 },
+  { key: "source",       label: "Source",        width: 150 },
+  { key: "project",      label: "Project",       width: 140 },
+  { key: "status",       label: "Status",        width: 116 },
+  { key: "priority",     label: "Priority",      width: 104 },
+  { key: "requirements", label: "Requirements",  width: 190 },
+  { key: "remark",       label: "Remark",        width: 150 },
+  { key: "remark1",      label: "Remark 1",      width: 150 },
+  { key: "remark2",      label: "Remark 2",      width: 150 },
+  { key: "followup",     label: "Follow up",     width: 172 },
+  { key: "followup2",    label: "Follow up 2",   width: 172 },
+  { key: "booking",      label: "Lead outcome",  width: 156 },
+  { key: "property",     label: "Property",      width: 180 },
+  { key: "assigned",     label: "Assigned",      width: 124 },
+  { key: "actions",      label: "Actions",       width: 112 },
+];
+
+// "Apartment · 2 BHK · Buy", skipping anything not filled in.
+const propertySummary = (lead) =>
+  [lead.propertyType, lead.bhk, lead.purpose].filter((v) => !isBlank(v)).join(" · ");
+
+const budgetText = (lead) => {
+  const { min, max } = lead.budget || {};
+  if (!min && !max) return "";
+  return !min || !max || min === max ? fmtBudget(max || min) : `${fmtBudget(min)} – ${fmtBudget(max)}`;
+};
 
 export default function Leads() {
   useEffect(() => { document.title = "Lead Management - Arthaleads CRM"; }, []);
@@ -335,6 +369,8 @@ export default function Leads() {
     }
   };
 
+  const canDelete = true; // all roles can delete; super_admin = permanent, others = soft → dump
+
   const [agents, setAgents] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editLead, setEditLead] = useState(null);
@@ -382,13 +418,12 @@ export default function Leads() {
   const [formOptions, setFormOptions] = useState([]);
 
   // ── Column widths for main leads table (resizable via drag, persisted) ──────
-  const [colW, startResize] = useColumnResize("leads", {
-    lead: 180, phone: 148, whatsapp: 118, source: 118, project: 118,
-    status: 88, priority: 82, requirements: 175, budget: 88, purpose: 72,
-    remark: 128, remark1: 118, remark2: 118,
-    followup: 185, followup2: 185, booking: 138,
-    property: 148, assigned: 98, actions: 108,
-  });
+  // Defaults are wide enough for every header to read in full. Budget and
+  // Purpose live in the Property column now (it already showed the budget).
+  // "leads_v2" so widths saved under the old, narrower layout (headers cut to
+  // "PRIOR…") don't carry over; dragging still saves per browser.
+  const [colW, startResize] = useColumnResize("leads_v2", Object.fromEntries(LEAD_COLUMNS.map((c) => [c.key, c.width])));
+  const tableWidth = (canDelete ? 40 : 0) + LEAD_COLUMNS.reduce((sum, c) => sum + (colW[c.key] || c.width), 0);
 
   // Clear preset state from location so back-navigation doesn't re-apply filters
   useEffect(() => {
@@ -1129,9 +1164,18 @@ export default function Leads() {
     }
   };
 
-  const canDelete = true; // all roles can delete; super_admin = permanent, others = soft → dump
+  // Phones (below Tailwind md) get stacked cards instead of the table.
+  const [isPhone, setIsPhone] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const on = () => setIsPhone(mq.matches);
+    mq.addEventListener?.("change", on);
+    return () => mq.removeEventListener?.("change", on);
+  }, []);
 
-  // Sync top scrollbar ↔ table scrollbar, and keep spacer width = table scrollWidth
+  // Sync top scrollbar ↔ table scrollbar, and keep spacer width = table scrollWidth.
+  // The table only exists once leads have loaded (a loader, empty state or the
+  // phone cards show otherwise), so this hooks up again whenever it appears.
   useEffect(() => {
     const top    = topScrollRef.current;
     const table  = tableScrollRef.current;
@@ -1156,7 +1200,24 @@ export default function Leads() {
       top.removeEventListener("scroll",   onTopScroll);
       table.removeEventListener("scroll", onTableScroll);
     };
-  }, []);
+  }, [loading, leads.length === 0, isPhone]);
+
+  // Header tool buttons: icon only on phones and tablets, icon + a short word
+  // from lg up. Every one has a tooltip and an accessible name.
+  const toolBtnCls = "inline-flex h-8 min-w-8 items-center justify-center gap-1.5 rounded-full px-2 text-xs font-semibold transition-colors hover:opacity-80 lg:px-3";
+  const toolBtnStyle = { border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" };
+
+  const projectIdOf = (lead) => (lead._type === "project" ? lead.projectId : undefined);
+  const assignedName = (lead) => lead.assignedToName || lead.assignedTo?.name || "";
+
+  const rowActions = (lead) => (
+    <>
+      <IconButton icon={Pencil} label="Edit lead" onClick={() => { setEditLead(lead); setShowForm(true); }} />
+      <IconButton icon={ArrowRightLeft} label="Move to a project"
+        onClick={() => setTransferMeta({ lead, leadType: lead._type || "lead", projectId: lead._type === "project" ? lead.projectId : null })} />
+      {canDelete && <IconButton icon={Trash2} label="Delete lead" tone="danger" onClick={() => setDeletingLead(lead)} />}
+    </>
+  );
 
   return (
     <div className="stitch-page space-y-6">
@@ -1164,27 +1225,36 @@ export default function Leads() {
       <div className="card px-5 py-4 space-y-3">
         {/* Row 1: title + action buttons */}
         <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0 overflow-hidden">
-            <h1 className="text-[15px] sm:text-xl font-black tracking-tight text-app leading-none truncate">Leads Management</h1>
+          <div className="min-w-0">
+            {/* Phones get the short name so it never cuts to "Leads …". */}
+            <h1 className="text-lg sm:text-xl font-black tracking-tight text-app leading-none">
+              <span className="sm:hidden">Leads</span>
+              <span className="hidden sm:inline">Leads Management</span>
+            </h1>
             <p className="text-xs text-app-soft mt-1 hidden sm:block">{total} active leads across your property funnel.</p>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            {/* Import — compact icon button */}
+            {/* Import */}
             <label
-              className="inline-flex items-center justify-center h-8 w-8 rounded-full cursor-pointer transition-colors hover:opacity-80"
-              style={{ border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
-              title={importing ? "Importing…" : "Import CSV/Excel"}
+              className={`${toolBtnCls} ${importing ? "opacity-60" : "cursor-pointer"}`}
+              style={toolBtnStyle}
+              title={importing ? "Importing…" : "Import leads from a CSV or Excel file"}
             >
-              <Upload className="h-3.5 w-3.5 shrink-0" />
-              <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
+              {importing ? <Spinner size="sm" /> : <Upload className="h-3.5 w-3.5 shrink-0" />}
+              <span className="hidden lg:inline">{importing ? "Importing…" : "Import"}</span>
+              <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing}
+                aria-label="Import leads from a CSV or Excel file" />
             </label>
-            {/* Export — compact icon button. Bulk export is Growth (pricing, API). */}
+            {/* Export. Bulk export is Growth (pricing, API). */}
             {(user?.role === "super_admin" || canAccess(org, "growth")) && <div ref={exportMenuRef} data-tour="export-btn">
               <button
                 ref={exportBtnRef}
-                className="inline-flex items-center justify-center h-8 w-8 rounded-full transition-colors hover:opacity-80"
-                style={{ border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
-                title="Export leads"
+                type="button"
+                className={toolBtnCls}
+                style={toolBtnStyle}
+                title="Export leads to Excel or CSV"
+                aria-label="Export leads"
+                aria-expanded={showExportMenu}
                 onClick={() => {
                   const rect = exportBtnRef.current?.getBoundingClientRect();
                   if (rect) setExportMenuPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
@@ -1192,16 +1262,20 @@ export default function Leads() {
                 }}
               >
                 <Download className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden lg:inline">Export</span>
               </button>
             </div>}
             {/* QR Code */}
             <button
-              className="inline-flex items-center justify-center h-8 w-8 rounded-full transition-colors hover:opacity-80"
-              style={{ border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
-              title="Lead capture QR code"
+              type="button"
+              className={toolBtnCls}
+              style={toolBtnStyle}
+              title="Lead capture QR code: people scan it to send you their details"
+              aria-label="Lead capture QR code"
               onClick={() => setShowOrgQr(true)}
             >
               <QrCode className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden lg:inline">QR code</span>
             </button>
             {/* Add Lead */}
             <button
@@ -1254,11 +1328,56 @@ export default function Leads() {
           />
         ) : (
           <>
+            {/* ── Phones: one card per lead; tap the name for Lead Details ── */}
+            {isPhone ? (
+            <ul className="divide-y divide-[color:var(--app-border)]">
+              {leads.map((lead) => (
+                <li key={lead._id} className={`px-4 py-3 ${selectedIds.has(lead._id) ? "bg-orange-500/5" : ""}`}>
+                  <div className="flex items-start gap-3">
+                    {canDelete && (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(lead._id)}
+                        onChange={() => toggleOne(lead._id)}
+                        aria-label={`Select ${lead.name}`}
+                        className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded accent-orange-500"
+                      />
+                    )}
+                    <button type="button" onClick={() => setDetailLead(lead)} className="min-w-0 flex-1 text-left">
+                      <p className="truncate text-sm font-semibold text-app">{lead.name}</p>
+                      {lead.email && <p className="truncate text-xs text-app-soft">{lead.email}</p>}
+                    </button>
+                    <StatusBadge status={lead.status} lead={lead} compact />
+                  </div>
+                  <div className={`mt-2 flex flex-wrap items-center gap-3 ${canDelete ? "pl-7" : ""}`}>
+                    {lead.phone ? (
+                      <>
+                        <PhoneActions phone={lead.phone} lead={lead} onContact={() => handleContact(lead)} />
+                        <WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} onContact={() => handleContact(lead)} />
+                      </>
+                    ) : <EmptyValue />}
+                  </div>
+                  <div className={`mt-2 flex items-center gap-2 ${canDelete ? "pl-7" : ""}`}>
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-app-soft">
+                      <SoftSourceBadge source={lead.source} />
+                      {lead.projectName && <span className="max-w-[140px] truncate font-semibold text-violet-600">{lead.projectName}</span>}
+                      <span className="truncate">
+                        {assignedName(lead) ? <>Assigned to <span className="text-app">{assignedName(lead)}</span></> : "Not assigned"}
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 gap-1">{rowActions(lead)}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            ) : (
+            /* ── Tablets and up: the full table ── */
+            <div>
             {/* Top scroll mirror - always-visible horizontal scrollbar above the table */}
             <div
               ref={topScrollRef}
               style={{
-                overflowX: "scroll",
+                overflowX: "auto",
                 overflowY: "hidden",
                 height: 14,
                 borderBottom: "1px solid var(--app-border)",
@@ -1267,10 +1386,10 @@ export default function Leads() {
               <div ref={topSpacerRef} style={{ height: 1 }} />
             </div>
           <div ref={tableScrollRef} data-tour="leads-table" className="overflow-x-auto">
-            <table className="stitch-table stitch-table-fixed text-sm" style={{ tableLayout: "fixed", width: (canDelete ? 40 : 0) + Object.values(colW).reduce((a, b) => a + b, 0) }}>
+            <table className="stitch-table stitch-table-fixed text-sm" style={{ tableLayout: "fixed", width: tableWidth }}>
               <colgroup>
                 {canDelete && <col style={{ width: 40, minWidth: 40 }} />}
-                {Object.entries(colW).map(([k, w]) => <col key={k} style={{ width: w, minWidth: 60 }} />)}
+                {LEAD_COLUMNS.map((c) => <col key={c.key} style={{ width: colW[c.key] || c.width, minWidth: 60 }} />)}
               </colgroup>
               <thead>
                 <tr>
@@ -1286,66 +1405,51 @@ export default function Leads() {
                       />
                     </th>
                   )}
-                  <RTh k="lead"         colW={colW} startResize={startResize}>Lead</RTh>
-                  <RTh k="phone"        colW={colW} startResize={startResize}>Phone</RTh>
-                  <RTh k="whatsapp"     colW={colW} startResize={startResize}>WhatsApp</RTh>
-                  <RTh k="source"       colW={colW} startResize={startResize}>Source</RTh>
-                  <RTh k="project"      colW={colW} startResize={startResize}>Project</RTh>
-                  <RTh k="status"       colW={colW} startResize={startResize}>Status</RTh>
-                  <RTh k="priority"     colW={colW} startResize={startResize}>Priority</RTh>
-                  <RTh k="requirements" colW={colW} startResize={startResize}>Requirements</RTh>
-                  <RTh k="budget"       colW={colW} startResize={startResize}>Budget</RTh>
-                  <RTh k="purpose"      colW={colW} startResize={startResize}>Purpose</RTh>
-                  <RTh k="remark"       colW={colW} startResize={startResize}>Remark</RTh>
-                  <RTh k="remark1"      colW={colW} startResize={startResize}>Remark 1</RTh>
-                  <RTh k="remark2"      colW={colW} startResize={startResize}>Remark 2</RTh>
-                  <RTh k="followup"     colW={colW} startResize={startResize}>Follow Up</RTh>
-                  <RTh k="followup2"    colW={colW} startResize={startResize}>Follow Up 2</RTh>
-                  <RTh k="booking"      colW={colW} startResize={startResize}>Lead Outcome</RTh>
-                  <RTh k="property"     colW={colW} startResize={startResize}>Property</RTh>
-                  <RTh k="assigned"     colW={colW} startResize={startResize}>Assigned</RTh>
-                  <RTh k="actions"      colW={colW} startResize={startResize}>Actions</RTh>
+                  {LEAD_COLUMNS.map((c) => (
+                    <RTh key={c.key} k={c.key} colW={colW} startResize={startResize}>{c.label}</RTh>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {leads.map((lead, index) => (
-                  <tr key={lead._id} className={`${index % 2 === 1 ? "bg-black/5 dark:bg-white/[0.02]" : ""} group ${selectedIds.has(lead._id) ? "ring-1 ring-inset ring-orange-400/40 bg-orange-500/5" : ""}`}>
+                {leads.map((lead) => (
+                  <tr key={lead._id} className={`group ${selectedIds.has(lead._id) ? "ring-1 ring-inset ring-orange-400/40 bg-orange-500/5" : ""}`}>
                     {canDelete && (
                       <td className="px-2.5" style={{ width: 40 }}>
                         <input
                           type="checkbox"
                           checked={selectedIds.has(lead._id)}
                           onChange={() => toggleOne(lead._id)}
+                          aria-label={`Select ${lead.name}`}
                           className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500"
                         />
                       </td>
                     )}
                     <td>
                       <div className="flex items-center gap-3">
-                        <div className="stitch-surface-muted flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border text-sm font-bold text-orange-500">
+                        <div className="stitch-surface-muted flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border text-xs font-bold text-orange-500">
                           {lead.name?.slice(0, 1)?.toUpperCase()}
                         </div>
-                        <div className="min-w-0 cursor-pointer group" onClick={() => setDetailLead(lead)}>
-                          <p className="truncate text-sm font-semibold text-app max-w-[140px] group-hover:text-orange-500 transition-colors">{lead.name}</p>
-                          <p className="truncate text-xs text-app-soft max-w-[140px]">{lead.email || "No email"}</p>
-                        </div>
+                        <button type="button" className="min-w-0 cursor-pointer text-left group/name" onClick={() => setDetailLead(lead)} title="Open lead details">
+                          <p className="truncate text-sm font-semibold text-app group-hover/name:text-orange-500 transition-colors">{lead.name}</p>
+                          {lead.email && <p className="truncate text-xs text-app-soft">{lead.email}</p>}
+                        </button>
                       </div>
                     </td>
-                    <td><PhoneActions phone={lead.phone} lead={lead} onContact={() => handleContact(lead)} /></td>
-                    <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} onContact={() => handleContact(lead)} /></td>
+                    <td>{lead.phone ? <PhoneActions phone={lead.phone} lead={lead} onContact={() => handleContact(lead)} /> : <EmptyValue />}</td>
+                    <td>{lead.phone ? <WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} onContact={() => handleContact(lead)} /> : <EmptyValue />}</td>
                     <td>
-                      <div className="flex flex-col gap-0.5">
-                        <SourceBadge source={lead.source} lead={lead} />
+                      <div className="flex flex-col items-start gap-0.5">
+                        <SoftSourceBadge source={lead.source} />
                         {/* Website leads: site and page ("shaporjipallonji.com/treetopia-2"),
                             then the ad that sent them; others: the source label. */}
                         {originalSourceLabel(lead) && (
-                          <span className={`text-[10px] truncate max-w-[150px] ${lead.sourceDomain ? "text-blue-500" : "text-app-soft"}`}
+                          <span className={`text-[10px] truncate max-w-full ${lead.sourceDomain ? "text-blue-500" : "text-app-soft"}`}
                             title={lead.sourcePage ? String(lead.sourcePage).split("?")[0] : originalSourceLabel(lead)}>
                             {originalSourceLabel(lead)}
                           </span>
                         )}
                         {adFromPage(lead.sourcePage) && (
-                          <span className="text-[10px] text-app-soft truncate max-w-[150px]" title={adFromPage(lead.sourcePage)}>
+                          <span className="text-[10px] text-app-soft truncate max-w-full" title={adFromPage(lead.sourcePage)}>
                             {adFromPage(lead.sourcePage)}
                           </span>
                         )}
@@ -1353,55 +1457,45 @@ export default function Leads() {
                     </td>
                     <td>
                       {lead.projectName
-                        ? <span className="text-[11px] font-semibold text-violet-600 truncate max-w-[130px] block" title={lead.projectName}>{lead.projectName}</span>
+                        ? <span className="text-[11px] font-semibold text-violet-600 truncate block" title={lead.projectName}>{lead.projectName}</span>
                         : lead.inProjects?.length
                           ? (
                             <Tooltip title={`Also in ${lead.inProjects.map((p) => p.projectName).join(", ")}`}
                               content="This person is in that project's lead list too, and still here in Leads. Transfer them to that project to merge the two into one entry.">
-                              <span className="flex max-w-[130px] flex-col">
+                              <span className="flex max-w-full flex-col">
                                 <span className="truncate text-[11px] font-semibold text-violet-600">{lead.inProjects[0].projectName}</span>
                                 <span className="text-[10px] text-app-soft">{lead.inProjects.length > 1 ? `+${lead.inProjects.length - 1} more · ` : ""}Also in project</span>
                               </span>
                             </Tooltip>
                           )
-                          : <span className="text-xs text-app-soft">-</span>}
+                          : <EmptyValue />}
                     </td>
                     <td className="whitespace-nowrap"><StatusBadge status={lead.status} lead={lead} compact /></td>
-                    <td className="whitespace-nowrap"><PriorityBadge priority={lead.priority} /></td>
+                    <td className="whitespace-nowrap">{lead.priority ? <PriorityBadge priority={lead.priority} /> : <EmptyValue />}</td>
                     <td>
                       {cleanRequirements(lead.requirements)
                         ? <p className="text-xs text-app leading-relaxed line-clamp-2" title={cleanRequirements(lead.requirements)}>{cleanRequirements(lead.requirements)}</p>
-                        : <span className="text-xs text-app-soft">-</span>}
-                    </td>
-                    <td className="whitespace-nowrap">
-                      <span className="text-xs text-app">
-                        {lead.budget?.min || lead.budget?.max
-                          ? `${fmtBudget(lead.budget.min)}${lead.budget.max && lead.budget.max !== lead.budget.min ? ` - ${fmtBudget(lead.budget.max)}` : ""}`
-                          : <span className="text-app-soft">-</span>}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap">
-                      <span className="text-xs text-app">{lead.purpose && lead.purpose !== "N/A" ? lead.purpose : <span className="text-app-soft">-</span>}</span>
+                        : <EmptyValue />}
                     </td>
                     {/* Remark (contact status) - same dropdown for all lead types */}
                     <td>
                       <ContactStatusCell
                         lead={lead}
-                        projectId={lead._type === "project" ? lead.projectId : undefined}
+                        projectId={projectIdOf(lead)}
                         onUpdated={handleInlineUpdate}
                       />
                     </td>
                     <td>
-                      <RemarkPopupCell value={lead.remark1} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} field="remark1" onSaved={handleInlineUpdate} placeholder="Remark 1…" />
+                      <RemarkPopupCell value={lead.remark1} leadId={lead._id} projectId={projectIdOf(lead)} field="remark1" onSaved={handleInlineUpdate} placeholder="Add remark…" />
                     </td>
                     <td>
-                      <RemarkPopupCell value={lead.remark2} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} field="remark2" onSaved={handleInlineUpdate} placeholder="Remark 2…" />
+                      <RemarkPopupCell value={lead.remark2} leadId={lead._id} projectId={projectIdOf(lead)} field="remark2" onSaved={handleInlineUpdate} placeholder="Add remark…" />
                     </td>
                     <td>
                       <InlineDate
                         value={lead.followUpDate}
                         leadId={lead._id}
-                        projectId={lead._type === "project" ? lead.projectId : undefined}
+                        projectId={projectIdOf(lead)}
                         field={lead._type === "project" ? "followUp" : "followUpDate"}
                         onSaved={handleInlineUpdate}
                       />
@@ -1410,40 +1504,36 @@ export default function Leads() {
                       <InlineDate
                         value={lead.followUp2}
                         leadId={lead._id}
-                        projectId={lead._type === "project" ? lead.projectId : undefined}
+                        projectId={projectIdOf(lead)}
                         field="followUp2"
                         onSaved={handleInlineUpdate}
                       />
                     </td>
                     <td>
-                      <InlineBooking value={lead.booking} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} onSaved={handleInlineUpdate} />
+                      <InlineBooking value={lead.booking} leadId={lead._id} projectId={projectIdOf(lead)} onSaved={handleInlineUpdate} />
+                    </td>
+                    {/* Property: type · BHK · purpose, budget under it */}
+                    <td>
+                      {propertySummary(lead) || budgetText(lead) ? (
+                        <>
+                          {propertySummary(lead) && <p className="truncate text-xs font-medium text-app" title={propertySummary(lead)}>{propertySummary(lead)}</p>}
+                          {budgetText(lead) && <p className="mt-0.5 truncate text-xs text-orange-500">{budgetText(lead)}</p>}
+                        </>
+                      ) : <EmptyValue />}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      {assignedName(lead) ? <span className="truncate block text-xs text-app" title={assignedName(lead)}>{assignedName(lead)}</span> : <EmptyValue />}
                     </td>
                     <td>
-                      {(lead.propertyType || lead.bhk) ? (
-                        <p className="text-sm font-medium text-app">
-                          {lead.propertyType || ""}{lead.bhk && lead.bhk !== "N/A" ? ` · ${lead.bhk}` : ""}
-                        </p>
-                      ) : <span className="text-xs text-app-soft">-</span>}
-                      {(lead.budget?.min || lead.budget?.max) && (
-                        <p className="mt-0.5 text-xs text-orange-500">{lead.budget?.min === lead.budget?.max
-                          ? fmtCurrency(lead.budget.max)
-                          : `${fmtCurrency(lead.budget?.min)} – ${fmtCurrency(lead.budget?.max)}`}</p>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap text-sm text-app-soft">{lead.assignedToName || lead.assignedTo?.name || "-"}</td>
-                    <td>
-                      <div className="flex justify-end gap-1.5">
-                        <IconButton icon={Pencil} label="Edit lead" onClick={() => { setEditLead(lead); setShowForm(true); }} />
-                        <IconButton icon={ArrowRightLeft} label="Move to a project"
-                          onClick={() => setTransferMeta({ lead, leadType: lead._type || "lead", projectId: lead._type === "project" ? lead.projectId : null })} />
-                        {canDelete && <IconButton icon={Trash2} label="Delete lead" tone="danger" onClick={() => setDeletingLead(lead)} />}
-                      </div>
+                      <div className="flex justify-end gap-1.5">{rowActions(lead)}</div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          </div>
+            )}
           </>
         )}
 
