@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+- [claude] 2026-10-30 IST: Calls page call window solid (var(--app-surface-solid)) instead of the glass card. frontend pages/Calls.jsx
 - [claude] 2026-10-30 IST: Call transcripts ON STAGING: speech from 0.1 s counts (customer side is network-gated and clips speech: a real customer's two hellos were 0.14/0.22 s bursts, owner listened), one retry for a short piece that comes back empty, speech the model can't make out shown as 'Customer: (unclear)' instead of dropped. Replayed on two real calls (Arvind now shows both customer responses; S Rao gains the customer's 'Yes'). backend utils/callTranscript.js, tests/callTranscript.test.js
 - [claude] 2026-10-30 IST: ON STAGING 2a0e7491, not live: 'A new version is ready' banner never on the website (isMarketingHost), and version.json build id = hash of the code the CRM can run (vite.config.js crmBuildId: entry + chunks reachable without website pages, WEBSITE_PAGE list; was the commit SHA, so every push prompted). Tested by building: header/footer/AboutUs/PublicBlog/shader edits keep the id, Leads/MorningBrief edits change it. If you add a website page, add it to WEBSITE_PAGE. frontend vite.config.js, components/UpdateBanner.jsx
 - [claude] 2026-10-30 IST: ON STAGING 93dfff9f, not live: desktop header order Features, Pricing, Compare, Resources, Company, About Us, Contact (owner: About Us last or second last). frontend components/PublicNav.jsx
