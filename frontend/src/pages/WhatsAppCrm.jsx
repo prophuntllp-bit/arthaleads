@@ -41,7 +41,7 @@ function PhoneVisual() {
     <div className="relative mx-auto w-full max-w-[290px]" style={{ "--hc-h": "clamp(420px, 58svh, 480px)", "--hc-w": "calc(var(--hc-h) * 0.53)" }}>
       <div aria-hidden="true" className="hero-glass" />
       <div className="relative py-4"><HeroChat /></div>
-      <FloatCard index={0} className="hidden sm:flex -left-10 lg:-left-20 top-[16%] items-center gap-3 !py-3 max-w-[240px]">
+      <FloatCard index={0} className="hidden sm:flex -left-10 lg:-left-20 top-[3%] items-center gap-3 !py-3 max-w-[240px]">
         <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(24,119,242,0.12)" }}><FacebookLogo className="w-[18px] h-[18px]" /></span>
         <Cycle items={["Riverview Heights campaign", "Skyline Residency campaign", "Green Acres campaign"]} offset={600}>{(c) => <span className="min-w-0 block"><span className="block text-[13px] font-semibold site-ink leading-tight">New lead · Facebook ad</span><span className="block text-[11px] site-muted leading-tight mt-0.5">{c}</span></span>}</Cycle>
       </FloatCard>
