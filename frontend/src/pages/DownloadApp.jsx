@@ -72,6 +72,22 @@ const FAQ_JSONLD = JSON.stringify({
   "mainEntity": FAQS.map(({ q, a }) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
 }).replace(/</g, "\\u003c");
 
+// The Android app itself, for search engines. downloadUrl is the public repo's
+// "latest release" link, which always points at the newest build (see
+// backend/constants/appRelease.js), so it never goes stale.
+const APP_JSONLD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "MobileApplication",
+  "@id": "https://www.arthaleads.com/download-app#app",
+  "name": "Arthaleads for Android",
+  "operatingSystem": "Android 7.0 or later",
+  "applicationCategory": "BusinessApplication",
+  "downloadUrl": "https://github.com/prophuntllp-bit/arthaleads-app/releases/latest",
+  "installUrl": "https://www.arthaleads.com/download-app",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" },
+  "publisher": { "@id": "https://www.arthaleads.com/#organization" },
+}).replace(/</g, "\\u003c");
+
 const iconTile = { background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" };
 
 /** The hero phone: a realistic Android lock screen with arriving notifications. */
@@ -126,6 +142,7 @@ function DownloadAppInner() {
   return (
     <SitePage>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_JSONLD }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: APP_JSONLD }} />
 
       <PageHero
         eyebrow="Android app"

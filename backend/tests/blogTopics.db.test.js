@@ -83,6 +83,9 @@ test("the sitemap lists topic pages that have an article", async () => {
   assert.ok(xml.includes("/blog/category/whatsapp</loc>"));
   assert.ok(!xml.includes("/blog/category/channel-partners"), "empty topics stay out");
   assert.ok(!xml.includes("<priority>") && !xml.includes("<changefreq>"), "no priority or changefreq (Google ignores them)");
+  await BlogPost.updateOne({ slug: "crm-guide" }, { $set: { featuredImage: "https://cdn.sanity.io/images/x/cover.png" } });
+  const withImage = (await call(ctrl.getSitemap, { query: {} })).body;
+  assert.ok(withImage.includes("/blog/crm-guide</loc>") && withImage.includes("<image:loc>https://cdn.sanity.io/images/x/cover.png</image:loc>"), "a post lists its cover image");
 });
 
 test("a post merged into another (redirected) is not listed or counted", async () => {
