@@ -73,9 +73,11 @@ function wavBuffer(samples, rate) {
 // ── Finding speech on one channel ─────────────────────────────────────────────
 // 20 ms frames; speech is well above the channel's own noise floor. Pauses up
 // to 0.9 s stay in one utterance; utterances are capped at 25 s for the model.
-// Anything from 0.25 s counts: a customer's quick "hello?" is about 0.3 s and was
-// lost at the old 0.4 s (real call, 28 Oct 2026); clicks that slip through come
-// back as filler and are dropped below.
+// Anything from 0.1 s counts. The phone network gates the customer's side to
+// digital silence and clips speech: a real customer's two "hello"s survived as
+// 0.14 s and 0.22 s bursts (28 Oct 2026, owner listened) and were lost at 0.25 s.
+// Clicks last 20-40 ms; anything else that slips through comes back empty or as
+// filler and is dropped below.
 function speechSegments(samples, rate) {
   const frame = Math.max(1, Math.round(rate * 0.02));
   const n = Math.floor(samples.length / frame);
@@ -101,7 +103,7 @@ function speechSegments(samples, rate) {
     const tooLong = start >= 0 && f - start >= MAX;
     if (start >= 0 && ((!loud && f - lastLoud > GAP) || tooLong || f === n - 1)) {
       const end = tooLong ? f : lastLoud;
-      if ((end - start + 1) * 0.02 >= 0.25) segs.push({ start: Math.max(0, start - 8) * 0.02, end: Math.min(n, end + 9) * 0.02 });
+      if ((end - start + 1) * 0.02 >= 0.1) segs.push({ start: Math.max(0, start - 8) * 0.02, end: Math.min(n, end + 9) * 0.02 });
       start = -1;
     }
   }
@@ -171,11 +173,19 @@ async function stereoTranscript(wav, opts) {
     let context = "";
     for (let i = 0; i < pieces.length; i++) {
       if (pieces[i].ch !== ch) continue;
-      const text = await transcribeBuffer(wavBuffer(pieces[i].samples, wav.rate), `seg-${i}.wav`, context.slice(-300))
-        .catch((err) => { failed++; lastError = err; return ""; });
+      const audio = wavBuffer(pieces[i].samples, wav.rate);
+      let text = await transcribeBuffer(audio, `seg-${i}.wav`, context.slice(-300))
+        .catch((err) => { failed++; lastError = err; return null; });
+      // A clipped one-word piece ("hello") sometimes comes back empty; one more try.
+      if (text === "" && pieces[i].end - pieces[i].start < 0.8) text = await transcribeBuffer(audio, `seg-${i}b.wav`).catch(() => "");
+      // Speech the model cannot make out still happened: shown as "(unclear)" so the
+      // agent and the analysis know the person did say something (a 0.14 s clipped
+      // "hello" under the agent's voice, 28 Oct 2026). A failed request stays empty.
+      if (text === "") text = "(unclear)";
+      text = text || "";
       if (text && context && context.includes(text) && text.length > 12) continue;
       texts[i] = text;
-      if (text) context = `${context} ${text}`.trim();
+      if (text && text !== "(unclear)") context = `${context} ${text}`.trim();
     }
   }));
   // Speech was there but the service did not answer for most of it: a failure,
@@ -184,7 +194,7 @@ async function stereoTranscript(wav, opts) {
   const lines = pieces.map((p, i) => ({ ch: p.ch, start: p.start, end: p.end, text: texts[i] }))
     .filter((l) => l.text && !FILLER_ONLY.test(l.text))
     .sort((a, b) => a.start - b.start);
-  if (!lines.length) return { method: "stereo", text: "", turns: [], noSpeech: true };
+  if (!lines.length || lines.every((l) => l.text === "(unclear)")) return { method: "stereo", text: "", turns: [], noSpeech: true };
 
   const agentCh = opts.agentChannel === "left" ? 0 : opts.agentChannel === "right" ? 1 : await agentChannelByContent(lines, opts);
   // Consecutive lines from the same side become one turn.
