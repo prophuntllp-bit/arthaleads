@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { RefreshCw, X } from "lucide-react";
+import { isMarketingHost } from "../utils/hosts";
 
 // A tab opened before a deploy keeps running the old code until it is
 // reloaded, so a fix can be live for everyone else and still "not work" in a
@@ -12,9 +13,12 @@ const CURRENT = typeof __APP_BUILD__ !== "undefined" ? __APP_BUILD__ : "";
 // Only people inside the app need the prompt: they keep a tab open all day and
 // would otherwise run old code. A visitor on the marketing pages loads the
 // newest build on their next click, and the banner there only looked like an
-// error. The CRM stores the signed-in user under crm_user (localStorage, or
-// sessionStorage where that is blocked).
+// error. The website never shows it: browsers that signed in on www before the
+// CRM moved to app.arthaleads.com still keep a crm_user there. The CRM stores
+// the signed-in user under crm_user (localStorage, or sessionStorage where
+// that is blocked).
 function signedIn() {
+  if (isMarketingHost()) return false;
   try { if (localStorage.getItem("crm_user")) return true; } catch { /* blocked */ }
   try { return !!sessionStorage.getItem("crm_user"); } catch { return false; }
 }
