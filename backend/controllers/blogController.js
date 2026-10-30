@@ -110,7 +110,7 @@ const blogController = {
         "robots.index": { $ne: false },
         $or: [{ redirectUrl: { $exists: false } }, { redirectUrl: "" }],
       })
-        .select("slug publishedAt updatedAt sanityUpdatedAt category")
+        .select("slug publishedAt updatedAt sanityUpdatedAt category featuredImage")
         .sort({ publishedAt: -1 })
         .limit(1000);
 
@@ -157,6 +157,9 @@ const blogController = {
         // a W3C Datetime and crawlers read it as such. This is the one date here
         // that is not customer-facing, so it stays off the IST helpers.
         lastmod: (p.sanityUpdatedAt || p.updatedAt || p.publishedAt || new Date()).toISOString().split("T")[0],
+        // The post's own cover, so Google Images pairs the post with it (it kept
+        // showing old screenshot covers the posts no longer use, Oct 2026).
+        image: p.featuredImage || "",
       }));
 
       // The blog index changes whenever a post does.
@@ -194,11 +197,11 @@ const blogController = {
     </video:video>`;
 
       const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${allEntries
   .map(
     (e) => `  <url>
-    <loc>${baseUrl}${e.url}</loc>${e.lastmod ? `\n    <lastmod>${e.lastmod}</lastmod>` : ""}${e.video ? videoXml : ""}
+    <loc>${baseUrl}${e.url}</loc>${e.lastmod ? `\n    <lastmod>${e.lastmod}</lastmod>` : ""}${e.image ? `\n    <image:image><image:loc>${e.image.replace(/&/g, "&amp;")}</image:loc></image:image>` : ""}${e.video ? videoXml : ""}
   </url>`
   )
   .join("\n")}

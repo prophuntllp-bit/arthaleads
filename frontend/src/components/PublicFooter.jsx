@@ -1,11 +1,68 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Instagram, Facebook, Linkedin, Youtube, Mail, Phone } from "lucide-react";
+import { Instagram, Facebook, Linkedin, Youtube, Mail, Phone, ChevronDown } from "lucide-react";
 import WhatsAppLogo from "./WhatsAppLogo";
 
 // The WhatsApp glyph in the social row, coloured like the lucide icons beside it.
 const WaIcon = ({ strokeWidth, ...props }) => <WhatsAppLogo {...props} color="currentColor" />;
 import { PHONE_DISPLAY, PHONE_TEL, waLink, WA_MESSAGES, SOCIAL_LINKS } from "../utils/crmLinks";
 import { usePublicTheme } from "../context/PublicThemeContext";
+
+// One column of footer links. On phones it folds into a 48px row that opens on
+// tap (the open lists made the footer about 1.7 screens tall); from md up it is
+// always open. The links stay in the HTML either way, so crawlers see them.
+function FooterGroup({ title, links, text, heading, border }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b md:border-b-0" style={{ borderColor: border }}>
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
+        className="md:hidden w-full min-h-[48px] flex items-center justify-between font-semibold text-sm" style={{ color: heading }}>
+        {title}
+        <ChevronDown className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} style={{ color: text }} aria-hidden="true" />
+      </button>
+      <p style={{ color: heading }} className="hidden md:block font-semibold text-sm mb-4">{title}</p>
+      <div className={`${open ? "block pb-2" : "hidden"} md:block md:space-y-2.5`}>
+        {links.map(([label, href]) => (
+          <Link key={label} to={href} style={{ color: text }} className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const PRODUCT = [
+  ["Features",           "/features"],
+  ["Pricing",            "/pricing"],
+  ["WhatsApp CRM",       "/whatsapp-crm"],
+  ["AI CRM",             "/ai-crm"],
+  ["Builder CRM",        "/builder-crm"],
+  ["Download App",       "/download-app"],
+  ["WordPress Plugin",   "/wordpress-plugin"],
+  ["API Docs",           "/api-docs"],
+  ["Refer & Earn",       "/refer"],
+];
+const COMPARE = [
+  ["All comparisons",        "/compare"],
+  ["Arthaleads vs Sell.Do",  "/compare/sell-do-alternative"],
+  ["Arthaleads vs Leadrat",  "/compare/leadrat-alternative"],
+  ["Arthaleads vs Kylas",    "/compare/kylas-alternative"],
+];
+const COMPANY = [
+  ["About Us",        "/about-us"],
+  ["Careers",         "/careers"],
+  ["Blog",            "/blog"],
+  ["Product Updates", "/product-updates"],
+  ["Help Guide",      "/help-guide"],
+  ["Security",        "/security"],
+  ["Book a Demo",     "/book-demo"],
+  ["Contact Us",      "/contact"],
+];
+const LEGAL = [
+  ["Privacy Policy",   "/privacy"],
+  ["Terms of Service", "/terms"],
+  ["Refund Policy",    "/refund"],
+  ["Cookie Policy",    "/cookie-policy"],
+];
 
 export default function PublicFooter() {
   const { isDark } = usePublicTheme();
@@ -16,11 +73,11 @@ export default function PublicFooter() {
 
   return (
     <footer style={{ background: bg, borderTop: `1px solid ${border}` }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 mb-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-8 mb-8 md:mb-10">
 
           {/* Brand */}
-          <div className="col-span-2 md:col-span-4 lg:col-span-2">
+          <div className="md:col-span-4 lg:col-span-2">
             <div className="flex items-center gap-2.5 mb-4">
               <img
                 src={isDark ? "/logo-lockup-dark.webp" : "/logo-lockup.webp"}
@@ -50,7 +107,7 @@ export default function PublicFooter() {
               {PHONE_DISPLAY}
             </a>
 
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] mt-7 mb-3" style={{ color: heading }}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] mt-5 md:mt-7 mb-3" style={{ color: heading }}>
               Follow Arthaleads
             </p>
             <div className="flex flex-wrap gap-2.5">
@@ -74,73 +131,12 @@ export default function PublicFooter() {
             </div>
           </div>
 
-          {/* Product */}
-          <div>
-            <p style={{ color: heading }} className="font-semibold text-sm mb-4">Product</p>
-            <div className="md:space-y-2.5">
-              {[
-                ["Features",           "/features"],
-                ["Pricing",            "/pricing"],
-                ["WhatsApp CRM",       "/whatsapp-crm"],
-                ["AI CRM",             "/ai-crm"],
-                ["Builder CRM",        "/builder-crm"],
-                ["Download App",       "/download-app"],
-                ["WordPress Plugin",   "/wordpress-plugin"],
-                ["API Docs",           "/api-docs"],
-                ["Refer & Earn",       "/refer"],
-              ].map(([label, href]) => (
-                <Link key={label} to={href} style={{ color: text }} className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Compare */}
-          <div>
-            <p style={{ color: heading }} className="font-semibold text-sm mb-4">Compare</p>
-            <div className="md:space-y-2.5">
-              {[
-                ["All comparisons",        "/compare"],
-                ["Arthaleads vs Sell.Do",  "/compare/sell-do-alternative"],
-                ["Arthaleads vs Leadrat",  "/compare/leadrat-alternative"],
-                ["Arthaleads vs Kylas",    "/compare/kylas-alternative"],
-              ].map(([label, href]) => (
-                <Link key={label} to={href} style={{ color: text }} className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Company */}
-          <div>
-            <p style={{ color: heading }} className="font-semibold text-sm mb-4">Company</p>
-            <div className="md:space-y-2.5">
-              {[
-                ["About Us",      "/about-us"],
-                ["Careers",       "/careers"],
-                ["Blog",          "/blog"],
-                ["Product Updates", "/product-updates"],
-                ["Help Guide",    "/help-guide"],
-                ["Security",      "/security"],
-                ["Book a Demo",   "/book-demo"],
-                ["Contact Us",    "/contact"],
-              ].map(([label, href]) => (
-                <Link key={label} to={href} style={{ color: text }} className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Legal */}
-          <div>
-            <p style={{ color: heading }} className="font-semibold text-sm mb-4">Legal</p>
-            <div className="md:space-y-2.5">
-              {[
-                ["Privacy Policy",   "/privacy"],
-                ["Terms of Service", "/terms"],
-                ["Refund Policy",    "/refund"],
-                ["Cookie Policy",    "/cookie-policy"],
-              ].map(([label, href]) => (
-                <Link key={label} to={href} style={{ color: text }} className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
-              ))}
-            </div>
+          {/* Link groups: folded rows on phones, columns from md up */}
+          <div className="md:contents" style={{ borderTop: `1px solid ${border}` }}>
+            <FooterGroup title="Product" links={PRODUCT} text={text} heading={heading} border={border} />
+            <FooterGroup title="Compare" links={COMPARE} text={text} heading={heading} border={border} />
+            <FooterGroup title="Company" links={COMPANY} text={text} heading={heading} border={border} />
+            <FooterGroup title="Legal" links={LEGAL} text={text} heading={heading} border={border} />
           </div>
 
         </div>
