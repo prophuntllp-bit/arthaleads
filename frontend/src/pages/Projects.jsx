@@ -110,7 +110,7 @@ export default function Projects() {
                 <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold text-white"
                   style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}>
                   <Users className="h-3 w-3" />
-                  {proj.leadCount || 0} leads
+                  {proj.leadCount || 0} {(proj.leadCount || 0) === 1 ? "lead" : "leads"}
                 </div>
                 {canManage && (
                   <button

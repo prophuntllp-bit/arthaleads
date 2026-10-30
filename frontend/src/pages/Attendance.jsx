@@ -17,12 +17,12 @@ import {
 function pad(n) { return String(n).padStart(2, "0"); }
 
 function fmtTime(d) {
-  if (!d) return "-";
+  if (!d) return "—";
   return new Date(d).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" });
 }
 
 function fmtDate(str) {
-  if (!str) return "-";
+  if (!str) return "—";
   const [y, m, d] = str.split("-");
   return new Date(y, m - 1, d).toLocaleDateString("en-IN", {
     day: "numeric", month: "short", year: "numeric", weekday: "short",
@@ -30,7 +30,7 @@ function fmtDate(str) {
 }
 
 function fmtDuration(mins) {
-  if (mins == null) return "-";
+  if (mins == null) return "—";
   const h = Math.floor(mins / 60), m = mins % 60;
   if (h === 0) return `${m}m`;
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
@@ -209,7 +209,7 @@ function ClockOutCell({ a }) {
   );
   if (isRunning(a)) return <span className="text-green-500 font-bold"><LiveTimer since={a.clockIn} /></span>;
   if (neverClosed(a)) return <span className="text-red-500 font-semibold">Not clocked out</span>;
-  return <span className="text-app-soft">-</span>;
+  return <span className="text-app-soft">—</span>;
 }
 
 export default function Attendance() {
@@ -495,8 +495,8 @@ export default function Attendance() {
           {[
             { label: "Clock In",  value: fmtTime(status.clockIn),  color: "text-green-500" },
             { label: "Clock Out", value: fmtTime(status.clockOut), color: "text-red-400" },
-            { label: "Duration",  value: isClockedOut ? fmtDuration(status.totalMinutes) : isClockedIn ? "Active" : "-", color: "text-orange-500" },
-            { label: "Status",    value: status.isLate ? `Late +${fmtDuration(status.lateByMinutes)}` : isClockedIn ? "On time" : isClockedOut ? (status.dayType === "full" ? "Full Day" : status.dayType === "half" ? "Half Day" : "Short Day") : "-", color: status.isLate ? "text-orange-500" : "text-app" },
+            { label: "Duration",  value: isClockedOut ? fmtDuration(status.totalMinutes) : isClockedIn ? "Active" : "—", color: "text-orange-500" },
+            { label: "Status",    value: status.isLate ? `Late +${fmtDuration(status.lateByMinutes)}` : isClockedIn ? "On time" : isClockedOut ? (status.dayType === "full" ? "Full Day" : status.dayType === "half" ? "Half Day" : "Short Day") : "—", color: status.isLate ? "text-orange-500" : "text-app" },
           ].map(({ label, value, color }) => (
             <div key={label} className="card px-4 py-3">
               <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-1">{label}</p>
@@ -562,15 +562,15 @@ export default function Attendance() {
                                 {a.date !== todayStr() && <span className="text-[10px] text-app-soft">yesterday</span>}
                                 <LateBadge isLate={a?.isLate} lateByMinutes={a?.lateByMinutes} outsideShift={a?.outsideShift} />
                               </div>
-                            ) : <span className="text-app-soft">-</span>}
+                            ) : <span className="text-app-soft">—</span>}
                           </td>
                           <td className="px-5 py-3">
-                            {a?.clockOut || neverClosed(a) ? <ClockOutCell a={a} /> : <span className="text-app-soft">-</span>}
+                            {a?.clockOut || neverClosed(a) ? <ClockOutCell a={a} /> : <span className="text-app-soft">—</span>}
                           </td>
                           <td className="px-5 py-3 font-bold text-app">
                             {isOut ? fmtDuration(a.totalMinutes)
                               : isIn ? <span className="text-green-500"><LiveTimer since={a.clockIn} /></span>
-                              : "-"}
+                              : "—"}
                           </td>
                           <td className="px-5 py-3">
                             {a?.overtimeMinutes
@@ -728,7 +728,7 @@ export default function Attendance() {
                             <DayTypeBadge dayType={rec.dayType} clockIn={rec.clockIn} clockOut={rec.clockOut} />
                           </td>
                           <td className="px-4 py-3"><StatusBadge a={rec} /></td>
-                          <td className="px-4 py-3 text-app-soft max-w-[140px] truncate">{rec.note || "-"}</td>
+                          <td className="px-4 py-3 text-app-soft max-w-[140px] truncate">{rec.note || "—"}</td>
                           <td className="px-4 py-3">
                             <ProofCell a={rec} />
                           </td>

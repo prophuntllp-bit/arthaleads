@@ -8,7 +8,6 @@ import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import { canAccess } from "../utils/plan";
 import DeleteAccountSection from "../components/DeleteAccountSection";
-import CustomSelect from "../components/CustomSelect";
 import SegmentTabs from "../components/SegmentTabs";
 import PageHeader from "../components/PageHeader";
 
@@ -641,27 +640,18 @@ export default function Settings() {
                 that's done from Team management, not here on your own
                 profile (an admin changing their own role away from admin
                 here would be a good way to lock themselves out). */}
-            {isAdmin ? (
-              <div className="rounded-[1.25rem] p-4 stitch-surface-muted space-y-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-app"><ShieldCheck className="h-4 w-4 text-orange-500" /> Role</div>
-                <CustomSelect
-                  value={form.role}
-                  onChange={(v) => setValue("role")({ target: { value: v } })}
-                  options={[
-                    { value: "admin",   label: "Admin" },
-                    { value: "manager", label: "Manager" },
-                    { value: "agent",   label: "Sales Agent" },
-                  ]}
-                  style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
-                />
-              </div>
-            ) : (
-              <div className="rounded-[1.25rem] p-4 stitch-surface-muted flex items-center gap-2 text-sm">
-                <ShieldCheck className="h-4 w-4 text-orange-500" />
-                <span className="font-semibold text-app">Role</span>
-                <span className="text-app-soft">— {form.role === "manager" ? "Manager" : "Sales Agent"} (set by your admin)</span>
-              </div>
-            )}
+            <div className="rounded-[1.25rem] p-4 stitch-surface-muted flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              <ShieldCheck className="h-4 w-4 text-orange-500" />
+              <span className="font-semibold text-app">Role:</span>
+              <span className="text-app">
+                {form.role === "admin" || form.role === "super_admin" ? "Admin" : form.role === "manager" ? "Manager" : "Sales Agent"}
+              </span>
+              <span className="text-app-soft">
+                {isAdmin
+                  ? <>· Roles are changed on the <Link to="/team" className="font-medium hover:underline underline-offset-2" style={{ color: "var(--app-primary)" }}>Team page</Link></>
+                  : "· Set by your admin"}
+              </span>
+            </div>
 
             {/* Change password.
                 An account created through Google has no password, so there is
@@ -723,9 +713,6 @@ export default function Settings() {
       {tab === "organization" && isAdmin && (
         <div className="space-y-6">
 
-          {/* Org & Billing */}
-          <OrgBillingSection org={org} updateOrg={updateOrg} />
-
           {/* Auto Lead Assignment */}
           <section className="card p-6">
             <div className="flex items-start justify-between gap-6">
@@ -742,7 +729,7 @@ export default function Settings() {
                   </p>
                   {canAccess(org, "growth") ? (
                     <p className="text-xs mt-2 font-medium" style={{ color: autoAssign ? "var(--app-primary)" : "var(--app-text-soft)" }}>
-                      {autoAssign ? "✅ Enabled — leads auto-assign on creation" : "⏸ Disabled — leads are unassigned until set manually"}
+                      {autoAssign ? "On: new leads are assigned automatically as they come in." : "Off: new leads stay unassigned until someone assigns them."}
                     </p>
                   ) : (
                     <p className="text-xs mt-2 font-medium text-app-soft">
@@ -754,6 +741,9 @@ export default function Settings() {
               {canAccess(org, "growth") && <button
                 onClick={handleAutoAssignToggle}
                 disabled={togglingAA}
+                role="switch"
+                aria-checked={autoAssign}
+                aria-label="Auto lead assignment"
                 className="shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50"
                 style={{ background: autoAssign ? "var(--app-primary)" : "var(--app-border-strong)" }}
               >
@@ -762,6 +752,10 @@ export default function Settings() {
               </button>}
             </div>
           </section>
+
+          {/* Org & Billing */}
+          <OrgBillingSection org={org} updateOrg={updateOrg} />
+
 
         </div>
       )}

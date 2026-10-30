@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, ImagePlus, Phone, Plus, Pencil, Shield, Trash2, UserCheck, UserCog, UserMinus, Users } from "lucide-react";
+import { Eye, EyeOff, ImagePlus, Phone, Plus, Pencil, Trash2, UserCheck, UserMinus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { planLabel, planLevel } from "../utils/plan";
 import api from "../services/api";
@@ -224,6 +224,13 @@ export default function Team() {
           <div>
             <h1 className="page-title">Team</h1>
             <p className="page-subtitle">Everyone in your CRM, their role and their access.</p>
+            <p className="mt-1 text-xs font-medium text-app-soft">
+              {[
+                [grouped.admin.length, "admin", "admins"],
+                [grouped.manager.length, "manager", "managers"],
+                [grouped.agent.length, "agent", "agents"],
+              ].map(([n, one, many]) => `${n} ${n === 1 ? one : many}`).join(" · ")}
+            </p>
           </div>
           {isAdmin && (
             <div className="flex items-center gap-2">
@@ -253,12 +260,6 @@ export default function Team() {
             </div>
           )}
         </div>
-      </section>
-
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <SummaryCard label="Admins" value={grouped.admin.length} note="System owners" icon={Shield} />
-        <SummaryCard label="Managers" value={grouped.manager.length} note="Sales floor leaders" icon={UserCog} />
-        <SummaryCard label="Agents" value={grouped.agent.length} note="Lead handlers" icon={Users} />
       </section>
 
       {users.length === 0 ? (
@@ -426,23 +427,6 @@ export default function Team() {
         title="Remove Team Member"
         message={deletingUser ? `Remove ${deletingUser.name} from the CRM? This action cannot be undone.` : ""}
       />
-    </div>
-  );
-}
-
-function SummaryCard({ label, value, note, icon: Icon }) {
-  return (
-    <div className="card p-5">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="stitch-kicker mb-2">{label}</p>
-          <p className="text-3xl font-black tracking-tight text-app">{value}</p>
-          <p className="mt-2 text-xs text-app-soft">{note}</p>
-        </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-500">
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useLocation, useNavigate, useParams, useOutletContext } from "react-router-dom";
 import {
   AlertTriangle, Bot, Check, CheckCheck, ChevronDown, Clock, ExternalLink,
-  FileText, ListChecks, Loader2, Paperclip, Plus, RefreshCw, Search, Send, Settings, Sparkles, User, UserCheck, Wallet, X, Zap,
+  FileText, ListChecks, Loader2, Paperclip, Plus, RefreshCw, Search, Send, Sparkles, User, UserCheck, Wallet, X, Zap,
 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -624,11 +624,9 @@ export default function Inbox() {
       <div className={`flex flex-col ${activeId ? "hidden md:flex" : "flex"} w-full md:w-[320px] shrink-0`}
         style={{ borderRight: "1px solid var(--app-border)" }}>
 
-        <div className="flex items-center justify-between gap-2 px-4 py-3" style={{ borderBottom: "1px solid var(--app-border)" }}>
-          <div className="flex items-center gap-2">
-            <WhatsAppIcon className="w-5 h-5 shrink-0" style={{ color: "#25D366" }} />
-            <span className="text-sm font-bold text-app">WhatsApp</span>
-          </div>
+        {/* No title or gear here: the sidebar and the "Chats" tab already say
+            where you are, and the Settings tab is the one way to settings. */}
+        <div className="flex items-center justify-end gap-2 px-4 py-3" style={{ borderBottom: "1px solid var(--app-border)" }}>
           <div className="flex items-center gap-1">
             {credits && (
               <button onClick={() => setShowTopUp(true)} title="WhatsApp credits — click to top up"
@@ -638,14 +636,6 @@ export default function Inbox() {
                   : { background: "rgba(239,68,68,0.10)", color: "#b91c1c", border: "1px solid rgba(239,68,68,0.3)" }}>
                 <Wallet className="w-3 h-3" />
                 {credits.availablePaise < 0 ? "−" : ""}₹{(Math.abs(credits.availablePaise) / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
-              </button>
-            )}
-            {/* Only an admin can save WhatsApp settings; hide the gear rather
-                than open a page that cannot be saved. */}
-            {isAdmin && (
-              <button onClick={() => navigate("/conversations/settings")} title="WhatsApp settings"
-                className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition">
-                <Settings className="w-3.5 h-3.5 text-app-soft" />
               </button>
             )}
             <button onClick={() => fetchConvs()} title="Refresh"

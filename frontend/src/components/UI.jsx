@@ -366,7 +366,7 @@ export function PhoneActions({ phone, lead, projectLead, onContact, compact = fa
   const sp        = useSoftPhone();   // null on pages outside the authed CRM shell
   const { org }   = useAuth() || {};
 
-  if (!phone) return <span className="text-xs text-app-soft">-</span>;
+  if (!phone) return <span className="text-xs text-app-soft">—</span>;
 
   // Start an in-app (browser) call — the agent's browser becomes the phone.
   const callInBrowser = () => {
@@ -738,7 +738,7 @@ export function WhatsAppLink({ phone, name, leadId, projectId, onContact }) {
     return () => window.removeEventListener("scroll", handler, true);
   }, [open]);
 
-  if (!phone) return <span className="text-xs text-app-soft">-</span>;
+  if (!phone) return <span className="text-xs text-app-soft">—</span>;
 
   const waNumber = toWaNumber(phone);
 
