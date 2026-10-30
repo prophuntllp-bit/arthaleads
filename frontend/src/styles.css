@@ -20,13 +20,13 @@
     --app-surface: rgba(255, 255, 255, 0.58);
     --app-surface-solid: #ffffff;
     --app-surface-low: rgba(255, 255, 255, 0.38);
-    /* Popups: white with a breath of the brand colour, and a soft peach inset
+    /* Popups: a light orange tint of the brand colour, and a deeper peach inset
        for rows, fields and boxes inside them, so they read as the same CRM as
        the orange-tinted cards and borders (owner, 30 Oct 2026: the beige
        looked like another app). Mixed from --app-primary so a custom brand
        colour carries into popups too. */
-    --app-modal-bg: color-mix(in srgb, var(--app-primary) 2%, #ffffff);
-    --app-modal-inset: color-mix(in srgb, var(--app-primary) 5%, #ffffff);
+    --app-modal-bg: color-mix(in srgb, var(--app-primary) 5%, #fffdfb);
+    --app-modal-inset: color-mix(in srgb, var(--app-primary) 9%, #fffdfb);
     --app-surface-high: rgba(255, 255, 255, 0.75);
     --app-text: #18181b;
     /* Soft text darkened from #71717a → #5f5f66 for AA contrast on glass surfaces,
@@ -185,6 +185,13 @@
   [style*="--app-surface-solid"] {
     --app-surface-low: var(--app-modal-inset);
     --app-surface: var(--app-modal-bg);
+    /* Edges inside popups a step stronger than on the page, so rows and boxes
+       stay outlined on the tinted panel (owner, 30 Oct 2026). */
+    --app-border: rgba(var(--app-primary-deep-rgb), 0.22);
+  }
+  :root.dark .modal-panel,
+  :root.dark [style*="--app-surface-solid"] {
+    --app-border: rgba(255, 255, 255, 0.14);
   }
 
   .card:hover {
