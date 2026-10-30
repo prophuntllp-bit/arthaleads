@@ -186,7 +186,7 @@ export default function OnboardingGate() {
         style={{
           // Solid, not frosted. This is the change: the panel used to be
           // translucent with a heavy backdrop blur behind it.
-          background: "var(--app-surface-solid)",
+          background: "var(--app-modal-bg)",
           border: "1px solid var(--app-border)",
         }}>
         <div className="px-7 pt-7 pb-6">

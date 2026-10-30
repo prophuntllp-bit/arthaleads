@@ -179,16 +179,31 @@
      Performance floated with no edges at all). Covers .modal-panel and the
      popups that set the solid background inline. */
   .modal-panel,
-  [style*="--app-surface-solid"] {
+  [style*="--app-surface-solid"],
+  [style*="--app-modal-bg"] {
     --app-surface-low: var(--app-modal-inset);
     --app-surface: var(--app-modal-bg);
+    /* Same look as Lead Details (owner, 30 Oct 2026): white fields and white
+       content cards on the off-white panel, sand boxes, orange selected tab. */
+    --app-field-bg: #ffffff;
+    --seg-strip: var(--tab-accent-strip); --seg-strip-border: var(--app-border);
+    --seg-pill: var(--tab-accent-bg); --seg-ring: var(--tab-accent-ring);
+    --seg-on: var(--tab-accent-text); --seg-chip-on: var(--tab-accent-chip);
     /* Edges inside popups a step stronger than on the page, so rows and boxes
        stay outlined on the tinted panel (owner, 30 Oct 2026). */
     --app-border: rgba(var(--app-primary-deep-rgb), 0.16);
   }
   :root.dark .modal-panel,
-  :root.dark [style*="--app-surface-solid"] {
+  :root.dark [style*="--app-surface-solid"],
+  :root.dark [style*="--app-modal-bg"] {
     --app-border: rgba(255, 255, 255, 0.14);
+    --app-field-bg: var(--app-modal-inset);
+  }
+  :root:not(.dark) .modal-panel .card { background: #ffffff; border-color: #ebe2d8; }
+  .seg-accent {
+    --seg-strip: var(--tab-accent-strip); --seg-strip-border: var(--app-border);
+    --seg-pill: var(--tab-accent-bg); --seg-ring: var(--tab-accent-ring);
+    --seg-on: var(--tab-accent-text); --seg-chip-on: var(--tab-accent-chip);
   }
 
   /* -- Lead Details popup, from the owner's mock-ups (30 Oct 2026) --
@@ -242,7 +257,7 @@
   .input {
     @apply w-full rounded-2xl px-4 py-3 text-sm transition;
     border: 1px solid var(--app-border);
-    background: var(--app-surface-low);
+    background: var(--app-field-bg, var(--app-surface-low));
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     color: var(--app-text);
@@ -254,7 +269,7 @@
     outline: none;
     border-color: rgba(var(--app-primary-rgb), 0.45);
     box-shadow: 0 0 0 4px rgba(var(--app-primary-rgb), 0.12), 0 2px 12px rgba(var(--app-primary-rgb), 0.08);
-    background: var(--app-surface);
+    background: var(--app-field-bg, var(--app-surface));
   }
 
   .select   { @apply input appearance-none; }

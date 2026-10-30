@@ -898,7 +898,7 @@ export default function Attendance() {
         <div className="fixed inset-0 z-50 flex sm:items-center items-end sm:justify-center justify-center sm:p-4 p-0"
           style={{ background: "rgba(0,0,0,0.6)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setEntryModal(false); }}>
-          <div className="w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl sm:p-6 p-4 shadow-2xl flex flex-col sm:max-h-[88vh] max-h-[92vh]" style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
+          <div className="w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl sm:p-6 p-4 shadow-2xl flex flex-col sm:max-h-[88vh] max-h-[92vh]" style={{ background: "var(--app-modal-bg)", border: "1px solid var(--app-border)" }}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-bold text-app flex items-center gap-2">
                 <Edit3 className="w-4 h-4 text-orange-500" /> {entryForm.id ? "Edit Attendance Entry" : "Manual Attendance Entry"}

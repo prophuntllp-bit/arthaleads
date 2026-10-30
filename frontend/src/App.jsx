@@ -340,7 +340,7 @@ function TrialExpiredScreen({ onLogout }) {
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="max-w-md w-full rounded-3xl p-8 text-center shadow-2xl"
-        style={{ background: "var(--app-surface-solid)", border: "1px solid rgba(255,107,0,0.35)" }}>
+        style={{ background: "var(--app-modal-bg)", border: "1px solid rgba(255,107,0,0.35)" }}>
 
         {/* Icon */}
         <div className="w-16 h-16 rounded-full bg-[#FF6B00]/10 flex items-center justify-center mx-auto mb-5">
