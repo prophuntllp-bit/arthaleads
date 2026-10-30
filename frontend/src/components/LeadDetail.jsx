@@ -17,6 +17,7 @@ import SegmentTabs from "./SegmentTabs";
 import { originalSourceLabel } from "../utils/leadSource";
 import { fmtCurrency, fmtDate, fmtDateTime, STATUS_OPTIONS } from "../utils/constants";
 import WaMessageMedia, { messageText } from "./WaMessageMedia";
+import WhatsAppLogo from "./WhatsAppLogo";
 
 // Incoming (lead called us) vs outgoing (we called the lead). Kept visually
 // identical to the badge on the Calls page so the two screens agree.
@@ -160,13 +161,19 @@ function ConsentCard({ lead, onUpdated }) {
   };
 
   return (
-    <div className="rounded-[1.35rem] p-4 stitch-surface-muted">
+    <div className="consent-card rounded-[1.35rem] p-5">
       <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <p className="stitch-kicker mb-2">WhatsApp marketing consent</p>
-          <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: meta.bg, color: meta.fg }}>
-            {meta.label}
-          </span>
+        <div className="flex items-start gap-4 min-w-0">
+        <span className="consent-logo grid h-10 w-10 shrink-0 place-items-center rounded-full">
+          <WhatsAppLogo className="h-5 w-5" color="currentColor" />
+        </span>
+        <div className="min-w-0">
+          <p className="stitch-kicker consent-kicker mb-3" style={{ color: "var(--app-text)" }}>WhatsApp marketing consent</p>
+          {current === "unknown"
+            ? <p className="text-sm font-bold text-app">{meta.label}</p>
+            : <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: meta.bg, color: meta.fg }}>
+                {meta.label}
+              </span>}
           {current !== "unknown" && lead.whatsappConsent?.capturedAt && (
             <p className="text-xs text-app-soft mt-2">
               {CONSENT_SOURCE[lead.whatsappConsent.source] || lead.whatsappConsent.source || "recorded"}
@@ -174,14 +181,17 @@ function ConsentCard({ lead, onUpdated }) {
             </p>
           )}
           {current === "unknown" && (
-            <p className="text-xs text-app-soft mt-2">Campaigns will skip this lead until consent is recorded.</p>
+            <p className="text-sm text-app-soft mt-2">Campaigns will skip this lead until consent is recorded.</p>
           )}
+        </div>
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {CONSENT_STATES.filter((s) => s.value !== current).map((s) => (
             <button key={s.value} type="button" onClick={() => set(s.value)} disabled={!!saving}
-              className="text-xs font-semibold px-3 py-1.5 rounded-full transition disabled:opacity-50"
-              style={{ border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
+              className="text-sm font-semibold px-4 py-2 rounded-full transition disabled:opacity-50"
+              style={s.value === "denied"
+                ? { border: "1px solid rgba(220,38,38,0.55)", color: "#b91c1c", background: "rgba(255,255,255,0.35)" }
+                : { border: "1px solid rgba(24,24,27,0.22)", color: "var(--app-text)", background: "rgba(255,255,255,0.35)" }}>
               {saving === s.value ? "Saving…"
                 : s.value === "granted" ? "Mark as given"
                 : s.value === "denied" ? "Mark as refused" : "Clear"}
@@ -493,7 +503,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   return (
     <Modal open={open} onClose={onClose} title="Lead Details" size="xl">
       <div className="space-y-5">
-        <div className="rounded-[1.75rem] p-5 stitch-surface-muted">
+        <div className="lead-hero rounded-[1.75rem] p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
@@ -656,9 +666,10 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
         {/* Vistrow AI calls: last AI call, tries, next scheduled AI call. Pipeline leads only (project copies have no delivery of their own). */}
         {!isProjectLead && <VistrowVoicePanel lead={lead} vistrow={vistrow} />}
 
-        <div className="flex flex-wrap items-center gap-2 border-b pb-3" style={{ borderColor: "var(--app-border)" }}>
-          {/* Shared tab strip (SegmentTabs), same look as the Leads status tabs */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Shared tab strip (SegmentTabs), orange selected tab */}
           <SegmentTabs
+            accent
             ariaLabel="Lead details"
             value={tab}
             onChange={setTab}
@@ -699,7 +710,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
           const empty = fields.filter((f) => isBlank(f.value));
           const answers = (lead.formResponses || []).filter((r) => !isBlank(r.value));
           return (
-            <div className="space-y-5">
+            <div className="lead-info-wrap">
+              <div className="lead-info-card space-y-5">
               <section>
                 {filled.length > 0
                   ? <DetailList items={filled} />
@@ -732,6 +744,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                   <DetailList items={answers.map((r) => ({ label: r.label || r.fieldKey, value: r.value }))} />
                 </section>
               )}
+              </div>
 
               {/* Project leads have no consent field and campaigns never reach them. */}
               {!isProjectLead && <ConsentCard lead={lead} onUpdated={onUpdated} />}

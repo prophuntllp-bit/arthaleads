@@ -20,13 +20,10 @@
     --app-surface: rgba(255, 255, 255, 0.58);
     --app-surface-solid: #ffffff;
     --app-surface-low: rgba(255, 255, 255, 0.38);
-    /* Popups: a light orange tint of the brand colour, and a deeper peach inset
-       for rows, fields and boxes inside them, so they read as the same CRM as
-       the orange-tinted cards and borders (owner, 30 Oct 2026: the beige
-       looked like another app). Mixed from --app-primary so a custom brand
-       colour carries into popups too. */
-    --app-modal-bg: color-mix(in srgb, var(--app-primary) 5%, #fffdfb);
-    --app-modal-inset: color-mix(in srgb, var(--app-primary) 9%, #fffdfb);
+    /* Popups: warm off-white panel and a sand inset for rows and boxes inside
+       them, from the owner's Lead Details mock-up (30 Oct 2026). */
+    --app-modal-bg: #fbf7f3;
+    --app-modal-inset: #f3ece4;
     --app-surface-high: rgba(255, 255, 255, 0.75);
     --app-text: #18181b;
     /* Soft text darkened from #71717a → #5f5f66 for AA contrast on glass surfaces,
@@ -56,7 +53,7 @@
     --app-surface-solid: #1e1d20;
     --app-surface-low: rgba(22, 21, 24, 0.68);
     --app-modal-bg: #1e1d20;
-    --app-modal-inset: color-mix(in srgb, var(--app-primary) 3%, #28272b);
+    --app-modal-inset: #29272c;
     --app-surface-high: rgba(42, 40, 46, 0.84);
     --app-text: #ededed;
     --app-text-soft: #969696;
@@ -187,11 +184,47 @@
     --app-surface: var(--app-modal-bg);
     /* Edges inside popups a step stronger than on the page, so rows and boxes
        stay outlined on the tinted panel (owner, 30 Oct 2026). */
-    --app-border: rgba(var(--app-primary-deep-rgb), 0.22);
+    --app-border: rgba(var(--app-primary-deep-rgb), 0.16);
   }
   :root.dark .modal-panel,
   :root.dark [style*="--app-surface-solid"] {
     --app-border: rgba(255, 255, 255, 0.14);
+  }
+
+  /* -- Lead Details popup, from the owner's mock-ups (30 Oct 2026) --
+     Light: sand top box, solid orange selected tab, white info card, grey-green
+     consent box. Dark: top box warming to orange on the right, outlined orange
+     tab, and the info area on a light cream card (dark text) holding the
+     consent box. */
+  .lead-hero { background: #f3ece4; border: 1px solid #e6dcd1; }
+  :root.dark .lead-hero {
+    background: linear-gradient(105deg, #262428 0%, #2b2526 45%, #4a2a17 80%, #6a3412 100%);
+    border: 1px solid rgba(var(--app-primary-rgb), 0.28);
+  }
+  .lead-info-wrap { display: flex; flex-direction: column; gap: 1.25rem; }
+  .lead-info-card { background: #ffffff; border: 1px solid #ebe2d8; border-radius: 1.25rem; padding: 0.5rem 1.5rem 1rem; }
+  :root.dark .lead-info-wrap {
+    background: #f3efe9; border-radius: 1.5rem; padding: 0.75rem 1.5rem 1.5rem;
+    --app-text: #18181b; --app-text-soft: #5f5f66; --app-border: rgba(24, 24, 27, 0.10);
+    color: var(--app-text);
+  }
+  :root.dark .lead-info-card { background: transparent; border: 0; padding: 0; }
+  .consent-card { background: #eef0eb; border: 1px solid #dde2da; }
+  :root.dark .consent-card { background: #e4e8e2; border-color: #d2d8cf; }
+  .consent-kicker { display: inline-block; padding-bottom: 0.4rem; border-bottom: 1px solid rgba(24, 24, 27, 0.18); }
+  .consent-logo { background: #25d366; color: #ffffff; }
+  :root.dark .consent-logo { background: rgba(37, 211, 102, 0.18); color: #16a34a; }
+  /* Accent tab strip (SegmentTabs accent): solid orange selected tab in light,
+     an orange outline on a dark orange wash in dark. */
+  :root {
+    --tab-accent-strip: #f1e9e0; --tab-accent-bg: var(--app-primary);
+    --tab-accent-ring: var(--app-primary); --tab-accent-text: #ffffff;
+    --tab-accent-chip: #ffffff;
+  }
+  :root.dark {
+    --tab-accent-strip: #2a292d; --tab-accent-bg: rgba(var(--app-primary-rgb), 0.22);
+    --tab-accent-ring: rgba(var(--app-primary-rgb), 0.85); --tab-accent-text: #ffffff;
+    --tab-accent-chip: #4a494f;
   }
 
   .card:hover {
