@@ -20,10 +20,10 @@
     --app-surface: rgba(255, 255, 255, 0.58);
     --app-surface-solid: #ffffff;
     --app-surface-low: rgba(255, 255, 255, 0.38);
-    /* Popups: the CRM's own peach background (owner's pick, 30 Oct 2026),
+    /* Popups: the CRM's peach, dulled a little (owner, 30 Oct 2026),
        with a lighter peach for boxes inside them; fields and cards stay white. */
-    --app-modal-bg: #f2d9c4;
-    --app-modal-inset: #f8e8da;
+    --app-modal-bg: #ebdacb;
+    --app-modal-inset: #f5ebe1;
     --app-surface-high: rgba(255, 255, 255, 0.75);
     --app-text: #18181b;
     /* Soft text darkened from #71717a → #5f5f66 for AA contrast on glass surfaces,
