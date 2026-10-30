@@ -106,7 +106,6 @@ export default function AboutUs() {
           style={{ background: "radial-gradient(50% 60% at 50% 40%, rgba(255,107,0,0.18), transparent 70%)" }} />
         <Container className="relative text-center">
           <Reveal className="max-w-3xl mx-auto">
-            <p className="site-eyebrow mb-5">Our mission</p>
             <h2 className="font-display text-white font-extrabold tracking-[-0.02em] leading-[1.12] text-[32px] sm:text-[44px] lg:text-[52px]" style={{ textWrap: "balance" }}>
               Turn every property enquiry <span className="site-dim">into a closed deal.</span>
             </h2>

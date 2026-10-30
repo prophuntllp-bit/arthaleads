@@ -79,7 +79,7 @@ export function PageHero({ eyebrow, crumb, title, lede, visual, actions, trust, 
           {crumb}
           {/* The label sits above the H1, not inside it: inside, search engines read
               "About usBuilt for ..." as one heading (audit, 29 Oct 2026). */}
-          {eyebrow && <p className="font-display site-eyebrow mb-4 sm:mb-5">{eyebrow}</p>}
+          {eyebrow && <p className="site-eyebrow mb-3 sm:mb-4">{eyebrow}</p>}
           <h1 className="font-display site-ink font-extrabold tracking-[-0.03em]">
             <span className="block text-[34px] leading-[1.08] sm:text-[46px] lg:text-[52px]" style={{ textWrap: "balance" }}>{title}</span>
           </h1>
@@ -225,7 +225,6 @@ export function ClosingCta({
         <Reveal>
           <div className="site-cta-panel relative overflow-hidden rounded-[28px] sm:rounded-[32px] p-5 sm:p-10 lg:p-12 grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-center">
             <div className="relative">
-              <p className="site-eyebrow mb-4">Start today</p>
               <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[30px] sm:text-[38px] lg:text-[40px] xl:text-[44px]" style={{ textWrap: "balance" }}>
                 {title} {dim && <span className="site-dim">{dim}</span>}
               </h2>

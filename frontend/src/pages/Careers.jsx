@@ -576,7 +576,6 @@ export default function Careers() {
           <Reveal>
             <Card raised className="overflow-hidden grid sm:grid-cols-[1fr_220px]">
               <div className="p-6 sm:p-10">
-                <p className="site-eyebrow mb-4">Open Application</p>
                 <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.15] text-[26px] sm:text-[32px] mb-3">
                   Don't see the right role?
                 </h2>

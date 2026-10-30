@@ -306,7 +306,6 @@ export default function BookDemo() {
       <Section tone="tint">
         <Container className="grid lg:grid-cols-[0.8fr_1.2fr] gap-8 lg:gap-14 items-center">
           <div className="min-w-0">
-            <p className="site-eyebrow mb-4">Before your demo</p>
             <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[28px] sm:text-[36px]">
               What is Arthaleads? <span className="site-dim">Explained in 2 minutes.</span>
             </h2>
