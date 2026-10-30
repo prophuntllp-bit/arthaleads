@@ -200,6 +200,20 @@
     --app-field-bg: var(--app-modal-inset);
   }
   :root:not(.dark) .modal-panel .card { background: #ffffff; border-color: #ebe2d8; }
+  /* The title strip at the top of a popup and its plain buttons (Cancel and
+     the like) are white on the peach panel (owner, 30 Oct 2026). Matches the
+     header row of the shared Modal and of the hand-built popups alike. */
+  :root:not(.dark) .modal-panel > :first-child:is([style*="border-bottom"], .border-b),
+  :root:not(.dark) [style*="--app-modal-bg"] > :first-child:is([style*="border-bottom"], .border-b) {
+    background: #ffffff;
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
+  }
+  :root:not(.dark) .modal-panel .btn-secondary,
+  :root:not(.dark) [style*="--app-modal-bg"] .btn-secondary {
+    background: #ffffff;
+    border-color: rgba(var(--app-primary-deep-rgb), 0.18);
+  }
   .seg-accent {
     --seg-strip: var(--tab-accent-strip); --seg-strip-border: var(--app-border);
     --seg-pill: var(--tab-accent-bg); --seg-ring: var(--tab-accent-ring);
