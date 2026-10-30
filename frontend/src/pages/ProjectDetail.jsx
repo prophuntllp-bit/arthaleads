@@ -25,7 +25,7 @@ import CustomSelect from "../components/CustomSelect";
 import SegmentTabs from "../components/SegmentTabs";
 import {
   ArrowLeft, ArrowRightLeft, Building2, Calendar, ChevronDown, ChevronLeft, ChevronRight,
-  Archive, Download, FileSpreadsheet, FileText, ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users, X as XIcon,
+  Archive, Download, FileSpreadsheet, FileText, ImageOff, MapPin, MoreHorizontal, Pencil, Search, Trash2, Upload, Users, X as XIcon,
 } from "lucide-react";
 
 // Tap to reveal full name; default shows first name only
@@ -37,7 +37,7 @@ function NameCell({ name, bold, onOpen }) {
       className="text-left w-full focus:outline-none group"
     >
       <span className={`block text-xs leading-snug ${bold ? "font-semibold" : "font-medium"} text-app truncate group-hover:text-orange-500 transition-colors`}>
-        {name || "-"}
+        {name || "—"}
       </span>
     </button>
   );
@@ -52,7 +52,7 @@ function fmtPrice(n) {
 }
 
 function fmtDate(d) {
-  if (!d) return "-";
+  if (!d) return "—";
   return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -489,6 +489,10 @@ export default function ProjectDetail() {
   const [exportLeadsDropOpen, setExportLeadsDropOpen] = useState(false);
   const exportLeadsDropRef = useRef(null);
 
+  // Header "more" menu (holds the quiet Delete action)
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef(null);
+
   useEffect(() => {
     api.get(`/projects/${id}`)
       .then((r) => setProject(r.data.data))
@@ -532,6 +536,13 @@ export default function ProjectDetail() {
       .catch(() => toast.error("Failed to load prospective leads"))
       .finally(() => setProspLoading(false));
   }, [id, tab, prospPage, prospSearch, prospBookingFilter, prospDateFrom, prospDateTo, refreshKey]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const handler = (e) => { if (!moreRef.current?.contains(e.target)) setMoreOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [moreOpen]);
 
   // Close export dropdowns on outside click
   useEffect(() => {
@@ -866,6 +877,12 @@ export default function ProjectDetail() {
   if (loading) return <PageLoader />;
   if (!project) return null;
 
+  // Info tab: only show sections that have something in them
+  const hasPrice   = Boolean(project.priceMin || project.priceMax);
+  const hasOptions = (project.unitTypes?.length || project.bhkTypes?.length || 0) > 0;
+  const hasPricing = hasPrice || hasOptions;
+  const hasDetails = Boolean(project.description || project.reraNumber || project.possessionDate || project.area);
+
   return (
     <div className="stitch-page space-y-6">
       {/* Top bar */}
@@ -888,9 +905,31 @@ export default function ProjectDetail() {
             <button className="btn-secondary" onClick={() => setShowEdit(true)}>
               <Pencil className="h-4 w-4" /> Edit
             </button>
-            <button className="btn-danger" onClick={() => setShowDeleteProject(true)}>
-              <Trash2 className="h-4 w-4" /> Delete Project
-            </button>
+            <div className="relative" ref={moreRef}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setMoreOpen((o) => !o)}
+                aria-label="More actions"
+                aria-haspopup="menu"
+                aria-expanded={moreOpen}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+              {moreOpen && (
+                <div role="menu" className="absolute right-0 top-full mt-1 z-50 w-44 rounded-xl overflow-hidden shadow-lg py-1"
+                  style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { setMoreOpen(false); setShowDeleteProject(true); }}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-500/10 transition"
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete project
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -946,57 +985,69 @@ export default function ProjectDetail() {
           )}
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="card p-6 space-y-4">
-              <p className="stitch-kicker">Project Details</p>
-              {project.description && <p className="text-sm text-app-soft leading-relaxed">{project.description}</p>}
-              <div className="space-y-3">
-                {project.reraNumber && (
+            {!hasDetails && !hasPricing && (
+              <div className="card p-6 md:col-span-2">
+                <p className="text-sm text-app-soft">
+                  No details added yet.{canManage ? " Edit the project to add them." : ""}
+                </p>
+              </div>
+            )}
+
+            {hasDetails && (
+              <div className="card p-6 space-y-4">
+                <p className="stitch-kicker">Project Details</p>
+                {project.description && <p className="text-sm text-app-soft leading-relaxed">{project.description}</p>}
+                <div className="space-y-3">
+                  {project.reraNumber && (
+                    <div>
+                      <p className="text-xs text-app-soft mb-0.5">RERA Number</p>
+                      <p className="text-sm font-semibold text-app">{project.reraNumber}</p>
+                    </div>
+                  )}
+                  {project.possessionDate && (
+                    <div>
+                      <p className="text-xs text-app-soft mb-0.5">Possession Date</p>
+                      <p className="text-sm font-semibold text-app flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5 text-orange-500" />
+                        {fmtDate(project.possessionDate)}
+                      </p>
+                    </div>
+                  )}
+                  {project.area && (
+                    <div>
+                      <p className="text-xs text-app-soft mb-0.5">Area</p>
+                      <p className="text-sm font-semibold text-app">{project.area}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {hasPricing && (
+              <div className="card p-6 space-y-4">
+                <p className="stitch-kicker">Pricing & Configuration</p>
+                {hasPrice && (
                   <div>
-                    <p className="text-xs text-app-soft mb-0.5">RERA Number</p>
-                    <p className="text-sm font-semibold text-app">{project.reraNumber}</p>
-                  </div>
-                )}
-                {project.possessionDate && (
-                  <div>
-                    <p className="text-xs text-app-soft mb-0.5">Possession Date</p>
-                    <p className="text-sm font-semibold text-app flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-orange-500" />
-                      {fmtDate(project.possessionDate)}
+                    <p className="text-xs text-app-soft mb-0.5">Price Range</p>
+                    <p className="text-xl font-black text-orange-500">
+                      {fmtPrice(project.priceMin)}{project.priceMin && project.priceMax ? " – " : ""}{fmtPrice(project.priceMax)}
                     </p>
                   </div>
                 )}
-                {project.area && (
+                {hasOptions && (
                   <div>
-                    <p className="text-xs text-app-soft mb-0.5">Area</p>
-                    <p className="text-sm font-semibold text-app">{project.area}</p>
+                    <p className="text-xs text-app-soft mb-2">
+                      {project.propertyType ? `${project.propertyType} Options` : "Available Options"}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {(project.unitTypes?.length ? project.unitTypes : project.bhkTypes).map((b) => (
+                        <span key={b} className="rounded-full bg-orange-500/10 border border-orange-500/20 px-3 py-1 text-xs font-bold text-orange-500">{b}</span>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
-            </div>
-
-            <div className="card p-6 space-y-4">
-              <p className="stitch-kicker">Pricing & Configuration</p>
-              {(project.priceMin || project.priceMax) && (
-                <div>
-                  <p className="text-xs text-app-soft mb-0.5">Price Range</p>
-                  <p className="text-xl font-black text-orange-500">
-                    {fmtPrice(project.priceMin)}{project.priceMin && project.priceMax ? " – " : ""}{fmtPrice(project.priceMax)}
-                  </p>
-                </div>
-              )}
-              {(project.unitTypes?.length || project.bhkTypes?.length) > 0 && (
-                <div>
-                  <p className="text-xs text-app-soft mb-2">
-                    {project.propertyType ? `${project.propertyType} Options` : "Available Options"}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {(project.unitTypes?.length ? project.unitTypes : project.bhkTypes).map((b) => (
-                      <span key={b} className="rounded-full bg-orange-500/10 border border-orange-500/20 px-3 py-1 text-xs font-bold text-orange-500">{b}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
 
             {project.amenities?.length > 0 && (
               <div className="card p-6 md:col-span-2">
@@ -1192,7 +1243,7 @@ export default function ProjectDetail() {
                           </td>
                           <td><PhoneActions phone={lead.phone} projectLead={lead} /></td>
                           <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} projectId={id} /></td>
-                          <td className="text-sm text-app-soft">{lead.email || "-"}</td>
+                          <td className="text-sm text-app-soft">{lead.email || "—"}</td>
                           <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
                           <td>
                             <RemarkCell lead={lead} projectId={id} onUpdated={handleLeadUpdated} />
@@ -1254,7 +1305,7 @@ export default function ProjectDetail() {
                             <InlineBooking value={lead.booking} leadId={lead._id} projectId={id} onSaved={handleLeadUpdated} />
                           </td>
                           <td className="text-xs text-app-soft whitespace-nowrap">
-                            {lead.remarkUpdatedBy?.name || "-"}
+                            {lead.remarkUpdatedBy?.name || "—"}
                             {lead.remarkUpdatedAt && (
                               <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>
                             )}
@@ -1564,7 +1615,7 @@ export default function ProjectDetail() {
                               <InlineText value={lead.remark4} leadId={lead._id} projectId={id} field="remark4" placeholder="Remark 4…" onSaved={handleProspUpdate} />
                             </td>
                             <td className="text-xs text-app-soft whitespace-nowrap">
-                              {lead.remarkUpdatedBy?.name || "-"}
+                              {lead.remarkUpdatedBy?.name || "—"}
                               {lead.remarkUpdatedAt && <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>}
                             </td>
                             <td>

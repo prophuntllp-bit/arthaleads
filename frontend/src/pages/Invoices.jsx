@@ -537,13 +537,14 @@ export default function Invoices() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
         {[
-          { label: "Total Raised", value: fmtINR(totalBill), color: "#6366f1" },
-          { label: "Received",     value: fmtINR(totalRecv), color: "#10b981" },
-          { label: "Pending",      value: fmtINR(totalPend), color: "#f59e0b" },
+          // One neutral number colour; green only for money actually received.
+          { label: "Total Raised", value: totalBill ? fmtINR(totalBill) : "₹0" },
+          { label: "Received",     value: totalRecv ? fmtINR(totalRecv) : "₹0", color: totalRecv ? "#10b981" : undefined },
+          { label: "Pending",      value: totalPend ? fmtINR(totalPend) : "₹0" },
         ].map(s => (
           <div key={s.label} className="card rounded-2xl p-4" style={{ border: "1px solid var(--app-border)" }}>
             <p className="text-xs text-app-soft">{s.label}</p>
-            <p className="text-lg font-black mt-1" style={{ color: s.color }}>{s.value}</p>
+            <p className="text-lg font-black mt-1" style={{ color: s.color || "var(--app-text)" }}>{s.value}</p>
           </div>
         ))}
       </div>

@@ -16,12 +16,12 @@ const STATUS_COLORS = {
 };
 
 function fmtINR(n) {
-  if (!n && n !== 0) return "-";
+  if (!n && n !== 0) return "—";
   return "₹" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function fmtDate(d) {
-  if (!d) return "-";
+  if (!d) return "—";
   return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -395,15 +395,16 @@ export default function Bookings() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
         {[
-          { label: "Total Bookings",  value: bookings.length,   color: "#6366f1" },
-          { label: "Total Brokerage", value: "₹" + (totalBill / 1e5).toFixed(1) + "L", color: "#ff6b00" },
-          { label: "Invoice Pending", value: countPending,      color: "#f59e0b" },
-          { label: "Payment Received",value: countPaid,         color: "#10b981" },
+          // One neutral number colour; green only for payments actually received.
+          { label: "Total Bookings",  value: bookings.length },
+          { label: "Total Brokerage", value: totalBill ? "₹" + (totalBill / 1e5).toFixed(1) + "L" : "₹0" },
+          { label: "Invoice Pending", value: countPending },
+          { label: "Payment Received",value: countPaid,         color: countPaid ? "#10b981" : undefined },
         ].map(s => (
           <div key={s.label} className="card rounded-2xl p-4"
             style={{ border: "1px solid var(--app-border)" }}>
             <p className="text-xs text-app-soft">{s.label}</p>
-            <p className="text-xl font-black mt-1" style={{ color: s.color }}>{s.value}</p>
+            <p className="text-xl font-black mt-1" style={{ color: s.color || "var(--app-text)" }}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -450,7 +451,7 @@ export default function Bookings() {
                       >{b.customerName}</p>
                       {b.jointBuyerName && <p className="text-xs text-app-soft">{b.jointBuyerName}</p>}
                     </td>
-                    <td className="px-4 py-3 text-sm text-app-soft">{b.developerId?.name || "-"}</td>
+                    <td className="px-4 py-3 text-sm text-app-soft">{b.developerId?.name || "—"}</td>
                     <td className="px-4 py-3">
                       <p className="text-sm text-app">{b.projectName}</p>
                       <p className="text-xs text-app-soft">

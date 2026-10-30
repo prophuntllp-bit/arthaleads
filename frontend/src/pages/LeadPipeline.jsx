@@ -4,6 +4,7 @@ import useAppRefresh from "../hooks/useAppRefresh";
 import { ArrowLeftRight, ChevronDown, Clock3, MapPinned, PhoneCall, RefreshCw, Trophy, XCircle } from "lucide-react";
 import api from "../services/api";
 import { STATUS_OPTIONS } from "../utils/constants";
+import PageHeader from "../components/PageHeader";
 import { PhoneActions, WhatsAppLink, Spinner } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 import { useAuth } from "../context/AuthContext";
@@ -149,52 +150,54 @@ export default function LeadPipeline() {
 
   return (
     <div className="stitch-page space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-app">Lead Pipeline</h1>
-          {lastUpdated && (
-            <span className="flex items-center gap-1.5 text-[11px] text-app-soft mt-0.5">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-              Live · {lastUpdated.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Pipeline type picker — All / Leads-only / Project-only */}
-          <CustomSelect
-            value={pipelineType}
-            onChange={setPipelineType}
-            options={PIPELINE_TYPE_OPTIONS}
-            style={{ minWidth: 160 }}
-          />
-          {/* Member picker — admin / manager only */}
-          {isAdminOrManager && members.length > 0 && (
+      <PageHeader
+        title="Lead Pipeline"
+        subtitle={lastUpdated ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+            Live · {lastUpdated.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
+          </span>
+        ) : "Every lead by stage. Click a card for details."}
+        actions={(
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Pipeline type picker — All / Leads-only / Project-only */}
             <CustomSelect
-              value={selectedUserId}
-              onChange={setSelectedUserId}
-              placeholder="All Members"
-              options={[
-                { value: "", label: "All Members" },
-                ...members.map((m) => ({ value: m._id, label: m.name })),
-              ]}
+              value={pipelineType}
+              onChange={setPipelineType}
+              options={PIPELINE_TYPE_OPTIONS}
               style={{ minWidth: 160 }}
             />
-          )}
-          <button
-            onClick={() => fetchLeads(true)}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition hover:border-orange-400 hover:text-orange-500 disabled:opacity-50"
-            style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "Refreshing…" : "Refresh"}
-          </button>
-        </div>
-      </div>
+            {/* Member picker — admin / manager only */}
+            {isAdminOrManager && members.length > 0 && (
+              <CustomSelect
+                value={selectedUserId}
+                onChange={setSelectedUserId}
+                placeholder="All Members"
+                options={[
+                  { value: "", label: "All Members" },
+                  ...members.map((m) => ({ value: m._id, label: m.name })),
+                ]}
+                style={{ minWidth: 160 }}
+              />
+            )}
+            <button
+              onClick={() => fetchLeads(true)}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition hover:border-orange-400 hover:text-orange-500 disabled:opacity-50"
+              style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </button>
+          </div>
+        )}
+      />
 
       {/* Kanban board */}
-      <div data-tour="pipeline-board" className="overflow-x-auto pb-3 -mx-4 px-4">
+      {/* Six stages never fit a laptop screen, so the board scrolls sideways.
+          The scrollbar is kept visible and a trailing spacer stops the last
+          column from sitting flush against (and under) the right edge. */}
+      <div data-tour="pipeline-board" className="overflow-x-auto pb-3 -mx-4 px-4" style={{ scrollbarWidth: "thin" }}>
         <div className="flex gap-3" style={{ minWidth: "max-content" }}>
           {STATUS_OPTIONS.map((status) => {
             const meta = STAGE_META[status];
@@ -206,8 +209,8 @@ export default function LeadPipeline() {
                 key={status}
                 className="flex flex-col rounded-2xl overflow-hidden"
                 style={{
-                  width: 256,
-                  minWidth: 256,
+                  width: 236,
+                  minWidth: 236,
                   border: "1px solid var(--app-border)",
                   background: "var(--app-surface-low)",
                   boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
@@ -262,14 +265,16 @@ export default function LeadPipeline() {
                           />
                           {/* Name + project */}
                           <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-semibold text-app truncate leading-tight">{lead.name}</p>
+                            {/* The name gets priority: up to two lines, never cut to "Test Lea…" */}
+                            <p className="text-[13px] font-semibold text-app leading-tight line-clamp-2 break-words" title={lead.name}>{lead.name}</p>
                             {lead.projectName && (
                               <p className="text-[10px] text-app-soft truncate leading-none mt-0.5">{lead.projectName}</p>
                             )}
                           </div>
                           {/* Phone (stop propagation so click doesn't toggle) */}
-                          <span onClick={e => e.stopPropagation()}>
-                            <PhoneActions phone={lead.phone} onContact={() => handleContact(lead)} />
+                          {/* Call icon only here (number on hover); the full number is in the expanded card */}
+                          <span className="shrink-0 flex h-7 w-7 items-center justify-center" onClick={e => e.stopPropagation()}>
+                            <PhoneActions compact phone={lead.phone} onContact={() => handleContact(lead)} />
                           </span>
                           {/* Expand chevron */}
                           <ChevronDown
@@ -285,7 +290,10 @@ export default function LeadPipeline() {
                             style={{ borderColor: "var(--app-border)" }}
                           >
                             {/* WhatsApp + source */}
-                            <div className="flex items-center gap-2 pt-2">
+                            <div className="pt-2">
+                              <PhoneActions phone={lead.phone} onContact={() => handleContact(lead)} />
+                            </div>
+                            <div className="flex items-center gap-2">
                               <WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} onContact={() => handleContact(lead)} />
                               <span className="text-[11px] text-app-soft">· {lead.source}</span>
                             </div>
@@ -320,6 +328,8 @@ export default function LeadPipeline() {
               </div>
             );
           })}
+          {/* Trailing spacer so the last column clears the right edge when scrolled */}
+          <div aria-hidden="true" className="shrink-0 w-1" />
         </div>
       </div>
     </div>

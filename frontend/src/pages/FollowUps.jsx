@@ -11,6 +11,7 @@ import { CalendarClock, ChevronLeft, ChevronRight, Clock, CalendarCheck, Calenda
 import { useAuth } from "../context/AuthContext";
 import { useColumnResize, RTh } from "../hooks/useColumnResize";
 import PageHeader from "../components/PageHeader";
+import SegmentTabs from "../components/SegmentTabs";
 
 const FU_COL_DEFAULTS = {
   name: 120, phone: 130, whatsapp: 110, source: 80, status: 110,
@@ -158,13 +159,13 @@ function FUBooking({ lead, onUpdate }) {
 }
 
 const SECTIONS = [
-  { key: "past",    label: "Past Events",    icon: Clock,         color: "text-red-500",   bg: "bg-red-500/10",   activeBg: "bg-red-500",    badge: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400" },
-  { key: "present", label: "Today's Leads",  icon: CalendarCheck, color: "text-blue-500",  bg: "bg-blue-500/10",  activeBg: "bg-blue-500",   badge: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400" },
-  { key: "future",  label: "Future Events",  icon: CalendarDays,  color: "text-green-500", bg: "bg-green-500/10", activeBg: "bg-green-500",  badge: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400" },
+  { key: "past",    label: "Past Events",    emptyTitle: "No missed follow-ups", emptyDesc: "Every planned call or visit so far has been handled.", icon: Clock,         color: "text-red-500",   bg: "bg-red-500/10",   activeBg: "bg-red-500",    badge: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400" },
+  { key: "present", label: "Today's Leads",  emptyTitle: "No follow-ups today", emptyDesc: "Nothing is planned for today.", icon: CalendarCheck, color: "text-blue-500",  bg: "bg-blue-500/10",  activeBg: "bg-blue-500",   badge: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400" },
+  { key: "future",  label: "Future Events",  emptyTitle: "No upcoming follow-ups", emptyDesc: "Nothing is planned for the coming days.", icon: CalendarDays,  color: "text-green-500", bg: "bg-green-500/10", activeBg: "bg-green-500",  badge: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400" },
 ];
 
 function fmtDate(d) {
-  if (!d) return "-";
+  if (!d) return "—";
   return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -185,7 +186,7 @@ const BOOKING_COLORS = {
 };
 
 function BookingBadge({ value }) {
-  if (!value) return <span className="text-app-soft">-</span>;
+  if (!value) return <span className="text-app-soft">—</span>;
   const cls = BOOKING_COLORS[value] || "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400";
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${cls}`}>{value}</span>;
 }
@@ -297,31 +298,20 @@ export default function FollowUps() {
 
       {/* Section tabs */}
       <div className="pt-4">
-        <div data-tour="followup-tabs" className="flex gap-2 p-1 rounded-2xl w-full max-w-lg" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-          {SECTIONS.map(s => {
-            const Icon = s.icon;
-            const isActive = section === s.key;
-            return (
-              <button
-                key={s.key}
-                onClick={() => setSection(s.key)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
-                  isActive ? `${s.activeBg} text-white shadow-sm` : "text-app-soft hover:text-app"
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="hidden sm:inline">{s.label}</span>
-                <span className="sm:hidden">{s.label.split(" ")[0]}</span>
-              </button>
-            );
-          })}
+        <div data-tour="followup-tabs">
+          <SegmentTabs
+            ariaLabel="Follow-up sections"
+            value={section}
+            onChange={setSection}
+            tabs={SECTIONS.map((s) => ({ value: s.key, label: s.label }))}
+          />
         </div>
       </div>
 
       {/* Controls row - search + sort toggle + future date filters + my-only toggle */}
       <div className="pt-3 flex items-center gap-3 flex-wrap">
         {/* Search within follow-ups */}
-        <div className="relative flex-shrink-0" style={{ width: 220 }}>
+        <div className="relative flex-shrink-0" style={{ width: 240 }}>
           <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-app-soft" />
           <input
             value={searchInput}
@@ -334,7 +324,7 @@ export default function FollowUps() {
                 setSearchParams(v ? { q: v } : {});
               }, 350);
             }}
-            placeholder="Search by name or phone…"
+            placeholder="Search name or phone…"
             className="w-full rounded-xl pl-8 pr-7 py-1.5 text-sm text-app"
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", outline: "none" }}
             onFocus={e => { e.target.style.borderColor = "var(--app-primary)"; }}
@@ -433,8 +423,8 @@ export default function FollowUps() {
         ) : leads.length === 0 ? (
           <EmptyState
             icon={activeSection?.icon}
-            title={`No ${activeSection?.label?.toLowerCase()} found`}
-            desc="Nothing to show for this section right now."
+            title={activeSection?.emptyTitle || "No follow-ups"}
+            desc={searchQ.trim() ? "No follow-ups match your search." : activeSection?.emptyDesc}
           />
         ) : (
           <div className="card overflow-hidden">
@@ -490,7 +480,7 @@ export default function FollowUps() {
                             onClick={() => setDetailLead(lead)}
                             className="font-semibold text-app truncate max-w-[120px] text-left hover:text-orange-500 transition-colors cursor-pointer block"
                           >
-                            {lead.name || "-"}
+                            {lead.name || "—"}
                           </button>
                           {lead._type === "project" && (
                             <span className="text-[10px] text-orange-400 leading-none">Project lead</span>
@@ -510,11 +500,11 @@ export default function FollowUps() {
                         <td className="px-2.5 py-2">
                           {lead._type === "project"
                             ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400">Project</span>
-                            : lead.source ? <SourceBadge source={lead.source} /> : <span className="text-app-soft">-</span>
+                            : lead.source ? <SourceBadge source={lead.source} /> : <span className="text-app-soft">—</span>
                           }
                         </td>
                         <td className="px-2.5 py-2">
-                          <span className="text-app-soft truncate max-w-[120px] block">{lead.status || lead.remark || "-"}</span>
+                          <span className="text-app-soft truncate max-w-[120px] block">{lead.status || lead.remark || "—"}</span>
                         </td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           <FUBooking lead={lead} onUpdate={handleUpdate} />
@@ -542,7 +532,7 @@ export default function FollowUps() {
                         </td>
                         <td className="px-2.5 py-2">
                           {lead._type === "project"
-                            ? <span className="text-orange-500 font-medium truncate max-w-[120px] block">{lead.projectName || "-"}</span>
+                            ? <span className="text-orange-500 font-medium truncate max-w-[120px] block">{lead.projectName || "—"}</span>
                             : <span className="text-app-soft">Main Pipeline</span>
                           }
                         </td>

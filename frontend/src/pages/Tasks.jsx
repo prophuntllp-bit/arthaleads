@@ -308,12 +308,15 @@ export default function Tasks() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         {canManage && (
-          <button
-            onClick={() => setMyOnly(v => !v)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${myOnly ? "bg-orange-500 text-white border-orange-500" : "border-app-border text-app-soft hover:text-app"}`}
-          >
-            {myOnly ? "My Tasks" : "All Tasks"}
-          </button>
+          <SegmentTabs
+            ariaLabel="Whose tasks"
+            value={myOnly ? "mine" : "everyone"}
+            onChange={(v) => setMyOnly(v === "mine")}
+            tabs={[
+              { value: "everyone", label: "Everyone's tasks" },
+              { value: "mine",     label: "Only mine" },
+            ]}
+          />
         )}
         <CustomSelect
           value={priorityFilter}

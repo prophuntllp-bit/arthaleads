@@ -58,7 +58,7 @@ const navItems = [
   {
     label: "Tasks", icon: ClipboardList, hint: "Tasks for you and your team",
     children: [
-      { to: "/tasks",     label: "Manage Tasks", icon: List, hint: "All tasks for you and your team, with due dates" },
+      { to: "/tasks",     label: "All Tasks", icon: List, hint: "All tasks for you and your team, with due dates" },
       { to: "/tasks?new=1", label: "Add Task",   icon: Plus, roles: ["admin", "manager", "super_admin"], noActive: true, hint: "Create a task and assign it to someone" },
     ],
   },
@@ -1439,8 +1439,8 @@ export default function Sidebar() {
                       <img src="/logo.png" alt={org.name} className="h-7 w-7 rounded object-cover" />
                     )}
                   </div>
-                  <span className="font-bold text-sm text-app truncate max-w-[90px]">{org.name}</span>
-                  <img src="/logo.png" alt="AL" className="w-4 h-4 rounded object-cover flex-shrink-0" />
+                  {/* No second small ArthaLeads mark here: it only took room from the name. */}
+                  <span className="font-bold text-sm text-app truncate">{org.name}</span>
                 </>
               ) : (
                 <>

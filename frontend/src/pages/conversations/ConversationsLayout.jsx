@@ -28,7 +28,7 @@ import SegmentTabs from "../../components/SegmentTabs";
  */
 
 const TABS = [
-  { to: "/conversations",           label: "WhatsApp",  icon: Mail, end: true },
+  { to: "/conversations",           label: "Chats",     icon: Mail, end: true },
   { to: "/conversations/templates", label: "Templates", icon: FileText, minPlan: "growth" },
   { to: "/conversations/campaigns", label: "Campaigns", icon: Megaphone, minPlan: "growth" },
   { to: "/conversations/credits",   label: "Credits",   icon: Wallet,       roles: ["admin", "manager", "super_admin"] },
