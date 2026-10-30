@@ -145,7 +145,7 @@ function DevModal({ dev, onClose, onSaved }) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}>
       <div className="w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden"
-        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+        style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
         <div className="flex items-center justify-between px-5 py-4"
           style={{ borderBottom: "1px solid var(--app-border)" }}>
           <h2 className="text-base font-bold text-app">{dev ? "Edit Developer" : "Add Developer"}</h2>

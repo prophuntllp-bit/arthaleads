@@ -141,7 +141,7 @@ export default function CheckoutModal({ open, planId, onClose, onSuccess, org, i
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
       onClick={onClose}>
       <div
-        className="w-full sm:max-w-md bg-app-surface rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto"
+        className="modal-panel w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         role="dialog" aria-modal="true" aria-label="Checkout"
       >

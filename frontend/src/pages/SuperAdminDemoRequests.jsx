@@ -50,7 +50,7 @@ function Detail({ item, onClose, onSaved }) {
   ].filter(([, v]) => v);
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
-      <div className="card w-full max-w-xl max-h-[90vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-panel rounded-[1.5rem] w-full max-w-xl max-h-[90vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
             <h2 className="text-lg font-black text-app">{item.name}</h2>

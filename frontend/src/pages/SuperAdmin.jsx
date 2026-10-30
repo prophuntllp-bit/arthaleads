@@ -1007,7 +1007,7 @@ function TicketDetailModal({ ticket: initialTicket, onClose, onUpdated }) {
     <div className="fixed inset-0 z-[9990] flex items-center justify-center p-3"
       style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}>
       <div className="w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden flex flex-col"
-        style={{ maxHeight: "94vh", background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+        style={{ maxHeight: "94vh", background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
 
         {/* Header */}
         <div className="flex items-start justify-between px-6 py-4 border-b flex-shrink-0"

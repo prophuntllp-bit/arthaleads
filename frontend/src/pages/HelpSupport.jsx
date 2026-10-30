@@ -494,7 +494,7 @@ function RaiseTicketModal({ onClose, onSuccess }) {
     <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}>
       <div className="w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
-        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+        style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b flex-shrink-0" style={{ borderColor: "var(--app-border)" }}>
           <div className="flex items-center gap-3">
@@ -594,7 +594,7 @@ function TicketSuccessModal({ ticket, onClose }) {
     <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}>
       <div className="w-full max-w-sm rounded-3xl p-8 text-center shadow-2xl"
-        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+        style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
         <div className="flex h-16 w-16 items-center justify-center rounded-full mx-auto mb-4"
           style={{ background: "rgba(34,197,94,0.12)" }}>
           <CheckCircle2 className="h-8 w-8 text-green-500" />
@@ -707,7 +707,7 @@ function TicketThreadModal({ ticketId, onClose, onUpdated }) {
     <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}>
       <div className="w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col"
-        style={{ maxHeight: "92vh", background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+        style={{ maxHeight: "92vh", background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
 
         {/* Header */}
         <div className="flex items-start justify-between px-6 py-5 border-b flex-shrink-0"

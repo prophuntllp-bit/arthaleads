@@ -455,8 +455,7 @@ function LeadCallModal({ lead, onClose }) {
       style={{ background: "rgba(0,0,0,0.55)" }}
       onClick={e => e.target === e.currentTarget && onClose()}>
       {/* Solid, not the glass card: the page behind showed through (owner, 30 Oct 2026). */}
-      <div className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col shadow-2xl"
-        style={{ maxHeight: "92vh", background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
+      <div className="modal-panel w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col" style={{ maxHeight: "92vh" }}>
 
         {/* Header */}
         <div className="p-5 shrink-0" style={{ borderBottom: "1px solid var(--app-border)" }}>

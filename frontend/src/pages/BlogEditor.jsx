@@ -159,7 +159,7 @@ function FormatBar({ targetRef }) {
   return (
     <div
       className="fixed z-50 flex items-center gap-0.5 rounded-xl shadow-2xl px-2 py-1.5"
-      style={{ top: pos.top, left: pos.left, background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
+      style={{ top: pos.top, left: pos.left, background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}
       onMouseDown={(e) => e.preventDefault()}
     >
       {[{ l: "B", c: "bold", s: "font-bold" }, { l: "I", c: "italic", s: "italic" }, { l: "U", c: "underline", s: "underline" }, { l: "S", c: "strikeThrough", s: "line-through" }].map(({ l, c, s }) => (
@@ -482,7 +482,7 @@ function ImportModal({ onImport, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }}>
       <div className="w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col"
-        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", maxHeight: "85vh" }}>
+        style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)", maxHeight: "85vh" }}>
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: "var(--app-border)" }}>
           <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center">
@@ -760,7 +760,7 @@ export default function BlogEditor() {
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setPublishMenu(false)} />
                 <div className="absolute right-0 top-10 rounded-xl shadow-xl overflow-hidden w-40 z-50"
-                  style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+                  style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
                   <button onClick={() => save("published")} className="w-full px-4 py-2.5 text-left text-xs font-semibold text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10 transition">✓ Publish Now</button>
                   <button onClick={() => save("draft")} className="w-full px-4 py-2.5 text-left text-xs text-app-soft hover:bg-orange-500/5 transition">Save as Draft</button>
                 </div>

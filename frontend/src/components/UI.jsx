@@ -162,8 +162,7 @@ export function Modal({ open, onClose, title, children, size = "md" }) {
         onClick={onClose}
       />
       <div
-        className={`relative w-full ${widths[size]} max-h-[92vh] sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col`}
-        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
+        className={`modal-panel relative w-full ${widths[size]} max-h-[92vh] sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col`}
       >
         <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: "1px solid var(--app-border)" }}>
           <h2 className="text-base font-bold text-app">{title}</h2>
@@ -271,8 +270,7 @@ export function ImportResultModal({ open, onClose, inserted = 0, duplicates = 0,
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Import result">
       <div className="absolute inset-0 bg-black/50" style={{ backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }} onClick={onClose} />
       <div
-        className="relative w-full max-w-sm rounded-3xl shadow-2xl p-7 text-center"
-        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
+        className="modal-panel relative w-full max-w-sm rounded-3xl p-7 text-center"
       >
         <div className="flex justify-center mb-4">
           {failed ? (
