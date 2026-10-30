@@ -277,7 +277,7 @@ export function PipelineViz() {
       <div className="grid grid-cols-3 gap-2 h-full">
         {cols.map(([name, count, cards]) => (
           <div key={name} className="rounded-xl p-2 site-chip">
-            <p className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide site-muted mb-2 px-0.5">
+            <p className="flex items-center justify-between text-[11px] font-semibold site-muted mb-2 px-0.5">
               <span className="truncate">{name}</span><span className="site-ink">{count}</span>
             </p>
             <div className="space-y-1.5">

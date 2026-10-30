@@ -299,8 +299,8 @@ function StepClose() {
           <Phone className="w-4 h-4" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
         </span>
         <span className="min-w-0">
-          <span className="block text-[12.5px] font-semibold site-ink leading-tight">Call Neha Joshi · score 81</span>
-          <span className="block text-[11px] site-muted leading-tight truncate">Follow-up due 4:00 PM · 3 BHK Baner</span>
+          <span className="block text-[12.5px] font-semibold site-ink leading-tight">Call Neha Joshi, score 81</span>
+          <span className="block text-[11px] site-muted leading-tight truncate">Follow-up due 4:00 PM, 3 BHK Baner</span>
         </span>
       </FloatCard>
     </div>
