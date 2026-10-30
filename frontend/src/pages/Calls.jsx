@@ -73,7 +73,7 @@ const INTENT_STYLE = {
   unclear:        { bg: "rgba(161,161,170,0.10)", color: "#71717a", label: "Unclear"           },
 };
 
-function AISummarySection({ initialMeta, leadId, activityId, callStatus }) {
+function AISummarySection({ initialMeta, leadId, activityId, callStatus, onUpdated }) {
   const [meta,      setMeta]      = useState(initialMeta || {});
   const [loading,   setLoading]   = useState(false);
   const [copied,    setCopied]    = useState(false);
@@ -83,6 +83,7 @@ function AISummarySection({ initialMeta, leadId, activityId, callStatus }) {
     try {
       const { data } = await api.post(`/calls/${leadId}/${activityId}/summarize`);
       setMeta(data.meta);
+      onUpdated?.(data.meta); // the transcript and badges above and below refresh too
       toast.success("AI analysis complete!");
     } catch (err) {
       toast.error(err.response?.data?.message || "AI analysis failed");
@@ -216,7 +217,9 @@ function AISummarySection({ initialMeta, leadId, activityId, callStatus }) {
 
 // ── Call detail panel (shown inside the history modal) ────────────────────────
 function CallDetailPanel({ call, leadId, leadName, isProjectLead, onBack }) {
-  const meta   = call.meta || {};
+  // Kept in state so a re-run analysis shows its new transcript straight away.
+  const [meta, setMetaState] = useState(call.meta || {});
+  const setMeta = (m) => { call.meta = m; setMetaState(m); };
   const status = meta.status || "initiated";
   const ss     = STATUS_STYLE[status] || STATUS_STYLE.initiated;
   const sent   = meta.sentiment ? SENTIMENT[meta.sentiment] : null;
@@ -325,6 +328,7 @@ function CallDetailPanel({ call, leadId, leadName, isProjectLead, onBack }) {
         leadId={leadId}
         activityId={call.activityId}
         callStatus={status}
+        onUpdated={setMeta}
       />
 
       {meta.transcript && (

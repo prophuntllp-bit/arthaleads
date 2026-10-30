@@ -1359,7 +1359,7 @@ async function transcribeAndSummarize(leadId, match, recordingUrl, Model = Lead)
       "meta.transcript":       transcript,
       "meta.transcriptTurns":  [],
       "meta.transcriptMethod": result.method,
-      "meta.summary":    "No clear conversation was captured on this call.",
+      "meta.summary":    "No one spoke on this call (ringing, voicemail or silence).",
       "meta.keyPoints":  [],
       "meta.nextAction": null,
       "meta.intent":     "unclear",
@@ -1370,44 +1370,45 @@ async function transcribeAndSummarize(leadId, match, recordingUrl, Model = Lead)
     return;
   }
 
-  // Quick sentiment heuristic before calling GPT (saves token cost)
-  const lower    = transcript.toLowerCase();
-  const pos      = ["interested", "visit", "book", "confirm", "yes", "sure", "like", "want"].some(w => lower.includes(w));
-  const neg      = ["not interested", "busy", "later", "no thanks", "don't call"].some(w => lower.includes(w));
-  const sentiment = pos && !neg ? "positive" : neg ? "negative" : "neutral";
-
-  // Structured AI analysis — returns JSON with summary, keyPoints, nextAction, intent
-  const gpt = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+  // The analysis (30 Oct 2026): the old prompt told gpt-4o-mini to call any
+  // transcript that "may be garbled" no conversation, and it did so for every
+  // Hindi/Marathi call, even a clear "mera bilkul interest nahi hai". Checked on
+  // two real calls: this prompt gets not_interested on both and still says
+  // unclear for an agent-only call. Sentiment comes from the model too (the old
+  // English keyword check called every Hindi call neutral).
+  const ANALYSIS_MODEL = process.env.CALL_ANALYSIS_MODEL || "gpt-5-mini";
+  const req = {
+    model: ANALYSIS_MODEL,
+    response_format: { type: "json_object" },
     messages: [{
       role: "user",
-      content: `You are a real estate CRM assistant. Analyse this sales call transcript and return ONLY a valid JSON object with exactly these fields:
-- "summary": 1-2 sentence overview of the call
-- "keyPoints": array of 2-3 short bullet strings (lead's requirements, budget, timeline if mentioned)
-- "nextAction": one specific recommended action for the sales agent
-- "intent": exactly one of "interested" | "site_visit" | "negotiation" | "not_interested" | "follow_up" | "unclear"
+      content: `You analyse a recorded real estate sales phone call in India for a CRM. The agent works for the developer or broker; the other side is the customer. Calls are usually in Hindi, Marathi or English, often mixed, and the transcript keeps the original language and script. Read them as they are: short or mixed-language answers are normal and count.
 
-IMPORTANT: The transcript is auto-generated and may be garbled, empty, or contain
-no real conversation (e.g. the call wasn't truly answered). If it is not a coherent,
-intelligible conversation, DO NOT invent any details — instead return summary
-"No clear conversation was captured on this call.", keyPoints [], nextAction null,
-and intent "unclear".
+Return one JSON object with exactly these fields, written in English:
+- "summary": 1-2 sentences on what happened on the call, from the customer's side (what they said or wanted).
+- "keyPoints": 0-3 short strings with facts the customer gave (requirement, budget, location, timeline, reason for no). Empty if none.
+- "nextAction": one specific next step for the agent, or null when nothing should follow (for example the customer clearly said no).
+- "intent": exactly one of "interested" | "site_visit" | "negotiation" | "not_interested" | "follow_up" | "unclear".
+- "sentiment": exactly one of "positive" | "neutral" | "negative" (the customer's attitude).
 
-Return ONLY the JSON, no markdown, no explanation.
+A customer who says they are not interested, did not enquire, or asks not to be called is "not_interested" (that is a clear outcome, not "unclear"). Use "unclear" only when the customer said nothing meaningful (only "hello", silence, or the line dropped); then the summary is "The customer did not respond beyond a greeting." Never invent details that are not in the transcript.
 
 Transcript:
-${transcript.slice(0, 3000)}`,
+${transcript.slice(0, 6000)}`,
     }],
-    max_tokens: 300,
-  });
+  };
+  if (/^(gpt-5|gpt-6|o\d)/.test(ANALYSIS_MODEL)) { req.reasoning_effort = "low"; req.max_completion_tokens = 2500; }
+  else { req.temperature = 0.2; req.max_tokens = 400; }
+  const gpt = await openai.chat.completions.create(req);
 
   let parsed = null;
   try { parsed = JSON.parse(gpt.choices[0]?.message?.content || "{}"); } catch {}
 
-  const summary    = parsed?.summary    || gpt.choices[0]?.message?.content?.trim() || null;
-  const keyPoints  = Array.isArray(parsed?.keyPoints)  ? parsed.keyPoints  : [];
+  const summary    = parsed?.summary || "The call was transcribed but could not be summarised. Tap refresh to try again.";
+  const keyPoints  = Array.isArray(parsed?.keyPoints)  ? parsed.keyPoints.slice(0, 3)  : [];
   const nextAction = parsed?.nextAction  || null;
-  const intent     = parsed?.intent      || null;
+  const intent     = ["interested", "site_visit", "negotiation", "not_interested", "follow_up", "unclear"].includes(parsed?.intent) ? parsed.intent : "unclear";
+  const sentiment  = ["positive", "neutral", "negative"].includes(parsed?.sentiment) ? parsed.sentiment : "neutral";
 
   const INTENT_STATUS_MAP = { site_visit: "Site Visit", negotiation: "Negotiation" };
   const targetStatus = intent ? INTENT_STATUS_MAP[intent] : null;
