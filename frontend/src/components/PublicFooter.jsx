@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Instagram, Facebook, Linkedin, Youtube, Mail, Phone, ChevronDown } from "lucide-react";
+import { Instagram, Facebook, Linkedin, Youtube, Mail, Phone } from "lucide-react";
 import WhatsAppLogo from "./WhatsAppLogo";
 
 // The WhatsApp glyph in the social row, coloured like the lucide icons beside it.
@@ -8,22 +7,16 @@ const WaIcon = ({ strokeWidth, ...props }) => <WhatsAppLogo {...props} color="cu
 import { PHONE_DISPLAY, PHONE_TEL, waLink, WA_MESSAGES, SOCIAL_LINKS } from "../utils/crmLinks";
 import { usePublicTheme } from "../context/PublicThemeContext";
 
-// One column of footer links. On phones it folds into a 48px row that opens on
-// tap (the open lists made the footer about 1.7 screens tall); from md up it is
-// always open. The links stay in the HTML either way, so crawlers see them.
-function FooterGroup({ title, links, text, heading, border }) {
-  const [open, setOpen] = useState(false);
+// One column of footer links. Every link always shows; on phones the rows are
+// tight (28px) and the groups sit two to a row (Product beside Company, Compare
+// beside Legal, so the rows are even); from md up the columns keep their order.
+function FooterGroup({ title, links, text, heading, className = "" }) {
   return (
-    <div className="border-b md:border-b-0" style={{ borderColor: border }}>
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
-        className="md:hidden w-full min-h-[48px] flex items-center justify-between font-semibold text-sm" style={{ color: heading }}>
-        {title}
-        <ChevronDown className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} style={{ color: text }} aria-hidden="true" />
-      </button>
-      <p style={{ color: heading }} className="hidden md:block font-semibold text-sm mb-4">{title}</p>
-      <div className={`${open ? "block pb-2" : "hidden"} md:block md:space-y-2.5`}>
+    <div className={className}>
+      <p style={{ color: heading }} className="font-semibold text-sm mb-2 md:mb-4">{title}</p>
+      <div className="md:space-y-2.5">
         {links.map(([label, href]) => (
-          <Link key={label} to={href} style={{ color: text }} className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
+          <Link key={label} to={href} style={{ color: text }} className="block py-1 md:py-0 text-[13px] md:text-sm leading-5 hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
         ))}
       </div>
     </div>
@@ -73,12 +66,12 @@ export default function PublicFooter() {
 
   return (
     <footer style={{ background: bg, borderTop: `1px solid ${border}` }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-8 mb-8 md:mb-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-6 gap-y-6 md:gap-8 mb-6 md:mb-10">
 
           {/* Brand */}
-          <div className="md:col-span-4 lg:col-span-2">
-            <div className="flex items-center gap-2.5 mb-4">
+          <div className="col-span-2 md:col-span-4 lg:col-span-2">
+            <div className="flex items-center gap-2.5 mb-3 md:mb-4">
               <img
                 src={isDark ? "/logo-lockup-dark.webp" : "/logo-lockup.webp"}
                 srcSet={isDark ? "/logo-lockup-dark-240.webp 240w, /logo-lockup-dark.webp 420w" : "/logo-lockup-240.webp 240w, /logo-lockup.webp 420w"} sizes="120px"
@@ -93,13 +86,13 @@ export default function PublicFooter() {
             <a
               href="mailto:contact@arthaleads.com"
               style={{ color: text }}
-              className="flex items-center min-h-[44px] md:min-h-0 md:block text-sm mt-2 md:mt-4 hover:text-[color:var(--brand-text)] transition-colors"
+              className="block text-sm mt-2 md:mt-4 hover:text-[color:var(--brand-text)] transition-colors"
             >
               contact@arthaleads.com
             </a>
             {/* The phone number is the fastest way to reach sales: shown as a highlighted call chip. */}
             <a href={PHONE_TEL}
-              className="inline-flex items-center gap-2 mt-3 pl-1.5 pr-3.5 py-2 rounded-full text-[15px] font-bold transition-transform duration-200 hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 mt-2.5 md:mt-3 pl-1.5 pr-3.5 py-2 rounded-full text-[15px] font-bold transition-transform duration-200 hover:-translate-y-0.5"
               style={{ color: isDark ? "#ffffff" : "#111827", background: "rgba(255,107,0,0.10)", border: "1px solid rgba(255,107,0,0.35)" }}>
               <span className="w-7 h-7 rounded-full flex items-center justify-center text-white" style={{ background: "var(--brand-btn)" }}>
                 <Phone className="w-3.5 h-3.5" aria-hidden="true" />
@@ -107,7 +100,7 @@ export default function PublicFooter() {
               {PHONE_DISPLAY}
             </a>
 
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] mt-5 md:mt-7 mb-3" style={{ color: heading }}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] mt-4 md:mt-7 mb-2.5 md:mb-3" style={{ color: heading }}>
               Follow Arthaleads
             </p>
             <div className="flex flex-wrap gap-2.5">
@@ -131,17 +124,14 @@ export default function PublicFooter() {
             </div>
           </div>
 
-          {/* Link groups: folded rows on phones, columns from md up */}
-          <div className="md:contents" style={{ borderTop: `1px solid ${border}` }}>
-            <FooterGroup title="Product" links={PRODUCT} text={text} heading={heading} border={border} />
-            <FooterGroup title="Compare" links={COMPARE} text={text} heading={heading} border={border} />
-            <FooterGroup title="Company" links={COMPANY} text={text} heading={heading} border={border} />
-            <FooterGroup title="Legal" links={LEGAL} text={text} heading={heading} border={border} />
-          </div>
+          <FooterGroup title="Product" links={PRODUCT} text={text} heading={heading} className="md:order-1" />
+          <FooterGroup title="Company" links={COMPANY} text={text} heading={heading} className="md:order-3" />
+          <FooterGroup title="Compare" links={COMPARE} text={text} heading={heading} className="md:order-2" />
+          <FooterGroup title="Legal" links={LEGAL} text={text} heading={heading} className="md:order-4" />
 
         </div>
 
-        <div style={{ borderTop: `1px solid ${border}`, paddingTop: "1.5rem" }} className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div style={{ borderTop: `1px solid ${border}` }} className="pt-4 md:pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p style={{ color: text }} className="text-xs">© {new Date().getFullYear()} Arthaleads, operated by Prophunt LLP · Pune, India</p>
         </div>
       </div>
