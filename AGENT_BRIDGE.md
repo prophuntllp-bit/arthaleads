@@ -122,6 +122,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-30 IST: LIVE 0c4813fe: prerendered pages' stylesheet marker link added by the boot script, not the HTML (no wasted 32 KB fetch; phone home LCP 2.3 -> 2.1 s on staging) (from staging e13301a7). frontend scripts/prerender.mjs
 - [claude] 2026-10-30 IST: LIVE 944b4654: update banner never on the website; CRM prompts only when CRM code changed (version.json = hash of CRM-reachable code, vite.config.js WEBSITE_PAGE list) (from staging 2a0e7491). frontend vite.config.js, components/UpdateBanner.jsx
 - [claude] 2026-10-30 IST: LIVE e762d028: website shader backgrounds start on first interaction (desktop home TBT 240-799 ms -> ~0), desktop header About Us second last (from staging c7d5259c, 93dfff9f). frontend components/site/LiveBackground.jsx, components/PublicNav.jsx
 - [claude] 2026-10-30 IST: LIVE ca306fba (staging 35c976d0, 063c9a4f, 739c3d91): phone footer shows every link, two groups per row, tighter spacing (1,389px -> 873px); sitemap image:image per post cover; /download-app MobileApplication JSON-LD; robots.txt Content-Signal; COOP same-origin-allow-popups on www/staging hosts. Owner to delete the 8 unused pre-28 Oct screenshot assets in Sanity Media
