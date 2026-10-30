@@ -12,7 +12,7 @@ export default function Privacy() {
   });
 
   return (
-    <LegalLayout title="Privacy Policy" badge="Privacy" updated="28 October 2026">
+    <LegalLayout title="Privacy Policy" badge="Privacy" updated="30 October 2026">
 
       <Section title="1. Introduction">
         <p>
@@ -178,12 +178,13 @@ export default function Privacy() {
       <Section title="7. AI Features (Artha AI)">
         <p>
           Arthaleads includes AI features ("Artha AI") for lead scoring, follow-up suggestions, WhatsApp reply
-          drafts, call and voice note transcription, and sales assistance, powered by OpenAI's API. When you
-          use AI features:
+          drafts, call and voice note transcription, and sales assistance, powered by OpenAI's API. If OpenAI is
+          unavailable, the same request is answered by Anthropic's Claude API instead (transcription always uses
+          OpenAI). When you use AI features:
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
-          <li>Relevant lead context (such as name, status, follow-up notes, messages, call audio and your question) is sent to OpenAI's API to generate a response. This data is processed under OpenAI's data processing terms.</li>
-          <li>OpenAI does not use API data to train its general models (per its API data usage policy).</li>
+          <li>Relevant lead context (such as name, status, follow-up notes, messages, call audio and your question) is sent to OpenAI's API, or to Anthropic's API when it stands in, to generate a response. This data is processed under that provider's data processing terms.</li>
+          <li>Neither OpenAI nor Anthropic uses API data to train its general models (per their API data usage policies).</li>
           <li>We track the number of AI requests per organisation for billing and abuse prevention.</li>
           <li>You must not submit sensitive personal data (government ID numbers, financial account details, medical data) to AI features.</li>
           <li>AI suggestions and scores are advisory only. Arthaleads does not warrant the accuracy or suitability of AI responses.</li>
@@ -244,6 +245,7 @@ export default function Privacy() {
           <li><strong style={strong}>Railway:</strong> hosting for our API servers. Outside India.</li>
           <li><strong style={strong}>Vercel:</strong> hosting for the web app and website. Global network.</li>
           <li><strong style={strong}>OpenAI:</strong> AI features, lead scoring and transcription of calls and voice notes. USA.</li>
+          <li><strong style={strong}>Anthropic:</strong> backup AI provider (Claude), used for the same AI features only when OpenAI is unavailable. No transcription. USA.</li>
           <li><strong style={strong}>Meta Platforms:</strong> Facebook Lead Ads, the WhatsApp Business Platform (Cloud API), and the optional Conversions API described in Section 5. Global.</li>
           <li><strong style={strong}>Google:</strong> Sign in with Google, Google Ads lead forms (when connected), reCAPTCHA spam protection on sign-up and website forms, Firebase Cloud Messaging for Android app notifications, and Google Analytics on our website (only with your consent). Global.</li>
           <li><strong style={strong}>Resend:</strong> transactional email (sign-up codes, password resets, notifications). Outside India.</li>

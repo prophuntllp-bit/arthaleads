@@ -111,7 +111,7 @@ export default function CookiePolicy() {
   });
 
   return (
-    <LegalLayout title="Cookie Policy" badge="Privacy" updated="28 October 2026">
+    <LegalLayout title="Cookie Policy" badge="Privacy" updated="30 October 2026">
 
       <Section title="1. What Are Cookies?">
         <p>
@@ -216,6 +216,7 @@ export default function CookiePolicy() {
           <li><strong style={{ color: "var(--app-text)" }}>Google reCAPTCHA</strong>: spam protection on sign-up and website forms. Google may set its own cookies to tell people from bots.</li>
           <li><strong style={{ color: "var(--app-text)" }}>Firebase (Google)</strong>: push notification delivery for Android app users. May store a device token.</li>
           <li><strong style={{ color: "var(--app-text)" }}>OpenAI</strong>: AI feature processing. API calls only; no browser-level cookies set by OpenAI in our platform.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Anthropic</strong>: backup AI feature processing when OpenAI is unavailable. API calls only; no browser-level cookies set by Anthropic in our platform.</li>
           <li><strong style={{ color: "var(--app-text)" }}>Resend</strong>: transactional email delivery. No browser cookies.</li>
         </ul>
         <p>
