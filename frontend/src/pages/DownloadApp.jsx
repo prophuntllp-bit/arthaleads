@@ -159,7 +159,7 @@ function DownloadAppInner() {
       >
         <p className="mt-5 text-[13px] site-muted">
           {[version && `v${version}`, build ? `build ${build}` : null, sizeMb ? `${sizeMb} MB` : null,
-            `Android ${minAndroid}+`, "Free with any plan"].filter(Boolean).join("  ·  ")}
+            `Android ${minAndroid}+`, "Free with any plan"].filter(Boolean).join(", ")}
         </p>
       </PageHero>
 

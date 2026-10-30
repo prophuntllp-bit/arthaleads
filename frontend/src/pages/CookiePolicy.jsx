@@ -78,9 +78,10 @@ function CookiePreferences() {
               }}
             >
               <span style={{
-                position: "absolute", top: 2, left: prefs[c.key] ? 22 : 2,
+                position: "absolute", top: 2, left: 2,
+                transform: prefs[c.key] ? "translateX(20px)" : "translateX(0)",
                 width: 20, height: 20, borderRadius: "50%", background: "#fff",
-                transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                transition: "transform 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
               }} />
             </button>
           </div>

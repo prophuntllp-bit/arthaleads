@@ -49,7 +49,7 @@ function setTag(html, pattern, tag) {
   return pattern.test(html) ? html.replace(pattern, () => tag) : html.replace("</head>", () => `    ${tag}\n  </head>`);
 }
 
-function articleLd(post, { url, desc, image }) {
+function articleLd(post, { url, desc, image, words }) {
   const keywords = [post.focusKeyword, ...(post.secondaryKeywords || []), ...(post.tags || [])].filter(Boolean);
   const author = post.byline || post.author?.name;
   return {
@@ -65,8 +65,11 @@ function articleLd(post, { url, desc, image }) {
     author: author && author !== "Arthaleads Team"
       ? { "@type": "Person", name: author }
       : { "@type": "Organization", name: "Arthaleads", url: SITE },
-    publisher: { "@type": "Organization", name: "Arthaleads", url: SITE, logo: { "@type": "ImageObject", url: `${SITE}/logo.png` } },
+    publisher: { "@id": `${SITE}/#organization` },
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    "@id": `${url}#article`,
+    inLanguage: "en-IN",
+    wordCount: words || undefined,
   };
 }
 
@@ -185,7 +188,17 @@ const decodeEntities = (s) => String(s).replace(/&(amp|quot|#39|apos|lt|gt|nbsp)
 const stripTags = (h) => decodeEntities(String(h || "").replace(/<[^>]*>/g, "")).trim();
 const dateIN = (d) => (d ? new Date(d).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" }) : "");
 
-function fillTemplate(html, post, categories) {
+// Up to three other guides, same topic first, then the newest: the same choice the
+// live page makes in the browser, so crawlers see the links too (SEO audit, 30 Oct 2026).
+function relatedHtml(post, posts) {
+  const others = (posts || []).filter((p) => p.slug && p.slug !== post.slug && !p.redirectUrl);
+  const same = others.filter((p) => p.category?.slug && p.category.slug === post.category?.slug);
+  const pick = [...same, ...others.filter((p) => !same.includes(p))].slice(0, 3);
+  if (!pick.length) return "";
+  return `<nav aria-label="Related guides"><p><strong>Related guides</strong></p><ul>${pick.map((p) => `<li><a href="/blog/${esc(p.slug)}">${esc(p.title)}</a></li>`).join("")}</ul></nav>`;
+}
+
+function fillTemplate(html, post, categories, posts) {
   const author = post.byline || post.author?.name || "Arthaleads Team";
   const initials = author.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   const tags = post.tags || [];
@@ -238,7 +251,7 @@ function fillTemplate(html, post, categories) {
   else html = html.replace("</head>", () => `    <script type="application/ld+json" id="faq-jsonld">${JSON.stringify(faqLd(faqs)).replace(/</g, "\u005Cu003c")}</script>\n  </head>`);
   if (!categories.length) html = html.replace(/<label class="relative flex items-center mt-3">[\s\S]*?<\/label>/, "");
 
-  html = put(html, "<p>@@BODY@@</p>", bodyHtml(post.blocks));
+  html = put(html, "<p>@@BODY@@</p>", bodyHtml(post.blocks) + relatedHtml(post, posts));
   html = put(html, "%40%40TITLE%40%40", encodeURIComponent(post.title));
   html = put(html, "%40%40SLUG%40%40", encodeURIComponent(post.slug));
   html = put(html, "@@TITLE@@", esc(post.title));
@@ -265,6 +278,8 @@ export default async function handler(req, res) {
   let status = 200;
   const cats = fetch(`${API}/blog/categories?inUse=1`, { headers: { Accept: "application/json" } })
     .then((r) => (r.ok ? r.json() : {})).then((d) => d.categories || []).catch(() => []);
+  const recent = fetch(`${API}/blog/posts?limit=12`, { headers: { Accept: "application/json" } })
+    .then((r) => (r.ok ? r.json() : {})).then((d) => d.posts || []).catch(() => []);
   try {
     // nocount: this lookup must not add to the post's view counter.
     const r = await fetch(`${API}/blog/posts/${encodeURIComponent(slug)}?nocount=1`, { headers: { Accept: "application/json" } });
@@ -275,7 +290,7 @@ export default async function handler(req, res) {
   // The real page for a post; the plain shell otherwise (or if the template is missing).
   let html = null;
   if (post && !post.redirectUrl) {
-    try { html = fillTemplate(await shell(req, "blog-post-template.html"), post, await cats); } catch { html = null; }
+    try { html = fillTemplate(await shell(req, "blog-post-template.html"), post, await cats, await recent); } catch { html = null; }
   }
   const filled = !!html;
   if (!html) {
@@ -324,7 +339,8 @@ export default async function handler(req, res) {
     if (keywords.length) html = setTag(html, /<meta name="keywords"[^>]*>/, `<meta name="keywords" content="${esc(keywords.join(", "))}" />`);
     // Structured data in the source too; the app replaces it (same id) once it loads.
     // Every "<" is escaped so a title can never close the script tag early.
-    const ld = articleLd(post, { url: `${SITE}/blog/${post.slug}`, desc, image });
+    const words = stripTags(bodyHtml(post.blocks)).split(/\s+/).filter(Boolean).length;   // lists and tables included
+    const ld = articleLd(post, { url: `${SITE}/blog/${post.slug}`, desc, image, words });
     html = html.replace("</head>", () => `    <script type="application/ld+json" id="blog-jsonld">${JSON.stringify(ld).replace(/</g, "\u005Cu003c")}</script>\n  </head>`);
     // Breadcrumb too, built exactly like PublicBlogPost's (same id, so the app replaces it).
     const crumbs = [

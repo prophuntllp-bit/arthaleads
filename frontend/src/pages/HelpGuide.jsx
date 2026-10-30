@@ -22,7 +22,7 @@ const faqs = [
   },
   {
     q: "How do I connect my WordPress contact forms?",
-    a: "Install the Arthaleads WordPress plugin from the WordPress plugin directory (search 'Arthaleads'). In the plugin settings, enter your Arthaleads API token - found in your Settings → Integrations page. The plugin supports MetForm, Contact Form 7, WPForms, Elementor Forms, Gravity Forms, Ninja Forms, Forminator, and Fluent Forms.",
+    a: "Install the Arthaleads WordPress plugin from the WordPress plugin directory (search 'Arthaleads'). In the plugin settings, enter your Arthaleads API token (found in your Settings → Integrations page). The plugin supports MetForm, Contact Form 7, WPForms, Elementor Forms, Gravity Forms, Ninja Forms, Forminator, and Fluent Forms.",
   },
   {
     q: "Can multiple team members use the same account?",

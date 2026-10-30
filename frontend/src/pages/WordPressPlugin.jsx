@@ -206,7 +206,7 @@ function LiveNotification() {
   const lead = FAKE_LEADS[idx];
   return (
     <div
-      className={`flex items-center gap-3 rounded-2xl border p-3.5 text-left transition-all duration-300 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
+      className={`flex items-center gap-3 rounded-2xl border p-3.5 text-left transition-[opacity,transform] duration-300 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
       style={{ background: "var(--site-card)", borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}
     >
       <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,107,0,0.12)" }}>
@@ -281,7 +281,7 @@ function WordPressPluginInner() {
         visual={<FormToCrmViz />}
         actions={
           <div className="mt-7 flex flex-wrap gap-2.5 sm:gap-3 justify-center lg:justify-start">
-            <SiteButton href="/arthaleads-integration.zip" download className={btnLg}><Download className="w-5 h-5" /> Download Plugin - Free</SiteButton>
+            <SiteButton href="/arthaleads-integration.zip" download className={btnLg}><Download className="w-5 h-5" /> Download Plugin Free</SiteButton>
             <SiteButton href={CRM_SIGNUP_URL} external variant="secondary" className={btnLg}>Get Free CRM Account <ArrowRight className="w-4 h-4" /></SiteButton>
           </div>
         }
@@ -293,7 +293,7 @@ function WordPressPluginInner() {
           Also on WordPress.org: search “Arthaleads” in Plugins → Add New
         </a>
         <p className="text-[13px] site-muted mt-3">
-          v{PLUGIN_VERSION} &nbsp;·&nbsp; Free forever &nbsp;·&nbsp; 8 form plugins &nbsp;·&nbsp; No credit card
+          v{PLUGIN_VERSION}, free forever, 8 form plugins, no credit card
         </p>
       </PageHero>
 

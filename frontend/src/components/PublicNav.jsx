@@ -165,9 +165,8 @@ function DropdownPanel({ open, items, onClose, isDark, width = 268 }) {
                 </span>
                 {l.badge && (
                   <span style={{
-                    fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 20,
+                    fontSize: 11, fontWeight: 700, padding: "2px 6px", borderRadius: 20,
                     background: "rgba(255,107,0,0.12)", color: "var(--brand-text)",
-                    textTransform: "uppercase", letterSpacing: "0.06em",
                   }}>
                     {l.badge}
                   </span>
@@ -290,7 +289,7 @@ function NavInner({ onScrollTo }) {
     : { background: mobileOpen ? mobileBg : "transparent" };
 
   return (
-    <nav className="public-nav fixed top-0 left-0 right-0 z-50 transition-all duration-300" style={navStyle}>
+    <nav className="public-nav fixed top-0 left-0 right-0 z-50 transition-[background-color,box-shadow] duration-300" style={navStyle}>
       {/* Desktop bar (phones and tablets use the Card Nav below) */}
       <div className="hidden xl:block max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
@@ -393,7 +392,7 @@ function NavInner({ onScrollTo }) {
               Login
             </a>
             <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-              className="bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white text-sm font-semibold px-5 py-2.5 rounded-xl whitespace-nowrap transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-0.5"
+              className="bg-[color:var(--brand-btn)] hover:bg-[color:var(--brand-btn-hover)] text-white text-sm font-semibold px-5 py-2.5 rounded-xl whitespace-nowrap transition-[background-color,box-shadow,transform] duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-0.5"
             >
               Start 14-day free trial
             </a>

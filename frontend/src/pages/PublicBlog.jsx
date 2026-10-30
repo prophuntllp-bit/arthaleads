@@ -54,7 +54,7 @@ function setMeta(name, content) {
 const PAGE_SIZE = 12;   // cards per page under "All guides"
 
 const inputCls = "w-full rounded-2xl px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-[color:var(--site-brand)]";
-const inputStyle = { background: "var(--site-bg)", border: "1px solid var(--site-line-strong)", color: "var(--site-ink)" };
+const inputStyle = { background: "var(--site-bg)", border: "1px solid var(--site-field-line)", color: "var(--site-ink)" };
 
 // ── Cards (SiteBlogCard is also used by PublicBlogPost's "Keep reading") ──────
 
@@ -70,7 +70,7 @@ export function CoverFallback() {
 
 export function PostCategory({ post, className = "" }) {
   if (!post.category?.name) return null;
-  return <span className={`text-[11px] font-bold uppercase tracking-[0.14em] ${className}`} style={{ color: "var(--site-brand-ink)" }}>{post.category.name}</span>;
+  return <span className={`text-xs font-semibold ${className}`} style={{ color: "var(--site-brand-ink)" }}>{post.category.name}</span>;
 }
 
 /** One article in a grid: cover, topic + read time, title, summary, date and author. */
@@ -132,8 +132,8 @@ function FeaturedCard({ post }) {
         </div>
         <div className="flex items-center justify-between gap-4 mt-7 pt-5" style={{ borderTop: "1px solid var(--site-line)" }}>
           <span className="text-xs site-muted">{fmtDate(post.publishedAt)} · {post.readingTime || 1} min read</span>
-          <span className="site-link text-sm transition-all group-hover:gap-2">
-            Read the guide <ArrowRight className="w-4 h-4" aria-hidden="true" />
+          <span className="site-link text-sm">
+            Read the guide <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
           </span>
         </div>
       </div>
@@ -141,11 +141,10 @@ function FeaturedCard({ post }) {
   );
 }
 
-/** A section heading with an eyebrow and a note on the right. */
-function ListHead({ eyebrow, title, note }) {
+/** A section heading with a note on the right. */
+function ListHead({ title, note }) {
   return (
     <div className="mb-7">
-      {eyebrow && <p className="site-eyebrow !text-xs mb-2">{eyebrow}</p>}
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
         <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] text-[26px] sm:text-[32px]">{title}</h2>
         {note && <span className="text-sm site-muted">{note}</span>}
@@ -331,13 +330,13 @@ function BlogPageInner() {
               <>
                 {sections.featured && page === 1 && (
                   <div className="mb-14 lg:mb-16">
-                    <ListHead eyebrow="Featured" title="The latest guide" />
+                    <ListHead title="The latest guide" />
                     <FeaturedCard post={sections.featured} />
                   </div>
                 )}
                 {sections.recent.length > 0 && page === 1 && (
                   <div className="mb-14 lg:mb-16">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] site-muted mb-5">Also recent</p>
+                    <p className="text-sm font-semibold site-muted mb-5">Also recent</p>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">
                       {sections.recent.map((p) => <SiteBlogCard key={p._id} post={p} />)}
                     </div>
@@ -345,7 +344,7 @@ function BlogPageInner() {
                 )}
                 {sections.rest.length > 0 && (
                   <div id="blog-all" className="scroll-mt-28">
-                    <ListHead eyebrow={topicSlug || filtering ? null : "All guides"} title={restTitle} note={articlesLabel(topicSlug || filtering ? posts.length : totalAll)} />
+                    <ListHead title={restTitle} note={articlesLabel(topicSlug || filtering ? posts.length : totalAll)} />
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">
                       {shown.map((p, i) => (
                         <Reveal key={p._id} delay={(i % 3) * 80} className="h-full">
@@ -388,6 +387,18 @@ function BlogPageInner() {
   );
 }
 
+// Each topic page links to the product page it belongs to (SEO audit, 30 Oct 2026).
+const TOPIC_HUB = {
+  "real-estate-crm": ["/features", "See everything Arthaleads does"],
+  "lead-generation": ["/features", "How Arthaleads brings every lead into one list"],
+  "lead-management": ["/features", "Lead management in Arthaleads"],
+  "whatsapp": ["/whatsapp-crm", "WhatsApp CRM for real estate"],
+  "ai-automation": ["/ai-crm", "The AI real estate CRM"],
+  "sales-team": ["/features", "Team performance in Arthaleads"],
+  "site-visits": ["/builder-crm", "CRM for builders and developers"],
+  "channel-partners": ["/builder-crm", "CRM for builders and developers"],
+};
+
 /** A topic page's guide (paragraphs) and its common questions, under the articles.
  *  Same markup as topicGuideHtml in api/blog-index.js. */
 function TopicGuide({ topic }) {
@@ -398,7 +409,7 @@ function TopicGuide({ topic }) {
       {guide.length > 0 && (
         <div>
           <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] text-[24px] sm:text-[28px] mb-4">About {topic.name}</h2>
-          <div className="space-y-4 text-base leading-relaxed">{guide.map((p, i) => <p key={i}>{p}</p>)}</div>
+          <div className="space-y-4 text-base leading-relaxed">{guide.map((p, i) => <p key={i}>{p}</p>)}{TOPIC_HUB[topic.slug] && <p><Link to={TOPIC_HUB[topic.slug][0]} className="font-semibold site-ink underline underline-offset-4">{TOPIC_HUB[topic.slug][1]}</Link></p>}</div>
         </div>
       )}
       {faqs.length > 0 && (
@@ -430,7 +441,7 @@ function TopicTab({ to, on, label, count }) {
 }
 
 function Pager({ page, pages, onGo }) {
-  const btn = "w-10 h-10 rounded-xl flex items-center justify-center transition disabled:opacity-30 hover:border-[color:var(--site-brand)] site-ink";
+  const btn = "w-10 h-10 rounded-xl flex items-center justify-center transition disabled:opacity-30 disabled:cursor-not-allowed hover:border-[color:var(--site-brand)] site-ink";
   const plain = { border: "1px solid var(--site-line-strong)", background: "var(--site-card)" };
   return (
     <nav aria-label="Pages" className="flex flex-wrap items-center justify-center gap-2 mt-12">

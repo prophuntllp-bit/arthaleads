@@ -15,9 +15,9 @@ export const PLANS = [
     maxMembers: PLAN_PRICING.starter.maxSeats,
     userLimit: "5 to 10 members",
     groups: [
-      { label: "Lead Management", items: [
+      { label: "Lead management", items: [
         "Unlimited lead imports (CSV / Excel)",
-        "Lead pipeline - Kanban (6 stages)",
+        "Lead pipeline: Kanban (6 stages)",
         "Follow-up scheduling & reminders",
         "Lead source tracking",
         "Push notifications & new lead alerts",

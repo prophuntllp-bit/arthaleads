@@ -55,7 +55,7 @@ export default function YouTubePlayer({ videoId, poster, posterSet, posterSizes 
         <iframe key={videoId} ref={frame} className="absolute inset-0 w-full h-full" title={title} src={src}
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
       ) : (
-        <button type="button" onClick={() => play(start)} className="group absolute inset-0 w-full h-full" aria-label={`Play: ${title}`}>
+        <button type="button" onClick={() => play(start)} className="group absolute inset-0 w-full h-full" aria-label={`Play: ${title}${badge ? `, ${badge}` : ""}`}>
           <img src={poster} srcSet={posterSet} sizes={posterSet ? posterSizes : undefined} alt="" width="1280" height="720" loading="lazy" decoding="async"
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
           <span aria-hidden="true" className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.55) 100%)" }} />

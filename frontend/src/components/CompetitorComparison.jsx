@@ -67,7 +67,7 @@ function PriceCard({ c }) {
         <div className="rounded-2xl p-5 mb-3 border" style={{ ...ourBorder, background: "rgba(255,107,0,0.06)" }}>
           <div className="flex items-center justify-between mb-3">
             <span className="font-display font-bold site-ink">Arthaleads</span>
-            <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "#16a34a" }}><Check className="w-3.5 h-3.5" aria-hidden="true" /> Published</span>
+            <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--site-green)" }}><Check className="w-3.5 h-3.5" aria-hidden="true" /> Published</span>
           </div>
           <div className="grid grid-cols-2 gap-4">
             {[["Starter", PLAN_PRICING.starter.monthly], ["Growth", PLAN_PRICING.growth.monthly]].map(([n, v]) => (
@@ -77,7 +77,7 @@ function PriceCard({ c }) {
               </div>
             ))}
           </div>
-          <p className="text-xs site-muted mt-3">+ GST · 14-day free trial · no card</p>
+          <p className="text-xs site-muted mt-3">+ GST, 14-day free trial, no card</p>
         </div>
         <div className="rounded-2xl p-5 border" style={{ borderColor: "var(--site-line)", background: "var(--site-card-soft)" }}>
           <div className="flex items-center justify-between gap-3 mb-2">

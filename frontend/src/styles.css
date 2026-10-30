@@ -91,7 +91,7 @@
      Many components set outline:none for the mouse; restore a clear ring for
      keyboard users only (:focus-visible never triggers on plain mouse clicks). */
   :focus-visible {
-    outline: 2px solid var(--app-primary);
+    outline: 2px solid var(--focus-ring, #e65c00);
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -801,8 +801,11 @@ html[data-public-theme="dark"] { --brand-text: #ff6b00; }
   --site-dark-card: #181a25;
   --site-brand: #ff6b00;
   --site-brand-ink: #ad3a0a;   /* 4.7:1+ on the orange-tint chips */
+  --focus-ring: #e65c00;       /* keyboard focus: 3:1+ on white and on the dark bands (Hallmark audit, 30 Oct 2026) */
   --site-green: #15803d;        /* green text on white, 5:1 */
   --site-green-ink: #166534;    /* green text on green-tint chips, 6:1 */
+  --site-amber: #b45309;        /* 'partial' marks, 5:1 on white (Hallmark polish, 30 Oct 2026) */
+  --site-field-line: #8a8f9c;   /* a form field's edge, 3:1+ against the page */
   --site-grid: rgba(15, 18, 34, 0.055);
   --site-card-shine: linear-gradient(transparent, transparent);
   --site-shadow-sm: 0 1px 2px rgba(15, 18, 34, 0.05), 0 6px 16px -6px rgba(15, 18, 34, 0.08);
@@ -828,6 +831,8 @@ html[data-public-theme="dark"] {
   --site-brand-ink: #ff8a3d;
   --site-green: #4ade80;
   --site-green-ink: #4ade80;
+  --site-amber: #fbbf24;
+  --site-field-line: rgba(255, 255, 255, 0.34);
   --site-grid: rgba(255, 255, 255, 0.045);
   --site-card-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0) 42%);
   --site-shadow-sm: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px -12px rgba(0, 0, 0, 0.7);
@@ -865,6 +870,8 @@ html[data-public-theme="dark"] .site-section.site-section--dark { box-shadow: in
   --site-brand-ink: #ff8a3d;
   --site-green: #4ade80;
   --site-green-ink: #4ade80;
+  --site-amber: #fbbf24;
+  --site-field-line: rgba(255, 255, 255, 0.34);
   --site-grid: rgba(255, 255, 255, 0.05);
   --site-card-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 42%);
   --site-shadow-sm: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px -12px rgba(0, 0, 0, 0.6);
@@ -901,12 +908,17 @@ html[data-public-theme="dark"] .site-section.site-section--dark { box-shadow: in
 }
 .site-stage > * { position: relative; }
 
-.site-eyebrow { font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--site-brand-ink); }
+/* A small label (a hero's keyword line, a date, a category, a box title): the body face,
+   a step smaller, sentence case, untracked (Hallmark polish, 30 Oct 2026: no tracked caps). */
+.site-eyebrow { font-size: 0.875rem; font-weight: 600; color: var(--site-muted); }
 .site-ink { color: var(--site-ink); }
 .site-muted { color: var(--site-muted); }
 .site-chip { background: var(--site-chip); color: var(--site-text); box-shadow: inset 0 0 0 1px var(--site-line); }
-/* Second half of a two-tone heading: the brand gradient (owner, 24 Oct 2026: no grey). */
-.site-dim {
+/* Second half of a two-tone heading. It carries the brand gradient only in a page's
+   main title (h1), the page's one accent; in every other heading it reads in that
+   heading's own ink (owner, 24 Oct 2026: no grey; Hallmark polish, 30 Oct 2026). */
+.site-dim { color: inherit; }
+h1 .site-dim {
   background-image: linear-gradient(90deg, #ff6b00 0%, #ffaa00 100%);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
@@ -928,11 +940,12 @@ html[data-public-theme="dark"] .site-section.site-section--dark { box-shadow: in
   font-weight: 600; font-size: 0.9375rem; line-height: 1; white-space: nowrap;
   transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
-.site-btn:focus-visible { outline: 2px solid var(--site-brand); outline-offset: 3px; }
+.site-btn:focus-visible { outline: 2px solid var(--focus-ring, #e65c00); outline-offset: 3px; }
 .site-btn--primary { background: var(--brand-btn); color: #fff; box-shadow: 0 10px 24px -10px rgba(204, 75, 0, 0.6); }
-.site-btn--primary:hover { background: var(--brand-btn-hover); transform: translateY(-1px); }
+.site-btn--primary:hover:not(:disabled) { background: var(--brand-btn-hover); transform: translateY(-1px); }
 .site-btn--secondary { background: var(--site-card); color: var(--site-ink); border: 1px solid var(--site-line-strong); }
-.site-btn--secondary:hover { border-color: var(--site-brand); transform: translateY(-1px); }
+.site-btn--secondary:hover:not(:disabled) { border-color: var(--site-brand); transform: translateY(-1px); }
+.site-btn:disabled { cursor: not-allowed; opacity: 0.6; }
 .site-section--dark .site-btn--secondary { background: rgba(255, 255, 255, 0.06); color: #fff; }
 /* For use on the orange CTA panel. */
 .site-btn--light { background: #fff; color: #0f1222; }
@@ -1196,7 +1209,7 @@ html[data-public-theme="dark"] .hero-glass {
 .blog-faq__item[open] .blog-faq__icon { transform: rotate(45deg); }
 .blog-faq__answer { padding: 0 1.25rem 1.2rem; font-size: 16px; line-height: 1.75; color: var(--site-text); }
 .blog-code { margin: 2em 0; border-radius: 16px; overflow: hidden; background: #14151d; border: 1px solid rgba(255, 255, 255, 0.08); }
-.blog-code__lang { padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 255, 255, 0.45); }
+.blog-code__lang { padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: rgba(255, 255, 255, 0.62); }
 .blog-code pre { margin: 0; padding: 1.25rem; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.875rem; line-height: 1.7; color: #e6e8ef; }
 
 /* Cards that move (owner, 27 Oct 2026: "cards are the same and static").

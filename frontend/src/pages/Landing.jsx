@@ -49,11 +49,11 @@ function Hero() {
       <div aria-hidden="true" className="hero-warm" />
       <Container className="relative grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-center">
         <div className="text-center lg:text-left">
-          <h1 className="font-display site-ink font-extrabold tracking-[-0.03em]">
+          <h1 className="site-ink font-extrabold">
             {/* The keyword label stays in the H1; the spaces keep the words apart for search engines (audit, 29 Oct 2026). */}
-            <span className="site-eyebrow block mb-4 sm:mb-5">Real estate CRM software for India</span>{" "}
-            <span className="block text-[35px] leading-[1.06] sm:text-[48px] lg:text-[52px] xl:text-[58px] min-[1700px]:text-[64px]">Every enquiry answered.</span>{" "}
-            <span className="block text-[35px] leading-[1.1] sm:text-[48px] lg:text-[52px] xl:text-[58px] min-[1700px]:text-[64px]"><span className="site-gradient-text">Even at 1 AM.</span></span>
+            <span className="block mb-3 sm:mb-4 text-[15px] sm:text-base font-semibold site-muted">Real estate CRM software for India</span>{" "}
+            <span className="font-display tracking-[-0.03em] block text-[35px] leading-[1.06] sm:text-[48px] lg:text-[52px] xl:text-[58px] min-[1700px]:text-[64px]">Every enquiry answered.</span>{" "}
+            <span className="font-display tracking-[-0.03em] block text-[35px] leading-[1.1] sm:text-[48px] lg:text-[52px] xl:text-[58px] min-[1700px]:text-[64px]"><span className="site-gradient-text">Even at 1 AM.</span></span>
           </h1>
           <p className="mt-5 text-base sm:text-[17px] min-[1700px]:text-lg leading-relaxed max-w-[35rem] mx-auto lg:mx-0" style={{ textWrap: "pretty" }}>
             Facebook, Google and WhatsApp enquiries land in one place. A WhatsApp AI agent replies in seconds,
@@ -135,7 +135,7 @@ function AiBand() {
         {/* Desktop: heading, text and cards on the left, the phone alone on the right.
             Phones: heading, then the phone, then the cards (DOM order). */}
         <div className="grid lg:grid-cols-[minmax(0,1fr)_auto] lg:grid-rows-[auto_1fr] gap-x-10 xl:gap-x-16 gap-y-8">
-          <SectionHeader eyebrow="AI that works the night shift" title={<>Your best salesperson <span className="site-dim">never sleeps.</span></>}
+          <SectionHeader title={<>Your best salesperson never sleeps.</>}
             lede="Enquiries often arrive after office hours. Arthaleads answers every one and tells your team who to call first. On Growth and above."
             className="!mb-0 lg:col-start-1 lg:row-start-1">
             <Link to="/ai-crm" className="site-link text-[15px] mt-4">See everything the AI does <ArrowRight className="w-4 h-4" /></Link>
@@ -186,7 +186,7 @@ function Features() {
   return (
     <Section id="features" tone="white">
       <Container>
-        <SectionHeader eyebrow="One workspace" title={<>From first message to booking.<br className="hidden sm:block" /> <span className="site-dim">In one place.</span></>}
+        <SectionHeader title={<>From first message to booking.<br className="hidden sm:block" /> In one place.</>}
           lede="Everything a property sales team uses every day, built for how builders, brokers and channel partners in India actually sell."
           action={<Link to="/features" className="site-link text-[15px]">See every feature <ArrowRight className="w-4 h-4" /></Link>} />
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -221,7 +221,7 @@ function BuiltFor() {
   return (
     <Section tone="white">
       <Container>
-        <SectionHeader eyebrow="Who it is for" title={<>Built for how property<br className="hidden sm:block" /> <span className="site-dim">is sold in India.</span></>}
+        <SectionHeader title={<>Built for how property<br className="hidden sm:block" /> is sold in India.</>}
           lede="Builders, brokers and channel partners sell differently. Arthaleads fits each of them." />
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {PERSONAS.map(({ img, title, body, to, link, alt }, i) => (
@@ -299,8 +299,8 @@ function StepClose() {
           <Phone className="w-4 h-4" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
         </span>
         <span className="min-w-0">
-          <span className="block text-[12.5px] font-semibold site-ink leading-tight">Call Neha Joshi · score 81</span>
-          <span className="block text-[11px] site-muted leading-tight truncate">Follow-up due 4:00 PM · 3 BHK Baner</span>
+          <span className="block text-[12.5px] font-semibold site-ink leading-tight">Call Neha Joshi, score 81</span>
+          <span className="block text-[11px] site-muted leading-tight truncate">Follow-up due 4:00 PM, 3 BHK Baner</span>
         </span>
       </FloatCard>
     </div>
@@ -317,7 +317,7 @@ function HowItWorks() {
   return (
     <Section tone="tint">
       <Container>
-        <SectionHeader eyebrow="How it works" title={<>Live in a day,<br className="hidden sm:block" /> <span className="site-dim">not a quarter.</span></>}
+        <SectionHeader title={<>Live in a day,<br className="hidden sm:block" /> not a quarter.</>}
           lede="No setup project and no consultants. You can connect your lead sources and see the AI reply on the same day."
           action={<Link to="/download-app" className="site-link text-[15px]"><Download className="w-4 h-4" /> Get the Android app</Link>} />
         <ol className="relative grid md:grid-cols-3 gap-5">
@@ -332,7 +332,7 @@ function HowItWorks() {
               <Card glow className="h-full p-3 flex flex-col">
                 <Viz />
                 <div className="px-3 pt-5 pb-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] site-muted mb-1.5">Step {i + 1}</p>
+                  <p className="text-[13px] font-semibold site-muted mb-1.5">Step {i + 1}</p>
                   <h3 className="font-display text-lg font-bold site-ink mb-1.5">{title}</h3>
                   <p className="text-[15px] leading-relaxed">{body}</p>
                 </div>
@@ -375,14 +375,14 @@ function Trust() {
   return (
     <Section tone="white">
       <Container>
-        <SectionHeader eyebrow="Why teams trust it" title={<>Serious about your leads<br className="hidden sm:block" /> <span className="site-dim">and your data.</span></>}
+        <SectionHeader title={<>Serious about your leads<br className="hidden sm:block" /> and your data.</>}
           action={<Link to="/security" className="site-link text-[15px]">How we protect data <ArrowRight className="w-4 h-4" /></Link>} />
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           <Reveal className="min-w-0 md:col-span-2">
             <Card glow className="site-section--dark site-feature-glow h-full p-7 sm:p-9 grid sm:grid-cols-[1fr_280px] gap-8 items-center">
               <div>
                 <TrustIcon Icon={WhatsAppLogo} green />
-                <h3 className="font-display text-xl sm:text-2xl font-bold site-ink mb-3">Official WhatsApp Business Platform</h3>
+                <h3 className="font-display text-xl sm:text-2xl font-bold site-ink mb-3" style={{ textWrap: "balance" }}>Official WhatsApp Business Platform</h3>
                 <p className="text-[15px] leading-relaxed max-w-md">Your own verified business number on Meta's official API, not a grey-market tool that can get your number banned. Templates, campaigns and the AI agent run on it.</p>
               </div>
               <div className="rounded-2xl p-4" style={{ background: "var(--site-stage)", border: "1px solid var(--site-line)" }}>
@@ -405,7 +405,7 @@ function Trust() {
             <Card glow className="h-full p-7 flex flex-col">
               <TrustIcon Icon={Lock} />
               <h3 className="font-display text-lg font-bold site-ink mb-2">Your data stays yours</h3>
-              <p className="text-[15px] leading-relaxed mb-5">Each company's data is kept apart, and you can export everything or delete your account any time.</p>
+              <p className="text-[15px] leading-relaxed mb-5">Each company's data is kept apart. On Growth and Enterprise you can export all your leads, and you can delete your account any time.</p>
               <ul className="mt-auto space-y-1.5">
                 <TrustRow left="All leads as Excel" right="Export" tone={T_ORANGE} />
                 <TrustRow left="Delete account" right="Self-serve" tone={T_PLAIN} />
@@ -489,7 +489,7 @@ function Faq() {
     <Section id="faq" tone="tint">
       <Container className="grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16">
         <div className="lg:sticky lg:top-28 self-start">
-          <SectionHeader align="left" eyebrow="FAQ" title="Questions people ask first" className="!mb-6"
+          <SectionHeader align="left" title="Questions people ask first" className="!mb-6"
             lede="Anything else? Message us on WhatsApp and a real person replies." />
           <SiteButton href={waLink(WA_MESSAGES.sales)} external variant="whatsapp"><WhatsAppLogo className="w-[18px] h-[18px]" color="#fff" /> Ask on WhatsApp</SiteButton>
         </div>
@@ -532,9 +532,8 @@ function FinalCta() {
               silk={0.25} grainAmount={0.06} clickSwirl={false} stir={0.5}
               style={{ WebkitMaskImage: "radial-gradient(90% 120% at 100% 100%, #000 20%, transparent 75%)", maskImage: "radial-gradient(90% 120% at 100% 100%, #000 20%, transparent 75%)", opacity: isDark ? 0.9 : 0.7 }} />
             <div className="relative">
-              <p className="site-eyebrow mb-4">Start today</p>
               <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[30px] sm:text-[38px] lg:text-[40px] xl:text-[44px]" style={{ textWrap: "balance" }}>
-                Stop losing buyers <span className="site-dim">to whoever replies first.</span>
+                Stop losing buyers to whoever replies first.
               </h2>
               <p className="mt-5 text-base sm:text-lg leading-relaxed max-w-lg">Book a 30-minute demo on your own leads, or start the 14-day free trial yourself.</p>
               <div className="mt-8 flex gap-2 sm:gap-3">
