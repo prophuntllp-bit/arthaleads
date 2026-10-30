@@ -106,7 +106,7 @@ const FONT_PRELOADS = [/^inter-latin-400-normal-.*\.woff2$/, /^inter-latin-600-n
   .map((f) => `    <link rel="preload" as="font" type="font/woff2" href="/assets/${f}" crossorigin>`)
   .join("\n");
 const bootScript = (src) => `<script>(function(){var d=document,w=window,started=0;
-      function boot(){if(started)return;started=1;w.__alBootStarted=Date.now();var s=d.createElement("script");s.type="module";s.crossOrigin="";s.src=${JSON.stringify(src)};d.head.appendChild(s)}
+      function boot(){if(started)return;started=1;w.__alBootStarted=Date.now();var c=d.getElementById("app-css"),l;if(c&&c.dataset.href){l=d.createElement("link");l.disabled=true;l.rel="stylesheet";l.href=c.dataset.href;d.head.appendChild(l)}var s=d.createElement("script");s.type="module";s.crossOrigin="";s.src=${JSON.stringify(src)};d.head.appendChild(s)}
       function painted(){requestAnimationFrame(function(){requestAnimationFrame(function(){setTimeout(boot,0)})});setTimeout(boot,500)}
       function ready(){setTimeout(boot,2500);if(d.hidden||d.documentElement.hasAttribute("data-prerender-hide"))return boot();var waits=[];if(d.fonts&&d.fonts.ready)waits.push(d.fonts.ready);
         var imgs=d.querySelectorAll("#root img[fetchpriority=high]");for(var i=0;i<imgs.length;i++){var im=imgs[i];
@@ -119,10 +119,12 @@ const deferBoot = (html) => html.replace(/<script type="module" crossorigin src=
 // "render-blocking", ~1 s). Its font and image URLs are absolute (/assets/...).
 const inlineCss = (html) => html.replace(/<link rel="stylesheet"(?: crossorigin)? href="(\/assets\/[^"]+\.css)"\s*\/?>/, (tag, href) => {
   const css = readFileSync(join(dist, href.slice(1)), "utf8");
-  // The disabled link is never fetched or applied; it is there so Vite's lazy
-  // chunk loader (which looks for link[href][rel=stylesheet]) knows the sheet
-  // is already on the page and does not add and re-parse it after the app starts.
-  return css.includes("</style") ? tag : `<style id="app-css">${css}</style><link rel="stylesheet" href="${href}" disabled>`;
+  // Vite's lazy chunk loader looks for link[href][rel=stylesheet] to know the
+  // sheet is already on the page (else it adds and re-parses it after the app
+  // starts). The boot script adds that link, disabled, just before the app
+  // starts. Not in the HTML: Lighthouse's Chrome fetched a disabled link there
+  // anyway, 32 KB at top priority beside the hero photo (30 Oct 2026).
+  return css.includes("</style") ? tag : `<style id="app-css" data-href="${href}">${css}</style>`;
 });
 
 // ── 3b. Render and inject ──────────────────────────────────────────────────
