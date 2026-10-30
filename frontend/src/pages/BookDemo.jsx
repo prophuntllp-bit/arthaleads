@@ -55,7 +55,7 @@ function nextDays() {
   return out;
 }
 
-const inputCls = "w-full rounded-2xl px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-[color:var(--site-brand)]";
+const inputCls = "w-full rounded-2xl px-4 py-3 text-sm outline-none transition-shadow focus:ring-2 focus:ring-[color:var(--site-brand)]";
 const inputStyle = { background: "var(--site-bg)", border: "1px solid var(--site-line-strong)", color: "var(--site-ink)" };
 
 function Field({ label, required, hint, children, htmlFor }) {
@@ -77,7 +77,7 @@ function Choice({ options, value, onChange, multi = false, name }) {
     <div role={multi ? "group" : "radiogroup"} aria-label={name} className="flex flex-wrap gap-2">
       {options.map((o) => (
         <button key={o} type="button" role={multi ? "checkbox" : "radio"} aria-checked={isOn(o)} onClick={() => toggle(o)}
-          className="rounded-full px-3.5 py-2 text-[13px] font-medium transition"
+          className="rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors"
           style={isOn(o)
             ? { background: "rgba(255,107,0,0.12)", color: "var(--site-brand-ink)", border: "1px solid var(--site-brand)" }
             : { background: "var(--site-bg)", color: "var(--site-text)", border: "1px solid var(--site-line-strong)" }}>
@@ -285,7 +285,7 @@ export default function BookDemo() {
                   {step > 0
                     ? <SiteButton variant="secondary" onClick={back}><ArrowLeft className="w-4 h-4" /> Back</SiteButton>
                     : <span className="text-[12px] site-muted">Takes about a minute</span>}
-                  <SiteButton type="submit" disabled={sending}>
+                  <SiteButton type="submit" disabled={sending} className="disabled:cursor-not-allowed">
                     {step < 2 ? <>Next <ArrowRight className="w-4 h-4" /></> : sending ? "Sending..." : <>Book my demo <ArrowRight className="w-4 h-4" /></>}
                   </SiteButton>
                 </div>
@@ -306,7 +306,7 @@ export default function BookDemo() {
       <Section tone="tint">
         <Container className="grid lg:grid-cols-[0.8fr_1.2fr] gap-8 lg:gap-14 items-center">
           <div className="min-w-0">
-            <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[28px] sm:text-[36px]">
+            <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[28px] sm:text-[36px]" style={{ textWrap: "balance" }}>
               What is Arthaleads? <span className="site-dim">Explained in 2 minutes.</span>
             </h2>
             <p className="mt-4 text-base sm:text-[17px] leading-relaxed max-w-lg">

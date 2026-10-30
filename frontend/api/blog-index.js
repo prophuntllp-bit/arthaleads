@@ -33,11 +33,11 @@ const articles = (n) => `${n} ${n === 1 ? "article" : "articles"}`;
 const icon = (name, paths, cls, extra = "") =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-${name} ${cls}"${extra} aria-hidden="true">${paths.map((d) => `<path d="${d}"></path>`).join("")}</svg>`;
 const chevron = () => icon("chevron-right", ["m9 18 6-6-6-6"], "w-3.5 h-3.5");
-const arrowRight = () => icon("arrow-right", ["M5 12h14", "m12 5 7 7-7 7"], "w-4 h-4");
+const arrowRight = () => icon("arrow-right", ["M5 12h14", "m12 5 7 7-7 7"], "w-4 h-4 transition-transform group-hover:translate-x-0.5");
 const arrowUpRight = () => icon("arrow-up-right", ["M7 7h10v10", "M7 17 17 7"], "w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5", ' style="color:var(--site-brand-ink)"');
 
 const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--site-brand)] focus-visible:outline-offset-2";
-const category = (p) => (p.category?.name ? `<span class="text-[11px] font-bold uppercase tracking-[0.14em] " style="color:var(--site-brand-ink)">${esc(p.category.name)}</span>` : "");
+const category = (p) => (p.category?.name ? `<span class="text-xs font-semibold " style="color:var(--site-brand-ink)">${esc(p.category.name)}</span>` : "");
 const fallback = `<div class="absolute inset-0 flex items-center justify-center" style="background:linear-gradient(135deg, rgba(255,107,0,0.16), rgba(255,170,0,0.05)), var(--site-chip)"><img src="/logo.png" alt="" aria-hidden="true" class="w-14 h-14 object-contain opacity-70"/></div>`;
 
 // SiteBlogCard
@@ -68,26 +68,26 @@ function featured(p) {
     + (p.excerpt ? `<p class="text-base leading-relaxed line-clamp-3">${esc(p.excerpt)}</p>` : "")
     + `</div><div class="flex items-center justify-between gap-4 mt-7 pt-5" style="border-top:1px solid var(--site-line)">`
     + `<span class="text-xs site-muted">${esc(date(p.publishedAt))} · ${p.readingTime || 1} min read</span>`
-    + `<span class="site-link text-sm transition-all group-hover:gap-2">Read the guide ${arrowRight()}</span></div></div></a>`;
+    + `<span class="site-link text-sm">Read the guide ${arrowRight()}</span></div></div></a>`;
 }
 
 // ListHead
-const listHead = (eyebrow, title, note) => `<div class="mb-7">${eyebrow ? `<p class="site-eyebrow !text-xs mb-2">${esc(eyebrow)}</p>` : ""}`
+const listHead = (title, note) => `<div class="mb-7">`
   + `<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-2"><h2 class="font-display site-ink font-extrabold tracking-[-0.02em] text-[26px] sm:text-[32px]">${esc(title)}</h2>`
   + `${note ? `<span class="text-sm site-muted">${esc(note)}</span>` : ""}</div></div>`;
 const grid = (ps) => `<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">${ps.map((p) => `<div class="h-full">${card(p)}</div>`).join("")}</div>`;
 
 function articlesHtml(posts, topic, totalAll) {
   if (topic) {
-    return `<div id="blog-all" class="scroll-mt-28">${listHead(null, `All ${topic.name} guides`, articles(posts.length))}${grid(posts.slice(0, PAGE_SIZE))}</div>`;
+    return `<div id="blog-all" class="scroll-mt-28">${listHead(`All ${topic.name} guides`, articles(posts.length))}${grid(posts.slice(0, PAGE_SIZE))}</div>`;
   }
   const [first, ...others] = posts;
   const recent = others.slice(0, 3);
   const rest = others.slice(3);
-  return `<div class="mb-14 lg:mb-16">${listHead("Featured", "The latest guide")}${featured(first)}</div>`
-    + (recent.length ? `<div class="mb-14 lg:mb-16"><p class="text-[11px] font-bold uppercase tracking-[0.14em] site-muted mb-5">Also recent</p>`
+  return `<div class="mb-14 lg:mb-16">${listHead("The latest guide")}${featured(first)}</div>`
+    + (recent.length ? `<div class="mb-14 lg:mb-16"><p class="text-sm font-semibold site-muted mb-5">Also recent</p>`
       + `<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">${recent.map(card).join("")}</div></div>` : "")
-    + (rest.length ? `<div id="blog-all" class="scroll-mt-28">${listHead("All guides", "Keep exploring", articles(totalAll))}${grid(rest.slice(0, PAGE_SIZE))}</div>` : "");
+    + (rest.length ? `<div id="blog-all" class="scroll-mt-28">${listHead("Keep exploring", articles(totalAll))}${grid(rest.slice(0, PAGE_SIZE))}</div>` : "");
 }
 
 const tab = (href, on, label, count) =>

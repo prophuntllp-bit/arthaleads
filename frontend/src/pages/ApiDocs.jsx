@@ -14,6 +14,12 @@ const METHOD_COLORS = {
   DELETE: "#ef4444",
 };
 
+// Method as small text on the page background (sidebar): theme tokens that pass 4.5:1 in light and dark.
+const METHOD_TEXT = {
+  GET:  "var(--site-green-ink)",
+  POST: "var(--site-brand-ink)",
+};
+
 const iconTile = { background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" };
 const inlineCode = "px-1.5 py-0.5 rounded-md text-[13px] font-mono site-chip";
 
@@ -252,7 +258,7 @@ export default function ApiDocs() {
                       color: activeId === e.id ? "var(--site-brand-ink)" : "var(--site-muted)",
                     }}
                   >
-                    <span className="font-bold w-9 shrink-0" style={{ color: METHOD_COLORS[e.method], fontSize: 10 }}>{e.method}</span>
+                    <span className="font-bold w-9 shrink-0" style={{ color: METHOD_TEXT[e.method] || METHOD_COLORS[e.method], fontSize: 10 }}>{e.method}</span>
                     {e.title}
                   </button>
                 </li>

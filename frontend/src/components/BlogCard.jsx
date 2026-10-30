@@ -20,7 +20,7 @@ export function blogTheme(isDark) {
     heading:   isDark ? "#ffffff" : "#111827",
     body:      isDark ? "rgba(255,255,255,0.62)" : "#5b6170",
     text:      isDark ? "rgba(255,255,255,0.82)" : "#374151",   // long-form reading text
-    muted:     isDark ? "rgba(255,255,255,0.42)" : "#6b7280",
+    muted:     isDark ? "rgba(255,255,255,0.5)" : "#6b7280",
     rule:      isDark ? "rgba(255,255,255,0.09)" : "#ece8e3",
     card:      isDark ? "rgba(255,255,255,0.035)" : "#ffffff",
     cardBorder:isDark ? "rgba(255,255,255,0.09)" : "#ebe5dd",
@@ -40,7 +40,7 @@ export function CoverFallback({ isDark }) {
 
 export function CategoryLabel({ post, className = "" }) {
   if (!post.category?.name) return null;
-  return <span className={`text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--brand-text)] ${className}`}>{post.category.name}</span>;
+  return <span className={`text-xs font-semibold text-[color:var(--brand-text)] ${className}`}>{post.category.name}</span>;
 }
 
 /** One article in the grid: cover, category + read time, title, summary, date and author. */
@@ -48,7 +48,7 @@ export default function BlogCard({ post, isDark, eager = false }) {
   const t = blogTheme(isDark);
   return (
     <Link to={`/blog/${post.slug}`}
-      className="group flex flex-col rounded-[26px] overflow-hidden border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ff6b00]"
+      className="group flex flex-col rounded-[26px] overflow-hidden border transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ff6b00]"
       style={{ background: t.card, borderColor: t.cardBorder }}>
       <div className="relative overflow-hidden" style={{ aspectRatio: "16 / 10" }}>
         {post.featuredImage ? (
@@ -86,7 +86,7 @@ export function FeaturedCard({ post, isDark }) {
       <div className="flex flex-col justify-between p-7 sm:p-10 lg:p-12 order-2 lg:order-1">
         <div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6">
-            <span className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--brand-text)]">Latest</span>
+            <span className="text-xs font-semibold text-[color:var(--brand-text)]">Latest</span>
             <CategoryLabel post={post} />
             <span className="text-xs" style={{ color: t.muted }}>· {post.readingTime || 1} min read</span>
           </div>
@@ -101,8 +101,8 @@ export function FeaturedCard({ post, isDark }) {
             <div className="text-sm font-semibold" style={{ color: t.heading }}>{authorOf(post)}</div>
             <div className="text-xs" style={{ color: t.muted }}>{fmtDate(post.publishedAt)}</div>
           </div>
-          <span className="inline-flex items-center gap-2 text-sm font-bold text-[color:var(--brand-text)] transition-all group-hover:gap-3">
-            Read the article <ArrowRight className="w-4 h-4" />
+          <span className="inline-flex items-center gap-2 text-sm font-bold text-[color:var(--brand-text)]">
+            Read the article <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </span>
         </div>
       </div>

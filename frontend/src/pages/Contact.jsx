@@ -25,7 +25,7 @@ const FAQ_JSONLD = JSON.stringify({
 }).replace(/</g, "\\u003c");
 
 const inputCls = "w-full rounded-2xl px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-[color:var(--site-brand)]";
-const inputStyle = { background: "var(--site-bg)", border: "1px solid var(--site-line-strong)", color: "var(--site-ink)" };
+const inputStyle = { background: "var(--site-bg)", border: "1px solid var(--site-field-line)", color: "var(--site-ink)" };
 const EMPTY = { name: "", email: "", phone: "", company: "", message: "" };
 
 const INFO = [
@@ -166,7 +166,7 @@ export default function Contact() {
                     className={`${inputCls} resize-none`} style={inputStyle} />
                 </div>
                 {error && <p className="text-sm text-center" style={{ color: "#dc2626" }} role="alert">{error}</p>}
-                <SiteButton type="submit" disabled={loading} className="w-full disabled:opacity-60">
+                <SiteButton type="submit" disabled={loading} className="w-full disabled:opacity-60 disabled:cursor-not-allowed">
                   {loading ? "Sending…" : <>Send message <ArrowRight className="w-4 h-4" /></>}
                 </SiteButton>
               </form>

@@ -23,7 +23,7 @@ const JOBS = [
     department: "Marketing",
     location: "Pune, Maharashtra",
     type: "Full-time",
-    experience: "1–3 years",
+    experience: "1 to 3 years",
     icon: Megaphone,
     tagline: "Drive our brand presence and lead-gen campaigns across digital channels.",
     about:
@@ -38,7 +38,7 @@ const JOBS = [
       "Monitor competitor activity and identify growth opportunities",
     ],
     requirements: [
-      "1–3 years of hands-on digital marketing experience (agency or in-house)",
+      "1 to 3 years of hands-on digital marketing experience (agency or in-house)",
       "Proficiency in Meta Ads Manager and Google Ads",
       "Working knowledge of Google Analytics 4 and Search Console",
       "Basic design skills: Canva, Figma, or Adobe Suite",
@@ -52,7 +52,7 @@ const JOBS = [
     department: "Sales",
     location: "Pune, Maharashtra",
     type: "Full-time",
-    experience: "1–3 years",
+    experience: "1 to 3 years",
     icon: Handshake,
     tagline: "Build relationships with real estate developers and channel partners across Maharashtra.",
     about:
@@ -67,7 +67,7 @@ const JOBS = [
       "Attend real estate expos, networking events, and developer meets",
     ],
     requirements: [
-      "1–3 years of B2B sales or business development experience",
+      "1 to 3 years of B2B sales or business development experience",
       "Excellent spoken and written communication in English, Hindi, and Marathi",
       "Strong interpersonal skills; you enjoy meeting people and building relationships",
       "Familiarity with real estate industry (developers, channel partners, RERA) is a big plus",
@@ -86,9 +86,9 @@ const PERKS = [
 
 const EXP_OPTIONS = [
   "Less than 1 year",
-  "1–2 years",
-  "2–3 years",
-  "3–5 years",
+  "1 to 2 years",
+  "2 to 3 years",
+  "3 to 5 years",
   "5+ years",
 ];
 
@@ -111,7 +111,7 @@ const CULTURE = [
 const iconTile = { background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" };
 const brandInk = { color: "var(--site-brand-ink)" };
 const inputCls = "w-full rounded-2xl px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-[color:var(--site-brand)]";
-const inputStyle = { background: "var(--site-bg)", border: "1px solid var(--site-line-strong)", color: "var(--site-ink)" };
+const inputStyle = { background: "var(--site-bg)", border: "1px solid var(--site-field-line)", color: "var(--site-ink)" };
 
 const MAX_RESUME_BYTES = 5 * 1024 * 1024; // 5 MB
 
@@ -237,7 +237,6 @@ function ApplyModal({ job, onClose }) {
               <Briefcase className="w-5 h-5" style={brandInk} aria-hidden="true" />
             </span>
             <div>
-              <p className="site-eyebrow !text-[11px] mb-0.5">Apply Now</p>
               <h2 id="apply-title" className="font-display text-base sm:text-lg font-bold site-ink leading-tight">{job.title}</h2>
             </div>
           </div>
@@ -387,7 +386,7 @@ function JobCard({ job, onApply }) {
               <Icon className="w-[22px] h-[22px]" style={brandInk} aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <p className="text-[12px] font-semibold uppercase tracking-[0.12em] mb-1.5">
+              <p className="text-[13px] font-semibold mb-1.5">
                 <span style={brandInk}>{job.department}</span>
                 <span className="site-muted"> · {job.type}</span>
               </p>
@@ -472,7 +471,7 @@ export default function Careers() {
   return (
     <SitePage>
       <PageHero
-        eyebrow="We're Actively Hiring"
+        eyebrow="We're actively hiring"
         title={<>Build the future of <span className="site-dim">real estate tech</span></>}
         lede="We're a small, fast-moving team building the CRM that powers property sales across Maharashtra. Join us before we get big."
         actions={
@@ -515,7 +514,7 @@ export default function Careers() {
       {/* Open positions */}
       <Section tone="white" id="open-positions">
         <Container narrow>
-          <SectionHeader eyebrow="2 Positions Open" title="Open Positions" align="center"
+          <SectionHeader eyebrow="2 positions open" title="Open Positions" align="center"
             lede="Click a role to see the full details, then hit Apply Now." />
           <div className="space-y-4">
             {JOBS.map((job, i) => (

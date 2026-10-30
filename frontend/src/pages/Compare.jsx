@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { waLink } from "../utils/crmLinks";
-import { Check, X, Search, ArrowRight } from "lucide-react";
+import { Check, X, Minus, Search, ArrowRight } from "lucide-react";
 import { SitePage, Section, Container, SectionHeader, Card } from "../components/site/Site";
 import { PageHero, FaqSection, ClosingCta } from "../components/site/Blocks";
 import { Reveal } from "../components/motion/Motion";
@@ -133,7 +133,8 @@ const GUIDE_JSONLD = JSON.stringify({
   "mainEntity": GUIDE_FAQS.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
 }).replace(/</g, "\\u003c");
 
-const PARTIAL = "#d97706";
+// --site-amber is proposed for styles.css (light #b45309, dark #fbbf24); until it lands the old amber shows.
+const PARTIAL = "var(--site-amber, #d97706)";
 const brandInk = { color: "var(--site-brand-ink)" };
 const COLS = "minmax(0,1.6fr) repeat(4, minmax(0,1fr))";
 
@@ -141,7 +142,7 @@ function Cell({ val }) {
   if (val === "y") return <span><Check aria-hidden="true" className="w-4 h-4 mx-auto" style={{ color: "#16a34a" }} /><span className="sr-only">Yes</span></span>;
   if (val === "e") return <span className="text-xs font-semibold" style={{ color: "var(--site-green)" }}>Enterprise</span>;
   if (val === "p") return <span className="text-xs font-semibold" style={{ color: PARTIAL }}>Partial</span>;
-  if (val === "u") return <span className="text-sm site-muted" title="Not stated on their website"><span aria-hidden="true">–</span><span className="sr-only">Not stated</span></span>;
+  if (val === "u") return <span className="site-muted" title="Not stated on their website"><Minus aria-hidden="true" className="w-4 h-4 mx-auto" /><span className="sr-only">Not stated</span></span>;
   return <span><X aria-hidden="true" className="w-4 h-4 mx-auto" style={{ color: "#ef4444" }} /><span className="sr-only">No</span></span>;
 }
 
@@ -205,7 +206,7 @@ export default function Compare() {
             <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search a feature"
               placeholder="Search a feature (e.g. WhatsApp, API, analytics)…"
               className="w-full pl-11 pr-4 py-3 rounded-2xl text-sm outline-none transition focus:ring-2 focus:ring-[color:var(--site-brand)]"
-              style={{ background: "var(--site-card)", border: "1px solid var(--site-line-strong)", color: "var(--site-ink)" }} />
+              style={{ background: "var(--site-card)", border: "1px solid var(--site-field-line)", color: "var(--site-ink)" }} />
           </div>
 
           {/* Below sm the five columns would crush into ~340px: scroll sideways instead. */}
@@ -213,7 +214,7 @@ export default function Compare() {
             <Card raised className="min-w-[560px] sm:min-w-0">
               <div className="grid sm:sticky site-sticky-top z-10 rounded-t-[20px]"
                 style={{ gridTemplateColumns: COLS, background: "var(--site-card)", borderBottom: "1px solid var(--site-line)" }}>
-                <div className="px-5 py-4 text-xs font-bold uppercase tracking-[0.12em] site-muted flex items-center">Feature</div>
+                <div className="px-5 py-4 text-xs font-semibold site-muted flex items-center">Feature</div>
                 {COMPETITORS.map((c, i) => (
                   <div key={c} className={`px-2 py-4 text-center text-[13px] font-display font-bold flex items-center justify-center ${i ? "site-ink" : ""}`}
                     style={i === 0 ? { ...brandInk, background: "rgba(255,107,0,0.07)" } : undefined}>{c}</div>
@@ -226,7 +227,7 @@ export default function Compare() {
 
               {filtered.map((cat, ci) => (
                 <div key={cat.name}>
-                  <div className="px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em]" style={{ ...brandInk, background: "rgba(255,107,0,0.05)", borderBottom: "1px solid var(--site-line)" }}>
+                  <div className="px-5 py-2.5 text-xs font-semibold" style={{ ...brandInk, background: "rgba(255,107,0,0.05)", borderBottom: "1px solid var(--site-line)" }}>
                     {cat.name}
                   </div>
                   {cat.rows.map(([label, vals], ri) => {
@@ -252,7 +253,7 @@ export default function Compare() {
             <span className="flex items-center gap-1.5"><Check className="w-4 h-4" style={{ color: "#16a34a" }} /> Full support</span>
             <span className="flex items-center gap-1.5"><span className="font-semibold" style={{ color: PARTIAL }}>Partial</span> Limited</span>
             <span className="flex items-center gap-1.5"><X className="w-4 h-4" style={{ color: "#ef4444" }} /> Not offered, per their website</span>
-            <span className="flex items-center gap-1.5"><span className="text-sm">–</span> Not stated on their website</span>
+            <span className="flex items-center gap-1.5"><Minus className="w-4 h-4" aria-hidden="true" /> Not stated on their website</span>
           </div>
           <p className="text-center text-xs mt-4 max-w-2xl mx-auto leading-relaxed site-muted">
             Each competitor is marked from its own website and help pages as checked on {CHECKED}:{" "}

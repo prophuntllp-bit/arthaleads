@@ -46,7 +46,7 @@ function PhoneVisual() {
         <Cycle items={["Riverview Heights campaign", "Skyline Residency campaign", "Green Acres campaign"]} offset={600}>{(c) => <span className="min-w-0 block"><span className="block text-[13px] font-semibold site-ink leading-tight">New lead · Facebook ad</span><span className="block text-[11px] site-muted leading-tight mt-0.5">{c}</span></span>}</Cycle>
       </FloatCard>
       <FloatCard index={1} className="hidden sm:flex -right-10 lg:-right-20 bottom-[14%] items-center gap-3 !py-3 max-w-[240px]">
-        <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(22,163,74,0.12)" }}><CalendarCheck2 className="w-[18px] h-[18px]" style={{ color: "#16a34a" }} /></span>
+        <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(22,163,74,0.12)" }}><CalendarCheck2 className="w-[18px] h-[18px]" style={{ color: "var(--site-green)" }} /></span>
         <Cycle items={["Saturday · 11:00 AM", "Sunday · 4:00 PM", "Monday · 10:30 AM"]} offset={2200}>{(v) => <span className="min-w-0 block"><span className="block text-[13px] font-semibold site-ink leading-tight">Site visit booked</span><span className="block text-[11px] site-muted leading-tight mt-0.5">{v}</span></span>}</Cycle>
       </FloatCard>
     </div>

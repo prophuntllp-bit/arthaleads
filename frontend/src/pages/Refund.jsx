@@ -56,7 +56,7 @@ function RefundChecker() {
             : <XCircle style={{ width: 20, height: 20, color: "#ef4444", flexShrink: 0 }} />}
           <span style={{ fontSize: 13, color: isDark ? "rgba(255,255,255,0.85)" : "#374151", lineHeight: 1.5 }}>
             {result.eligible
-              ? `You're within the 7-day window (${result.days} day${result.days !== 1 ? "s" : ""} ago). You're eligible for a full refund — contact us to process it.`
+              ? `You're within the 7-day window (${result.days} day${result.days !== 1 ? "s" : ""} ago). You're eligible for a full refund. Contact us to process it.`
               : `It's been ${result.days} days since payment, which is past the 7-day window. A refund isn't available, but you can cancel anytime to stop future billing.`}
           </span>
         </div>

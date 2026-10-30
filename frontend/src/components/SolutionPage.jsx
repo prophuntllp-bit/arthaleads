@@ -58,7 +58,7 @@ export default function SolutionPage({ hero, answer, steps, features, compare, f
                 <Card glow className="h-full p-6">
                   <span className="font-display w-10 h-10 rounded-full flex items-center justify-center text-base font-extrabold text-white mb-5"
                     style={{ background: "var(--brand-btn)", boxShadow: "0 12px 26px -12px rgba(204,75,0,0.7)" }}>{i + 1}</span>
-                  <h3 className="font-display text-lg font-bold site-ink mb-2">{s.title}</h3>
+                  <h3 className="font-display text-lg font-bold site-ink mb-2" style={{ textWrap: "balance" }}>{s.title}</h3>
                   <p className="text-[15px] leading-relaxed">{s.body}</p>
                 </Card>
               </Reveal>
@@ -84,11 +84,11 @@ export default function SolutionPage({ hero, answer, steps, features, compare, f
                     <span className={`site-icon rounded-xl flex items-center justify-center ${first ? "w-14 h-14 mb-7" : "w-11 h-11 mb-5"}`} style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
                       <Icon className={first ? "w-7 h-7" : "w-5 h-5"} style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                     </span>
-                    <h3 className={`font-display font-bold site-ink mb-2 ${first ? "text-2xl sm:text-[28px] leading-tight tracking-[-0.02em]" : "text-base"}`}>{title}</h3>
-                    <p className={`leading-relaxed ${first && features.visual ? "" : "flex-1"} ${first ? "text-base sm:text-[17px] max-w-md" : "text-[14px]"}`}>{body}</p>
+                    <h3 className={`font-display font-bold site-ink mb-2 ${first ? "text-2xl sm:text-[28px] leading-tight tracking-[-0.02em]" : "text-base"}`} style={{ textWrap: "balance" }}>{title}</h3>
+                    <p className={`leading-relaxed ${first && features.visual ? "" : "flex-1"} ${first ? "site-ink text-base sm:text-[17px] max-w-md" : "text-[14px]"}`}>{body}</p>
                     {first && features.visual && <div className="mt-6 flex-1 flex flex-col justify-center">{features.visual}</div>}
                     <span className="mt-5 self-start text-[11px] font-semibold rounded-md px-2 py-1"
-                      style={plan === "all" ? { background: "rgba(22,163,74,0.12)", color: "#16a34a" } : { background: "rgba(255,107,0,0.12)", color: "var(--site-brand-ink)" }}>
+                      style={plan === "all" ? { background: "linear-gradient(rgba(22,163,74,0.12), rgba(22,163,74,0.12)), var(--site-card)", color: "var(--site-green-ink)" } : { background: "linear-gradient(rgba(255,107,0,0.12), rgba(255,107,0,0.12)), var(--site-card)", color: "var(--site-brand-ink)" }}>
                       {planLabel(plan)}
                     </span>
                   </Card>
@@ -109,7 +109,7 @@ export default function SolutionPage({ hero, answer, steps, features, compare, f
               <Card key={row} className="p-4">
                 <h3 className="font-display font-bold site-ink mb-2">{row}</h3>
                 <p className="flex gap-2 text-sm mb-1.5"><Minus className="w-4 h-4 mt-0.5 shrink-0 site-muted" aria-hidden="true" /><span><span className="font-medium site-ink">{compare.cols[0]}:</span> {left}</span></p>
-                <p className="flex gap-2 text-sm"><Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#16a34a" }} aria-hidden="true" /><span><span className="font-medium site-ink">{compare.cols[1]}:</span> {right}</span></p>
+                <p className="flex gap-2 text-sm"><Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "var(--site-green)" }} aria-hidden="true" /><span><span className="font-medium site-ink">{compare.cols[1]}:</span> {right}</span></p>
               </Card>
             ))}
           </div>
@@ -128,7 +128,7 @@ export default function SolutionPage({ hero, answer, steps, features, compare, f
                     <tr key={row} style={i < compare.rows.length - 1 ? { borderBottom: "1px solid var(--site-line)" } : undefined}>
                       <th scope="row" className="text-left font-semibold p-4 align-top site-ink">{row}</th>
                       <td className="p-4 align-top"><span className="inline-flex gap-2"><Minus className="w-4 h-4 mt-0.5 shrink-0 site-muted" aria-hidden="true" />{left}</span></td>
-                      <td className="p-4 align-top site-ink" style={{ background: "rgba(255,107,0,0.04)" }}><span className="inline-flex gap-2"><Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#16a34a" }} aria-hidden="true" />{right}</span></td>
+                      <td className="p-4 align-top site-ink" style={{ background: "rgba(255,107,0,0.04)" }}><span className="inline-flex gap-2"><Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "var(--site-green)" }} aria-hidden="true" />{right}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -148,7 +148,7 @@ export default function SolutionPage({ hero, answer, steps, features, compare, f
             {related.map((r, i) => (
               <span key={r.to}>
                 <Link to={r.to} className="font-semibold underline underline-offset-4" style={{ color: "var(--site-brand-ink)" }}>{r.label}</Link>
-                {i < related.length - 1 ? <span className="site-muted"> · </span> : null}
+                {i < related.length - 1 ? <span className="site-muted">, </span> : null}
               </span>
             ))}
           </p>

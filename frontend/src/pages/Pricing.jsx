@@ -125,8 +125,8 @@ export default function Pricing() {
                     <span className="text-sm site-muted">/ {billing === "annual" ? "year" : "month"} + GST</span>
                   </p>
                   <p className="text-xs site-muted mt-1">
-                    {estimate.seats} seats{members < estimate.seats ? ` (minimum ${estimate.seats})` : ""} · {formatINR(estimate.total)} including 18% GST
-                    {billing === "annual" ? ` · works out to ${formatINR(estimate.perMonth)} a month` : ""}
+                    {estimate.seats} seats{members < estimate.seats ? ` (minimum ${estimate.seats})` : ""}, {formatINR(estimate.total)} including 18% GST
+                    {billing === "annual" ? `, works out to ${formatINR(estimate.perMonth)} a month` : ""}
                   </p>
                 </>
               ) : (
@@ -139,7 +139,7 @@ export default function Pricing() {
             <div role="radiogroup" aria-label="Billing period" className="inline-flex p-1 rounded-xl self-start sm:self-end" style={{ background: "var(--site-chip)" }}>
               {[["monthly", "Monthly"], ["annual", "Annual · 2 months free"]].map(([id, label]) => (
                 <button key={id} type="button" role="radio" aria-checked={billing === id} onClick={() => setBilling(id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${billing === id ? "site-ink" : "site-muted"}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-[background-color,color,box-shadow] duration-200 ${billing === id ? "site-ink" : "site-muted"}`}
                   style={billing === id ? { background: "var(--site-card)", boxShadow: "var(--site-shadow-sm)" } : undefined}>
                   {label}
                 </button>
@@ -202,7 +202,7 @@ export default function Pricing() {
                     <div className="flex flex-col gap-5 flex-1 mb-7">
                       {plan.groups.map((group) => (
                         <div key={group.label}>
-                          <p className="text-[11px] font-bold uppercase tracking-[0.12em] site-muted mb-2.5">{group.label}</p>
+                          <p className="text-xs font-semibold site-muted mb-2.5">{group.label}</p>
                           <ul className="space-y-2">
                             {group.items.map((item) => (
                               <li key={item} className="flex items-start gap-2.5 text-[13.5px] leading-relaxed">

@@ -19,7 +19,7 @@ import { SiteBlogCard, PostCategory } from "./PublicBlog";
 const SITE = "https://www.arthaleads.com";
 
 const inputCls = "w-full rounded-2xl px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-[color:var(--site-brand)]";
-const inputStyle = { background: "var(--site-bg)", border: "1px solid var(--site-line-strong)", color: "var(--site-ink)" };
+const inputStyle = { background: "var(--site-bg)", border: "1px solid var(--site-field-line)", color: "var(--site-ink)" };
 const iconTile = { background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" };
 
 // ── SEO meta helper ────────────────────────────────────────────────────────────
@@ -556,8 +556,8 @@ function BlogPostInner({ initial }) {
             )}
 
             <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
-              <Link to="/blog" className="site-link text-sm hover:gap-2 transition-all">
-                <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Back to all articles
+              <Link to="/blog" className="group site-link text-sm">
+                <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" aria-hidden="true" /> Back to all articles
               </Link>
               <div className="flex flex-wrap gap-2.5">
                 <SiteButton to="/book-demo">Book a Demo <ArrowRight className="w-4 h-4" /></SiteButton>

@@ -18,7 +18,7 @@ const STEPS = [
   { icon: Share2,   title: "Share your link",  desc: "Send your unique referral link to other real estate teams, brokers, or channel partners." },
   { icon: UserPlus, title: "They sign up",     desc: "When they create an Arthaleads account using your link, we tag them as your referral." },
   { icon: CreditCard, title: "They subscribe", desc: "Once they upgrade to any paid plan and complete their first payment, the reward unlocks." },
-  { icon: Gift,     title: "You both earn",    desc: "You get 1 free month added to your plan — and they get 1 free month too. Everybody wins." },
+  { icon: Gift,     title: "You both earn",    desc: "You get 1 free month added to your plan, and they get 1 free month too. Everybody wins." },
 ];
 
 const TERMS = [
@@ -53,11 +53,11 @@ function ReferralBox() {
   };
 
   const shareWhatsApp = () => {
-    const msg = encodeURIComponent(`I use Arthaleads to manage my real estate leads — it's brilliant. Sign up with my link and we both get a free month: ${link}`);
+    const msg = encodeURIComponent(`I use Arthaleads to manage my real estate leads. It's brilliant. Sign up with my link and we both get a free month: ${link}`);
     window.open(`https://wa.me/?text=${msg}`, "_blank");
   };
   const shareEmail = () => {
-    const subject = encodeURIComponent("Try Arthaleads CRM — we both get a free month");
+    const subject = encodeURIComponent("Try Arthaleads CRM: we both get a free month");
     const body = encodeURIComponent(`Hi,\n\nI use Arthaleads to manage my real estate leads and thought you'd find it useful. Sign up with my link and we both get a free month:\n\n${link}\n\nCheers,\n${user?.name || ""}`);
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
@@ -94,7 +94,7 @@ function ReferralBox() {
           style={{ background: "var(--site-bg)", border: "1px solid var(--site-line-strong)", color: "var(--site-ink)" }}>
           <span className="truncate">{link}</span>
         </div>
-        <SiteButton onClick={copy} className="shrink-0" style={copied ? { background: "#16a34a" } : undefined}>
+        <SiteButton onClick={copy} className="shrink-0" style={copied ? { background: "#15803d" } : undefined}>
           {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
           {copied ? "Copied" : "Copy"}
         </SiteButton>
@@ -141,7 +141,7 @@ function EarningsCalculator() {
         <p className="font-display text-[30px] sm:text-[32px] font-extrabold leading-tight"><span className="site-dim">{capped} free month{capped !== 1 ? "s" : ""}</span></p>
         {months > 6 && (
           <p className="text-xs site-muted mt-1.5">
-            (Capped at 6 free months per year — but keep referring, it resets annually!)
+            (Capped at 6 free months per year, but keep referring: it resets annually!)
           </p>
         )}
       </div>
