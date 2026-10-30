@@ -339,7 +339,7 @@ export default async function handler(req, res) {
     if (keywords.length) html = setTag(html, /<meta name="keywords"[^>]*>/, `<meta name="keywords" content="${esc(keywords.join(", "))}" />`);
     // Structured data in the source too; the app replaces it (same id) once it loads.
     // Every "<" is escaped so a title can never close the script tag early.
-    const words = stripTags((post.blocks || []).map((b) => b.content || "").join(" ")).split(/\s+/).filter(Boolean).length;
+    const words = stripTags(bodyHtml(post.blocks)).split(/\s+/).filter(Boolean).length;   // lists and tables included
     const ld = articleLd(post, { url: `${SITE}/blog/${post.slug}`, desc, image, words });
     html = html.replace("</head>", () => `    <script type="application/ld+json" id="blog-jsonld">${JSON.stringify(ld).replace(/</g, "\u005Cu003c")}</script>\n  </head>`);
     // Breadcrumb too, built exactly like PublicBlogPost's (same id, so the app replaces it).
