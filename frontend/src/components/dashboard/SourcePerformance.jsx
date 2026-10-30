@@ -5,7 +5,7 @@ import { InfoTip } from "../Tooltip";
 // range. The donut answers "how many from where"; this answers "and are they
 // any good". Rows open the Leads page filtered to that source.
 function Pct({ part, whole }) {
-  if (!whole) return <span className="text-app-soft">-</span>;
+  if (!whole) return <span className="text-app-soft">—</span>;
   const pct = Math.round((part / whole) * 100);
   return (
     <span className="inline-flex items-center justify-end gap-2">

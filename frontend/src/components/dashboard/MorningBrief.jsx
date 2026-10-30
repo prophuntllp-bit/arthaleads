@@ -36,6 +36,20 @@ const COUNTS = [
   { key: "fresh", label: "new, not contacted" },
 ];
 
+// Below 640px the WhatsApp button shows its icon only, so the lead's name
+// has room (font-size 0 hides the "WhatsApp" text node and the chevron is
+// hidden; the text stays in the DOM, so screen readers still read it).
+const ICON_ONLY_BELOW_SM = "max-sm:[&_button]:text-[0px] max-sm:[&_button]:gap-0 max-sm:[&_button]:px-2 max-sm:[&_button]:py-2 max-sm:[&_button>svg:last-child:not(:first-child)]:hidden";
+
+// "Team today" columns (managers see one row per person).
+const TEAM_COLS = [
+  { key: "atRisk",  label: "At risk",            short: "at risk",            color: "#dc2626" },
+  { key: "overdue", label: "Missed follow-ups",  short: "missed follow-ups",  color: "#dc2626" },
+  { key: "fresh",   label: "New, not contacted", short: "new, not contacted", color: "#ea580c" },
+  { key: "today",   label: "Due today",          short: "due today" },
+  { key: "visits",  label: "Site visits",        short: "site visits" },
+];
+
 const hideKey = (date) => `al.brief.hidden.${date}`;
 const CACHE_KEY = "al.brief.last";   // sessionStorage: the last brief, shown instantly
 const ON_KEY = "al.brief.on";        // localStorage: this person gets a brief (show a placeholder)
@@ -113,16 +127,14 @@ export default function MorningBrief() {
     <section className="card p-4 sm:p-5" aria-label="Your day">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="stitch-kicker mb-1">Artha · {dateLabel}</p>
           <h3 className="flex items-center gap-1.5 text-base font-bold text-app">
             {nothing ? "Nothing urgent today" : "Your day: who to call first"}
             <InfoTip text="Worked out from your follow-ups, site visits, unread WhatsApp chats and new leads. 'Needs attention' flags deals slipping: hot leads gone quiet, visits with no follow-up or not updated, new leads waiting, and WhatsApp chats about to lose the reply window. Updates when your leads change." />
           </h3>
-          {counts.length > 0 && (
-            <p className="mt-1 text-xs text-app-soft">
-              {counts.map((c, i) => <span key={c.key}>{i > 0 && " · "}<b className="text-app">{brief.counts[c.key]}</b> {c.label}</span>)}
-            </p>
-          )}
+          <p className="mt-1 text-xs text-app-soft">
+            {dateLabel}
+            {counts.map((c) => <span key={c.key}>{" · "}<b className="text-app">{brief.counts[c.key]}</b> {c.label}</span>)}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {!nothing && (
@@ -170,7 +182,7 @@ export default function MorningBrief() {
                       <span className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ border: "1px solid var(--app-border)" }}>
                         <PhoneActions compact phone={it.phone} lead={{ _id: it.id, name: it.name }} />
                       </span>
-                      <WhatsAppLink phone={it.phone} name={it.name} leadId={it.id} />
+                      <span className={ICON_ONLY_BELOW_SM}><WhatsAppLink phone={it.phone} name={it.name} leadId={it.id} /></span>
                     </span>
                   )}
                 </li>
@@ -201,7 +213,7 @@ export default function MorningBrief() {
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ border: "1px solid var(--app-border)" }}>
                       <PhoneActions compact phone={it.phone} {...(it.kind === "projectLead" ? { projectLead: { _id: it.id, name: it.name, projectId: it.projectId } } : { lead: { _id: it.id, name: it.name } })} />
                     </span>
-                    <WhatsAppLink phone={it.phone} name={it.name} leadId={it.id} projectId={it.kind === "projectLead" ? it.projectId : undefined} />
+                    <span className={ICON_ONLY_BELOW_SM}><WhatsAppLink phone={it.phone} name={it.name} leadId={it.id} projectId={it.kind === "projectLead" ? it.projectId : undefined} /></span>
                   </span>
                 )}
               </li>
@@ -218,27 +230,42 @@ export default function MorningBrief() {
       {!collapsed && (brief.team || []).length > 0 && (
         <div className="mt-4">
           <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-app-soft"><Users className="h-3.5 w-3.5" /> Team today</p>
-          <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid var(--app-border)" }}>
+          {/* Phones: one block per person, only the numbers that are not zero. */}
+          <ul className="space-y-2 sm:hidden">
+            {brief.team.map((r) => {
+              const cells = TEAM_COLS.filter((c) => (r[c.key] || 0) > 0);
+              return (
+                <li key={r.id} className="rounded-xl px-3 py-2.5" style={{ border: "1px solid var(--app-border)" }}>
+                  <p className="truncate text-sm font-semibold text-app">{r.name}</p>
+                  {cells.length === 0 ? (
+                    <p className="mt-0.5 text-[11px] text-app-soft">Nothing pending</p>
+                  ) : (
+                    <p className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-app-soft">
+                      {cells.map((c) => (
+                        <span key={c.key}><b className="tabular-nums" style={{ color: c.color || "var(--app-text)" }}>{r[c.key]}</b> {c.short}</span>
+                      ))}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <div className="hidden overflow-x-auto rounded-xl sm:block" style={{ border: "1px solid var(--app-border)" }}>
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-left text-app-soft" style={{ background: "var(--app-surface-low)" }}>
                   <th className="px-3 py-2 font-semibold">Person</th>
-                  <th className="px-3 py-2 font-semibold text-right">At risk</th>
-                  <th className="px-3 py-2 font-semibold text-right">Missed follow-ups</th>
-                  <th className="px-3 py-2 font-semibold text-right">New, not contacted</th>
-                  <th className="px-3 py-2 font-semibold text-right">Due today</th>
-                  <th className="px-3 py-2 font-semibold text-right">Site visits</th>
+                  {TEAM_COLS.map((c) => <th key={c.key} className="px-3 py-2 font-semibold text-right">{c.label}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {brief.team.map((r) => (
                   <tr key={r.id} style={{ borderTop: "1px solid var(--app-border)" }}>
                     <td className="px-3 py-2 font-semibold text-app">{r.name}</td>
-                    <td className="px-3 py-2 text-right tabular-nums font-semibold" style={{ color: r.atRisk ? "#dc2626" : undefined }}>{r.atRisk || 0}</td>
-                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: r.overdue ? "#dc2626" : undefined }}>{r.overdue}</td>
-                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: r.fresh ? "#ea580c" : undefined }}>{r.fresh}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-app">{r.today}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-app">{r.visits}</td>
+                    {TEAM_COLS.map((c) => (
+                      <td key={c.key} className={`px-3 py-2 text-right tabular-nums ${c.key === "atRisk" ? "font-semibold" : ""} ${r[c.key] && c.color ? "" : "text-app"}`}
+                        style={{ color: r[c.key] && c.color ? c.color : undefined }}>{r[c.key] || 0}</td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
