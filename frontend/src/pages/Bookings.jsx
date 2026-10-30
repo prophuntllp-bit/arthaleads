@@ -164,7 +164,7 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4"
       style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}>
       <div className="w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden"
-        style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
+        style={{ background: "var(--app-modal-bg)", border: "1px solid var(--app-border)" }}>
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--app-border)" }}>
           <h2 className="text-base font-bold text-app">{editing ? "Edit Booking" : "New Booking"}</h2>
           <button onClick={onClose} className="text-app-soft hover:text-app cursor-pointer"><X className="h-5 w-5" /></button>

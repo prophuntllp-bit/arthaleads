@@ -619,7 +619,7 @@ export default function DumpLeads() {
       {showBulkConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !bulkDeleting && setShowBulkConfirm(false)} />
-          <div className="relative w-full max-w-sm rounded-2xl p-6 space-y-4" style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
+          <div className="relative w-full max-w-sm rounded-2xl p-6 space-y-4" style={{ background: "var(--app-modal-bg)", border: "1px solid var(--app-border)" }}>
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10">
                 <Trash2 className="h-5 w-5 text-red-500" />
