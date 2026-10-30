@@ -1023,7 +1023,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                 <p className="text-sm font-semibold text-app">No messages yet</p>
               </div>
             ) : (
-              <div className="rounded-[1.25rem] p-4 space-y-1 stitch-surface-muted" style={{ maxHeight: 480, overflowY: "auto" }}>
+              <div className="wa-thread rounded-[1.25rem] p-4 space-y-1" style={{ maxHeight: 480, overflowY: "auto", border: "1px solid var(--app-border)" }}>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-3 flex items-center gap-1.5">
                   <AlertCircle className="w-3 h-3 opacity-60" /> Read-only — for context before you call. Reply from WhatsApp.
                 </p>
