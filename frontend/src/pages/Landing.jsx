@@ -332,7 +332,7 @@ function HowItWorks() {
               <Card glow className="h-full p-3 flex flex-col">
                 <Viz />
                 <div className="px-3 pt-5 pb-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] site-muted mb-1.5">Step {i + 1}</p>
+                  <p className="text-[13px] font-semibold site-muted mb-1.5">Step {i + 1}</p>
                   <h3 className="font-display text-lg font-bold site-ink mb-1.5">{title}</h3>
                   <p className="text-[15px] leading-relaxed">{body}</p>
                 </div>

@@ -100,7 +100,7 @@ export default function PublicFooter() {
               {PHONE_DISPLAY}
             </a>
 
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] mt-4 md:mt-7 mb-2.5 md:mb-3" style={{ color: heading }}>
+            <p className="text-[13px] font-semibold mt-4 md:mt-7 mb-2.5 md:mb-3" style={{ color: heading }}>
               Follow Arthaleads
             </p>
             <div className="flex flex-wrap gap-2.5">

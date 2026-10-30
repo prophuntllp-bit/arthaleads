@@ -165,9 +165,8 @@ function DropdownPanel({ open, items, onClose, isDark, width = 268 }) {
                 </span>
                 {l.badge && (
                   <span style={{
-                    fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 20,
+                    fontSize: 11, fontWeight: 700, padding: "2px 6px", borderRadius: 20,
                     background: "rgba(255,107,0,0.12)", color: "var(--brand-text)",
-                    textTransform: "uppercase", letterSpacing: "0.06em",
                   }}>
                     {l.badge}
                   </span>
