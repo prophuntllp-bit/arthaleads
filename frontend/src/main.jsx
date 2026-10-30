@@ -168,29 +168,25 @@ ReactDOM.createRoot(rootEl).render(
   </React.StrictMode>
 );
 
-// Fade out splash only after BOTH conditions are met:
-//  1. React has painted its first frame (double rAF)
-//  2. At least 1.8s has passed so the animation is actually visible
+// Fade out splash once React has painted its first frame (double rAF) and the
+// routed page has content (below).
 const reactReady = new Promise((resolve) => {
   requestAnimationFrame(() => requestAnimationFrame(resolve));
   // Hidden tabs and some crawlers never run animation frames; don't let the
-  // splash cover the marketing site forever because of that.
-  if (!isAppHost()) setTimeout(resolve, 400);
+  // splash cover the page forever because of that.
+  setTimeout(resolve, 400);
 });
-// The marketing site skips the 1.8s minimum: visitors (and Google's page-speed
-// measurement) should see the page the moment it has content. It waits only
-// until the routed page has painted a heading or nav, capped at 1.5s.
-const isCrmHost = isAppHost();
-const minDisplay = isCrmHost
-  ? new Promise((resolve) => setTimeout(resolve, 1800))
-  : new Promise((resolve) => {
-      const started = Date.now();
-      const check = () => {
-        if (document.querySelector("#root h1, #root nav") || Date.now() - started > 1500) resolve();
-        else setTimeout(check, 40);
-      };
-      check();
-    });
+// No fixed minimum (the CRM used to hold it for 1.8 s on every load and
+// refresh, owner 30 Oct 2026): the splash waits only until the routed page has
+// painted a heading or nav, capped at 1.5s, on the CRM and the website alike.
+const minDisplay = new Promise((resolve) => {
+  const started = Date.now();
+  const check = () => {
+    if (document.querySelector("#root h1, #root nav") || Date.now() - started > 1500) resolve();
+    else setTimeout(check, 40);
+  };
+  check();
+});
 
 Promise.all([reactReady, minDisplay]).then(() => {
   const splash = document.getElementById("app-splash");
