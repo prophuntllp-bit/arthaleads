@@ -1,4 +1,5 @@
-// pages/Compare.jsx - /compare, the buyer's guide and feature comparison, on
+// pages/Compare.jsx - /compare, the Arthaleads / Sell.Do / Leadrat / Kylas comparison
+// (retitled 30 Oct 2026: the 'best real estate CRM' query belongs to the five-CRM blog post), on
 // the shared marketing theme (components/site/*).
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
@@ -133,7 +134,7 @@ const GUIDE_JSONLD = JSON.stringify({
   "mainEntity": GUIDE_FAQS.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
 }).replace(/</g, "\\u003c");
 
-// --site-amber is proposed for styles.css (light #b45309, dark #fbbf24); until it lands the old amber shows.
+// --site-amber lives in styles.css (light #b45309, dark #fbbf24); the fallback is the old amber.
 const PARTIAL = "var(--site-amber, #d97706)";
 const brandInk = { color: "var(--site-brand-ink)" };
 const COLS = "minmax(0,1.6fr) repeat(4, minmax(0,1fr))";
@@ -150,8 +151,8 @@ export default function Compare() {
   const [query, setQuery] = useState("");
 
   useSEO({
-    title:       "Best Real Estate CRM in India: Buyer's Guide & Comparison",
-    description: "Compare Arthaleads, Sell.Do, Leadrat and Kylas on features, pricing and free trials, with a buyer's guide to choosing a real estate CRM in India.",
+    title:       "Arthaleads vs Sell.Do, Leadrat and Kylas: CRM Comparison",
+    description: "Arthaleads, Sell.Do, Leadrat and Kylas side by side: features, pricing and free trials, and which real estate CRM suits which team in India.",
     canonical:   "https://www.arthaleads.com/compare",
   });
 
@@ -168,9 +169,9 @@ export default function Compare() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: GUIDE_JSONLD }} />
 
       <PageHero
-        eyebrow="Buyer's guide"
-        title={<>Choosing the best real estate CRM <span className="site-dim">in India</span></>}
-        lede="An honest buyer's guide: who each CRM suits, what it costs, and a feature-by-feature comparison of Arthaleads, Sell.Do, Leadrat and Kylas, sourced from their own websites."
+        eyebrow="Real estate CRM comparison"
+        title={<>Arthaleads, Sell.Do, Leadrat and Kylas <span className="site-dim">compared</span></>}
+        lede="Who each CRM suits, what it costs, and a feature-by-feature comparison of Arthaleads, Sell.Do, Leadrat and Kylas, sourced from their own websites."
         actions={[
           { label: "See the comparison", href: "#feature-table" },
           { label: "Book a Demo", to: "/book-demo" },
