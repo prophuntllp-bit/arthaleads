@@ -151,13 +151,6 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
 
   return (
     <Modal open={open} onClose={onClose} title={lead ? "Edit Lead" : "Add Lead"} size="xl">
-      <div className="mb-6 rounded-[1.5rem] p-4 stitch-surface-muted">
-        <p className="stitch-kicker mb-2">Lead Editor</p>
-        <p className="text-sm text-app-soft">
-          Capture property interest, source quality, assignment, and follow-up details in one premium workspace.
-        </p>
-      </div>
-
       <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FormField label="Name">
           <input className="input" value={form.name} onChange={setValue("name")} required />
@@ -167,7 +160,7 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
         </FormField>
         {duplicate && (
           <div className="md:col-span-2 -mt-2 rounded-xl px-4 py-2 text-sm" style={{ background: "rgba(234,88,12,0.1)", color: "#c2410c" }}>
-            ⚠️ A lead with this phone number already exists — <strong>{duplicate.name}</strong> ({duplicate.status}, {duplicate.source}), added {new Date(duplicate.createdAt).toLocaleDateString()}. You can still save this as a new lead if needed.
+            ⚠️ A lead with this phone number already exists — <strong>{duplicate.name}</strong> ({duplicate.status}, {duplicate.source}), added {new Date(duplicate.createdAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" })}. You can still save this as a new lead if needed.
           </div>
         )}
         <FormField label="Email">

@@ -8,7 +8,8 @@ import useAppRefresh from "../hooks/useAppRefresh";
 import ArthaSuggestCard from "./ArthaSuggestCard";
 import VistrowVoicePanel, { useVistrowCall } from "./VistrowVoicePanel";
 import fetchLeadToOpen from "../utils/fetchLeadToOpen";
-import { ConfirmDialog, Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
+import { ConfirmDialog, Modal, PriorityBadge, Spinner, PhoneActions, WhatsAppLink, toWaNumber, isAiCallStatus } from "./UI";
+import { SoftSourceBadge, EmptyValue, isBlank } from "./leads/LeadBits";
 import { useSoftPhone } from "../context/SoftPhoneContext";
 import CustomSelect from "./CustomSelect";
 import CopyButton from "./CopyButton";
@@ -103,12 +104,21 @@ const cleanRequirements = (text) => {
   return text.split("\n").filter(l => !/^Field\s+[a-f0-9]{5,}\s*:/i.test(l.trim())).join("\n").trim();
 };
 
-function Info({ label, value }) {
+// A compact label / value list, two columns on wider screens. Rows marked
+// `wide` (long notes) take the full width. An empty value shows "—".
+function DetailList({ items }) {
   return (
-    <div className="rounded-[1.35rem] p-4 stitch-surface-muted">
-      <p className="stitch-kicker mb-2">{label}</p>
-      <p className="text-sm font-medium text-app">{value}</p>
-    </div>
+    <dl className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
+      {items.map((item, i) => (
+        <div key={`${item.label}-${i}`} className={`flex gap-3 border-b py-2.5 ${item.wide ? "sm:col-span-2" : ""}`}
+          style={{ borderColor: "var(--app-border)" }}>
+          <dt className="w-36 shrink-0 text-xs leading-5 text-app-soft">{item.label}</dt>
+          <dd className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm leading-5 text-app">
+            {isBlank(item.value) ? <EmptyValue /> : item.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -231,6 +241,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   const [waMessages, setWaMessages] = useState(null);
   const [waConversation, setWaConversation] = useState(null);
   const [waLoading, setWaLoading] = useState(false);
+  // Info tab: empty fields stay folded away until asked for.
+  const [showEmpty, setShowEmpty] = useState(false);
 
   const handleRetryFacebook = async () => {
     setRetrying(true);
@@ -256,6 +268,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     setNote("");
     setWaMessages(null);
     setWaConversation(null);
+    setShowEmpty(false);
   }, [lead?._id, open]);
 
   // Artha (or a background sync) changed data while this window is open:
@@ -487,7 +500,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                 <h3 className="text-2xl font-black tracking-tight text-app">{lead.name}</h3>
                 <CopyButton value={[lead.name, lead.phone].filter(Boolean).join("\n")} label="Copy name and number" done="Name and number copied" />
               </div>
-              <div className="mt-1 flex flex-wrap items-center gap-3">
+              {lead.email && <p className="mt-0.5 text-sm text-app-soft break-all">{lead.email}</p>}
+              <div className="mt-2 flex flex-wrap items-center gap-3">
                 <PhoneActions phone={lead.phone} />
                 <WhatsAppLink phone={lead.phone} name={lead.name} leadId={!isProjectLead ? lead._id : undefined} />
                 {lead.phone && (
@@ -563,7 +577,6 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                     {b.label}
                   </button>
                 ))}
-                {lead.email && <span className="text-sm text-app-soft">{lead.email}</span>}
               </div>
               {aiDraft !== null && (
                 <div className="mt-3 rounded-xl p-3" style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.2)" }}>
@@ -600,15 +613,31 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                 </div>
               )}
             </div>
-            <div className="flex flex-wrap items-start gap-2">
-              <SourceBadge source={lead.source} />
-              <PriorityBadge priority={lead.priority} />
-              <StatusBadge status={lead.status} lead={lead} />
+            <div className="flex flex-wrap items-center gap-2">
+              {/* The one status control for this lead (it used to show twice:
+                  a pill here and a dropdown by the tabs). */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-app-soft">Status</span>
+                <CustomSelect
+                  value={status}
+                  onChange={handleStatus}
+                  options={STATUS_OPTIONS}
+                  style={{ minWidth: 150, fontWeight: 600 }}
+                />
+              </div>
+              {isAiCallStatus(lead) && (
+                <span className="badge inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-300" title="Updated by Vistrow Voice call">
+                  <PhoneOutgoing className="h-3 w-3" aria-hidden="true" /> Set by AI call
+                </span>
+              )}
+              <SoftSourceBadge source={lead.source} />
+              {lead.priority && <PriorityBadge priority={lead.priority} />}
               {onEdit && (
                 <button
                   type="button"
                   onClick={() => { onClose(); onEdit(lead); }}
                   title="Edit lead"
+                  aria-label="Edit lead"
                   className="p-1.5 rounded-xl transition-colors"
                   style={{ color: "var(--app-text-soft)" }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(249,115,22,0.10)"; e.currentTarget.style.color = "var(--app-primary)"; }}
@@ -639,60 +668,76 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
               count: item === "notes" ? lead.notes?.length || 0 : item === "calls" && callHistory.length ? callHistory.length : undefined,
             }))}
           />
-          <CustomSelect
-            value={status}
-            onChange={handleStatus}
-            options={STATUS_OPTIONS}
-            style={{ marginLeft: "auto", minWidth: 160 }}
-          />
         </div>
 
-        {tab === "info" && (
-          <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-            {originalSourceLabel(lead) && <Info label="Source Detail" value={originalSourceLabel(lead)} />}
-            <Info label="Property Type" value={lead.propertyType} />
-            <Info label="BHK" value={lead.bhk} />
-            <Info label="Purpose" value={lead.purpose} />
-            <Info label="Preferred Location" value={lead.preferredLocation || "-"} />
-            <Info label="Street Address" value={lead.streetAddress || "-"} />
-            <Info label="City" value={lead.city || "-"} />
-            <Info label="Budget" value={
-              lead.budget?.min || lead.budget?.max
-                ? (lead.budget?.min === lead.budget?.max
-                  ? fmtCurrency(lead.budget.max)
-                  : `${fmtCurrency(lead.budget?.min)} - ${fmtCurrency(lead.budget?.max)}`)
-                : "Not captured"
-            } />
-            {lead.timeline && <Info label="Timeline" value={lead.timeline} />}
-            <Info label="Assigned To" value={lead.assignedToName || lead.assignedTo?.name || "-"} />
-            <Info label="Follow-up Date" value={fmtDate(lead.followUpDate)} />
-            <Info label="Created On" value={fmtDateTime(lead.createdAt)} />
-            {/* Project leads have no consent field and campaigns never reach them. */}
-            {!isProjectLead && (
-              <div className="md:col-span-2">
-                <ConsentCard lead={lead} onUpdated={onUpdated} />
-              </div>
-            )}
-            <div className="md:col-span-2">
-              <Info label="Follow-up Note" value={lead.followUpNote || "-"} />
+        {tab === "info" && (() => {
+          // Every field, in reading order. Filled ones show; empty ones fold
+          // under "Show empty fields" so the window shows information, not
+          // a wall of blank boxes.
+          const budget = lead.budget?.min || lead.budget?.max
+            ? (!lead.budget?.min || !lead.budget?.max || lead.budget.min === lead.budget.max
+              ? fmtCurrency(lead.budget.max || lead.budget.min)
+              : `${fmtCurrency(lead.budget.min)} – ${fmtCurrency(lead.budget.max)}`)
+            : "";
+          const fields = [
+            { label: "Source detail",      value: originalSourceLabel(lead) },
+            { label: "Property type",      value: lead.propertyType },
+            { label: "BHK",                value: lead.bhk },
+            { label: "Purpose",            value: lead.purpose },
+            { label: "Budget",             value: budget },
+            { label: "Timeline",           value: lead.timeline },
+            { label: "Preferred location", value: lead.preferredLocation },
+            { label: "Street address",     value: lead.streetAddress },
+            { label: "City",               value: lead.city },
+            { label: "Assigned to",        value: lead.assignedToName || lead.assignedTo?.name },
+            { label: "Follow-up date",     value: lead.followUpDate ? fmtDate(lead.followUpDate) : "" },
+            { label: "Created on",         value: lead.createdAt ? fmtDateTime(lead.createdAt) : "" },
+            { label: "Follow-up note",     value: lead.followUpNote, wide: true },
+            { label: "Remark / imported info", value: lead.remarkNote, wide: true },
+          ];
+          const filled = fields.filter((f) => !isBlank(f.value));
+          const empty = fields.filter((f) => isBlank(f.value));
+          const answers = (lead.formResponses || []).filter((r) => !isBlank(r.value));
+          return (
+            <div className="space-y-5">
+              <section>
+                {filled.length > 0
+                  ? <DetailList items={filled} />
+                  : <p className="text-sm text-app-soft">No details recorded yet.</p>}
+                {empty.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <button type="button" onClick={() => setShowEmpty((v) => !v)}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-app-soft transition hover:text-app"
+                      aria-expanded={showEmpty}>
+                      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showEmpty ? "rotate-180" : ""}`} />
+                      {showEmpty ? "Hide empty fields" : `Show ${empty.length} empty field${empty.length !== 1 ? "s" : ""}`}
+                    </button>
+                    {onEdit && (
+                      <button type="button" onClick={() => { onClose(); onEdit(lead); }}
+                        className="inline-flex items-center gap-1 text-xs font-semibold transition hover:underline"
+                        style={{ color: "var(--app-primary)" }}>
+                        <Pencil className="h-3 w-3" /> Add details
+                      </button>
+                    )}
+                  </div>
+                )}
+                {showEmpty && empty.length > 0 && (
+                  <div className="mt-2"><DetailList items={empty} /></div>
+                )}
+              </section>
+
+              {answers.length > 0 && (
+                <section>
+                  <p className="stitch-kicker mb-1">Form answers</p>
+                  <DetailList items={answers.map((r) => ({ label: r.label || r.fieldKey, value: r.value }))} />
+                </section>
+              )}
+
+              {/* Project leads have no consent field and campaigns never reach them. */}
+              {!isProjectLead && <ConsentCard lead={lead} onUpdated={onUpdated} />}
             </div>
-            {lead.remarkNote && (
-              <div className="md:col-span-2">
-                <Info label="Remark / Imported Info" value={lead.remarkNote} />
-              </div>
-            )}
-            {!!lead.formResponses?.length && (
-              <div className="md:col-span-2 rounded-[1.35rem] p-4 stitch-surface-muted">
-                <p className="stitch-kicker mb-3">Additional Questions</p>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {lead.formResponses.map((item, index) => (
-                    <Info key={`${item.fieldKey}-${index}`} label={item.label} value={item.value || "-"} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+          );
+        })()}
 
         <ConfirmDialog
           open={!!deletingNote}
@@ -1078,13 +1123,12 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
 
                       {/* Captured details (extracted_data) */}
                       {extracted.length > 0 && (
-                        <div className="rounded-[1.35rem] p-4 stitch-surface-muted">
-                          <p className="stitch-kicker mb-3">Captured Details</p>
-                          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                            {extracted.map(([k, v]) => (
-                              <Info key={k} label={k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())} value={String(v)} />
-                            ))}
-                          </div>
+                        <div>
+                          <p className="stitch-kicker mb-1">Captured details</p>
+                          <DetailList items={extracted.map(([k, v]) => ({
+                            label: k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+                            value: String(v),
+                          }))} />
                         </div>
                       )}
 
