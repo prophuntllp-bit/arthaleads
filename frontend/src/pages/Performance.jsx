@@ -1,26 +1,40 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { BarChart3, Target, Trophy, Users, RefreshCw, FolderKanban, Layers, FileDown, Phone, ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import api from "../services/api";
-import { PageLoader, AppSelect, AppDatePicker, RoleBadge, Modal, StatusBadge } from "../components/UI";
+import { PageLoader, AppSelect, Modal, StatusBadge } from "../components/UI";
+import DateRangePicker, { rangeDays } from "../components/DateRangePicker";
+import SourcePerformance from "../components/dashboard/SourcePerformance";
+import { TopAgents, TeamActivity, MonthlyGoal, ClosingPace, ProjectBreakdown, AgentStatusToday } from "../components/dashboard/TeamSections";
+import { describeRange, analyticsRangeParams } from "../components/dashboard/range";
 import LeadDetail from "../components/LeadDetail";
 import { useAuth } from "../context/AuthContext";
 import UpgradeWall from "../components/UpgradeWall";
 import { canAccess } from "../utils/plan";
 
 export default function Performance() {
-  useEffect(() => { document.title = "Analytics & Reports - Arthaleads CRM"; }, []);
-  const { org } = useAuth();
+  useEffect(() => { document.title = "Performance - Arthaleads CRM"; }, []);
+  const { org, user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const allowed = canAccess(org, "growth");
   const [members,    setMembers]    = useState([]);
   const [teamTotals, setTeamTotals] = useState(null);   // whole team, each lead once
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [dateFrom,        setDateFrom]        = useState("");
-  const [dateTo,          setDateTo]          = useState("");
+  // One date range picker (same as Attendance). "" = All time, as before.
+  const [range,           setRange]           = useState("");
+  const { from: dateFrom, to: dateTo } = rangeDays(range);
   const [filterMemberId,  setFilterMemberId]  = useState("");
   const [callAnalytics,   setCallAnalytics]   = useState(null);
+  // Sections moved here from the Dashboard (30 Oct 2026): source quality, top
+  // agents, team activity, monthly goal, closing pace, projects, who is in.
+  const [analytics,  setAnalytics]  = useState(null);
+  const [projects,   setProjects]   = useState(null);
+  const [teamToday,  setTeamToday]  = useState(null);
+  const [goalOverride, setGoalOverride] = useState(null);
+  const [focusId, setFocusId] = useState(() => location.state?.focusUserId || "");
   const dateFilterMounted = useRef(false);
   // Drill-down: which tile was tapped, and the lead opened from that list.
   const [drill, setDrill]           = useState(null); // { title, userId, pipeline, metric }
@@ -53,12 +67,13 @@ export default function Performance() {
       .replace(/'/g, "&#39;");
 
     const now = new Date();
-    const dateStr  = now.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
-    const timeStr  = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+    const dateStr  = now.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "long", year: "numeric" });
+    const timeStr  = now.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" });
+    const dayLabel = (k) => new Date(`${k}T12:00:00+05:30`).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" });
     const orgName  = esc(org?.name || "Your Organisation");
     const orgLogo  = org?.logo && !org.logo.startsWith("data:") ? encodeURI(org.logo) : null;
     const rangeLabel = dateFrom || dateTo
-      ? `${dateFrom ? new Date(dateFrom).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Start"} → ${dateTo ? new Date(dateTo).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Today"}`
+      ? `${dateFrom ? dayLabel(dateFrom) : "Start"} → ${dateTo ? dayLabel(dateTo) : "Today"}`
       : "All time · Live data";
 
     const agentCards = displayMembers.map((m, idx) => {
@@ -293,7 +308,27 @@ export default function Performance() {
   useEffect(() => {
     fetchData();
     api.get("/calls/analytics").then(r => setCallAnalytics(r.data)).catch(() => {});
-  }, []);
+    if (!allowed) return;
+    api.get("/projects/stats", { timeout: 12000 }).then((r) => setProjects(r.data.data || [])).catch(() => setProjects([]));
+    api.get("/attendance/team-today", { timeout: 12000 }).then((r) => setTeamToday(r.data.data || [])).catch(() => setTeamToday([]));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The Dashboard's lead analytics, for the same dates as this page.
+  const rangeKey = typeof range === "object" ? `${range.from}|${range.to}` : range;
+  useEffect(() => {
+    if (!allowed) return;
+    let cancelled = false;
+    api.get("/leads/analytics", { params: analyticsRangeParams(range), timeout: 30000 })
+      .then((r) => { if (!cancelled) setAnalytics(r.data.data || null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [rangeKey, allowed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A person picked from Top agents (here or on the Dashboard): bring their row into view.
+  useEffect(() => {
+    if (!focusId || loading) return;
+    document.getElementById(`perf-row-${focusId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [focusId, loading]);
 
   // Auto-refetch when date filter changes (skip first render)
   useEffect(() => {
@@ -309,11 +344,14 @@ export default function Performance() {
     return acc;
   }, { totalAssigned: 0, closedWon: 0, siteVisits: 0 }), [displayMembers, members, teamTotals]);
 
-  if (!canAccess(org, "growth")) {
-    return <UpgradeWall org={org} feature="Analytics & Reports" description="View team performance, conversion rates, booking metrics and individual agent tracking." />;
+  if (!allowed) {
+    return <UpgradeWall org={org} feature="Performance" description="View team performance, conversion rates, booking metrics and individual agent tracking." />;
   }
 
   if (loading) return <PageLoader />;
+
+  const scope = describeRange(range);
+  const goal = goalOverride !== null ? goalOverride : (analytics?.monthlyClosingGoal || 0);
 
   return (
     <div className="stitch-page space-y-6">
@@ -349,13 +387,11 @@ export default function Performance() {
             )}
             {/* Date range filter */}
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-medium shrink-0" style={{ color: "var(--app-text-soft)" }}>From</span>
-              <AppDatePicker value={dateFrom} onChange={setDateFrom} className="w-36" />
-              <span className="text-xs font-medium shrink-0" style={{ color: "var(--app-text-soft)" }}>To</span>
-              <AppDatePicker value={dateTo} onChange={setDateTo} className="w-36" />
-              {(dateFrom || dateTo) && (
+              <span className="text-xs font-medium shrink-0" style={{ color: "var(--app-text-soft)" }}>Dates</span>
+              <DateRangePicker value={range} onChange={setRange} compact />
+              {range && (
                 <button
-                  onClick={() => { setDateFrom(""); setDateTo(""); }}
+                  onClick={() => setRange("")}
                   className="text-xs font-medium text-orange-400 hover:text-orange-500 transition"
                 >
                   Clear
@@ -397,6 +433,17 @@ export default function Performance() {
           onClick={() => openDrill("Closed / Booked", { userId: filterMemberId, metric: "won" })} />
       </section>
 
+      {/* One row per person */}
+      {displayMembers.length > 0 && (
+        <TeamTable members={displayMembers} focusId={focusId} openDrill={openDrill} />
+      )}
+
+      {/* Which sources bring leads that go somewhere */}
+      {analytics?.sourcePerformance?.length > 0 && (
+        <SourcePerformance rows={analytics.sourcePerformance} scope={scope}
+          onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(range), presetSource: source } })} />
+      )}
+
       {/* Call Analytics */}
       {callAnalytics && (callAnalytics.volumeByDay?.length > 0 || callAnalytics.durationByAgent?.length > 0) && (
         <section className="card p-5 space-y-4">
@@ -408,7 +455,7 @@ export default function Performance() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Volume bar chart */}
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-2">Daily Volume</p>
+              <p className="text-xs font-semibold text-app-soft mb-2">Daily volume</p>
               {callAnalytics.volumeByDay.slice(-14).map((d, i) => {
                 const max   = Math.max(...callAnalytics.volumeByDay.slice(-14).map(x => x.total), 1);
                 const date  = new Date(d._id.y, d._id.m - 1, d._id.d);
@@ -431,7 +478,7 @@ export default function Performance() {
             </div>
             {/* Agent stats */}
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-2">Answered Calls by Agent</p>
+              <p className="text-xs font-semibold text-app-soft mb-2">Answered calls by agent</p>
               {callAnalytics.durationByAgent.length === 0 ? (
                 <p className="text-xs text-app-soft">No answered calls yet.</p>
               ) : callAnalytics.durationByAgent.map(a => (
@@ -453,108 +500,27 @@ export default function Performance() {
         </section>
       )}
 
-      {/* Member cards */}
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        {displayMembers.map((member) => {
-          const focused  = location.state?.focusUserId === member._id;
-          const pipeline = member.pipeline || {};
-          const project  = member.project  || {};
-          const hasPipeline = pipeline.totalAssigned > 0;
-          const hasProject  = project.totalAssigned  > 0;
+      {/* Goal, closing pace and projects */}
+      {analytics && (
+        <MonthlyGoal
+          goal={goal}
+          current={analytics.thisMonthClosedWon || 0}
+          role={user?.role}
+          onGoalUpdate={(n) => setGoalOverride(n)}
+        />
+      )}
+      {/* The forecast projects from closed deals; with none yet it could only show dashes. */}
+      {analytics?.allTimeClosedWon > 0 && <ClosingPace data={analytics} goal={goal} />}
+      <ProjectBreakdown projects={projects} onOpenProject={(id) => navigate(`/projects/${id}`)} onViewAll={() => navigate("/projects")} />
 
-          return (
-            <article
-              key={member._id}
-              className={`card p-5 space-y-4 transition ${focused ? "ring-2 ring-orange-500/60" : ""}`}
-            >
-              {/* Name / role */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  {member.avatar ? (
-                    <img src={member.avatar} alt={member.name}
-                      className="h-12 w-12 rounded-2xl object-cover border"
-                      style={{ borderColor: "var(--app-border)" }} />
-                  ) : (
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/10 text-sm font-bold text-orange-500">
-                      {member.name?.[0]?.toUpperCase()}
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <h3 className="truncate text-sm font-semibold text-app">{member.name}</h3>
-                    <p className="truncate text-xs text-app-soft">{member.email}</p>
-                  </div>
-                </div>
-                <div className="text-right shrink-0">
-                  <RoleBadge role={member.role} />
-                  <p className="mt-2 text-xs text-app-soft">{member.isActive ? "Active" : "Inactive"}</p>
-                </div>
-              </div>
-
-              {/* ── Main Pipeline Section ── */}
-              <div className="rounded-[1.15rem] overflow-hidden" style={{ border: "1px solid var(--app-border)" }}>
-                <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "var(--app-surface-low)" }}>
-                  <Layers className="w-3.5 h-3.5 text-orange-500" />
-                  <span className="text-xs font-semibold text-app">Main Pipeline</span>
-                  <span className="ml-auto text-xs text-app-soft">{pipeline.totalAssigned || 0} leads</span>
-                </div>
-                <div className="p-3 grid grid-cols-3 xs:grid-cols-5 sm:grid-cols-5 gap-2">
-                  <SmallTile label="Assigned"     value={pipeline.totalAssigned || 0} onOpen={() => openDrill(`${member.name} · Main Pipeline · Assigned`, { userId: member._id, pipeline: "main", metric: "assigned" })} />
-                  <SmallTile label="New"           value={pipeline.newLeads      || 0} onOpen={() => openDrill(`${member.name} · Main Pipeline · New`, { userId: member._id, pipeline: "main", metric: "new" })} />
-                  <SmallTile label="Site Visit"    value={pipeline.siteVisits    || 0} onOpen={() => openDrill(`${member.name} · Main Pipeline · Site Visit`, { userId: member._id, pipeline: "main", metric: "siteVisit" })} />
-                  <SmallTile label="Closed Won"    value={pipeline.closedWon     || 0} highlight={pipeline.closedWon > 0} onOpen={() => openDrill(`${member.name} · Main Pipeline · Closed Won`, { userId: member._id, pipeline: "main", metric: "closedWon" })} />
-                  <SmallTile label="Avg Response"  value={pipeline.avgResponseTime || "-"} valueClass="text-blue-400" />
-                </div>
-                {hasPipeline && (
-                  <div className="px-3 pb-3">
-                    <div className="flex justify-between text-[10px] text-app-soft mb-1">
-                      <span>Conversion Rate</span>
-                      <span className="text-orange-500 font-semibold">{pipeline.conversionRate}%</span>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded-full" style={{ background: "var(--app-border)" }}>
-                      <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400"
-                        style={{ width: `${Math.min(pipeline.conversionRate, 100)}%` }} />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* ── Project Pipeline Section ── */}
-              <div className="rounded-[1.15rem] overflow-hidden" style={{ border: "1px solid var(--app-border)" }}>
-                <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "var(--app-surface-low)" }}>
-                  <FolderKanban className="w-3.5 h-3.5 text-blue-500" />
-                  <span className="text-xs font-semibold text-app">Project Pipeline</span>
-                  <span className="ml-auto text-xs text-app-soft">{project.totalAssigned || 0} leads</span>
-                </div>
-                <div className="p-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <SmallTile label="Assigned"     value={project.totalAssigned || 0} onOpen={() => openDrill(`${member.name} · Project Pipeline · Assigned`, { userId: member._id, pipeline: "project", metric: "assigned" })} />
-                  <SmallTile label="Interested"   value={project.interested    || 0} onOpen={() => openDrill(`${member.name} · Project Pipeline · Interested`, { userId: member._id, pipeline: "project", metric: "interested" })} />
-                  <SmallTile label="Site Visit"   value={project.siteVisits    || 0}
-                    note={project.siteVisitDone > 0 ? `${project.siteVisitDone} done` : null}
-                    onOpen={() => openDrill(`${member.name} · Project Pipeline · Site Visit`, { userId: member._id, pipeline: "project", metric: "siteVisit" })} />
-                  <SmallTile label="Booked"       value={project.booked        || 0} highlight={project.booked > 0} onOpen={() => openDrill(`${member.name} · Project Pipeline · Booked`, { userId: member._id, pipeline: "project", metric: "booked" })} />
-                </div>
-                <div className="p-3 pt-0 grid grid-cols-3 gap-2">
-                  <SmallTile label="Call Back"      value={project.callBack      || 0} onOpen={() => openDrill(`${member.name} · Project Pipeline · Call Back`, { userId: member._id, pipeline: "project", metric: "callBack" })} />
-                  <SmallTile label="Not Interested" value={project.notInterested || 0} onOpen={() => openDrill(`${member.name} · Project Pipeline · Not Interested`, { userId: member._id, pipeline: "project", metric: "notInterested" })} />
-                  <SmallTile label="Not Reachable"  value={project.notReachable  || 0} onOpen={() => openDrill(`${member.name} · Project Pipeline · Not Reachable`, { userId: member._id, pipeline: "project", metric: "notReachable" })} />
-                </div>
-                {hasProject && (
-                  <div className="px-3 pb-3">
-                    <div className="flex justify-between text-[10px] text-app-soft mb-1">
-                      <span>Booking Rate</span>
-                      <span className="text-blue-500 font-semibold">{project.conversionRate}%</span>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded-full" style={{ background: "var(--app-border)" }}>
-                      <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-400"
-                        style={{ width: `${Math.min(project.conversionRate, 100)}%` }} />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </article>
-          );
-        })}
-      </section>
+      {/* Who is doing what */}
+      {analytics && (
+        <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-2">
+          <TopAgents agents={analytics.byAgent || []} scope={scope} onSelect={(id) => { setFilterMemberId(""); setFocusId(id); }} />
+          <TeamActivity items={analytics.recentActivity || []} onOpenLead={(id) => navigate("/leads", { state: { openLeadId: id } })} />
+        </div>
+      )}
+      <AgentStatusToday team={teamToday} onOpenAttendance={() => navigate("/attendance")} />
 
       <PerformanceLeadsModal
         drill={drill} hidden={!!detailLead}
@@ -598,18 +564,120 @@ function MetricCard({ icon: Icon, label, value, note, onClick }) {
   );
 }
 
-function SmallTile({ label, value, highlight = false, valueClass = "", note = null, onOpen }) {
-  const isNum = typeof value === "number";
-  const clickable = !!onOpen && isNum && value > 0;
+// The Leads page reads these from navigation state, so a source clicked here
+// opens Leads showing exactly the leads it counted.
+function leadsRangeState(range) {
+  if (range && typeof range === "object") return { presetFrom: range.from || "", presetTo: range.to || "" };
+  return range ? { presetDateRange: range } : {};
+}
+
+// One number in the team table. A number above zero opens the leads behind it.
+function Num({ value, label, onOpen, tone = "" }) {
+  const n = value || 0;
+  if (!n) return <span className="text-app-soft">0</span>;
+  if (!onOpen) return <span className={tone || "text-app"}>{n.toLocaleString("en-IN")}</span>;
   return (
-    <div className={`rounded-xl p-3 stitch-surface-muted ${clickable ? "cursor-pointer transition hover:ring-1 hover:ring-orange-400/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60" : ""}`}
-      {...(clickable ? { role: "button", tabIndex: 0, onClick: onOpen, "aria-label": `${label}: ${value}. View leads`, onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } } } : {})}>
-      <p className="text-[10px] text-app-soft leading-none">{label}</p>
-      <p className={`mt-1.5 text-base font-bold truncate ${valueClass || (highlight && value > 0 ? "text-green-500" : "text-app")}`}>
-        {isNum ? value.toLocaleString("en-IN") : value}
-      </p>
-      {note && <p className="text-[9px] text-teal-500 font-semibold mt-0.5 leading-none">{note}</p>}
-    </div>
+    <button type="button" onClick={onOpen} aria-label={`${label}: ${n}. View leads`}
+      className={`rounded-md px-1 font-semibold underline-offset-2 transition hover:underline hover:text-orange-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60 ${tone || "text-app"}`}>
+      {n.toLocaleString("en-IN")}
+    </button>
+  );
+}
+
+// Per-person numbers: one row each, main pipeline and project pipeline side
+// by side. Replaces the tall card of tiles per person (same numbers, same
+// drill-downs). Scrolls sideways on narrow screens with the name pinned.
+function TeamTable({ members, focusId, openDrill }) {
+  const th = "px-2.5 py-2 text-right font-semibold whitespace-nowrap";
+  const td = "px-2.5 py-2.5 text-right tabular-nums whitespace-nowrap";
+  const groupStart = { borderLeft: "1px solid var(--app-border)" };
+  const pinned = { background: "var(--app-surface-solid)" };
+  return (
+    <section className="card overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-5" style={{ borderBottom: "1px solid var(--app-border)" }}>
+        <h2 className="text-sm font-bold text-app">Each person</h2>
+        <p className="text-[11px] text-app-soft">Click a number to see those leads.</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[1080px] text-xs">
+          <thead>
+            <tr className="text-app-soft" style={{ background: "var(--app-surface-low)" }}>
+              <th rowSpan={2} className="sticky left-0 z-[1] px-4 py-2 text-left font-semibold align-bottom" style={{ ...pinned, background: "var(--app-surface-low)" }}>Person</th>
+              <th colSpan={6} className="px-2.5 pt-2 pb-1 text-left font-bold text-app" style={groupStart}>
+                <span className="inline-flex items-center gap-1.5"><Layers className="h-3.5 w-3.5 text-orange-500" /> Main pipeline</span>
+              </th>
+              <th colSpan={8} className="px-2.5 pt-2 pb-1 text-left font-bold text-app" style={groupStart}>
+                <span className="inline-flex items-center gap-1.5"><FolderKanban className="h-3.5 w-3.5 text-blue-500" /> Project pipeline</span>
+              </th>
+            </tr>
+            <tr className="text-app-soft" style={{ background: "var(--app-surface-low)" }}>
+              <th className={th} style={groupStart}>Assigned</th>
+              <th className={th}>New</th>
+              <th className={th}>Site visit</th>
+              <th className={th}>Closed won</th>
+              <th className={th}>Conversion</th>
+              <th className={th}>Avg response</th>
+              <th className={th} style={groupStart}>Assigned</th>
+              <th className={th}>Interested</th>
+              <th className={th}>Site visit</th>
+              <th className={th}>Booked</th>
+              <th className={th}>Call back</th>
+              <th className={th}>Not interested</th>
+              <th className={th}>Not reachable</th>
+              <th className={th}>Booking rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            {members.map((m) => {
+              const p  = m.pipeline || {};
+              const pr = m.project  || {};
+              const focused = focusId === m._id;
+              const open = (pipeline, metric, label) => () =>
+                openDrill(`${m.name} · ${pipeline === "main" ? "Main Pipeline" : "Project Pipeline"} · ${label}`, { userId: m._id, pipeline, metric });
+              return (
+                <tr key={m._id} id={`perf-row-${m._id}`} className={focused ? "bg-orange-500/5" : ""}
+                  style={{ borderTop: "1px solid var(--app-border)", ...(focused ? { boxShadow: "inset 3px 0 0 #f97316" } : {}) }}>
+                  <td className="sticky left-0 z-[1] px-4 py-2.5" style={pinned}>
+                    <div className="flex items-center gap-2.5 min-w-[160px] max-w-[220px]">
+                      {m.avatar ? (
+                        <img src={m.avatar} alt="" className="h-8 w-8 shrink-0 rounded-xl object-cover border" style={{ borderColor: "var(--app-border)" }} />
+                      ) : (
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-xs font-bold text-orange-500">
+                          {m.name?.[0]?.toUpperCase()}
+                        </span>
+                      )}
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-app" title={m.email || undefined}>{m.name}</span>
+                        <span className="block truncate text-[11px] text-app-soft capitalize">
+                          {String(m.role || "").replace("_", " ")}{m.isActive ? "" : " · Inactive"}
+                        </span>
+                      </span>
+                    </div>
+                  </td>
+                  <td className={td} style={groupStart}><Num value={p.totalAssigned} label="Main pipeline assigned" onOpen={open("main", "assigned", "Assigned")} /></td>
+                  <td className={td}><Num value={p.newLeads} label="Main pipeline new" onOpen={open("main", "new", "New")} /></td>
+                  <td className={td}><Num value={p.siteVisits} label="Main pipeline site visit" onOpen={open("main", "siteVisit", "Site Visit")} /></td>
+                  <td className={td}><Num value={p.closedWon} label="Main pipeline closed won" tone="text-green-500" onOpen={open("main", "closedWon", "Closed Won")} /></td>
+                  <td className={td}>{p.totalAssigned > 0 ? <span className="font-semibold text-orange-500">{p.conversionRate || 0}%</span> : <span className="text-app-soft">—</span>}</td>
+                  <td className={td}>{p.avgResponseTime && p.avgResponseTime !== "-" ? <span className="text-blue-400">{p.avgResponseTime}</span> : <span className="text-app-soft">—</span>}</td>
+                  <td className={td} style={groupStart}><Num value={pr.totalAssigned} label="Project pipeline assigned" onOpen={open("project", "assigned", "Assigned")} /></td>
+                  <td className={td}><Num value={pr.interested} label="Project pipeline interested" onOpen={open("project", "interested", "Interested")} /></td>
+                  <td className={td}>
+                    <Num value={pr.siteVisits} label="Project pipeline site visit" onOpen={open("project", "siteVisit", "Site Visit")} />
+                    {pr.siteVisitDone > 0 && <span className="block text-[10px] font-semibold text-teal-500">{pr.siteVisitDone} done</span>}
+                  </td>
+                  <td className={td}><Num value={pr.booked} label="Project pipeline booked" tone="text-green-500" onOpen={open("project", "booked", "Booked")} /></td>
+                  <td className={td}><Num value={pr.callBack} label="Project pipeline call back" onOpen={open("project", "callBack", "Call Back")} /></td>
+                  <td className={td}><Num value={pr.notInterested} label="Project pipeline not interested" onOpen={open("project", "notInterested", "Not Interested")} /></td>
+                  <td className={td}><Num value={pr.notReachable} label="Project pipeline not reachable" onOpen={open("project", "notReachable", "Not Reachable")} /></td>
+                  <td className={td}>{pr.totalAssigned > 0 ? <span className="font-semibold text-blue-500">{pr.conversionRate || 0}%</span> : <span className="text-app-soft">—</span>}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 

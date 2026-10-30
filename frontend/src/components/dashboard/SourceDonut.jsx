@@ -41,6 +41,7 @@ export default function SourceDonut({ bySource, scope = "", onSelect }) {
     return seg;
   });
   const focus = active ? rows.find((r) => r.name === active) : null;
+  const top = rows.reduce((best, r) => (!best || r.value > best.value ? r : best), null);
 
   return (
     <section className="card flex h-full flex-col p-4 sm:p-5">
@@ -76,8 +77,10 @@ export default function SourceDonut({ bySource, scope = "", onSelect }) {
               ))}
             </svg>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-              <span className="text-2xl font-black tabular-nums text-app">{focus ? focus.value : total}</span>
-              <span className="max-w-[90px] truncate text-[11px] text-app-soft">{focus ? focus.name : "leads"}</span>
+              {/* The period's total is on the Total Leads card; the centre names the
+                  biggest source instead, or the one being pointed at. */}
+              <span className="text-2xl font-black tabular-nums text-app">{Math.round(((focus || top).value / total) * 100)}%</span>
+              <span className="max-w-[90px] truncate text-[11px] text-app-soft">{(focus || top).name}</span>
             </div>
           </div>
 

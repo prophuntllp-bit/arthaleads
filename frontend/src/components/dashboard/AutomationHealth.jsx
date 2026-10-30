@@ -29,7 +29,9 @@ function Icon({ item, Logo }) {
   return <Logo platform={item.platform} size={18} />;
 }
 
-export default function AutomationHealth({ automations, Logo, onOpen }) {
+// onlyProblems: the Dashboard shows this card only when a source needs a look,
+// and then lists just those sources (the full list is on Integrations).
+export default function AutomationHealth({ automations, Logo, onOpen, onlyProblems = false }) {
   if (!automations || automations.length === 0) return null;
 
   const rows = automations.map((a) => {
@@ -43,6 +45,8 @@ export default function AutomationHealth({ automations, Logo, onOpen }) {
   const rank = { off: 0, quiet: 1, never: 2, setup: 3, ok: 4 };
   rows.sort((x, y) => rank[x.state] - rank[y.state]);
   const problems = rows.filter((r) => r.state === "off" || r.state === "quiet").length;
+  if (onlyProblems && problems === 0) return null;
+  const shown = onlyProblems ? rows.filter((r) => r.state === "off" || r.state === "quiet") : rows;
 
   const tone = {
     ok:    { dot: "#22c55e", text: "text-app-soft" },
@@ -73,7 +77,7 @@ export default function AutomationHealth({ automations, Logo, onOpen }) {
       </div>
 
       <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {rows.map(({ a, state, title }) => (
+        {shown.map(({ a, state, title }) => (
           <li key={a._id}>
             <button type="button" onClick={onOpen}
               className="flex w-full items-center gap-2.5 rounded-xl p-2.5 text-left transition hover:border-orange-500/30"

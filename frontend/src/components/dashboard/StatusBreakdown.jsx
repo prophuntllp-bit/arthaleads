@@ -26,7 +26,8 @@ export default function StatusBreakdown({ byStatus, scope = "", onSelect }) {
             <InfoTip text="Where the leads from these dates are in your pipeline right now. Click a stage to see those leads." />
           </h3>
         </div>
-        <span className="stitch-pill min-w-0 max-w-[60%] truncate text-xs">{total} leads{scope ? ` · ${scope}` : ""}</span>
+        {/* The period's total is on the Total Leads card; this just says which dates. */}
+        {scope && <span className="stitch-pill min-w-0 max-w-[60%] truncate text-xs">{scope}</span>}
       </div>
 
       {!total ? (

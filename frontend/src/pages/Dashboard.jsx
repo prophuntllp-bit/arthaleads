@@ -3,9 +3,9 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import StatusBreakdown from "../components/dashboard/StatusBreakdown";
 import SourceDonut from "../components/dashboard/SourceDonut";
-import SourcePerformance from "../components/dashboard/SourcePerformance";
 import AutomationHealth from "../components/dashboard/AutomationHealth";
 import MorningBrief, { prefetchBrief } from "../components/dashboard/MorningBrief";
+import { describeRange, analyticsRangeParams } from "../components/dashboard/range";
 import { InfoTip } from "../components/Tooltip";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
@@ -13,26 +13,19 @@ import {
   AlertTriangle,
   ArrowRight,
   Bell,
-  Building2,
   Calendar,
   Check,
   CheckCircle,
   ChevronDown,
   Clock3,
   Flame,
-  Globe,
-  IndianRupee,
   MapPin,
   MessageCircle,
   Mic,
-  Pencil,
   Phone,
   Plus,
   Sparkles,
   ThumbsDown,
-  Target,
-  TrendingUp,
-  Users,
   X,
   Zap,
 } from "lucide-react";
@@ -40,7 +33,6 @@ import { useAuth } from "../context/AuthContext";
 import { PhoneActions } from "../components/UI";
 import api from "../services/api";
 import { canAccess } from "../utils/plan";
-import { fmtDate } from "../utils/constants";
 import DateRangePicker from "../components/DateRangePicker";
 import OnboardingChecklist from "../components/OnboardingChecklist";
 import AttendanceCapture from "../components/AttendanceCapture";
@@ -82,14 +74,16 @@ function PlatformLogo({ platform, size = 16 }) {
   }
 }
 
-// Config for each platform - drives both header pills and source cards
+// Each lead source counted in the hero: the source name the leads carry and
+// the counter's colours. "Custom" counts every other source (manual,
+// referral, walk-in, portals...).
 const PLATFORM_CONFIG = {
-  "Facebook":     { label: "Facebook Leads",  note: "Meta Lead Ads",        shortLabel: "FB",    sourceKey: "Facebook",  icon: TrendingUp,   tone: "from-blue-500/20 via-blue-500/10 to-transparent",   iconTone: "bg-blue-500/15 text-blue-400",   dot: "bg-blue-500",   pillTone: "bg-blue-500/10 text-blue-400 border-blue-500/20",   presetSource: "Facebook"  },
-  "Google":       { label: "Google Leads",    note: "Ads and landing forms", shortLabel: "GGL",   sourceKey: "Google",    icon: Users,        tone: "from-red-500/20 via-red-500/10 to-transparent",     iconTone: "bg-red-500/15 text-red-400",     dot: "bg-red-500",    pillTone: "bg-red-500/10 text-red-400 border-red-500/20",     presetSource: "Google"    },
-  "WhatsApp":     { label: "WhatsApp Leads",  note: "Chats and inquiries",   shortLabel: "WA",    sourceKey: "WhatsApp",  icon: MessageCircle, tone: "from-green-500/20 via-green-500/10 to-transparent",  iconTone: "bg-green-500/15 text-green-400", dot: "bg-green-500",  pillTone: "bg-green-500/10 text-green-400 border-green-500/20", presetSource: "WhatsApp"  },
-  "Website Form": { label: "Website Leads",   note: "Landing page forms",    shortLabel: "WEB",   sourceKey: "Website",   icon: Globe,        tone: "from-violet-500/20 via-violet-500/10 to-transparent", iconTone: "bg-violet-500/15 text-violet-400", dot: "bg-violet-500", pillTone: "bg-violet-500/10 text-violet-400 border-violet-500/20", presetSource: "Website" },
-  "Custom":       { label: "Custom Leads",    note: "Other integrations",    shortLabel: "OTHER", sourceKey: "Other",     icon: Zap,          tone: "from-amber-500/20 via-amber-500/10 to-transparent",  iconTone: "bg-amber-500/15 text-amber-400", dot: "bg-amber-500",  pillTone: "bg-amber-500/10 text-amber-400 border-amber-500/20", presetSource: "Other"    },
-  "Vistrow Voice": { label: "Vistrow Voice Leads", note: "AI voice calling", shortLabel: "VOICE", sourceKey: "Vistrow Voice", icon: Mic,       tone: "from-violet-500/20 via-violet-500/10 to-transparent", iconTone: "bg-violet-500/15 text-violet-400", dot: "bg-violet-500", pillTone: "bg-violet-500/10 text-violet-400 border-violet-500/20", presetSource: "Vistrow Voice" },
+  "Facebook":      { sourceKey: "Facebook",      pillTone: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+  "Google":        { sourceKey: "Google",        pillTone: "bg-red-500/10 text-red-400 border-red-500/20" },
+  "WhatsApp":      { sourceKey: "WhatsApp",      pillTone: "bg-green-500/10 text-green-400 border-green-500/20" },
+  "Website Form":  { sourceKey: "Website",       pillTone: "bg-violet-500/10 text-violet-400 border-violet-500/20" },
+  "Custom":        { sourceKey: "Other",         pillTone: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
+  "Vistrow Voice": { sourceKey: "Vistrow Voice", pillTone: "bg-violet-500/10 text-violet-400 border-violet-500/20" },
 };
 
 function getGreeting() {
@@ -298,6 +292,8 @@ function SmartInsightsWidget({ data }) {
   );
 }
 
+// Attendance in the hero: the time, the date and the Clock In / Out button.
+// (Was a large analogue clock; same clock-in flow, a fraction of the space.)
 function DashboardClock() {
   const [now, setNow] = useState(() => new Date());
   const [clockStatus,   setClockStatus]   = useState(null);
@@ -307,7 +303,8 @@ function DashboardClock() {
   const [submitting,    setSubmitting]    = useState(false);
 
   useEffect(() => {
-    const iv = setInterval(() => setNow(new Date()), 1000);
+    // Only hours and minutes are shown, so a few seconds of lag is invisible.
+    const iv = setInterval(() => setNow(new Date()), 10000);
     return () => clearInterval(iv);
   }, []);
 
@@ -317,35 +314,11 @@ function DashboardClock() {
       .catch(() => {});
   }, []);
 
-  const tParts = new Intl.DateTimeFormat("en-IN", {
-    timeZone: "Asia/Kolkata",
-    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
-  }).formatToParts(now);
-  const h = parseInt(tParts.find(p => p.type === "hour")?.value || "0");
-  const m = parseInt(tParts.find(p => p.type === "minute")?.value || "0");
-  const s = parseInt(tParts.find(p => p.type === "second")?.value || "0");
-
-  const hourAngle   = ((h % 12) + m / 60) * 30;
-  const minuteAngle = (m + s / 60) * 6;
-  const secondAngle = s * 6;
-  const SIZE = 80;
-  const cx = SIZE / 2, cy = SIZE / 2, r = SIZE / 2 - 3;
-
-  const mkHand = (angleDeg, length, width, color) => {
-    const rad = (angleDeg - 90) * (Math.PI / 180);
-    return (
-      <line x1={cx} y1={cy}
-        x2={cx + Math.cos(rad) * length} y2={cy + Math.sin(rad) * length}
-        stroke={color} strokeWidth={width} strokeLinecap="round"
-      />
-    );
-  };
-
   const digitalTime = now.toLocaleTimeString("en-IN", {
     timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true,
   }).toUpperCase();
   const dateStr = now.toLocaleDateString("en-IN", {
-    timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric",
+    timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short",
   });
 
   const isClockedIn  = !!(clockStatus?.clockIn && !clockStatus?.clockOut);
@@ -374,47 +347,30 @@ function DashboardClock() {
 
   return (
     <>
-      <div className="hidden lg:flex flex-col items-center justify-center gap-2 border-l"
-        style={{ flex: "0 0 20%", width: "20%", borderColor: "var(--app-border)", paddingLeft: 20, paddingRight: 20 }}>
-        <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-          <circle cx={cx} cy={cy} r={r} fill="var(--app-surface-low)" stroke="var(--app-border)" strokeWidth="1.5" />
-          {Array.from({ length: 12 }, (_, i) => {
-            const a = (i * 30 - 90) * (Math.PI / 180);
-            const isQ = i % 3 === 0;
-            const outer = r - 3;
-            const inner = outer - (isQ ? 6 : 3);
-            return (
-              <line key={i}
-                x1={cx + Math.cos(a) * outer} y1={cy + Math.sin(a) * outer}
-                x2={cx + Math.cos(a) * inner} y2={cy + Math.sin(a) * inner}
-                stroke="var(--app-text-soft)" strokeWidth={isQ ? 2 : 1} strokeLinecap="round"
-              />
-            );
-          })}
-          {mkHand(hourAngle,   r * 0.50, 3,   "var(--app-text)")}
-          {mkHand(minuteAngle, r * 0.70, 2,   "var(--app-text)")}
-          {mkHand(secondAngle, r * 0.76, 1.2, "#f97316")}
-          <circle cx={cx} cy={cy} r={3.5} fill="#f97316" />
-        </svg>
-        <p className="text-sm font-bold tabular-nums text-app leading-none">{digitalTime}</p>
-        <p className="text-[10px] text-app-soft leading-none">{dateStr}</p>
+      <div className="hidden lg:flex flex-col items-stretch justify-center gap-2 border-l shrink-0 pl-5"
+        style={{ borderColor: "var(--app-border)", minWidth: 150 }}>
+        <div className="text-center">
+          <p className="text-lg font-bold tabular-nums text-app leading-none">{digitalTime}</p>
+          <p className="mt-1 text-[11px] text-app-soft leading-none">{dateStr}</p>
+        </div>
 
         {isClockedOut ? (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-semibold text-app-soft w-full justify-center"
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold text-app-soft justify-center"
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
             <Check className="w-3 h-3 flex-shrink-0" />
             Done for today
           </div>
         ) : (
           <button
+            type="button"
             onClick={() => openCapture(isClockedIn ? "clockout" : "clockin")}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition"
             style={isClockedIn
               ? { background: "rgba(239,68,68,0.10)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }
               : { background: "#22c55e", color: "#fff", border: "1px solid #16a34a" }}>
             {isClockedIn
               ? <><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" /> Clock Out</>
-              : <><Clock3 className="w-3 h-3 flex-shrink-0" /> Clock IN</>}
+              : <><Clock3 className="w-3 h-3 flex-shrink-0" /> Clock In</>}
           </button>
         )}
       </div>
@@ -431,36 +387,16 @@ function DashboardClock() {
   );
 }
 
-function fmtINR(val) {
-  if (!val) return "₹0";
-  if (val >= 1e7) return `₹${(val / 1e7).toFixed(1)}Cr`;
-  if (val >= 1e5) return `₹${(val / 1e5).toFixed(1)}L`;
-  return `₹${val.toLocaleString("en-IN")}`;
-}
-
 function calcDelta(current, previous) {
   if (!previous || previous === 0) return null;
   return Math.round((current - previous) / previous * 100);
 }
 
-function fmtResponseTime(ms) {
-  if (!ms || ms <= 0) return "No data";
-  const mins = Math.round(ms / 60000);
-  if (mins < 1) return "< 1 min";
-  if (mins < 60) return `${mins} min`;
-  const hrs = ms / 3600000;
-  if (hrs < 24) return `${hrs.toFixed(1)} hrs`;
-  return `${(hrs / 24).toFixed(1)} days`;
-}
+// Below 640px a button's text is hidden and only its icon shows (font-size 0
+// hides the text node; the icons are sized in px, so they stay). The text stays
+// in the DOM, so screen readers still read the label.
+const ICON_ONLY_BELOW_SM = "max-sm:[&_button]:text-[0px] max-sm:[&_button]:gap-0 max-sm:[&_button>svg:last-child:not(:first-child)]:hidden";
 
-// How the selected date range reads in a sentence ("... created in the last 30
-// days"), so every figure on the page can say what it covers.
-const RANGE_PHRASES = {
-  today: "today", yesterday: "yesterday", todayYesterday: "today and yesterday",
-  last7days: "in the last 7 days", last14days: "in the last 14 days", last28days: "in the last 28 days", last30days: "in the last 30 days",
-  thisweek: "this week", lastweek: "last week", thismonth: "this month", lastmonth: "last month",
-  thisyear: "this year", lastyear: "last year",
-};
 // The Leads page reads these from navigation state, so a card clicked on the
 // dashboard opens Leads showing exactly the leads the card counted.
 function leadsRangeState(range) {
@@ -468,14 +404,8 @@ function leadsRangeState(range) {
   return range ? { presetDateRange: range } : {};
 }
 
-function describeRange(range) {
-  if (range && typeof range === "object") {
-    const f = (k) => new Date(`${k}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-    return range.from && range.to ? `from ${f(range.from)} to ${f(range.to)}` : "in this period";
-  }
-  if (!range) return "across all time";
-  return RANGE_PHRASES[range] || "in this period";
-}
+// Short visible name for each source counter in the hero.
+const PILL_NAME = { "Facebook": "Facebook", "Google": "Google", "WhatsApp": "WhatsApp", "Website Form": "Website", "Vistrow Voice": "Voice", "Custom": "Other" };
 
 export default function Dashboard() {
   useEffect(() => { document.title = "Dashboard - Arthaleads CRM"; }, []);
@@ -495,28 +425,21 @@ export default function Dashboard() {
   const [dateRange, setDateRange] = useState("last30days");
   const [connectedPlatforms, setConnectedPlatforms] = useState(null); // null = loading
   const [allAutomations, setAllAutomations] = useState([]);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [agents, setAgents] = useState([]);
-  const [goalOverride, setGoalOverride] = useState(null);
+  const [refreshKey] = useState(0);
   const [analyticsError, setAnalyticsError] = useState(false);
   // Pre-fetched in parallel with analytics so Action Required renders immediately
   const [prefetchedFollowups, setPrefetchedFollowups] = useState(null);
   const [prefetchedHot, setPrefetchedHot] = useState(null);
-  // Admin widgets are fetched here too, so the whole page appears at once
+  // Stale leads are fetched here too, so the whole page appears at once
   // instead of cards popping in one by one as their own requests finish.
   const [prefetchedStale, setPrefetchedStale] = useState(null);
-  const [prefetchedProjects, setPrefetchedProjects] = useState(null);
-  const [prefetchedTeam, setPrefetchedTeam] = useState(null);
   const [waLoaded, setWaLoaded] = useState(false);
 
   const fetchAnalytics = (retryCount = 0) => {
     if (retryCount === 0) setLoading(true);
     else setRetrying(true);
     setAnalyticsError(false);
-    const rangeParams = dateRange && typeof dateRange === "object"
-      ? { from: dateRange.from, to: dateRange.to }
-      : { dateRange };
-    api.get("/leads/analytics", { params: rangeParams, timeout: 30000 })
+    api.get("/leads/analytics", { params: analyticsRangeParams(dateRange), timeout: 30000 })
       .then((response) => { setData(response.data.data); setRetrying(false); })
       .catch((err) => {
         console.error("[analytics]", err?.response?.status, err?.message);
@@ -545,18 +468,12 @@ export default function Dashboard() {
       .then((r) => setPrefetchedHot(r.data.data || []))
       .catch(() => setPrefetchedHot([]));
     else setPrefetchedHot([]);
-  }, [dateRange, refreshKey]);
+  }, [dateRange, refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const T = { timeout: 12000 };
     if (sessionStorage.getItem("stale_panel_dismissed") === "1") setPrefetchedStale([]);
     else api.get("/leads/stale", T).then((r) => setPrefetchedStale(r.data.data || [])).catch(() => setPrefetchedStale([]));
-    api.get("/projects/stats", T).then((r) => setPrefetchedProjects(r.data.data || [])).catch(() => setPrefetchedProjects([]));
-    api.get("/attendance/team-today", T).then((r) => setPrefetchedTeam(r.data.data || [])).catch(() => setPrefetchedTeam([]));
-  }, []);
-
-  useEffect(() => {
-    api.get("/auth/agents").then((r) => setAgents(r.data.agents || [])).catch(() => {});
   }, []);
 
   // WhatsApp is not an Automation (it is the org's own connection), so it never
@@ -566,14 +483,14 @@ export default function Dashboard() {
     api.get("/whatsapp/status").then((r) => setWaConnected(!!r.data?.connected)).catch(() => {}).finally(() => setWaLoaded(true));
   }, []);
 
-  // Fetch connected automations to drive dynamic source cards
+  // Fetch connected automations to drive the source counters
   useEffect(() => {
     api.get("/automations")
       .then((res) => {
         const list = res.data.automations || [];
         setAllAutomations(list);
         const active = list.filter((a) => a.status === "connected" && a.isActive !== false);
-        // Deduplicate by platform (multiple Facebook automations = one card)
+        // Deduplicate by platform (multiple Facebook automations = one counter)
         const seen = new Set();
         const unique = [];
         for (const a of active) {
@@ -585,12 +502,11 @@ export default function Dashboard() {
   }, []);
 
   const ready = !loading && !retrying && prefetchedFollowups !== null && prefetchedHot !== null
-    && prefetchedStale !== null && prefetchedProjects !== null && prefetchedTeam !== null
-    && connectedPlatforms !== null && waLoaded;
+    && prefetchedStale !== null && connectedPlatforms !== null && waLoaded;
   if (!ready) return <DashboardSkeleton />;
 
-  // Which source pills to show: every source that is connected OR has leads in
-  // this period, in a fixed order. Anything that is not one of the named
+  // Which source counters to show: every source that is connected OR has leads
+  // in this period, in a fixed order. Anything that is not one of the named
   // sources (Manual, Referral, Walk-in, portals...) is counted together as Other.
   const connectedSet = new Set(connectedPlatforms || []);
   if (waConnected) connectedSet.add("WhatsApp");
@@ -600,45 +516,45 @@ export default function Dashboard() {
   const pillCount = (p) => (p === "Custom" ? otherCount : (bySrc[PLATFORM_CONFIG[p].sourceKey] || 0));
   const activePlatforms = ["Facebook", "Google", "WhatsApp", "Website Form", "Vistrow Voice", "Custom"]
     .filter((p) => connectedSet.has(p) || pillCount(p) > 0);
-
-  const monthlyGoal = goalOverride !== null ? goalOverride : (data?.monthlyClosingGoal || 0);
+  const scope = describeRange(dateRange);
+  const isAdmin = ["admin", "manager", "super_admin"].includes(user?.role);
 
   return (
     <div className="stitch-page space-y-6">
-      {/* Dashboard banner — custom flex, NOT stitch-topbar so we control the layout */}
-      <header className="rounded-[1.75rem] p-4 sm:p-5 flex flex-col gap-3 lg:flex-row lg:items-stretch"
+      {/* Hero: greeting + new leads per source | date range, New Lead, Artha | attendance */}
+      <header className="rounded-[1.75rem] p-4 sm:p-5 flex flex-col gap-4 lg:flex-row lg:items-stretch lg:gap-5"
         style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", boxShadow: "var(--app-shadow)" }}>
 
-        {/* Left 40%: platform pills + greeting */}
-        <div className="flex flex-col gap-3 min-w-0 w-full lg:w-[40%] lg:flex-[0_0_40%]">
-          {/* Pills row */}
-          <div className="flex flex-wrap items-center gap-2">
-            {activePlatforms.map((platform) => {
-              const cfg = PLATFORM_CONFIG[platform];
-              if (!cfg) return null;
-              const count = pillCount(platform);
-              return (
-                <div key={platform} title={cfg.label} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-bold ${cfg.pillTone}`}>
-                  <PlatformLogo platform={platform} size={13} />
-                  {count}
-                </div>
-              );
-            })}
-          </div>
+        <div className="flex flex-col justify-center gap-3 min-w-0 flex-1">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-app">{greeting}, {user?.name?.split(" ")[0]}</h1>
 
-          {/* Greeting */}
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-app">{greeting}, {user?.name?.split(" ")[0]}</h1>
-            <p className="mt-1 max-w-2xl text-sm text-app-soft hidden sm:block">
-              Track source performance, team momentum, and recent lead movement across all your active channels in real time.
-            </p>
-          </div>
+          {activePlatforms.length > 0 && (
+            <div>
+              <ul className="flex flex-wrap items-center gap-2" aria-label={`New leads by source, ${scope}`}>
+                {activePlatforms.map((platform) => {
+                  const cfg = PLATFORM_CONFIG[platform];
+                  if (!cfg) return null;
+                  const count = pillCount(platform);
+                  const name = PILL_NAME[platform] || platform;
+                  const tip = `${name}: ${count} new ${count === 1 ? "lead" : "leads"} ${scope}${platform === "Custom" ? " (manual, referral, portals and other sources)" : ""}`;
+                  return (
+                    <li key={platform} title={tip} aria-label={tip}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-bold ${cfg.pillTone}`}>
+                      <PlatformLogo platform={platform} size={13} />
+                      <span className="hidden sm:inline font-semibold">{name}</span>
+                      <span className="tabular-nums">{count}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="mt-1.5 text-[11px] text-app-soft">New leads by source, {scope}</p>
+            </div>
+          )}
         </div>
 
-        {/* Middle 40%: date range + new lead + AI insights (stacked) */}
-        <div className="flex flex-col justify-center gap-2 w-full lg:w-[40%] lg:flex-[0_0_40%] lg:border-l"
-          style={{ borderColor: "var(--app-border)", paddingLeft: 0 }}>
-          <div className="flex items-center gap-2 lg:pl-5">
+        <div className="flex flex-col justify-center gap-2 w-full lg:w-[40%] lg:shrink-0 lg:border-l lg:pl-5"
+          style={{ borderColor: "var(--app-border)" }}>
+          <div className="flex items-center gap-2">
             <span data-tour="date-range">
               <DateRangePicker value={dateRange} onChange={setDateRange} compact />
             </span>
@@ -649,12 +565,9 @@ export default function Dashboard() {
               <span>New Lead</span>
             </button>
           </div>
-          <div className="lg:pl-5">
-            <SmartInsightsWidget data={data} />
-          </div>
+          <SmartInsightsWidget data={data} />
         </div>
 
-        {/* Right: live clock panel */}
         <DashboardClock />
       </header>
 
@@ -688,124 +601,51 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── Zone 2: Today at a Glance ─────────────────────────────────── */}
-      <ZonedKPIRow data={data} navigate={navigate} scope={describeRange(dateRange)} range={leadsRangeState(dateRange)} />
+      {/* Stat cards: the period's totals live here and only here */}
+      <ZonedKPIRow data={data} navigate={navigate} scope={scope} range={leadsRangeState(dateRange)} />
 
-      {/* ── Zone 3: Action Required ───────────────────────────────────── */}
+      {/* Action required: overdue follow-ups, Hot today, stale leads, broken sources, next 48 hours */}
       <div className="space-y-3">
-        <ZoneHeader label="Action Required" color="amber" />
-        {/* 2-col grid: overdue follow-ups left, hot leads right.
-            Mobile (<640px): stacked 1 col. Tablet/desktop: side by side. */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
           <FollowUpDuePanel user={user} navigate={navigate} prefetchedLeads={prefetchedFollowups} />
           {hasGrowth && <HotLeadsWidget navigate={navigate} limit={4} prefetchedLeads={prefetchedHot} />}
         </div>
+        {isAdmin && <StaleLeadsWidget navigate={navigate} prefetchedLeads={prefetchedStale} />}
+        {isAdmin && <AutomationHealth automations={allAutomations} Logo={PlatformLogo} onlyProblems onOpen={() => navigate("/integrations")} />}
         <UpcomingSchedule items={data?.upcomingItems || []} navigate={navigate} />
       </div>
 
-      {/* ── Zone 4: Admin Intelligence ───────────────────────────────── */}
-      <AdminOnly role={user?.role}>
-        <div className="space-y-3">
-          <ZoneHeader label="Admin Intelligence" color="indigo" />
-          <StaleLeadsWidget navigate={navigate} prefetchedLeads={prefetchedStale} />
-          {/* The forecast projects from closed deals. With none yet it could
-              only show dashes and zeros, so it waits until there is one. */}
-          {data?.allTimeClosedWon > 0 ? (
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              <RevenueForecastWidget data={data} />
-              <LeadsTrendWidget data={data} scope={describeRange(dateRange)} />
-            </div>
-          ) : (
-            <LeadsTrendWidget data={data} scope={describeRange(dateRange)} />
-          )}
-          {/* Project breakdown + Monthly goal — side by side */}
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-stretch">
-            <ProjectBreakdownWidget navigate={navigate} prefetchedProjects={prefetchedProjects} />
-            <GoalMetricsRow
-              goal={monthlyGoal}
-              current={data?.thisMonthClosedWon || 0}
-              avgResponseMs={null}
-              role={user?.role}
-              onGoalUpdate={(n) => setGoalOverride(n)}
-            />
-          </div>
-        </div>
-      </AdminOnly>
-
-      {/* ── Zone 5: Performance ──────────────────────────────────────── */}
-      <div className="space-y-3">
-        <ZoneHeader label="Performance" />
-        <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2">
-          <div>
-            <StatusBreakdown byStatus={data?.byStatus} scope={describeRange(dateRange)}
-              onSelect={(status) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetStatus: status } })} />
-          </div>
-          <div>
-            <SourceDonut bySource={data?.bySource} scope={describeRange(dateRange)}
-              onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetSource: source } })} />
-          </div>
-        </div>
-        {data?.advanced === false ? (
-          <section className="card p-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-app">Conversion reports, response times and agent performance</p>
-              <p className="text-xs text-app-soft mt-0.5">Part of the Growth plan: which sources turn into site visits and deals, how fast each lead was answered, and each agent's numbers.</p>
-            </div>
-            <button type="button" onClick={() => navigate("/plans")} className="btn-primary rounded-full px-4 py-2 text-xs font-semibold">See plans</button>
-          </section>
-        ) : (
-          <SourcePerformance rows={data?.sourcePerformance || []} scope={describeRange(dateRange)}
-            onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetSource: source } })} />
-        )}
+      {/* Pipeline: where the period's leads are, and where they came from */}
+      <div className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2">
+        <StatusBreakdown byStatus={data?.byStatus} scope={scope}
+          onSelect={(status) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetStatus: status } })} />
+        <SourceDonut bySource={data?.bySource} scope={scope}
+          onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(dateRange), presetSource: source } })} />
       </div>
 
-      {/* ── Zone 6: Team ─────────────────────────────────────────────── */}
-      <div className="space-y-3">
-        <ZoneHeader label="Team" />
-        <div className="grid grid-cols-1 gap-3 items-stretch xl:grid-cols-2">
-          <section className="card p-6">
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-app">Top Agents</h3>
-              </div>
-              <div className="stitch-pill">Leaderboard</div>
-            </div>
-            <div className="space-y-4">
-              {(data?.byAgent || []).slice(0, 5).map((agent, index) => (
-                <button
-                  key={agent._id}
-                  type="button"
-                  onClick={() => navigate("/performance", { state: { focusUserId: agent._id } })}
-                  className="flex w-full items-center gap-4 rounded-[1.25rem] p-3 text-left stitch-surface-muted transition hover:-translate-y-0.5 hover:border-orange-500/30 hover:bg-orange-500/5"
-                >
-                  <span className="w-4 text-xs font-bold text-app-soft">{index + 1}</span>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/10 text-sm font-bold text-orange-500">
-                    {agent.name?.[0]?.toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-app">{agent.name}</p>
-                    <p className="text-xs text-app-soft">Active agent</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-app">{agent.count}</p>
-                  <p className="text-xs text-app-soft">leads</p>
-                </div>
-              </button>
-            ))}
-            {(data?.byAgent || []).length === 0 && <p className="text-sm text-app-soft">No agent activity yet.</p>}
+      {/* Trends */}
+      {isAdmin && <LeadsTrendWidget data={data} scope={scope} />}
+
+      {isAdmin && data?.advanced !== false && (
+        <button type="button" onClick={() => navigate("/performance")}
+          className="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left text-sm transition hover:border-orange-500/30 card">
+          <span className="min-w-0">
+            <span className="block font-semibold text-app">Team, sources and goals</span>
+            <span className="block text-xs text-app-soft">Each person's numbers, source quality, top agents, team activity, projects and the monthly goal are on Performance.</span>
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0 text-app-soft" />
+        </button>
+      )}
+
+      {data?.advanced === false && (
+        <section className="card p-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-app">Conversion reports, response times and agent performance</p>
+            <p className="text-xs text-app-soft mt-0.5">Part of the Growth plan: which sources turn into site visits and deals, how fast each lead was answered, and each agent's numbers.</p>
           </div>
+          <button type="button" onClick={() => navigate("/plans")} className="btn-primary rounded-full px-4 py-2 text-xs font-semibold">See plans</button>
         </section>
-
-        <ActivityFeed items={data?.recentActivity || []} navigate={navigate} />
-      </div>
-        <AdminOnly role={user?.role}>
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-stretch">
-            <LiveAgentStatusWidget navigate={navigate} prefetchedTeam={prefetchedTeam} />
-            <AutomationHealth automations={allAutomations} Logo={PlatformLogo} onOpen={() => navigate("/integrations")} />
-          </div>
-        </AdminOnly>
-      </div>{/* end Zone 6 */}
-
+      )}
     </div>
   );
 }
@@ -816,29 +656,19 @@ function DashboardSkeleton() {
   const fill = { background: "var(--app-surface)", border: "1px solid var(--app-border)" };
   return (
     <div className="stitch-page space-y-6" aria-busy="true" aria-label="Loading dashboard">
-      <div className={`${block} h-44`} style={fill} />
+      <div className={`${block} h-36`} style={fill} />
+      <div className={`${block} h-24`} style={fill} />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className={`${block} h-20`} style={fill} />)}
       </div>
-      <div className={`${block} h-24`} style={fill} />
-      <div className={`${block} h-64`} style={fill} />
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className={`${block} h-16`} style={fill} />
+        <div className={`${block} h-16`} style={fill} />
+      </div>
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         <div className={`${block} h-56`} style={fill} />
         <div className={`${block} h-56`} style={fill} />
       </div>
-    </div>
-  );
-}
-
-// ── Zone components ───────────────────────────────────────────────────────────
-function ZoneHeader({ label, color = "default" }) {
-  const colorMap = { amber: "#f59e0b", indigo: "#6366f1", green: "#22c55e", purple: "#a855f7" };
-  const c = colorMap[color] || "var(--app-text-soft)";
-  return (
-    <div className="flex items-center gap-3 select-none">
-      <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
-      <span className="text-[9px] font-black uppercase tracking-[0.15em] shrink-0" style={{ color: c }}>{label}</span>
-      <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
     </div>
   );
 }
@@ -871,7 +701,7 @@ function ZonedKPIRow({ data, navigate, scope = "", range = {} }) {
     {
       // Share of the period's leads a person reached within an hour (a call,
       // marked Contacted, or an agent's WhatsApp message; bot replies don't count).
-      label: "Reached in 1 hr", value: in1h === null ? "-" : `${in1h}%`,
+      label: "Reached in 1 hr", value: in1h === null ? "—" : `${in1h}%`,
       color: in1h === null ? "var(--app-text-soft)" : in1h >= 60 ? "#22c55e" : in1h >= 30 ? "#f59e0b" : "#ef4444",
       sub: speed?.total ? `${speed.within5m} in 5 min · ${speed.notContacted} not yet` : "No leads in this period",
       tip: "Share of these leads a person reached within an hour of arriving: a call, marking them Contacted, or an agent's own WhatsApp message. The WhatsApp bot's replies don't count.",
@@ -965,143 +795,6 @@ function UpcomingSchedule({ items, navigate }) {
   );
 }
 
-// ── Goal Metrics Row ─────────────────────────────────────────────────────────
-function GoalMetricsRow({ goal, current, avgResponseMs, role, onGoalUpdate }) {
-  const [editing, setEditing] = useState(false);
-  const [val, setVal] = useState("");
-  const [saving, setSaving] = useState(false);
-  const canEdit = role === "admin" || role === "manager";
-  const pct = goal > 0 ? Math.min(100, Math.round(current / goal * 100)) : 0;
-
-  const save = async () => {
-    const n = parseInt(val, 10);
-    if (isNaN(n) || n < 1) return;
-    setSaving(true);
-    try {
-      await api.patch("/org/me/goal", { monthlyClosingGoal: n });
-      onGoalUpdate(n);
-      setEditing(false);
-    } catch { toast.error("Failed to save goal. Please try again."); } finally { setSaving(false); setEditing(false); }
-  };
-
-  if (goal === 0 && !canEdit) return null;
-
-  return (
-    <section className="card p-3 sm:p-4">
-      <div className="flex flex-wrap items-center gap-3 sm:gap-5">
-        <div className="flex items-center gap-2 shrink-0">
-          <Target className="w-4 h-4 text-orange-500" />
-          <span className="text-[11px] font-bold text-app uppercase tracking-wider">Monthly Goal</span>
-        </div>
-
-        {goal > 0 ? (
-          <>
-            <div className="flex items-center gap-2 flex-1 min-w-[140px]">
-              <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--app-surface-low)" }}>
-                <div className="h-full rounded-full transition-all duration-700"
-                  style={{ width: `${pct}%`, background: pct >= 100 ? "#22c55e" : "linear-gradient(90deg,#ff6b00,#ffaa00)" }} />
-              </div>
-              <span className={`text-xs font-bold shrink-0 ${pct >= 100 ? "text-emerald-400" : "text-orange-500"}`}>{pct}%</span>
-            </div>
-            <span className="text-xs text-app-soft shrink-0">
-              <span className="font-bold text-app">{current}</span> / {goal} closings this month
-            </span>
-          </>
-        ) : (
-          <span className="text-xs text-app-soft flex-1">
-            {canEdit ? "No goal set. Click the pencil to set a monthly closing target." : "No monthly goal set."}
-          </span>
-        )}
-
-        {canEdit && (
-          editing ? (
-            <div className="flex items-center gap-2 shrink-0">
-              <input type="number" min="1" value={val}
-                onChange={(e) => setVal(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && save()}
-                className="input w-20 text-center text-sm py-1" placeholder="Target"
-                autoFocus />
-              <button type="button" onClick={save} disabled={saving}
-                className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition">
-                <Check className="w-3.5 h-3.5" />
-              </button>
-              <button type="button" onClick={() => setEditing(false)}
-                className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5">
-                <X className="w-3.5 h-3.5 text-app-soft" />
-              </button>
-            </div>
-          ) : (
-            <button type="button" onClick={() => { setEditing(true); setVal(String(goal || "")); }}
-              title="Set monthly goal"
-              className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5 shrink-0">
-              <Pencil className="w-3.5 h-3.5 text-app-soft" />
-            </button>
-          )
-        )}
-
-        {avgResponseMs !== null && avgResponseMs !== undefined && (
-          <>
-            <div className="hidden sm:block h-5 w-px shrink-0" style={{ background: "var(--app-border)" }} />
-            <div className="flex items-center gap-2 shrink-0">
-              <Zap className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-xs text-app-soft">Avg first response · </span>
-              <span className="text-xs font-bold text-emerald-400">{fmtResponseTime(avgResponseMs)}</span>
-            </div>
-          </>
-        )}
-      </div>
-    </section>
-  );
-}
-
-// ── Activity Feed ─────────────────────────────────────────────────────────────
-function ActivityFeed({ items, navigate }) {
-  function timeAgo(date) {
-    const s = Math.floor((Date.now() - new Date(date)) / 1000);
-    if (s < 60) return "just now";
-    if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-    if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-    return `${Math.floor(s / 86400)}d ago`;
-  }
-  const TYPE_COLOR = {
-    status_changed: "#f59e0b", called: "#22c55e", site_visit: "#8b5cf6",
-    note_added: "#06b6d4", assigned: "#3b82f6", follow_up_set: "#f97316",
-    created: "#ff6b00", emailed: "#ec4899",
-  };
-  return (
-    <section className="card p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-bold text-app">Team Activity</h3>
-        </div>
-        <div className="stitch-pill text-xs">Last 10 actions</div>
-      </div>
-      {(!items || items.length === 0) ? (
-        <p className="text-sm text-app-soft py-4">No activity recorded yet.</p>
-      ) : (
-        <div className="space-y-0.5">
-          {items.map((item, i) => (
-            <button key={i} type="button"
-              onClick={() => navigate("/leads", { state: { openLeadId: item.leadId } })}
-              className="w-full flex items-start gap-3 rounded-xl px-2 py-2 text-left hover:bg-orange-500/5 transition">
-              <div className="mt-1.5 w-2 h-2 rounded-full shrink-0"
-                style={{ background: TYPE_COLOR[item.type] || "#6b7280" }} />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs text-app leading-snug">
-                  <span className="font-semibold">{item.performedByName || "System"}</span>
-                  <span className="text-app-soft"> · {item.description}</span>
-                </p>
-                <p className="text-[10px] text-app-soft mt-0.5">{item.leadName} · {timeAgo(item.createdAt)}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-// ── Pipeline Drop-off Funnel ──────────────────────────────────────────────────
 // ── Follow-up Due Alert Panel ─────────────────────────────────────────────────
 function FollowUpDuePanel({ user, navigate, prefetchedLeads }) {
   const [leads, setLeads] = useState(prefetchedLeads || []);
@@ -1268,7 +961,9 @@ function FollowUpDuePanel({ user, navigate, prefetchedLeads }) {
             {/* Call + WA - icon-only on mobile, label on sm+ */}
             {lead.phone && (
               <div className="flex items-center gap-1.5 shrink-0">
-                <div className="rounded-lg border px-2 py-1"
+                {/* Phone number shows from sm up; on a phone it is the icon only
+                    (the button keeps the number as its accessible name). */}
+                <div className={`rounded-lg border px-2 py-1 ${ICON_ONLY_BELOW_SM}`}
                   style={{ borderColor: "rgba(249,115,22,0.25)", background: "rgba(249,115,22,0.06)" }}>
                   <PhoneActions phone={lead.phone} lead={lead} />
                 </div>
@@ -1276,12 +971,11 @@ function FollowUpDuePanel({ user, navigate, prefetchedLeads }) {
                   href={`https://wa.me/${toWa(lead.phone)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  title="WhatsApp"
+                  title="WhatsApp" aria-label={`WhatsApp ${lead.name}`}
                   className="flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition"
                   style={{ borderColor: "rgba(34,197,94,0.25)", color: "#16a34a", background: "rgba(34,197,94,0.06)" }}
                 >
                   <MessageCircle className="h-3.5 w-3.5" />
-                  <span className="hidden xs:inline">WA</span>
                 </a>
               </div>
             )}
@@ -1529,71 +1223,7 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
   );
 }
 
-// ── Admin-only widget wrapper — renders null for agents ───────────────────────
-function AdminOnly({ role, children }) {
-  if (role !== "admin" && role !== "manager" && role !== "super_admin") return null;
-  return children;
-}
-
-// ── 1. Revenue Forecast Widget ────────────────────────────────────────────────
-function RevenueForecastWidget({ data }) {
-  if (!data) return null;
-  const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-  const dayOfMonth  = new Date().getDate();
-  const pace        = dayOfMonth > 0 ? Math.round((data.thisMonthClosedWon / dayOfMonth) * daysInMonth) : 0;
-  const goal        = data.monthlyClosingGoal || 0;
-  const onTrack     = goal > 0 ? pace >= goal : null;
-  const expectedRev = data.pipelineValue && data.conversionRate
-    ? Math.round((data.pipelineValue * data.conversionRate) / 100)
-    : 0;
-
-  return (
-    <section className="card p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <h3 className="text-base font-bold text-app">Revenue & Closing Pace</h3>
-        </div>
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
-          style={{ background: "rgba(99,102,241,0.12)" }}>
-          <TrendingUp className="h-4 w-4 text-indigo-400" />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="card p-3 flex flex-col gap-1">
-          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Expected Revenue</p>
-          <p className="text-lg font-black text-emerald-400 leading-none">{expectedRev ? fmtINR(expectedRev) : "—"}</p>
-          <p className="text-[9px] text-app-soft">{expectedRev ? `At ${data.conversionRate}% conversion` : "Needs a closed deal to project from"}</p>
-        </div>
-        <div className="card p-3 flex flex-col gap-1">
-          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Month Leads</p>
-          <p className="text-lg font-black text-indigo-400 leading-none">{data.thisMonthLeads || 0}</p>
-          <p className={`text-[9px] font-semibold ${(data.thisMonthLeads || 0) >= (data.lastMonthSamePeriodLeads || 0) ? "text-emerald-400" : "text-red-400"}`}>
-            {(data.lastMonthSamePeriodLeads || 0) === 0 ? "Same days last month: 0" : `${(data.thisMonthLeads || 0) >= (data.lastMonthSamePeriodLeads || 0) ? "↑" : "↓"} vs ${data.lastMonthSamePeriodLeads} same days last month`}
-          </p>
-        </div>
-        <div className="card p-3 flex flex-col gap-1">
-          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Closings vs Last Month</p>
-          <p className="text-lg font-black text-orange-500 leading-none">{data.thisMonthClosedWon || 0} <span className="text-sm font-normal text-app-soft">/ {data.lastMonthSamePeriodClosedWon || 0}</span></p>
-          <p className="text-[9px] text-app-soft">This month / same days last month</p>
-        </div>
-        <div className="card p-3 flex flex-col gap-1">
-          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Projected Pace</p>
-          <p className={`text-lg font-black leading-none ${onTrack === null ? "text-app" : onTrack ? "text-emerald-400" : "text-red-400"}`}>
-            {pace}
-          </p>
-          <p className="text-[9px] text-app-soft flex items-center gap-0.5">
-            {onTrack === null ? "No goal set" : onTrack
-              ? <><span className="text-emerald-400">↑</span> On track</>
-              : <><span className="text-red-400">↓</span> Behind pace</>}
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ── 2. Stale Leads Alert Widget ───────────────────────────────────────────────
+// ── Stale Leads Alert Widget ──────────────────────────────────────────────────
 function StaleLeadsWidget({ navigate, prefetchedLeads }) {
   const [leads, setLeads] = useState(prefetchedLeads ?? null);
   const [dismissed, setDismissed] = useState(
@@ -1692,151 +1322,7 @@ function StaleLeadsWidget({ navigate, prefetchedLeads }) {
   );
 }
 
-// ── 3. Project Breakdown Widget ───────────────────────────────────────────────
-function ProjectBreakdownWidget({ navigate, prefetchedProjects }) {
-  const [projects, setProjects] = useState(prefetchedProjects ?? null);
-  // Every collapsible dashboard panel starts closed on each load; the
-  // chevron opens it for this visit only (nothing is remembered).
-  const [collapsed, setCollapsed] = useState(true);
-
-  useEffect(() => {
-    if (prefetchedProjects != null) return;
-    api.get("/projects/stats").then((r) => setProjects(r.data.data || [])).catch(() => setProjects([]));
-  }, []);
-
-  if (!projects || projects.length === 0) return null;
-
-  function toggleCollapsed() {
-    const next = !collapsed;
-    setCollapsed(next);
-  }
-
-  return (
-    <section className="card overflow-hidden">
-      <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: collapsed ? "none" : "1px solid var(--app-border)" }}>
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg shrink-0"
-            style={{ background: "rgba(99,102,241,0.10)" }}>
-            <Building2 className="h-3.5 w-3.5 text-indigo-400" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-app leading-tight">Project-wise Leads</p>
-            <p className="text-[11px] text-app-soft">{projects.length} active project{projects.length !== 1 ? "s" : ""}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <button type="button" onClick={() => navigate("/projects")}
-            className="flex items-center gap-1 text-[11px] font-semibold text-app-soft hover:text-app transition rounded-lg px-2.5 py-1"
-            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-            View all <ArrowRight className="h-3 w-3" />
-          </button>
-          <button type="button" onClick={toggleCollapsed}
-            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5">
-            <ChevronDown className={`h-4 w-4 text-app-soft transition-transform duration-200 ${collapsed ? "" : "rotate-180"}`} />
-          </button>
-        </div>
-      </div>
-
-      {!collapsed && (
-        <div className="p-3 space-y-1">
-          {projects.slice(0, 6).map((p) => {
-            const pct = p.totalLeads > 0 ? Math.min(100, Math.round((p.closedWon / p.totalLeads) * 100)) : 0;
-            return (
-              <button key={String(p._id)} type="button"
-                onClick={() => navigate(`/projects/${p._id}`)}
-                className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-orange-500/5">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <p className="text-sm font-semibold text-app truncate">{p.name}</p>
-                    <span className="text-xs font-bold text-app shrink-0">{p.totalLeads} leads</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--app-surface-low)" }}>
-                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 50 ? "#22c55e" : "#f97316" }} />
-                    </div>
-                    <span className="text-[10px] text-app-soft shrink-0">{pct}% won</span>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </section>
-  );
-}
-
-// ── 4. Live Agent Status Widget ───────────────────────────────────────────────
-function LiveAgentStatusWidget({ navigate, prefetchedTeam }) {
-  const [team, setTeam] = useState(prefetchedTeam ?? null);
-
-  useEffect(() => {
-    if (prefetchedTeam != null) return;
-    api.get("/attendance/team-today").then((r) => setTeam(r.data.data || [])).catch(() => setTeam([]));
-  }, []);
-
-  if (!team || team.length === 0) return null;
-
-  const clocked = team.filter((m) => m.attendance?.clockIn && !m.attendance?.clockOut);
-  const done    = team.filter((m) => m.attendance?.clockIn && m.attendance?.clockOut);
-  const absent  = team.filter((m) => !m.attendance?.clockIn);
-
-  return (
-    <section className="card p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <p className="stitch-kicker mb-1">Live</p>
-          <h3 className="text-base font-bold text-app">Agent Status Today</h3>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-            style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>
-            {clocked.length} online
-          </span>
-          <button type="button" onClick={() => navigate("/attendance")}
-            className="text-[11px] font-semibold text-app-soft hover:text-app transition rounded-lg px-2.5 py-1"
-            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-            Attendance →
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-        {team.map((member) => {
-          const isIn  = member.attendance?.clockIn && !member.attendance?.clockOut;
-          const isDone = member.attendance?.clockIn && member.attendance?.clockOut;
-          const clockInTime = member.attendance?.clockIn
-            ? new Date(member.attendance.clockIn).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })
-            : null;
-          return (
-            <div key={member.user._id}
-              className="flex items-center gap-2.5 p-2.5 rounded-xl"
-              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-              <div className="relative flex-shrink-0">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold"
-                  style={{ background: isIn ? "rgba(34,197,94,0.15)" : isDone ? "rgba(99,102,241,0.12)" : "rgba(107,114,128,0.12)",
-                           color: isIn ? "#22c55e" : isDone ? "#6366f1" : "#6b7280" }}>
-                  {member.user.name?.[0]?.toUpperCase()}
-                </div>
-                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2"
-                  style={{ background: isIn ? "#22c55e" : isDone ? "#6366f1" : "#6b7280",
-                           borderColor: "var(--app-surface-low)" }} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-app truncate">{member.user.name}</p>
-                <p className="text-[10px] text-app-soft truncate">
-                  {isIn ? `In since ${clockInTime}` : isDone ? "Done for today" : "Not checked in"}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-// ── 5. Leads trend (follows the date range) ─────────────────────────────────
+// ── Leads trend (follows the date range) ────────────────────────────────────
 function LeadsTrendWidget({ data, scope = "" }) {
   if (!data?.dailyLeads) return null;
 
@@ -1873,15 +1359,13 @@ function LeadsTrendWidget({ data, scope = "" }) {
   return (
     <section className="card p-4">
       <div className="flex items-center justify-between mb-3">
-        <div>
-          <h3 className="text-base font-bold text-app">Leads Over Time</h3>
-        </div>
-        <div className="text-right">
-          <p className="text-xl font-black text-app">{total.toLocaleString("en-IN")}</p>
-          <p className="text-[10px] text-app-soft">{scope || "in this period"}</p>
-        </div>
+        <h3 className="flex items-center gap-1.5 text-sm font-bold text-app">
+          Leads over time
+          <InfoTip text="New leads per day (per month for long ranges) in the dates picked at the top. The total is on the Total Leads card." />
+        </h3>
+        <span className="stitch-pill min-w-0 max-w-[60%] truncate text-xs">{scope || "in this period"}</span>
       </div>
-      {chartData.length === 0 ? (
+      {chartData.length === 0 || total === 0 ? (
         <p className="text-sm text-app-soft py-8 text-center">No leads in this period.</p>
       ) : (
         <ResponsiveContainer width="100%" height={100}>
@@ -1901,27 +1385,3 @@ function LeadsTrendWidget({ data, scope = "" }) {
     </section>
   );
 }
-
-// ── 6. Automation Health Widget ───────────────────────────────────────────────
-function TopLeadSourceCard({ label, value, logo, note, tone, iconTone, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`card relative w-full overflow-hidden p-3 sm:p-6 bg-gradient-to-br text-left transition hover:-translate-y-1 hover:border-orange-500/30 ${tone}`}
-    >
-      <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/5 to-transparent dark:from-white/[0.04]" />
-      <div className="relative flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="stitch-kicker mb-1 sm:mb-2 text-[8px] sm:text-[11px] truncate">{label}</p>
-          <p className="text-2xl sm:text-4xl font-black tracking-tight text-app">{value}</p>
-          <p className="mt-1 sm:mt-2 text-[9px] sm:text-xs text-app-soft hidden sm:block">{note}</p>
-        </div>
-        <div className={`shrink-0 flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl ${iconTone}`}>
-          {logo}
-        </div>
-      </div>
-    </button>
-  );
-}
-
