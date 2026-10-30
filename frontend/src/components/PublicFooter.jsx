@@ -64,7 +64,7 @@ export default function PublicFooter() {
               ].map(({ label, href, Icon, hover }) => (
                 <a key={label} href={href} aria-label={label} title={label}
                   {...(href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                  className="w-11 h-11 rounded-xl flex items-center justify-center border transition-all duration-200 hover:-translate-y-0.5"
+                  className="w-11 h-11 rounded-xl flex items-center justify-center border transition-transform duration-200 hover:-translate-y-0.5"
                   style={{ color: text, borderColor: border, background: isDark ? "rgba(255,255,255,0.03)" : "#ffffff" }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = hover; e.currentTarget.style.borderColor = hover; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = text; e.currentTarget.style.borderColor = border; }}>

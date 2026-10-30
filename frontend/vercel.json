@@ -225,6 +225,36 @@
       "has": [
         {
           "type": "host",
+          "value": "www.arthaleads.com"
+        }
+      ],
+      "headers": [
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "staging.arthaleads.com"
+        }
+      ],
+      "headers": [
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
           "value": "app.arthaleads.com"
         }
       ],
