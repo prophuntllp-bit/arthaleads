@@ -192,7 +192,7 @@ export default function SourceTreeSelect({ value = [], onChange, options = [], d
       <button ref={triggerRef} type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
         className="inline-flex items-center justify-between gap-1.5 transition-colors"
         style={{ padding: "5px 10px", borderRadius: 10, fontSize: 13, border: open ? "1px solid var(--app-primary)" : "1px solid var(--app-border)",
-          background: "var(--app-surface-low)", color: value.length ? "var(--app-text)" : "var(--app-text-soft)", whiteSpace: "nowrap", minWidth: 0, ...style }}>
+          background: "var(--app-field-bg, var(--app-surface-low))", color: value.length ? "var(--app-text)" : "var(--app-text-soft)", whiteSpace: "nowrap", minWidth: 0, ...style }}>
         <span className="truncate">{triggerLabel}</span>
         <ChevronDown className="shrink-0" style={{ width: 13, height: 13, opacity: 0.6, transform: open ? "rotate(180deg)" : "none" }} />
       </button>
