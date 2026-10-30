@@ -243,6 +243,24 @@ const leadSchema = new mongoose.Schema(
       },
       default: undefined,
     },
+    // Which ad produced a Google Ads lead form lead (30 Oct 2026): Google's
+    // campaign > ad group > ad, and the lead form. Names as they were when the
+    // lead came in. Undefined for every other lead.
+    adRef: {
+      type: {
+        platform:     { type: String, trim: true, default: "" }, // "google"
+        campaignId:   { type: String, trim: true, default: "" },
+        campaignName: { type: String, trim: true, default: "" },
+        adGroupId:    { type: String, trim: true, default: "" },
+        adGroupName:  { type: String, trim: true, default: "" },
+        adId:         { type: String, trim: true, default: "" },
+        adName:       { type: String, trim: true, default: "" },
+        formId:       { type: String, trim: true, default: "" },
+        formName:     { type: String, trim: true, default: "" },
+        gclid:        { type: String, trim: true, default: "" },
+      },
+      default: undefined,
+    },
     // Meta's own id for a Facebook/Instagram lead-form submission (leadgen_id).
     // What lets Conversions API tie later stages back to the ad that made it.
     metaLeadId: { type: String, trim: true, default: "" },

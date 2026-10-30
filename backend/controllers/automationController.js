@@ -404,11 +404,15 @@ const automationController = {
           id: a._id,
           name: a.name,
           mode: a.mode, // "webhook" (URL+Key) or "oauth" (Sign in with Google)
-          token: a.verifyToken, // this is the "Webhook Key" in Google Ads' UI — empty for oauth-mode
+          // The "Webhook Key" pasted into Google Ads' UI. A Sign in with Google connection
+          // sets its own key on the lead forms, so it is never shown.
+          token: a.mode === "oauth" ? "" : a.verifyToken,
           googleCustomerId: a.googleCustomerId || "",
           googleCustomerName: a.googleCustomerName || "",
           status: a.status,
           lastSyncAt: a.lastSyncAt,
+          polledAt: a.googlePolledAt || null,
+          delivery: a.googleDelivery || null, // instant delivery: lead forms pushing to us
         })),
       });
     } catch (err) {
@@ -720,18 +724,32 @@ const automationController = {
         automation = await Automation.findOne({ _id: editingId, orgId: req.user.orgId, platform: "Google" });
         if (!automation) return next(new AppError("Connection not found", 404));
         Object.assign(automation, payload);
+        if (!automation.verifyToken) automation.verifyToken = generateWebsiteToken();
         automation.updatedBy = req.user._id;
         await automation.save();
       } else {
         automation = await Automation.create({
           ...payload,
+          verifyToken: generateWebsiteToken(), // the key our webhook carries on the lead forms
           orgId: req.user.orgId,
           createdBy: req.user._id,
           updatedBy: req.user._id,
         });
       }
 
-      res.status(201).json({ success: true, automation });
+      // Switch on instant delivery straight away (our webhook on the account's lead
+      // forms). A failure only means the 5-minute sync does the work; it never blocks.
+      let delivery = null;
+      try {
+        const { ensureInstantDelivery } = require("../utils/googleAdsPoller");
+        const token = await automationService.refreshGoogleAccessToken(automation.userToken);
+        delivery = await ensureInstantDelivery(automation, token);
+        await automation.save();
+      } catch (err) {
+        console.warn(`[google-ads] instant delivery on connect failed for ${automation._id}: ${err.message}`);
+      }
+
+      res.status(201).json({ success: true, automation: { _id: automation._id, name: automation.name, googleCustomerId: automation.googleCustomerId }, delivery });
     } catch (err) {
       next(err);
     }

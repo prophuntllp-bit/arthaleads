@@ -283,6 +283,16 @@ const automationService = {
   async remove(id, orgId) {
     const automation = await Automation.findOne({ _id: id, orgId });
     if (!automation) throw new AppError("Automation source not found", 404);
+    // A removed Sign in with Google connection takes its webhook off the lead forms
+    // (best effort; other webhooks on those forms are left alone).
+    if (automation.platform === "Google" && automation.mode === "oauth" && automation.userToken && automation.googleCustomerId) {
+      try {
+        const { removeLeadFormWebhooks } = require("../utils/googleAdsApi");
+        const { webhookUrl } = require("../utils/googleAdsPoller");
+        const accessToken = await this.refreshGoogleAccessToken(automation.userToken);
+        await removeLeadFormWebhooks(automation.googleCustomerId, { url: webhookUrl(), accessToken, loginCustomerId: automation.googleLoginCustomerId });
+      } catch { /* Google unreachable or access revoked: the forms then fail to deliver, which Google reports to the advertiser */ }
+    }
     await automation.deleteOne();
     return true;
   },

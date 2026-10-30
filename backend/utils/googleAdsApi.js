@@ -27,6 +27,7 @@ const FRIENDLY = {
   USER_PERMISSION_DENIED: "This Google login can't open that Google Ads account. Reconnect with a login that has access to it.",
   CUSTOMER_NOT_ENABLED: "That Google Ads account is not active (cancelled or not set up yet).",
   NOT_ADS_USER: "This Google login has no Google Ads account.",
+  ACTION_NOT_PERMITTED: "This Google login can only read this account. Instant delivery needs Standard or Admin access in Google Ads.",
 };
 
 function errorMessage(json, status) {
@@ -112,7 +113,73 @@ async function listAccounts(accessToken) {
   return [...direct.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
+// ── Instant delivery: our webhook on the account's lead forms ─────────────────
+// A lead form carries at most one webhook (asset.lead_form_asset.delivery_methods)
+// and lead form assets can be updated (Google's asset table, checked 30 Oct 2026),
+// so connecting can switch on push delivery without the customer pasting a URL
+// and key. A form that already sends to someone else's webhook (Zapier, another
+// CRM) is left alone; the safety-net sync still picks its leads up.
+
+async function mutateAssets(customerId, operations, { accessToken, loginCustomerId } = {}) {
+  const resp = await fetch(`${BASE}/customers/${customerId}/assets:mutate`, {
+    method: "POST",
+    headers: headers(accessToken, loginCustomerId),
+    body: JSON.stringify({ operations }),
+  });
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(errorMessage(json, resp.status));
+  return json;
+}
+
+async function leadForms(customerId, auth) {
+  const rows = await search(customerId, `
+    SELECT asset.resource_name, asset.id, asset.name, asset.lead_form_asset.headline, asset.lead_form_asset.delivery_methods
+    FROM asset
+    WHERE asset.type = 'LEAD_FORM'`, auth);
+  return rows.map(({ asset: a }) => ({
+    resourceName: a?.resourceName,
+    id: String(a?.id || ""),
+    name: a?.name || a?.leadFormAsset?.headline || "",
+    webhookUrl: (a?.leadFormAsset?.deliveryMethods || []).map((m) => m?.webhook?.advertiserWebhookUrl).find(Boolean) || "",
+  })).filter((f) => f.resourceName);
+}
+
+const webhookOperation = (resourceName, deliveryMethods) => ({
+  updateMask: "leadFormAsset.deliveryMethods",
+  update: { resourceName, leadFormAsset: { deliveryMethods } },
+});
+
+/**
+ * Puts our webhook on every lead form of the account that has none.
+ * Returns { total, ours, other, failed, error } for the connection card.
+ */
+async function ensureLeadFormWebhooks(customerId, { url, secret, accessToken, loginCustomerId }) {
+  const auth = { accessToken, loginCustomerId };
+  const forms = await leadForms(customerId, auth);
+  const result = { total: forms.length, ours: 0, other: 0, failed: 0, error: "" };
+  for (const f of forms) {
+    if (f.webhookUrl === url) { result.ours++; continue; }
+    if (f.webhookUrl) { result.other++; continue; }
+    try {
+      await mutateAssets(customerId, [webhookOperation(f.resourceName, [{ webhook: { advertiserWebhookUrl: url, googleSecret: secret } }])], auth);
+      result.ours++;
+    } catch (err) {
+      result.failed++;
+      result.error = err.message;
+    }
+  }
+  return result;
+}
+
+/** Takes our webhook off the account's lead forms (a removed connection). Others' webhooks stay. */
+async function removeLeadFormWebhooks(customerId, { url, accessToken, loginCustomerId }) {
+  const auth = { accessToken, loginCustomerId };
+  const forms = (await leadForms(customerId, auth)).filter((f) => f.webhookUrl === url);
+  if (forms.length) await mutateAssets(customerId, forms.map((f) => webhookOperation(f.resourceName, [])), auth);
+  return forms.length;
+}
+
 // "customers/123/campaigns/456" -> "456"
 const idFromResourceName = (rn) => (rn ? String(rn).split("/").pop() : "");
 
-module.exports = { GOOGLE_ADS_API_VERSION, search, listAccounts, idFromResourceName, errorMessage };
+module.exports = { GOOGLE_ADS_API_VERSION, search, listAccounts, idFromResourceName, errorMessage, leadForms, ensureLeadFormWebhooks, removeLeadFormWebhooks };
