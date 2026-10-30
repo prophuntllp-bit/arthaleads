@@ -30,12 +30,26 @@ function canAnimate() {
 export default function LiveBackground({ kind, fallback, className = "", style, ...props }) {
   const [live, setLive] = useState(false);
   const [shown, setShown] = useState(false);
+  // The shader starts on the visitor's first move, scroll, touch or key, not
+  // while the page loads: setting it up held the main thread for about 250 ms
+  // during start-up on desktop (Lighthouse, 30 Oct 2026). The `fallback`
+  // gradient shows until then, and on desktop the first mouse move comes at once.
   useEffect(() => {
-    const update = () => setLive(canAnimate());
-    update();
+    const events = ["pointermove", "pointerdown", "scroll", "keydown", "touchstart"];
+    let started = false;
+    const update = () => { if (started) setLive(canAnimate()); };
+    const start = () => {
+      events.forEach((e) => window.removeEventListener(e, start));
+      started = true;
+      update();
+    };
+    events.forEach((e) => window.addEventListener(e, start, { passive: true }));
     const mq = window.matchMedia?.("(min-width: 768px)");
     mq?.addEventListener?.("change", update);
-    return () => mq?.removeEventListener?.("change", update);
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, start));
+      mq?.removeEventListener?.("change", update);
+    };
   }, []);
   // Fade the canvas in once it has mounted, instead of popping in.
   useEffect(() => {
