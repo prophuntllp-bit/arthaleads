@@ -123,6 +123,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-30 IST: LIVE 48aa0680: /compare retitled 'Arthaleads vs Sell.Do, Leadrat and Kylas: CRM Comparison' (H1 '... compared'), from staging 3313d96e. frontend pages/Compare.jsx
 - [claude] 2026-10-30 IST: LIVE 6a1f78db: website polish (home + all website pages, Hallmark audit) and SEO audit fixes (related guides in blog HTML, topic hub links, /compare to five-CRM post, WhatsApp charges FAQ + prices in /pricing meta, BlogPosting @id/inLanguage/wordCount, WhatsApp pill under desktop cookie card, accessible names). From staging b0496851 23f9bb23 750090d9 726c02ec a1bc8061 9e37be87 8d7ae3a4 209ac0bf; 35 files copied, styles.css only these commits' hunks (other session's later styles.css commits not released).
 - [claude] 2026-10-30 IST: LIVE 0c4813fe: prerendered pages' stylesheet marker link added by the boot script, not the HTML (no wasted 32 KB fetch; phone home LCP 2.3 -> 2.1 s on staging) (from staging e13301a7). frontend scripts/prerender.mjs
 - [claude] 2026-10-30 IST: LIVE 944b4654: update banner never on the website; CRM prompts only when CRM code changed (version.json = hash of CRM-reachable code, vite.config.js WEBSITE_PAGE list) (from staging 2a0e7491). frontend vite.config.js, components/UpdateBanner.jsx
