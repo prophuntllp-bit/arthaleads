@@ -7,7 +7,7 @@ const { test, run, assert } = require("./helpers/harness");
 
 const RATE = 8000;
 // The fake transcriber names an utterance by its loudness.
-const BY_AMP = { 3000: "Hello, Sheetal from PropHunt.", 6000: "Haan bataiye.", 9000: "Site visit kab karenge?" };
+const BY_AMP = { 1500: "", 3000: "Hello, Sheetal from PropHunt.", 6000: "Haan bataiye.", 9000: "Site visit kab karenge?" };
 let sttCalls = 0;
 let chatReply = () => ({});
 let sttMode = "normal"; // "urdu": answers in Urdu letters unless asked for Hindi; "down": the service refuses
@@ -108,9 +108,9 @@ test("mono: the AI split is kept only when it copies the text exactly", async ()
   assert.equal(changed.text, "मोनो कॉल का पूरा पाठ। हाँ बताइए।");
 });
 
-test("a quick 0.3 s 'hello' counts as speech; a 0.15 s click does not", () => {
-  const w = ct.parseWav(stereoWav(4, [{ ch: 1, from: 1, to: 1.3, amp: 4000 }, { ch: 0, from: 2.5, to: 2.65, amp: 4000 }]));
-  assert.equal(ct.speechSegments(w.channels[1], RATE).length, 1, "the short hello is kept");
+test("a clipped 0.14 s 'hello' counts as speech; a 40 ms click does not", () => {
+  const w = ct.parseWav(stereoWav(4, [{ ch: 1, from: 1, to: 1.14, amp: 4000 }, { ch: 0, from: 2.5, to: 2.54, amp: 4000 }]));
+  assert.equal(ct.speechSegments(w.channels[1], RATE).length, 1, "the clipped hello is kept");
   assert.equal(ct.speechSegments(w.channels[0], RATE).length, 0, "the click is not");
 });
 
@@ -133,6 +133,15 @@ test("the speech service refusing (out of credits) is a failure, not a silent ca
     );
     await assert.rejects(ct.transcribeCall(Buffer.from("not a wav, an mp3"), { filename: "x.mp3" }), (err) => err instanceof ct.TranscriptionFailed);
   } finally { sttMode = "normal"; }
+});
+
+test("speech the model cannot make out is shown as (unclear), not dropped", async () => {
+  const r = await ct.transcribeCall(stereoWav(6, [{ ch: 1, from: 0.5, to: 0.8, amp: 1500 }, { ch: 0, from: 2, to: 4, amp: 3000 }]), { agentChannel: "left" });
+  assert.equal(r.turns[0].speaker, "customer");
+  assert.equal(r.turns[0].text, "(unclear)");
+  assert.equal(r.turns[1].speaker, "agent");
+  const only = await ct.transcribeCall(stereoWav(6, [{ ch: 1, from: 0.5, to: 0.8, amp: 1500 }, { ch: 1, from: 3, to: 3.3, amp: 1500 }]), { agentChannel: "left" });
+  assert.equal(only.noSpeech, true, "nothing but unclear sounds is no conversation");
 });
 
 run("Call transcripts by speaker");
