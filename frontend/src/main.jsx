@@ -103,6 +103,9 @@ const GoogleAuth = ({ children }) => IS_MARKETING_HOST
 // page has rendered its footer. Until then, the pages' own "scroll to top on
 // mount" must not yank a visitor who has already started reading.
 const rootEl = document.getElementById("root");
+// A prerendered website page: the static copy is already readable, so the live
+// page can be built in small slices (see the render below).
+const fromStaticCopy = rootEl.hasAttribute("data-prerendered") && !isAppHost();
 if (rootEl.hasAttribute("data-prerendered") && isAppHost()) {
   // The CRM host serves the same files for / and the marketing paths (they
   // redirect to /login or the marketing site): never show marketing copy there.
@@ -146,7 +149,7 @@ if (rootEl.hasAttribute("data-prerendered") && isAppHost()) {
   setTimeout(swap, 8000);   // never leave the static copy up if a page has no footer
 }
 
-ReactDOM.createRoot(rootEl).render(
+const tree = (
   <React.StrictMode>
     <HelmetProvider>
       <GoogleAuth>
@@ -167,6 +170,14 @@ ReactDOM.createRoot(rootEl).render(
     </HelmetProvider>
   </React.StrictMode>
 );
+// Behind a static copy the live page is built as a transition: React yields to
+// the browser every few milliseconds instead of building the whole page (3,000+
+// elements on the home page) in one block, which held the main thread for
+// 0.3-1.9 s on desktop (Lighthouse "total blocking time", 30 Oct 2026). The
+// CRM app renders straight away as before.
+const reactRoot = ReactDOM.createRoot(rootEl);
+if (fromStaticCopy) React.startTransition(() => reactRoot.render(tree));
+else reactRoot.render(tree);
 
 // Fade out splash only after BOTH conditions are met:
 //  1. React has painted its first frame (double rAF)
