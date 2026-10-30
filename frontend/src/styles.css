@@ -20,10 +20,10 @@
     --app-surface: rgba(255, 255, 255, 0.58);
     --app-surface-solid: #ffffff;
     --app-surface-low: rgba(255, 255, 255, 0.38);
-    /* Popups: warm off-white panel and a sand inset for rows and boxes inside
-       them, from the owner's Lead Details mock-up (30 Oct 2026). */
-    --app-modal-bg: #fbf7f3;
-    --app-modal-inset: #f3ece4;
+    /* Popups: the CRM's own peach background (owner's pick, 30 Oct 2026),
+       with a lighter peach for boxes inside them; fields and cards stay white. */
+    --app-modal-bg: #f2d9c4;
+    --app-modal-inset: #f8e8da;
     --app-surface-high: rgba(255, 255, 255, 0.75);
     --app-text: #18181b;
     /* Soft text darkened from #71717a → #5f5f66 for AA contrast on glass surfaces,
@@ -211,7 +211,7 @@
      consent box. Dark: top box warming to orange on the right, outlined orange
      tab, and the info area on a light cream card (dark text) holding the
      consent box. */
-  .lead-hero { background: #f3ece4; border: 1px solid #e6dcd1; }
+  .lead-hero { background: var(--app-modal-inset); border: 1px solid rgba(var(--app-primary-deep-rgb), 0.16); }
   :root.dark .lead-hero {
     background: linear-gradient(105deg, #262428 0%, #2b2526 45%, #4a2a17 80%, #6a3412 100%);
     border: 1px solid rgba(var(--app-primary-rgb), 0.28);
@@ -238,7 +238,7 @@
   /* Accent tab strip (SegmentTabs accent): solid orange selected tab in light,
      an orange outline on a dark orange wash in dark. */
   :root {
-    --tab-accent-strip: #f1e9e0; --tab-accent-bg: var(--app-primary);
+    --tab-accent-strip: var(--app-modal-inset); --tab-accent-bg: var(--app-primary);
     --tab-accent-ring: var(--app-primary); --tab-accent-text: #ffffff;
     --tab-accent-chip: #ffffff;
   }
