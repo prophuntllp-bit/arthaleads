@@ -121,6 +121,7 @@ Format: `- [agent] 2026-10-15 14:30 IST: what, files`
 
 
 ## Change log (newest first)
+- [claude] 2026-10-30 IST: LIVE e762d028: website shader backgrounds start on first interaction (desktop home TBT 240-799 ms -> ~0), desktop header About Us second last (from staging c7d5259c, 93dfff9f). frontend components/site/LiveBackground.jsx, components/PublicNav.jsx
 - [claude] 2026-10-30 IST: LIVE ca306fba (staging 35c976d0, 063c9a4f, 739c3d91): phone footer shows every link, two groups per row, tighter spacing (1,389px -> 873px); sitemap image:image per post cover; /download-app MobileApplication JSON-LD; robots.txt Content-Signal; COOP same-origin-allow-popups on www/staging hosts. Owner to delete the 8 unused pre-28 Oct screenshot assets in Sanity Media
 - [claude] 2026-10-30 IST: LIVE 68c27d45 (staging 27c866fb, 11f39e6c, 2cf82215, b9a69158, 19be3c08, aceb8719, 1c14ebae, ad7245fe): compact phone cookie banner with floats above it; softened claims; Aurum Heights renamed Riverview Heights; robots.txt tidy; CRM paths on www 308 to app.arthaleads.com (vercel.json); AboutPage/ContactPage/CollectionPage + logo ImageObject; /features short answer + FAQs; topic guides + FAQs (backend config/model/sync); 44px tap targets; hero image decodes before app start. Watch: www/leads etc. now redirect server-side; topic guides appear after the next Sanity sync run on production
 - [claude] 2026-10-30 IST: APK Attendance Clock In now a centred pill sized to its label (was full card width); checked light + dark. staging ed01dd90, main 673efeb1. Not released.
