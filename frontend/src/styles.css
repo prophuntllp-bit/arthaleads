@@ -20,6 +20,10 @@
     --app-surface: rgba(255, 255, 255, 0.58);
     --app-surface-solid: #ffffff;
     --app-surface-low: rgba(255, 255, 255, 0.38);
+    /* Popups: warm off-white rather than stark white, and a solid inset for
+       rows, fields and boxes inside them (owner, 30 Oct 2026). */
+    --app-modal-bg: #fbf9f6;
+    --app-modal-inset: #f2ede7;
     --app-surface-high: rgba(255, 255, 255, 0.75);
     --app-text: #18181b;
     /* Soft text darkened from #71717a → #5f5f66 for AA contrast on glass surfaces,
@@ -48,6 +52,8 @@
     --app-surface: rgba(30, 29, 32, 0.75);
     --app-surface-solid: #1e1d20;
     --app-surface-low: rgba(22, 21, 24, 0.68);
+    --app-modal-bg: #1e1d20;
+    --app-modal-inset: #29272c;
     --app-surface-high: rgba(42, 40, 46, 0.84);
     --app-text: #ededed;
     --app-text-soft: #969696;
@@ -164,9 +170,18 @@
      this class (the shared Modal in components/UI.jsx does), or the same
      var(--app-surface-solid) background. */
   .modal-panel {
-    background: var(--app-surface-solid);
-    border: 1px solid var(--app-border);
+    background: var(--app-modal-bg);
+    border: 1px solid var(--app-border-strong);
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+  }
+  /* Inside any popup the see-through surfaces become solid shades, so rows,
+     inputs and boxes keep visible edges on the solid panel (a list on
+     Performance floated with no edges at all). Covers .modal-panel and the
+     popups that set the solid background inline. */
+  .modal-panel,
+  [style*="--app-surface-solid"] {
+    --app-surface-low: var(--app-modal-inset);
+    --app-surface: var(--app-modal-bg);
   }
 
   .card:hover {

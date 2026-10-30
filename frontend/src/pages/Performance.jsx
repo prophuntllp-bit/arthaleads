@@ -734,8 +734,8 @@ function PerformanceLeadsModal({ drill, dateFrom, dateTo, onClose, onOpenLead, v
             const stage = lead._type === "project" ? lead.booking : lead.status;
             return (
               <button key={`${lead._type}-${lead._id}`} type="button" onClick={() => onOpenLead(lead)}
-                className="w-full flex items-center gap-3 rounded-2xl px-4 py-3 text-left transition hover:ring-1 hover:ring-orange-400/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60"
-                style={{ background: "var(--app-surface-low)" }}>
+                className="w-full flex items-center gap-3 rounded-2xl px-4 py-3 text-left transition hover:border-orange-400/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60"
+                style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-app">{lead.name || "Unnamed lead"}</p>
                   <p className="truncate text-xs text-app-soft">
