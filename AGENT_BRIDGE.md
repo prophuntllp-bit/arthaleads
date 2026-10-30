@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+- [claude] 2026-10-30 IST: LIVE (main 281da6cb, 4e988060; staging 1b5a85e8, f304ddec): every popup solid via .modal-panel (shared Modal + custom dialogs/menus), CLAUDE.md rule 'Popups are solid'
 - [claude] 2026-10-30 IST: LIVE (staging a4756f9f): call transcripts keep clipped customer replies from 0.1 s, retry short empty pieces, show '(unclear)'
 - [claude] 2026-10-30 IST: LIVE (staging 1e42deab): call AI analysis reads Hindi/Marathi calls (gpt-5-mini, new prompt, model sentiment), silent-call wording, call window refreshes after re-run
 - [claude] 2026-10-30 IST: LIVE 4a9c07ce (staging 8c28b51e): call transcripts - speech-to-text failure saved as 'couldn't transcribe, tap refresh' (meta.transcriptError), Hindi in Urdu letters re-asked as Hindi, utterances from 0.25 s. Two 29 Oct calls (out-of-credits) need the refresh button. Website connections renamed live: shaporjipallonji.com, mahindralife-spaces.com
