@@ -8,6 +8,7 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { Building2, FolderKanban, MapPin, Pencil, Plus, QrCode, Users } from "lucide-react";
 import QrModal from "../components/QrModal";
+import PageHeader from "../components/PageHeader";
 
 function fmtPrice(n) {
   if (!n) return null;
@@ -58,13 +59,10 @@ export default function Projects() {
 
   return (
     <div className="stitch-page space-y-6">
-      <header className="stitch-topbar">
-        <div>
-          <p className="stitch-kicker mb-1">Real Estate</p>
-          <h1 className="text-2xl font-black tracking-tight text-app">Projects</h1>
-          <p className="mt-1 text-sm text-app-soft">Manage project info and import telecaller leads</p>
-        </div>
-        {canManage && (
+      <PageHeader
+        title="Projects"
+        subtitle="Your projects with their leads, photos and brochures."
+        actions={canManage && (
           <button
             className="btn-primary"
             onClick={() => { setEditProj(null); setShowForm(true); }}
@@ -72,7 +70,7 @@ export default function Projects() {
             <Plus className="h-4 w-4" /> New Project
           </button>
         )}
-      </header>
+      />
 
       {projects.length === 0 ? (
         <EmptyState

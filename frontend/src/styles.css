@@ -293,6 +293,21 @@
   /* ── Page layout ── */
   .stitch-page { @apply px-4 py-6 sm:px-6 lg:px-8 lg:py-8; }
 
+  /* ── Page header: one look on every page (owner, 30 Oct 2026) ──
+     Title, one short line on what the page is for, buttons on the right; the
+     same as Integrations and Leads. Used by components/PageHeader.jsx and by
+     the few pages whose header holds more controls. */
+  .page-header { @apply flex flex-wrap items-center justify-between gap-3 px-5 py-4; }
+  .page-title  { @apply text-[15px] sm:text-xl font-black tracking-tight leading-none; color: var(--app-text); }
+  .page-subtitle { @apply text-xs mt-1.5; color: var(--app-text-soft); }
+
+  /* A laptop screen (about 800 px tall) cut the sidebar's last items off;
+     short screens get tighter rows so every item fits. */
+  @media (max-height: 880px) {
+    .sidebar-nav .py-2\.5 { padding-top: 0.4rem; padding-bottom: 0.4rem; }
+    .sidebar-nav .my-2 { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+  }
+
   /* ── WhatsApp thread ──
      Our own doodle wallpaper rather than WhatsApp's, in both themes. The
      pattern is a near-seamless tile, so it repeats rather than stretching, and

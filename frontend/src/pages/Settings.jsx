@@ -10,6 +10,7 @@ import { canAccess } from "../utils/plan";
 import DeleteAccountSection from "../components/DeleteAccountSection";
 import CustomSelect from "../components/CustomSelect";
 import SegmentTabs from "../components/SegmentTabs";
+import PageHeader from "../components/PageHeader";
 
 // ── Indian Banks list ─────────────────────────────────────────────────────────
 const INDIAN_BANKS = [
@@ -561,11 +562,7 @@ export default function Settings() {
   return (
     <div className="stitch-page space-y-6">
 
-      {/* Header */}
-      <div>
-        <p className="stitch-kicker mb-1">Account</p>
-        <h1 className="text-3xl font-black tracking-tight text-app">Settings</h1>
-      </div>
+      <PageHeader title="Settings" subtitle="Your profile and your organisation's details." />
 
       {/* Tab bar — shared SegmentTabs strip */}
       <SegmentTabs ariaLabel="Settings sections" value={tab} onChange={setTab}

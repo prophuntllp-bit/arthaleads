@@ -306,11 +306,10 @@ export default function DumpLeads() {
 
   return (
     <div className="stitch-page space-y-6">
-      <header className="stitch-topbar">
-        <div className="flex flex-1 flex-col gap-2">
-          <p className="stitch-kicker mb-1">Archive</p>
-          <h1 className="text-3xl font-black tracking-tight text-app">Dump Leads</h1>
-          <p className="text-sm text-app-soft">Deleted leads and leads marked Closed Lost - {leads.length} total</p>
+      <header className="card page-header">
+        <div className="min-w-0">
+          <h1 className="page-title">Dump Leads</h1>
+          <p className="page-subtitle">Deleted leads and leads marked Closed Lost · {leads.length} total</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

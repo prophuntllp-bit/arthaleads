@@ -16,6 +16,7 @@ import SegmentTabs from "../components/SegmentTabs";
 import { missedReason } from "../utils/dialNumbers";
 import CallTranscript from "../components/CallTranscript";
 import { useAuth } from "../context/AuthContext";
+import PageHeader from "../components/PageHeader";
 
 const STATUS_TABS = [
   { id: "all",       label: "All Calls" },
@@ -933,18 +934,17 @@ export default function Calls() {
     <>
       <div className="stitch-page space-y-5">
 
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <p className="stitch-kicker mb-1">EnableX Telephony</p>
-            <h1 className="text-3xl font-black tracking-tight text-app">Calls</h1>
-          </div>
-          <button onClick={refresh} disabled={loading}
-            className="btn-secondary flex items-center gap-2 rounded-xl px-4 py-2 text-sm disabled:opacity-50">
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
-        </div>
+        <PageHeader
+          title="Calls"
+          subtitle="Every call made from the CRM, with recordings, transcripts and AI notes."
+          actions={(
+            <button onClick={refresh} disabled={loading}
+              className="btn-secondary flex items-center gap-2 rounded-xl px-4 py-2 text-sm disabled:opacity-50">
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+          )}
+        />
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">

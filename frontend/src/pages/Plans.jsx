@@ -190,12 +190,11 @@ export default function Plans() {
     <div className="stitch-page space-y-6">
 
       {/* Header */}
-      <section className="card p-6">
+      <section className="card px-5 py-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <p className="stitch-kicker mb-1">Plans & Billing</p>
-            <h1 className="text-2xl font-black text-app">Your Plan</h1>
-            <p className="text-sm text-app-soft mt-1">
+            <h1 className="page-title">Plan & Billing</h1>
+            <p className="page-subtitle">
               Currently on <span className="font-semibold text-[#ff6b00]">{planLabel(org?.plan)}</span>
               {org?.plan === "trial" && org?.trialEndsAt && (() => {
                 const days = Math.max(0, Math.ceil((new Date(org.trialEndsAt) - Date.now()) / 86400000));

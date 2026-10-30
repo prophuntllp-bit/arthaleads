@@ -10,6 +10,7 @@ import useAppRefresh from "../hooks/useAppRefresh";
 import { CalendarClock, ChevronLeft, ChevronRight, Clock, CalendarCheck, CalendarDays, ArrowUp, ArrowDown, CheckCircle2, User, Search, X as XIcon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useColumnResize, RTh } from "../hooks/useColumnResize";
+import PageHeader from "../components/PageHeader";
 
 const FU_COL_DEFAULTS = {
   name: 120, phone: 130, whatsapp: 110, source: 80, status: 110,
@@ -289,18 +290,10 @@ export default function FollowUps() {
 
   return (
     <div className="stitch-page">
-      {/* Top bar */}
-      <div className="stitch-topbar">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-500/10">
-            <CalendarClock className="h-5 w-5 text-orange-500" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-app leading-none">Follow Ups</h1>
-            <p className="text-xs text-app-soft mt-0.5">{total} record{total !== 1 ? "s" : ""}</p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Follow Ups"
+        subtitle={`Leads you planned to call or visit · ${total} ${total === 1 ? "lead" : "leads"}`}
+      />
 
       {/* Section tabs */}
       <div className="pt-4">

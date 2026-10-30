@@ -628,7 +628,6 @@ export default function Dashboard() {
 
           {/* Greeting */}
           <div>
-            <p className="stitch-kicker mb-1">Overview</p>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-app">{greeting}, {user?.name?.split(" ")[0]}</h1>
             <p className="mt-1 max-w-2xl text-sm text-app-soft hidden sm:block">
               Track source performance, team momentum, and recent lead movement across all your active channels in real time.
@@ -767,7 +766,6 @@ export default function Dashboard() {
           <section className="card p-6">
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <p className="stitch-kicker mb-2">Team Focus</p>
                 <h3 className="text-lg font-bold text-app">Top Agents</h3>
               </div>
               <div className="stitch-pill">Leaderboard</div>
@@ -1074,7 +1072,6 @@ function ActivityFeed({ items, navigate }) {
     <section className="card p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <p className="stitch-kicker mb-1">Live Feed</p>
           <h3 className="text-base font-bold text-app">Team Activity</h3>
         </div>
         <div className="stitch-pill text-xs">Last 10 actions</div>
@@ -1554,7 +1551,6 @@ function RevenueForecastWidget({ data }) {
     <section className="card p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="stitch-kicker mb-1">Forecast</p>
           <h3 className="text-base font-bold text-app">Revenue & Closing Pace</h3>
         </div>
         <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
@@ -1878,7 +1874,6 @@ function LeadsTrendWidget({ data, scope = "" }) {
     <section className="card p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="stitch-kicker mb-1">Trends</p>
           <h3 className="text-base font-bold text-app">Leads Over Time</h3>
         </div>
         <div className="text-right">

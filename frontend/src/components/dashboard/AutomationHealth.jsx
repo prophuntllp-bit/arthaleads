@@ -56,7 +56,6 @@ export default function AutomationHealth({ automations, Logo, onOpen }) {
     <section className="card flex h-full flex-col p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <p className="stitch-kicker mb-1">Integrations</p>
           <h3 className="flex items-center gap-1.5 text-base font-bold text-app">
             Lead Sources Health
             <InfoTip text="Each connected lead source and when its last lead arrived. Amber means no lead for 24 hours, which can mean a connection has broken." />

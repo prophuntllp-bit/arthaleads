@@ -483,7 +483,6 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
         <div className="rounded-[1.75rem] p-5 stitch-surface-muted">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="stitch-kicker mb-2">Lead Profile</p>
               <div className="flex items-center gap-2">
                 <h3 className="text-2xl font-black tracking-tight text-app">{lead.name}</h3>
                 <CopyButton value={[lead.name, lead.phone].filter(Boolean).join("\n")} label="Copy name and number" done="Name and number copied" />

@@ -219,14 +219,11 @@ export default function Team() {
 
   return (
     <div className="stitch-page space-y-6">
-      <section className="card p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <section className="card px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="stitch-kicker mb-2">People Ops</p>
-            <h1 className="text-3xl font-black tracking-tight text-app">Team Management</h1>
-            <p className="mt-2 max-w-2xl text-sm text-app-soft">
-              View everyone in the CRM, assign roles, and control who can access your sales workspace.
-            </p>
+            <h1 className="page-title">Team</h1>
+            <p className="page-subtitle">Everyone in your CRM, their role and their access.</p>
           </div>
           {isAdmin && (
             <div className="flex items-center gap-2">

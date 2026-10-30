@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 import { AppSelect } from "../components/UI";
 import SegmentTabs from "../components/SegmentTabs";
+import PageHeader from "../components/PageHeader";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -531,16 +532,8 @@ export default function Invoices() {
   const totalPend = summary.pending || 0;
 
   return (
-    <div className="px-4 sm:px-6 py-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-xl font-black text-app flex items-center gap-2">
-            <FileCheck className="h-5 w-5" style={{ color: "var(--app-primary)" }} />
-            Invoices
-          </h1>
-          <p className="text-sm text-app-soft mt-0.5">Brokerage tax invoices sent to developers</p>
-        </div>
-      </div>
+    <div className="stitch-page">
+      <PageHeader className="mb-5" title="Invoices" subtitle="Brokerage tax invoices sent to developers." />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
         {[

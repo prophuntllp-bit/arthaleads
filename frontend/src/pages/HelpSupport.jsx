@@ -1009,14 +1009,11 @@ export default function HelpSupport() {
       )}
 
       {/* Header */}
-      <section className="card p-6">
+      <section className="card px-5 py-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <p className="stitch-kicker mb-2">Support Desk</p>
-            <h1 className="text-3xl font-black tracking-tight text-app">Help & Support</h1>
-            <p className="mt-2 max-w-2xl text-sm text-app-soft">
-              Step-by-step guides to get started, FAQs, and direct support for your team.
-            </p>
+            <h1 className="page-title">Help & Support</h1>
+            <p className="page-subtitle">Guides to get started, answers to common questions, and our support team.</p>
           </div>
           <button
             onClick={() => { setActiveTab("support"); setShowRaiseModal(true); }}

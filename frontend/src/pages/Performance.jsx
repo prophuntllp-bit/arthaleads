@@ -318,14 +318,11 @@ export default function Performance() {
   return (
     <div className="stitch-page space-y-6">
       {/* Header */}
-      <section className="card p-6">
+      <section className="card px-5 py-4">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
-            <p className="stitch-kicker mb-2">Performance Board</p>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-app">Team Performance</h1>
-            <p className="mt-2 max-w-2xl text-sm text-app-soft">
-              Track how each team member is handling leads across both the main pipeline and project pipelines - updated live.
-            </p>
+            <h1 className="page-title">Performance</h1>
+            <p className="page-subtitle">How each person is handling leads in the main and project pipelines.</p>
           </div>
           <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
             {/* Agent filter */}

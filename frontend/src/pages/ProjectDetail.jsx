@@ -869,16 +869,15 @@ export default function ProjectDetail() {
   return (
     <div className="stitch-page space-y-6">
       {/* Top bar */}
-      <div className="stitch-topbar">
+      <div className="card page-header">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/projects")} className="btn-ghost">
+          <button onClick={() => navigate("/projects")} className="btn-ghost" aria-label="Back to projects">
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div>
-            <p className="stitch-kicker mb-0.5">Project</p>
-            <h1 className="text-xl font-black tracking-tight text-app">{project.name}</h1>
+            <h1 className="page-title">{project.name}</h1>
             {project.location && (
-              <div className="flex items-center gap-1 mt-0.5 text-xs text-app-soft">
+              <div className="flex items-center gap-1 mt-1.5 text-xs text-app-soft">
                 <MapPin className="h-3 w-3" /> {project.location}
               </div>
             )}
