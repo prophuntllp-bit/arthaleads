@@ -56,7 +56,7 @@
     --app-surface-solid: #1e1d20;
     --app-surface-low: rgba(22, 21, 24, 0.68);
     --app-modal-bg: #1e1d20;
-    --app-modal-inset: color-mix(in srgb, var(--app-primary) 6%, #26252a);
+    --app-modal-inset: color-mix(in srgb, var(--app-primary) 3%, #28272b);
     --app-surface-high: rgba(42, 40, 46, 0.84);
     --app-text: #ededed;
     --app-text-soft: #969696;
