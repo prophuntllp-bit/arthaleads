@@ -9,7 +9,7 @@ export default function Terms() {
   });
 
   return (
-    <LegalLayout title="Terms of Service" badge="Legal" updated="28 October 2026">
+    <LegalLayout title="Terms of Service" badge="Legal" updated="30 October 2026">
 
       <Section title="1. Acceptance of Terms">
         <p>
@@ -120,7 +120,7 @@ export default function Terms() {
           suggestions, and sales assistance. When you use these features:
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
-          <li>Relevant lead and context data is sent to our AI provider (OpenAI) to generate responses. This data is processed under OpenAI's data processing terms and is not used to train its general models.</li>
+          <li>Relevant lead and context data is sent to our AI provider (OpenAI, or Anthropic as a backup when OpenAI is unavailable) to generate responses. This data is processed under that provider's data processing terms and is not used to train its general models.</li>
           <li>You must not submit sensitive personal data (e.g. financial account details, government ID numbers, health information) to AI features.</li>
           <li>AI-generated content is advisory only. Arthaleads makes no warranty regarding the accuracy, completeness, or suitability of AI suggestions. You remain solely responsible for all decisions made using the platform.</li>
           <li>AI usage is tracked per organisation for billing and abuse-prevention purposes.</li>
