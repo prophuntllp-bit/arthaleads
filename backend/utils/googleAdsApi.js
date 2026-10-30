@@ -92,7 +92,9 @@ async function listAccounts(accessToken) {
         WHERE customer_client.manager = false`, { accessToken, loginCustomerId: id });
       for (const { customerClient: c } of clients) {
         if (!c?.id) continue;
-        if (["CANCELED", "CLOSED"].includes(c.status)) { closedClients.push(`${c.descriptiveName || c.id} (${c.status.toLowerCase()})`); continue; }
+        // Google reports test accounts (no billing) as CLOSED; they stay pickable so the
+        // connection can be tried end to end. A real closed account is left out.
+        if (["CANCELED", "CLOSED"].includes(c.status) && c.testAccount !== true) { closedClients.push(`${c.descriptiveName || c.id} (${c.status.toLowerCase()})`); continue; }
         viaManager.push({ id: String(c.id), name: c.descriptiveName || String(c.id), loginCustomerId: id, managerName: customer.descriptiveName || id, testAccount: c.testAccount === true, status: c.status || "" });
       }
     } catch (err) {

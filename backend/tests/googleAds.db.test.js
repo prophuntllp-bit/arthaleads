@@ -30,6 +30,8 @@ global.fetch = async (url, opts = {}) => {
     return reply({ results: [
       { customerClient: { id: "222", descriptiveName: "Prophunt Ads" } },
       { customerClient: { id: "111", descriptiveName: "Direct Too" } },
+      { customerClient: { id: "333", descriptiveName: "Old Closed", status: "CLOSED" } },
+      { customerClient: { id: "444", descriptiveName: "Sandbox", status: "CLOSED", testAccount: true } },
     ] });
   }
   if (/FROM customer /.test(q + " ")) {
@@ -70,6 +72,7 @@ test("account list: a manager is replaced by its clients, each remembering the m
   assert.deepEqual(accounts.map((a) => [a.id, a.name, a.loginCustomerId]), [
     ["111", "Own Account", ""],
     ["222", "Prophunt Ads", "999"],
+    ["444", "Sandbox", "999"],
   ]);
   assert.equal(accounts[1].managerName, "Arthaleads MCC");
   assert.ok(calls.every((c) => c.url.includes("/v26/") || c.url.includes("oauth2")), "every call on v26");
