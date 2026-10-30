@@ -13,6 +13,7 @@ import { Modal, Spinner, EmptyState } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 import DateTimePicker from "../components/DateTimePicker";
 import SegmentTabs from "../components/SegmentTabs";
+import PageHeader from "../components/PageHeader";
 
 // Debounced lead search-select — resolves to a real Lead _id (not just a label)
 // so tasks stay genuinely linked to the lead they're about. Remounts fresh each
@@ -290,21 +291,16 @@ export default function Tasks() {
   ];
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-app">Tasks</h1>
-          <p className="text-sm text-app-soft mt-0.5">
-            {canManage ? "Assign and track tasks for your team" : "Your assigned tasks"}
-          </p>
-        </div>
-        {canManage && (
+    <div className="stitch-page space-y-6">
+      <PageHeader
+        title="Tasks"
+        subtitle={canManage ? "Assign and track tasks for your team." : "Your assigned tasks."}
+        actions={canManage && (
           <button onClick={openAdd} className="btn-primary flex items-center gap-2">
             <Plus className="h-4 w-4" /> Add Task
           </button>
         )}
-      </div>
+      />
 
       {/* Summary filter (shared SegmentTabs strip) */}
       <SegmentTabs ariaLabel="Task filter" value={activeCard} onChange={setActiveCard} tabs={cards} />

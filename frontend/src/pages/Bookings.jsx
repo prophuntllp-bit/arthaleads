@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { AppSelect, AppDatePicker } from "../components/UI";
 import { useNavigate } from "react-router-dom";
 import SegmentTabs from "../components/SegmentTabs";
+import PageHeader from "../components/PageHeader";
 
 const UNIT_TYPES = ["Flat", "Plot", "Villa", "Shop", "Office", "Other"];
 const STATUS_LABELS = { new: "New", invoiced: "Invoiced", payment_received: "Paid" };
@@ -378,21 +379,18 @@ export default function Bookings() {
   const countPaid    = summary.byStatus?.payment_received?.count || 0;
 
   return (
-    <div className="px-4 sm:px-6 py-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-xl font-black text-app flex items-center gap-2">
-            <BookMarked className="h-5 w-5" style={{ color: "var(--app-primary)" }} />
-            Bookings
-          </h1>
-          <p className="text-sm text-app-soft mt-0.5">Track every closed deal and generate brokerage invoices</p>
-        </div>
-        <button onClick={() => setModal("new")}
-          className="btn-primary rounded-2xl px-4 py-2 text-sm flex items-center gap-2 cursor-pointer whitespace-nowrap flex-shrink-0">
-          <Plus className="h-4 w-4" /> New Booking
-        </button>
-      </div>
+    <div className="stitch-page">
+      <PageHeader
+        className="mb-5"
+        title="Bookings"
+        subtitle="Every closed deal, and the brokerage invoices made from it."
+        actions={(
+          <button onClick={() => setModal("new")}
+            className="btn-primary rounded-2xl px-4 py-2 text-sm flex items-center gap-2 cursor-pointer whitespace-nowrap flex-shrink-0">
+            <Plus className="h-4 w-4" /> New Booking
+          </button>
+        )}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">

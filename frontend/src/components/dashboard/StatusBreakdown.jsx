@@ -21,7 +21,6 @@ export default function StatusBreakdown({ byStatus, scope = "", onSelect }) {
     <section className="card flex h-full flex-col p-4 sm:p-5">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="shrink-0">
-          <p className="stitch-kicker mb-0.5">Pipeline</p>
           <h3 className="flex items-center gap-1.5 text-sm font-bold text-app">
             Leads by Status
             <InfoTip text="Where the leads from these dates are in your pipeline right now. Click a stage to see those leads." />

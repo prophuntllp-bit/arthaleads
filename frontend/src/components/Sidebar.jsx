@@ -7,7 +7,7 @@ import {
   LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow,
   FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
   PenLine, ChevronDown, ChevronUp, Tag, FileText, Plus, List,
-  PanelLeftClose, PanelLeft, Zap, Search, X as XIcon, CornerDownLeft,
+  PanelLeftClose, PanelLeft, Zap, CreditCard, Search, X as XIcon, CornerDownLeft,
   Receipt, BookMarked, FileCheck, Building2, ClipboardList, Phone, Mail, ChevronsUpDown, ChevronRight, Home,
 } from "lucide-react";
 import WhatsAppIcon from "./WhatsAppIcon";
@@ -73,7 +73,7 @@ const navItems = [
   // this to an agent offers something they cannot act on. Seat usage is still
   // visible to everyone on the Team page.
   { divider: true },
-  { to: "/plans",       label: "Plan & Billing", icon: Zap, roles: ["admin"], hint: "Your plan, seats and payments" },
+  { to: "/plans",       label: "Plan & Billing", icon: CreditCard, roles: ["admin"], hint: "Your plan, seats and payments" },
   { to: "/settings",    label: "Settings",     icon: Settings, hint: "Your profile, workspace and notification settings" },
   { to: "/help-support", label: "Help & Support", icon: LifeBuoy, hint: "Guides, raise a support ticket or talk to us" },
 ];
@@ -602,7 +602,7 @@ export default function Sidebar() {
         </div>
 
         {/* ── Nav items ── */}
-        <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch", minHeight: 0 }}>
+        <nav className="sidebar-nav flex-1 px-2 space-y-0.5 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch", minHeight: 0 }}>
           {filtered.map((item, idx) => {
             if (item.divider) {
               return <div key={`divider-${idx}`} className="mx-3 my-2 h-px" style={{ background: "var(--app-border)" }} />;

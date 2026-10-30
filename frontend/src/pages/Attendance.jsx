@@ -436,14 +436,11 @@ export default function Attendance() {
     <div className="stitch-page">
 
       {/* ── Top bar ── */}
-      <div className="stitch-topbar">
+      <div className="card page-header">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-500/10">
-            <Clock className="h-5 w-5 text-orange-500" />
-          </div>
           <div>
-            <h1 className="text-lg font-bold text-app leading-none">Attendance</h1>
-            <p className="text-xs text-app-soft mt-0.5">
+            <h1 className="page-title">Attendance</h1>
+            <p className="page-subtitle">
               Shift: {shiftSettings.shiftStartTime} - {shiftSettings.shiftEndTime} · {shiftSettings.bufferMinutes}m grace ·{" "}
               {(shiftSettings.halfDayMinutes / 60).toFixed(1)}h half · {(shiftSettings.fullDayMinutes / 60).toFixed(1)}h full
             </p>

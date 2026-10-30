@@ -3,6 +3,7 @@ import { Building2, Plus, Pencil, Trash2, X, Check, Upload } from "lucide-react"
 import { AppSelect, SmartImage } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import PageHeader from "../components/PageHeader";
 
 const EMPTY = {
   name: "", address: "", pan: "", cin: "", gstNo: "",
@@ -271,21 +272,18 @@ export default function Developers() {
   };
 
   return (
-    <div className="px-4 sm:px-6 py-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-black text-app flex items-center gap-2">
-            <Building2 className="h-5 w-5" style={{ color: "var(--app-primary)" }} />
-            Developers
-          </h1>
-          <p className="text-sm text-app-soft mt-0.5">Builder profiles used for brokerage invoices</p>
-        </div>
-        <button onClick={() => setModal("add")}
-          className="btn-primary rounded-2xl px-4 py-2 text-sm flex items-center gap-2 cursor-pointer">
-          <Plus className="h-4 w-4" /> Add Developer
-        </button>
-      </div>
+    <div className="stitch-page">
+      <PageHeader
+        className="mb-5"
+        title="Developers"
+        subtitle="Builder profiles used on brokerage invoices."
+        actions={(
+          <button onClick={() => setModal("add")}
+            className="btn-primary rounded-2xl px-4 py-2 text-sm flex items-center gap-2 cursor-pointer">
+            <Plus className="h-4 w-4" /> Add Developer
+          </button>
+        )}
+      />
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
