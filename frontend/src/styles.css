@@ -20,10 +20,13 @@
     --app-surface: rgba(255, 255, 255, 0.58);
     --app-surface-solid: #ffffff;
     --app-surface-low: rgba(255, 255, 255, 0.38);
-    /* Popups: warm off-white rather than stark white, and a solid inset for
-       rows, fields and boxes inside them (owner, 30 Oct 2026). */
-    --app-modal-bg: #fbf9f6;
-    --app-modal-inset: #f2ede7;
+    /* Popups: white with a breath of the brand colour, and a soft peach inset
+       for rows, fields and boxes inside them, so they read as the same CRM as
+       the orange-tinted cards and borders (owner, 30 Oct 2026: the beige
+       looked like another app). Mixed from --app-primary so a custom brand
+       colour carries into popups too. */
+    --app-modal-bg: color-mix(in srgb, var(--app-primary) 2%, #ffffff);
+    --app-modal-inset: color-mix(in srgb, var(--app-primary) 5%, #ffffff);
     --app-surface-high: rgba(255, 255, 255, 0.75);
     --app-text: #18181b;
     /* Soft text darkened from #71717a → #5f5f66 for AA contrast on glass surfaces,
@@ -53,7 +56,7 @@
     --app-surface-solid: #1e1d20;
     --app-surface-low: rgba(22, 21, 24, 0.68);
     --app-modal-bg: #1e1d20;
-    --app-modal-inset: #29272c;
+    --app-modal-inset: color-mix(in srgb, var(--app-primary) 6%, #26252a);
     --app-surface-high: rgba(42, 40, 46, 0.84);
     --app-text: #ededed;
     --app-text-soft: #969696;
