@@ -91,7 +91,7 @@
      Many components set outline:none for the mouse; restore a clear ring for
      keyboard users only (:focus-visible never triggers on plain mouse clicks). */
   :focus-visible {
-    outline: 2px solid var(--app-primary);
+    outline: 2px solid var(--focus-ring, #e65c00);
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -801,6 +801,7 @@ html[data-public-theme="dark"] { --brand-text: #ff6b00; }
   --site-dark-card: #181a25;
   --site-brand: #ff6b00;
   --site-brand-ink: #ad3a0a;   /* 4.7:1+ on the orange-tint chips */
+  --focus-ring: #e65c00;       /* keyboard focus: 3:1+ on white and on the dark bands (Hallmark audit, 30 Oct 2026) */
   --site-green: #15803d;        /* green text on white, 5:1 */
   --site-green-ink: #166534;    /* green text on green-tint chips, 6:1 */
   --site-grid: rgba(15, 18, 34, 0.055);
@@ -928,7 +929,7 @@ html[data-public-theme="dark"] .site-section.site-section--dark { box-shadow: in
   font-weight: 600; font-size: 0.9375rem; line-height: 1; white-space: nowrap;
   transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
-.site-btn:focus-visible { outline: 2px solid var(--site-brand); outline-offset: 3px; }
+.site-btn:focus-visible { outline: 2px solid var(--focus-ring, #e65c00); outline-offset: 3px; }
 .site-btn--primary { background: var(--brand-btn); color: #fff; box-shadow: 0 10px 24px -10px rgba(204, 75, 0, 0.6); }
 .site-btn--primary:hover { background: var(--brand-btn-hover); transform: translateY(-1px); }
 .site-btn--secondary { background: var(--site-card); color: var(--site-ink); border: 1px solid var(--site-line-strong); }

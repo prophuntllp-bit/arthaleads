@@ -138,7 +138,7 @@ export function ScoreCard() {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold site-ink truncate">Raj Patil</p>
-          <p className="text-xs site-muted truncate">Riverview Heights · 2 BHK · ₹80 L – 1 Cr</p>
+          <p className="text-xs site-muted truncate">Riverview Heights, 2 BHK, ₹80 L to 1 Cr</p>
         </div>
         <div className="relative w-16 h-16 shrink-0" aria-label="Lead score 87 out of 100">
           <svg viewBox="0 0 64 64" className="w-16 h-16 -rotate-90" aria-hidden="true">
@@ -399,7 +399,7 @@ export function BookingViz() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="font-semibold site-ink flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" style={{ color: "var(--site-brand-ink)" }} /> Invoice AL-0142</p>
-            <p className="text-[11px] site-muted mt-0.5 truncate">Flat 1204 · Riverview Heights · Asha Kulkarni</p>
+            <p className="text-[11px] site-muted mt-0.5 truncate">Flat 1204, Riverview Heights, Asha Kulkarni</p>
           </div>
           <div className="flex gap-1.5 shrink-0">
             <Badge tone={GREEN}>PDF ready</Badge>

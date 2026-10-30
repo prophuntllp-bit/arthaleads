@@ -15,8 +15,8 @@ const SCRIPT = [
   { who: "buyer", text: "Hi, is the 2 BHK at Riverview Heights still available? What's the price?", time: "1:04 AM" },
   { who: "ai", text: "Hi Raj, yes it is. 2 BHK homes start at ₹82 L. Are you buying to live in or as an investment?", time: "1:04 AM", options: ["To live in", "Investment"] },
   { who: "buyer", text: "To live in", time: "1:05 AM" },
-  { who: "ai", text: "What budget are you looking at?", time: "1:05 AM", options: ["Under ₹80 L", "₹80 L – 1 Cr", "₹1 Cr +"] },
-  { who: "buyer", text: "₹80 L – 1 Cr", time: "1:05 AM" },
+  { who: "ai", text: "What budget are you looking at?", time: "1:05 AM", options: ["Under ₹80 L", "₹80 L to 1 Cr", "₹1 Cr +"] },
+  { who: "buyer", text: "₹80 L to 1 Cr", time: "1:05 AM" },
   { who: "ai", text: "Can you visit the site this Saturday? 11 AM or 4 PM?", time: "1:05 AM", options: ["11 AM", "4 PM"] },
   { who: "buyer", text: "11 AM", time: "1:06 AM" },
   { who: "booked" },
@@ -126,7 +126,7 @@ export default function HeroChat() {
                 style={{ background: "linear-gradient(135deg,#7dd3a8,#1fa463)" }}>RP</span>
               <div className="min-w-0 flex-1 ml-0.5">
                 <p className="text-[15px] font-semibold leading-tight text-[#0b0b0c] truncate">Raj Patil</p>
-                <p className="text-[11.5px] leading-tight text-[#667781] truncate">Facebook ad · Riverview Heights</p>
+                <p className="text-[11.5px] leading-tight text-[#54656f] truncate">Facebook ad · Riverview Heights</p>
               </div>
               <Video className="w-[22px] h-[22px] text-[#0b0b0c] shrink-0" strokeWidth={1.8} aria-hidden="true" />
               <Phone className="w-[19px] h-[19px] text-[#0b0b0c] shrink-0 ml-3" strokeWidth={1.8} aria-hidden="true" />
@@ -148,7 +148,7 @@ export default function HeroChat() {
                         <CalendarCheck2 className="w-4 h-4" aria-hidden="true" /> Site visit booked
                       </div>
                       <p className="text-[12px] text-[#111b21] mt-0.5">Sat, 11:00 AM · Riverview Heights</p>
-                      <p className="text-[11.5px] text-[#667781] mt-1 leading-snug">Sent to Neha with budget, purpose and visit time. Nobody on the team was awake.</p>
+                      <p className="text-[11.5px] text-[#54656f] mt-1 leading-snug">Sent to Neha with budget, purpose and visit time. Nobody on the team was awake.</p>
                     </div>
                   );
                 }
@@ -158,7 +158,7 @@ export default function HeroChat() {
                   <div key={i} className={`hc-in ${mine && m.options ? "w-[82%]" : "max-w-[82%]"} ${mine ? "self-end" : "self-start"} ${firstOfGroup ? "mt-1" : ""}`}>
                     <div className={`relative flow-root rounded-[10px] px-2.5 pt-1.5 pb-1 text-[13.5px] leading-[1.35] text-[#111b21] shadow-[0_1px_0.5px_rgba(0,0,0,0.13)] ${mine ? "bg-[#d9fdd3]" : "bg-white"} ${firstOfGroup ? (mine ? "rounded-tr-none hc-tail-out" : "rounded-tl-none hc-tail-in") : ""}`}>
                       {m.text}
-                      <span className="float-right ml-2 mt-[7px] -mb-0.5 flex items-center gap-0.5 text-[10.5px] text-[#667781]">
+                      <span className="float-right ml-2 mt-[7px] -mb-0.5 flex items-center gap-0.5 text-[10.5px] text-[#54656f]">
                         {m.time}{mine && <CheckCheck className="w-[15px] h-[15px] text-[#53bdeb]" aria-hidden="true" />}
                       </span>
                     </div>
@@ -166,7 +166,7 @@ export default function HeroChat() {
                       // Like WhatsApp: two buttons share a row, three stack as full-width rows.
                       <div className={`mt-[3px] grid gap-[3px] ${m.options.length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
                         {m.options.map((o) => (
-                          <span key={o} className={`whitespace-nowrap text-center text-[12.5px] font-medium rounded-[10px] py-[7px] px-1 bg-white shadow-[0_1px_0.5px_rgba(0,0,0,0.13)] ${i === lastAi ? "text-[#027eb5]" : "text-[#8696a0]"}`}>{o}</span>
+                          <span key={o} className={`whitespace-nowrap text-center text-[12.5px] font-medium rounded-[10px] py-[7px] px-1 bg-white shadow-[0_1px_0.5px_rgba(0,0,0,0.13)] ${i === lastAi ? "text-[#027eb5]" : "text-[#54656f]"}`}>{o}</span>
                         ))}
                       </div>
                     )}

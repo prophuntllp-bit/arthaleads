@@ -32,7 +32,7 @@ export default function FilmSection() {
   return (
     <Section id="tour" tone="tint">
       <Container>
-        <SectionHeader eyebrow="Watch the tour" title={<>A buyer messages at 1 AM.<br className="hidden sm:block" /> <span className="site-dim">Here is what happens next.</span></>}
+        <SectionHeader title={<>A buyer messages at 1 AM.<br className="hidden sm:block" /> Here is what happens next.</>}
           lede="Two minutes on how Arthaleads replies on WhatsApp, qualifies the buyer, books the site visit and hands your team a lead with every answer filled in."
           action={
             <div role="group" aria-label="Film language" className="site-card inline-flex p-1 !rounded-full">
