@@ -16,7 +16,7 @@ const { getNextAssignee } = require("../utils/assignLead");
 const { matchRoutingRule, matchWebsiteRoutingRule, fileLeadInRoutedProject } = require("../utils/routingRules");
 const { emitLeadCreated, routedProject } = require("../utils/emitLeadCreated");
 const Organization    = require("../models/Organization");
-const { mapGoogleLeadFields, fromWebhookColumns } = require("../utils/googleLeadFields");
+const { mapGoogleLeadFields, fromWebhookColumns, googleAdRef, adRefLines, googleSourceLabel } = require("../utils/googleLeadFields");
 const { mapCustomFieldsToLead } = require("../utils/formFieldMapper");
 const { samePhone } = require("../utils/phone");
 const OPTS = require("../constants/leadOptions");
@@ -1659,7 +1659,7 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
   try {
     const {
       google_key, is_test, lead_id, campaign_id, campaign_name,
-      adgroup_id, adgroup_name, gcl_id, user_column_data,
+      adgroup_id, adgroup_name, creative_id, form_id, gcl_id, user_column_data,
     } = req.body || {};
 
     if (!google_key) return res.status(400).json({ success: false, message: "Missing google_key" });
@@ -1690,8 +1690,10 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
 
     // Google re-sends a lead we answered with an error, so a lead id we already
     // saved is acknowledged and not saved again. Test leads reuse ids, skip them.
+    // The account sync (utils/googleAdsPoller.js) keys the same lead by its API resource name.
     const externalId = !isTestLead && lead_id ? `google:${String(lead_id)}` : "";
-    if (externalId && await Lead.findOne({ orgId, externalId }).select("_id").lean()) {
+    const syncedId = externalId ? new RegExp(`/leadFormSubmissionData/${String(lead_id).replace(/\D/g, "")}$`) : null;
+    if (externalId && await Lead.findOne({ orgId, externalId: syncedId && String(lead_id).replace(/\D/g, "") ? { $in: [externalId, syncedId] } : externalId }).select("_id").lean()) {
       logger.info(`[google webhook] lead ${lead_id} already saved - repeat delivery skipped`);
       return res.status(200).json({ success: true, message: "Lead already received" });
     }
@@ -1726,9 +1728,15 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
       try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
     }
 
+    // Which ad it came from. Google sends ad group and ad only for video and Discovery
+    // ads; otherwise the campaign and the lead form (forms sit on the campaign).
+    const adRef = googleAdRef({
+      campaignId: campaign_id, campaignName: campaign_name, adGroupId: adgroup_id, adGroupName: adgroup_name,
+      adId: creative_id, formId: form_id, gclid: gcl_id,
+    });
     const sourceLabel = isTestLead
       ? `${automation.name || "Google Ads"} - Test`
-      : (automation.name || automation.leadSourceLabel || "Google");
+      : googleSourceLabel(automation.name || automation.leadSourceLabel || "Google", adRef);
 
     const noteText = isTestLead
       ? `⚠️ Google Test Lead — sent via the "Send test lead" button in Google Ads. Real leads from your Lead Form ad will include name, phone, and any custom question answers.\n\nLead ID: ${lead_id || "unknown"}`
@@ -1737,6 +1745,7 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
           `Name: ${name || "-"}`,
           `Phone: ${cleanPhone}`,
           `Email: ${email || "-"}`,
+          ...adRefLines(adRef),
           requirements ? `\nForm Answers:\n${customFields.map((e) => `${e.label || e.id}: ${e.value}`).join("\n")}` : "",
           `Lead ID: ${lead_id || "unknown"}`,
         ].filter(Boolean).join("\n");
@@ -1750,6 +1759,7 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
       source: "Google",
       status: "New",
       ...(externalId ? { externalId } : {}),
+      ...(isTestLead ? {} : { adRef }),
       requirements: isTestLead ? "" : requirements,
       formResponses: isTestLead ? [] : formResponses,
       ...(isTestLead ? {} : mappedLeadFields),
@@ -1773,6 +1783,8 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
             campaignName: campaign_name || "",
             adgroupId: adgroup_id ? String(adgroup_id) : "",
             adgroupName: adgroup_name || "",
+            adId: creative_id ? String(creative_id) : "",
+            formId: form_id ? String(form_id) : "",
             gclId: gcl_id || "",
           },
         },
@@ -1796,7 +1808,9 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
     });
 
     automation.status = "connected";
-    automation.lastSyncAt = new Date();
+    // For a Sign in with Google connection lastSyncAt is the account sync's cursor:
+    // moving it here would make the sync skip leads from forms that don't push.
+    if (automation.mode !== "oauth") automation.lastSyncAt = new Date();
     await automation.save();
 
     if (assignee?._id) {

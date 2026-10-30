@@ -58,4 +58,30 @@ function fromApiFields(fields) {
   }));
 }
 
-module.exports = { mapGoogleLeadFields, fromWebhookColumns, fromApiFields };
+// Which ad a lead came from, in the Lead.adRef shape. Empty parts are dropped.
+function googleAdRef(parts) {
+  const ref = { platform: "google" };
+  for (const k of ["campaignId", "campaignName", "adGroupId", "adGroupName", "adId", "adName", "formId", "formName", "gclid"]) {
+    const v = parts?.[k];
+    if (v !== undefined && v !== null && String(v).trim()) ref[k] = String(v).trim();
+  }
+  return ref;
+}
+
+// Lines for the lead note: "Campaign: Baner 2BHK (1234)".
+function adRefLines(ref) {
+  const line = (label, name, id) => (name || id ? `${label}: ${name || id}${name && id ? ` (${id})` : ""}` : "");
+  return [
+    line("Campaign", ref?.campaignName, ref?.campaignId),
+    line("Ad group", ref?.adGroupName, ref?.adGroupId),
+    line("Ad", ref?.adName, ref?.adId),
+    line("Lead form", ref?.formName, ref?.formId),
+  ].filter(Boolean);
+}
+
+// "Prophunt Google · Baner 2BHK": the connection, then the campaign, like Facebook's label.
+function googleSourceLabel(base, ref) {
+  return [base || "Google", ref?.campaignName || ref?.formName || ""].filter(Boolean).join(" · ");
+}
+
+module.exports = { mapGoogleLeadFields, fromWebhookColumns, fromApiFields, googleAdRef, adRefLines, googleSourceLabel };

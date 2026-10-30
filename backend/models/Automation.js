@@ -97,6 +97,21 @@ const automationSchema = new mongoose.Schema(
       maxlength: 40,
       default: "",
     },
+    // Instant delivery: how many of the account's lead forms send to our webhook
+    // (utils/googleAdsApi.js ensureLeadFormWebhooks), checked on connect and each sync.
+    googleDelivery: {
+      type: {
+        total:     { type: Number, default: 0 },
+        ours:      { type: Number, default: 0 },
+        other:     { type: Number, default: 0 }, // forms sending to someone else's webhook
+        failed:    { type: Number, default: 0 },
+        error:     { type: String, default: "" },
+        checkedAt: { type: Date },
+      },
+      default: undefined,
+    },
+    // When the safety-net sync last asked Google (lastSyncAt is the lead cursor).
+    googlePolledAt: { type: Date, default: null },
     externalSourceUrl: {
       type: String,
       trim: true,

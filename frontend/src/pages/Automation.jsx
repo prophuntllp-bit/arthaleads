@@ -870,6 +870,19 @@ function GoogleCard({ conn, endpoint, onDelete, copyText }) {
 }
 
 /* ─── Google Ads: OAuth-connected account card ─────────────────────────────── */
+const istDateTime = (d) => new Date(d).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+
+// Instant delivery = our webhook on the account's lead forms (set when connecting).
+function deliveryText(d) {
+  if (!d || !d.checkedAt) return "Instant delivery: checking";
+  if (!d.total) return d.error ? "Instant delivery: couldn't check the lead forms" : "No lead forms yet. New ones get instant delivery automatically.";
+  if (d.ours === d.total) return `Instant delivery on for ${d.total === 1 ? "the lead form" : `all ${d.total} lead forms`}`;
+  const parts = [`Instant delivery on for ${d.ours} of ${d.total} lead forms`];
+  if (d.other) parts.push(`${d.other} already send to another tool`);
+  if (d.failed) parts.push(`${d.failed} need Standard or Admin access in Google Ads`);
+  return `${parts.join("; ")}. The rest arrive within 5 minutes.`;
+}
+
 function GoogleOAuthCard({ conn, onDelete, onSync }) {
   const [syncing, setSyncing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -920,9 +933,12 @@ function GoogleOAuthCard({ conn, onDelete, onSync }) {
         </div>
       </div>
       <div className="flex items-center justify-between gap-3 px-4 py-3">
-        <p className="text-xs text-app-soft">
-          {conn.lastSyncAt ? `Last synced: ${new Date(conn.lastSyncAt).toLocaleString()}` : "Not synced yet"}
-        </p>
+        <div className="min-w-0 space-y-0.5">
+          <p className="text-xs font-semibold text-app">{deliveryText(conn.delivery)}</p>
+          <p className="text-xs text-app-soft">
+            {conn.polledAt || conn.lastSyncAt ? `Last checked: ${istDateTime(conn.polledAt || conn.lastSyncAt)}` : "Not checked yet"}
+          </p>
+        </div>
         <button onClick={handleSync} disabled={syncing} className="btn-secondary rounded-xl px-3 py-1.5 text-xs flex items-center gap-1.5 shrink-0">
           {syncing ? <Spinner size="sm" /> : <RefreshCw className="h-3.5 w-3.5" />}
           {syncing ? "Syncing…" : "Sync now"}
@@ -1062,7 +1078,7 @@ function GoogleWizard({ open, onClose, onChanged }) {
     setSavingOAuth(true);
     try {
       const chosen = pendingOAuth.customers.find((c) => c.id === pendingCustomerId);
-      await api.post("/automations/google/oauth-create", {
+      const res = await api.post("/automations/google/oauth-create", {
         name: pendingName.trim(),
         customerId: pendingCustomerId,
         customerName: chosen?.name || pendingCustomerId,
@@ -1070,7 +1086,10 @@ function GoogleWizard({ open, onClose, onChanged }) {
         accessToken: pendingOAuth.accessToken,
         refreshToken: pendingOAuth.refreshToken,
       });
-      toast.success("Google Ads account connected! First lead sync will run shortly.");
+      const d = res?.data?.delivery;
+      toast.success(d?.total && d.ours === d.total
+        ? "Google Ads connected. New leads arrive instantly."
+        : "Google Ads connected. Leads arrive within 5 minutes.");
       setPendingOAuth(null);
       onChanged?.();
       await load(false);
