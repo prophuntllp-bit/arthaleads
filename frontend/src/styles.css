@@ -179,7 +179,11 @@
      popups whose panel sets background: var(--app-modal-bg). Pop-out menus
      that set var(--app-surface-solid) only get solid inner shades. */
   .modal-panel,
-  [style*="--app-modal-bg"] {
+  [style*="--app-modal-bg"],
+  /* Dropdowns and date pickers opened from a popup render at the end of the
+     page (outside the popup), so they pick up the same dark set while a popup
+     is open. */
+  body:has(.modal-panel, [style*="--app-modal-bg"]) > :is(.z-\[9999\], [style*="z-index: 9999"]) {
     color-scheme: dark;
     color: var(--app-text);
     --app-bg: #111113;
@@ -204,7 +208,7 @@
     --app-surface-low: var(--app-modal-inset);
     --app-surface: var(--app-surface-solid);
   }
-  :root:not(.dark) [style*="--app-surface-solid"] { --app-surface-low: #f3efe9; }
+  :root:not(.dark) body:not(:has(.modal-panel, [style*="--app-modal-bg"])) [style*="--app-surface-solid"] { --app-surface-low: #f3efe9; }
   .seg-accent {
     --seg-strip: #2a292d; --seg-strip-border: rgba(255, 255, 255, 0.14);
     --seg-pill: rgba(var(--app-primary-rgb), 0.22); --seg-ring: rgba(var(--app-primary-rgb), 0.85);
