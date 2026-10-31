@@ -290,10 +290,10 @@ async function finish(orgId, Model, lead, act, talkSeconds) {
   }
   if (status === "missed" && act.performedBy) {
     const who = act.meta?.direction === "inbound" ? `Missed call from ${lead.name}`
-      : act.meta?.agentAnswered ? `${lead.name} didn't answer` : "You didn't pick up";
+      : act.meta?.agentAnswered ? `${lead.name} didn't answer` : `Call to ${lead.name} not connected`;
     sendPushToUser(String(act.performedBy), {
-      title: "Missed Call",
-      body: `${who} (${lead.phone})`,
+      title: who,
+      body: act.meta?.direction === "inbound" || act.meta?.agentAnswered ? lead.phone : `You didn't pick up your phone. ${lead.phone}`,
       data: { type: "missed_call", leadId: String(lead._id) },
     }).catch(() => {});
   }
@@ -388,13 +388,13 @@ router.post("/inbound/:orgId", form, async (req, res) => {
     // and the team is told, rather than a phone ringing.
     if (org.telephony?.provider === "none") {
       const found = await findLeadByPhone(orgId, from).catch(() => null);
-      sendPushToAll({ title: "Missed Inbound Call", body: `${found ? found.lead.name : from} called while calling is switched off in Telephony.`, data: { type: "missed_call", leadId: found ? String(found.lead._id) : null } }, orgId).catch(() => {});
+      sendPushToAll({ title: `Missed call from ${found ? found.lead.name : from}`, body: "Calling is switched off in Telephony.", data: { type: "missed_call", leadId: found ? String(found.lead._id) : null } }, orgId).catch(() => {});
       return xml(res, plivo.hangupXml(plivo.NOBODY));
     }
     const found = await findLeadByPhone(orgId, from);
     const agent = await pickAgent(orgId, found?.lead);
     if (!agent) {
-      sendPushToAll({ title: "Missed Inbound Call", body: `A call came in${found ? ` from ${found.lead.name}` : ` from ${from}`} but no team member has a phone number set.`, data: { type: "missed_call", leadId: found ? String(found.lead._id) : null } }, orgId).catch(() => {});
+      sendPushToAll({ title: `Missed call from ${found ? found.lead.name : from}`, body: "No team member has a phone number set to receive calls.", data: { type: "missed_call", leadId: found ? String(found.lead._id) : null } }, orgId).catch(() => {});
       return xml(res, plivo.hangupXml(plivo.NOBODY));
     }
     const ref = `${found?.Model === ProjectLead ? "projectlead" : "lead"}_${found?.lead?._id || "unknown"}_${Date.now()}`;
@@ -412,8 +412,8 @@ router.post("/inbound/:orgId", form, async (req, res) => {
       });
     }
     sendPushToUser(String(agent._id), {
-      title: "Incoming Call",
-      body: found ? `${found.lead.name} is calling. Pick up your phone.` : `Call from ${from}. Pick up your phone.`,
+      title: found ? `${found.lead.name} is calling` : `Incoming call from ${from}`,
+      body: "Pick up your phone.",
       data: { type: "inbound_call", leadId: found ? String(found.lead._id) : null },
     }).catch(() => {});
     xml(res, plivo.inboundXml({ number: org.plivo.number, agentPhone: agent.phone, base: plivo.publicBase(req), orgId, ref }));

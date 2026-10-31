@@ -70,8 +70,8 @@ const taskController = {
       if (String(task.assignedTo) !== String(user._id)) {
         sendPushToUser(task.assignedTo, {
           type: "task_assigned",
-          title: "New Task Assigned",
-          body: `${user.name} assigned you a task: ${task.title}`,
+          title: `New task: ${task.title}`,
+          body: `Assigned to you by ${user.name}.`,
           data: { url: "/tasks", taskId: String(task._id) },
         }).catch(() => {});
       }
@@ -100,8 +100,8 @@ const taskController = {
       if (String(task.assignedTo) !== prevAssignedTo && String(task.assignedTo) !== String(req.user._id)) {
         sendPushToUser(task.assignedTo, {
           type: "task_assigned",
-          title: "New Task Assigned",
-          body: `${req.user.name} assigned you a task: ${task.title}`,
+          title: `New task: ${task.title}`,
+          body: `Assigned to you by ${req.user.name}.`,
           data: { url: "/tasks", taskId: String(task._id) },
         }).catch(() => {});
       }

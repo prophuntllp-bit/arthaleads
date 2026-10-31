@@ -669,8 +669,8 @@ const leadService = {
           logActivity(lead, "assigned", `Assigned to ${agent.name}`, user, { agentId: agent._id, agentName: agent.name });
           sendPushToUser(agent._id, {
             type: "lead_assigned",
-            title: "New Lead Assigned",
-            body: `${user.name} has assigned a lead to you - ${lead.name}`,
+            title: `Lead assigned to you: ${lead.name}`,
+            body: `Assigned by ${user.name}.`,
             data: { leadId: lead._id },
           }).catch(() => {});
         }
@@ -924,8 +924,8 @@ const leadService = {
 
     sendPushToUser(agent._id, {
       type: "lead_assigned",
-      title: "New Lead Assigned",
-      body: `${user.name} has assigned a lead to you - ${lead.name}`,
+      title: `Lead assigned to you: ${lead.name}`,
+      body: `Assigned by ${user.name}.`,
       data: { leadId: lead._id },
     }).catch(() => {});
 

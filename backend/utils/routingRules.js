@@ -118,8 +118,8 @@ async function notifyProjectTeam(projectId, lead) {
   if (!project) return;
   const ids = lead.assignedTo ? [lead.assignedTo] : (project.assignedTo || []);
   const payload = {
-    title: `New lead in ${project.name}`,
-    body: `${lead.name} (${lead.phone}) was added to the project.`,
+    title: `${lead.name} added to ${project.name}`,
+    body: `${lead.phone}. Tap to open the project.`,
     data: { url: `/projects/${projectId}` },
   };
   await Promise.all(ids.map((u) => sendPushToUser(u, payload).catch(() => {})));

@@ -273,8 +273,8 @@ async function pollOneGoogleAdsConnection(automation) {
       } else {
         sendPushToAll({
           type: "new_lead",
-          title: "New Google Lead 🔍",
-          body: `${lead.name} came in from Google Ads`,
+          title: `New Google lead: ${lead.name}`,
+          body: "From a Google Ads lead form. Not assigned to anyone yet.",
           data: { url: "/leads", leadId: String(lead._id), leadName: lead.name, source: "Google" },
         }, orgId).catch(() => {});
       }
