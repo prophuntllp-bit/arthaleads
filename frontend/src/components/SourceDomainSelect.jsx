@@ -151,7 +151,7 @@ export default function SourceDomainSelect({ value, domain, page = "", domains =
           borderRadius: 10,
           fontSize: 13,
           border: open ? "1px solid var(--app-primary)" : "1px solid var(--app-border)",
-          background: "var(--app-field-bg, var(--app-surface-low))",
+          background: "var(--app-surface-low)",
           color: value ? "var(--app-text)" : "var(--app-text-soft)",
           outline: "none",
           cursor: "pointer",
