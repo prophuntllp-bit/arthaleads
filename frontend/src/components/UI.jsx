@@ -80,7 +80,7 @@ export function isAiCallStatus(lead) {
 export function StatusBadge({ status, lead, compact = false }) {
   if (isAiCallStatus(lead)) {
     return (
-      <span className="badge inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-300"
+      <span className="badge inline-flex items-center gap-1 bg-purple-50 text-purple-700 ring-1 ring-purple-300"
         title="Updated by Vistrow Voice call" aria-label={`${status}, updated by Vistrow Voice call`}>
         {!compact && <PhoneCall className="h-3 w-3" aria-hidden="true" />}
         {status}{!compact && <span className="font-normal opacity-80">· AI call</span>}
@@ -114,9 +114,38 @@ export function RoleBadge({ role, className = "" }) {
   );
 }
 
-export function SourceBadge({ source }) {
+// A Vistrow Voice call that was matched onto a lead from another source
+// (a Website form, then a call on that site's widget) — same test the Lead
+// Details transcript tab uses.
+export function leadHadAiCall(lead) {
+  return Array.isArray(lead?.voiceCalls) && lead.voiceCalls.some((c) =>
+    c?.transcript?.length || c?.sentiment || c?.channel || c?.durationSeconds || c?.agentName || c?.recordingUrl);
+}
+
+export function SourceBadge({ source, lead }) {
+  const color = SOURCE_COLORS[source] || "bg-gray-100 text-gray-600";
+  if (lead && source !== "Vistrow Voice" && leadHadAiCall(lead)) {
+    // Two-tone pill: where the lead came from, plus the AI call on it.
+    // The source colour as a hex for the gradient (SOURCE_COLORS holds
+    // Tailwind classes such as "bg-[#f88025] text-white").
+    const hex = (color.match(/#[0-9a-fA-F]{6}/) || ["#64748B"])[0];
+    const last = [...lead.voiceCalls].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0];
+    const when = last?.createdAt ? ` · ${new Date(last.createdAt).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}` : "";
+    return (
+      <span
+        className="badge justify-between gap-2 text-white"
+        style={{ background: `linear-gradient(90deg, ${hex} 0%, ${hex} 40%, #9333ea 78%, #ec4899 100%)` }}
+        title={`Came in via ${source}, then a Vistrow AI call${when}`}
+      >
+        {/* One pill blending the source colour into Vistrow purple: no hard
+            line between the two (owner, 21 Oct 2026). */}
+        <span>{source}</span>
+        <span className="font-semibold">AI call</span>
+      </span>
+    );
+  }
   return (
-    <span className={`badge ${SOURCE_COLORS[source] || "bg-gray-100 text-gray-600"}`}>
+    <span className={`badge ${color}`}>
       {source}
     </span>
   );

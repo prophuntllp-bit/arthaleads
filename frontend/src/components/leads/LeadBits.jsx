@@ -1,4 +1,5 @@
 // Small display pieces shared by the Leads page and the Lead Details window.
+import { leadHadAiCall } from "../UI";
 
 // Source pills in the same soft style as the Status and Priority pills (light
 // tint, coloured text). The shared SourceBadge uses solid colour blocks, which
@@ -21,10 +22,24 @@ const SOURCE_SOFT = {
   "Vistrow Voice": "bg-fuchsia-50 text-fuchsia-700",
 };
 
-export function SoftSourceBadge({ source }) {
+// With `lead`: a lead from another source that also had a Vistrow AI call
+// shows both in one pill, the source tint blending into Vistrow purple
+// (owner, 21 Oct 2026, kept in the soft style).
+export function SoftSourceBadge({ source, lead }) {
   if (!source) return <EmptyValue />;
+  const soft = SOURCE_SOFT[source] || "bg-gray-100 text-gray-600";
+  if (lead && source !== "Vistrow Voice" && leadHadAiCall(lead)) {
+    return (
+      <span className={`badge justify-between gap-2 ${soft}`}
+        style={{ backgroundImage: "linear-gradient(90deg, transparent 40%, rgba(217,70,239,0.22) 100%)" }}
+        title={`Came in via ${source}, then a Vistrow AI call`}>
+        <span>{source}</span>
+        <span className="font-semibold text-fuchsia-700">AI call</span>
+      </span>
+    );
+  }
   return (
-    <span className={`badge ${SOURCE_SOFT[source] || "bg-gray-100 text-gray-600"}`}>
+    <span className={`badge ${soft}`}>
       {source}
     </span>
   );
