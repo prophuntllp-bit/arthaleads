@@ -36,12 +36,14 @@ export function LogoTile({ children, size = 40, bg = "var(--app-surface-low)" })
   );
 }
 
-/** Section heading on /integrations: small caps title and one line. */
+/** Section heading on /integrations: a real heading with a line above it, so
+ *  each section reads as its own block at a glance (owner, 31 Oct 2026: the
+ *  small grey caps blended into one long page). */
 export function SectionTitle({ title, note }) {
   return (
-    <div className="pt-2">
-      <p className="text-xs font-bold uppercase tracking-[0.08em] text-app-soft">{title}</p>
-      {note && <p className="text-xs text-app-soft mt-0.5">{note}</p>}
+    <div className="mt-4 border-t pt-6" style={{ borderColor: "var(--app-border-strong)" }}>
+      <h2 className="text-lg font-extrabold tracking-tight text-app leading-tight">{title}</h2>
+      {note && <p className="mt-1 text-[13px] text-app-soft">{note}</p>}
     </div>
   );
 }
