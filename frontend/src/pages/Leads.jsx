@@ -1359,7 +1359,7 @@ export default function Leads() {
                   </div>
                   <div className={`mt-2 flex items-center gap-2 ${canDelete ? "pl-7" : ""}`}>
                     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-app-soft">
-                      <SoftSourceBadge source={lead.source} />
+                      <SoftSourceBadge source={lead.source} lead={lead} />
                       {lead.projectName && <span className="max-w-[140px] truncate font-semibold text-violet-600">{lead.projectName}</span>}
                       <span className="truncate">
                         {assignedName(lead) ? <>Assigned to <span className="text-app">{assignedName(lead)}</span></> : "Not assigned"}
@@ -1439,7 +1439,7 @@ export default function Leads() {
                     <td>{lead.phone ? <WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} onContact={() => handleContact(lead)} /> : <EmptyValue />}</td>
                     <td>
                       <div className="flex flex-col items-start gap-0.5">
-                        <SoftSourceBadge source={lead.source} />
+                        <SoftSourceBadge source={lead.source} lead={lead} />
                         {/* Website leads: site and page ("shaporjipallonji.com/treetopia-2"),
                             then the ad that sent them; others: the source label. */}
                         {originalSourceLabel(lead) && (
