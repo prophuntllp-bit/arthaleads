@@ -685,55 +685,6 @@
   animation: importStatPop 0.35s ease-out both;
 }
 
-/* Gold ring cursor for mouse and trackpad users. */
-.custom-cursor {
-  position: fixed;
-  z-index: 9999;
-  width: 28px;
-  height: 28px;
-  border: 1px solid rgba(17, 24, 39, 0.9);
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0;
-  transform: translate(-50%, -50%);
-  transition:
-    width 0.22s,
-    height 0.22s,
-    background 0.22s,
-    border-color 0.22s,
-    opacity 0.15s;
-  will-change: left, top;
-}
-
-.custom-cursor.visible {
-  opacity: 1;
-}
-
-.custom-cursor::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: #111827;
-  transform: translate(-50%, -50%);
-}
-
-.custom-cursor.active {
-  width: 46px;
-  height: 46px;
-  border-color: #000;
-  background: rgba(0, 0, 0, 0.06);
-}
-
-@media (pointer: coarse) {
-  .custom-cursor {
-    display: none;
-  }
-}
-
 /* Status pills that stay readable on both themes. The pale -400 tints used
    before were near-invisible on the light theme's translucent panels. */
 .pill-ok, .pill-info {
@@ -820,14 +771,15 @@ html[data-public-theme="dark"] { --brand-text: #ff6b00; }
    a soft brand glow, so sections never merge into one black page. */
 :root {
   --site-bg: #ffffff;
-  --site-tint: #f7f3ee;
+  --site-tint: #f4eee6;
+  --site-sand: #ece3d6;
   --site-ink: #0f1222;
   --site-text: #474d5c;
   --site-muted: #5e6472;   /* 4.5:1+ on the chip and tint surfaces (audit, 28 Oct 2026) */
-  --site-line: rgba(15, 18, 34, 0.09);
-  --site-line-strong: rgba(15, 18, 34, 0.16);
+  --site-line: rgba(15, 18, 34, 0.13);
+  --site-line-strong: rgba(15, 18, 34, 0.2);
   --site-card: #ffffff;
-  --site-card-soft: #faf7f3;
+  --site-card-soft: #f6f1ea;
   --site-chip: #f3eee8;
   --site-stage: #f1ebe4;
   --site-dark: #0d0e15;
@@ -841,7 +793,7 @@ html[data-public-theme="dark"] { --brand-text: #ff6b00; }
   --site-field-line: #8a8f9c;   /* a form field's edge, 3:1+ against the page */
   --site-grid: rgba(15, 18, 34, 0.055);
   --site-card-shine: linear-gradient(transparent, transparent);
-  --site-shadow-sm: 0 1px 2px rgba(15, 18, 34, 0.05), 0 6px 16px -6px rgba(15, 18, 34, 0.08);
+  --site-shadow-sm: 0 1px 2px rgba(15, 18, 34, 0.06), 0 12px 28px -14px rgba(15, 18, 34, 0.18);
   --site-shadow: 0 1px 2px rgba(15, 18, 34, 0.05), 0 18px 40px -16px rgba(15, 18, 34, 0.2);
   --site-shadow-lg: 0 2px 6px rgba(15, 18, 34, 0.05), 0 36px 80px -28px rgba(15, 18, 34, 0.35);
   --site-radius: 20px;
@@ -850,13 +802,14 @@ html[data-public-theme="dark"] { --brand-text: #ff6b00; }
 html[data-public-theme="dark"] {
   --site-bg: #0a0b10;
   --site-tint: #10121a;
+  --site-sand: #16130f;
   --site-ink: #f5f6f9;
   --site-text: rgba(245, 246, 249, 0.72);
   --site-muted: rgba(245, 246, 249, 0.52);
-  --site-line: rgba(255, 255, 255, 0.08);
-  --site-line-strong: rgba(255, 255, 255, 0.16);
-  --site-card: #171923;
-  --site-card-soft: #13151e;
+  --site-line: rgba(255, 255, 255, 0.11);
+  --site-line-strong: rgba(255, 255, 255, 0.2);
+  --site-card: #1c1f2b;
+  --site-card-soft: #171a24;
   --site-chip: rgba(255, 255, 255, 0.06);
   --site-stage: #0c0d12;
   --site-dark: #140e0a;
@@ -881,8 +834,22 @@ html[data-public-theme="dark"] {
 .site-section { position: relative; padding-block: clamp(3.75rem, 7vw, 6.25rem); color: var(--site-text); }
 .site-section--white { background: var(--site-bg); --card-bg: var(--site-card-soft); }
 .site-section--tint  { background: var(--site-tint); --card-bg: var(--site-card); }
+/* Sand: a deeper warm band for one signature section per page; Brand: a soft
+   orange wash for proof/CTA moments. Cards stay white on both (UI audit 31 Oct 2026). */
+.site-section--sand  { background: var(--site-sand); --card-bg: var(--site-card); --site-chip: rgba(255, 255, 255, 0.6); }
+.site-section--brand {
+  background: radial-gradient(60% 90% at 100% 0%, rgba(255, 107, 0, 0.13), transparent 70%), radial-gradient(50% 80% at 0% 100%, rgba(255, 176, 0, 0.1), transparent 70%), #fff4ea;
+  --card-bg: var(--site-card); --site-chip: rgba(255, 255, 255, 0.7);
+}
+html[data-public-theme="dark"] .site-section--sand { --site-chip: rgba(255, 255, 255, 0.06); }
+html[data-public-theme="dark"] .site-section--brand {
+  background: radial-gradient(60% 90% at 100% 0%, rgba(255, 107, 0, 0.16), transparent 70%), radial-gradient(50% 80% at 0% 100%, rgba(255, 176, 0, 0.08), transparent 70%), #15100c;
+  --site-chip: rgba(255, 255, 255, 0.06);
+}
 /* Hairlines between bands in dark mode, where colour alone is too subtle. */
 html[data-public-theme="dark"] .site-section--tint,
+html[data-public-theme="dark"] .site-section--sand,
+html[data-public-theme="dark"] .site-section--brand,
 html[data-public-theme="dark"] .site-section.site-section--dark { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(255, 255, 255, 0.06); }
 /* Dark bands stay dark in both themes and carry their full token set, so any
    component placed inside reads correctly (cards, chips, rows, buttons). */
@@ -943,6 +910,15 @@ html[data-public-theme="dark"] .site-section.site-section--dark { box-shadow: in
 
 /* A small label (a hero's keyword line, a date, a category, a box title): the body face,
    a step smaller, sentence case, untracked (Hallmark polish, 30 Oct 2026: no tracked caps). */
+/* One heading scale for every marketing page (UI audit 31 Oct 2026).
+   h1 34/46/52, h2 30/38/44, h3 20/22, h4 16/17. Manrope, ink colour. */
+.site-h1, .site-h2, .site-h3, .site-h4 { font-family: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif; color: var(--site-ink); text-wrap: balance; margin: 0; }
+.site-h1 { font-size: 34px; line-height: 1.08; font-weight: 800; letter-spacing: -0.03em; }
+.site-h2 { font-size: 30px; line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
+.site-h3 { font-size: 20px; line-height: 1.25; font-weight: 700; letter-spacing: -0.01em; }
+.site-h4 { font-size: 16px; line-height: 1.35; font-weight: 700; }
+@media (min-width: 640px) { .site-h1 { font-size: 46px; } .site-h2 { font-size: 38px; } .site-h3 { font-size: 22px; } .site-h4 { font-size: 17px; } }
+@media (min-width: 1024px) { .site-h1 { font-size: 52px; } .site-h2 { font-size: 44px; } }
 .site-eyebrow { font-size: 0.875rem; font-weight: 600; color: var(--site-muted); }
 .site-ink { color: var(--site-ink); }
 .site-muted { color: var(--site-muted); }

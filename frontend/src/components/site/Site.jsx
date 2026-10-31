@@ -3,7 +3,9 @@
 // Every marketing page (and every new one) is built from these so spacing,
 // cards, headings and buttons stay identical across the site:
 //   <SitePage>       page wrapper: theme colours, nav and footer
-//   <Section tone>   "white" | "tint" | "dark"; one padding rhythm for all
+//   <Section tone>   "white" | "tint" | "sand" | "brand" | "dark"; one padding rhythm for all.
+//                    Each page alternates white/tint and gives ONE signature section sand or dark.
+//   Headings:        .site-h1 .. .site-h4 (styles.css) are the only heading sizes.
 //   <Container>      1240px max width with responsive gutters
 //   <SectionHeader>  H2 + lede, left-aligned by default (the eyebrow prop is accepted but not shown)
 //   <Card>           contrasts with its section automatically (see styles.css)
@@ -57,8 +59,7 @@ export function SectionHeader({ eyebrow, title, lede, align = "left", as: H = "h
   return (
     <Reveal className={cx("mb-10 lg:mb-14", centered ? "mx-auto text-center max-w-3xl" : "max-w-2xl", className)}>
       {/* No label above a section heading: the heading says it (Hallmark polish, 30 Oct 2026). */}
-      <H className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[30px] sm:text-[38px] lg:text-[44px]"
-        style={{ textWrap: "balance" }}>
+      <H className="site-h2">
         {title}
       </H>
       {lede && (

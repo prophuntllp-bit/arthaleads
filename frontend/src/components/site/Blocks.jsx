@@ -80,8 +80,8 @@ export function PageHero({ eyebrow, crumb, title, lede, visual, actions, trust, 
           {/* The label sits above the H1, not inside it: inside, search engines read
               "About usBuilt for ..." as one heading (audit, 29 Oct 2026). */}
           {eyebrow && <p className="site-eyebrow mb-3 sm:mb-4">{eyebrow}</p>}
-          <h1 className="font-display site-ink font-extrabold tracking-[-0.03em]">
-            <span className="block text-[34px] leading-[1.08] sm:text-[46px] lg:text-[52px]" style={{ textWrap: "balance" }}>{title}</span>
+          <h1 className="site-h1">
+            <span className="block">{title}</span>
           </h1>
           {lede && (
             <p className={cx("mt-5 text-base sm:text-[17px] leading-relaxed max-w-[36rem]", two ? "mx-auto lg:mx-0" : "mx-auto")} style={{ textWrap: "pretty" }}>{lede}</p>
@@ -157,7 +157,7 @@ export function FaqSection({ items, title = "Questions people ask", eyebrow = "F
               <Card key={q} className="overflow-hidden">
                 <h3 className="m-0">
                   <button type="button" onClick={() => setOpen(isOpen ? -1 : i)} aria-expanded={isOpen} aria-controls={`${id}-${i}`}
-                    className="w-full flex items-center justify-between gap-4 text-left px-5 sm:px-6 py-5 font-display text-[15px] sm:text-base font-bold site-ink">
+                    className="w-full flex items-center justify-between gap-4 text-left px-5 sm:px-6 py-5 site-h4">
                     {q}
                     <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "var(--site-tint)" }}>
                       {isOpen ? <Minus className="w-4 h-4" aria-hidden="true" /> : <Plus className="w-4 h-4" aria-hidden="true" />}
@@ -225,7 +225,7 @@ export function ClosingCta({
         <Reveal>
           <div className="site-cta-panel relative overflow-hidden rounded-[28px] sm:rounded-[32px] p-5 sm:p-10 lg:p-12 grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-center">
             <div className="relative">
-              <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[30px] sm:text-[38px] lg:text-[40px] xl:text-[44px]" style={{ textWrap: "balance" }}>
+              <h2 className="site-h2">
                 {title} {dim && <span className="site-dim">{dim}</span>}
               </h2>
               <p className="mt-5 text-base sm:text-lg leading-relaxed max-w-lg">{body}</p>
