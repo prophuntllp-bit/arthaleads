@@ -12,7 +12,6 @@ import LeadDetail from "../components/LeadDetail";
 import { useAuth } from "../context/AuthContext";
 import UpgradeWall from "../components/UpgradeWall";
 import { canAccess } from "../utils/plan";
-import CallAnalytics from "../components/CallAnalytics";
 
 export default function Performance() {
   useEffect(() => { document.title = "Performance - Arthaleads CRM"; }, []);
@@ -436,18 +435,14 @@ export default function Performance() {
 
       {/* One row per person */}
       {displayMembers.length > 0 && (
-        <TeamTable members={displayMembers} focusId={focusId} openDrill={openDrill} />
+        <TeamTable members={displayMembers} focusId={focusId} openDrill={openDrill}
+          calls={callAnalytics?.callsByAgent} onOpenCalls={() => navigate("/calls")} />
       )}
 
       {/* Which sources bring leads that go somewhere */}
       {analytics?.sourcePerformance?.length > 0 && (
         <SourcePerformance rows={analytics.sourcePerformance} scope={scope}
           onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(range), presetSource: source } })} />
-      )}
-
-      {/* Calls: the same chart and agent list as the Calls page */}
-      {callAnalytics && (callAnalytics.volumeByDay?.length > 0 || callAnalytics.durationByAgent?.length > 0) && (
-        <CallAnalytics data={callAnalytics} />
       )}
 
       {/* Goal, closing pace and projects */}
@@ -537,7 +532,12 @@ function Num({ value, label, onOpen, tone = "" }) {
 // Per-person numbers: one row each, main pipeline and project pipeline side
 // by side. Replaces the tall card of tiles per person (same numbers, same
 // drill-downs). Scrolls sideways on narrow screens with the name pinned.
-function TeamTable({ members, focusId, openDrill }) {
+// The call columns are each person's own calls over the last 30 days; the
+// day-by-day chart lives on the Calls page only (owner, 31 Oct 2026: no
+// duplicate of the Calls page here).
+function TeamTable({ members, focusId, openDrill, calls, onOpenCalls }) {
+  const callsOf = new Map((calls || []).map((c) => [String(c.userId), c]));
+  const talk = (secs) => (secs > 0 ? (secs >= 60 ? `${Math.floor(secs / 60)}m ${Math.round(secs % 60)}s` : `${Math.round(secs)}s`) : null);
   const th = "px-2.5 py-2 text-right font-semibold whitespace-nowrap";
   const td = "px-2.5 py-2.5 text-right tabular-nums whitespace-nowrap";
   const groupStart = { borderLeft: "1px solid var(--app-border)" };
@@ -546,10 +546,17 @@ function TeamTable({ members, focusId, openDrill }) {
     <section className="card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-5" style={{ borderBottom: "1px solid var(--app-border)" }}>
         <h2 className="text-sm font-bold text-app">Each person</h2>
-        <p className="text-[11px] text-app-soft">Click a number to see those leads.</p>
+        <div className="flex items-center gap-3">
+          <p className="text-[11px] text-app-soft">Click a number to see those leads.</p>
+          {calls && (
+            <button type="button" onClick={onOpenCalls} className="text-xs font-semibold hover:underline" style={{ color: "var(--app-primary)" }}>
+              See all calls →
+            </button>
+          )}
+        </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1080px] text-xs">
+        <table className="w-full min-w-[1320px] text-xs">
           <thead>
             <tr className="text-app-soft" style={{ background: "var(--app-surface-low)" }}>
               <th rowSpan={2} className="sticky left-0 z-[1] px-4 py-2 text-left font-semibold align-bottom" style={{ ...pinned, background: "var(--app-surface-low)" }}>Person</th>
@@ -558,6 +565,9 @@ function TeamTable({ members, focusId, openDrill }) {
               </th>
               <th colSpan={8} className="px-2.5 pt-2 pb-1 text-left font-bold text-app" style={groupStart}>
                 <span className="inline-flex items-center gap-1.5"><FolderKanban className="h-3.5 w-3.5 text-blue-500" /> Project pipeline</span>
+              </th>
+              <th colSpan={3} className="px-2.5 pt-2 pb-1 text-left font-bold text-app" style={groupStart}>
+                <span className="inline-flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-orange-500" /> Calls <span className="font-normal text-app-soft">· last 30 days</span></span>
               </th>
             </tr>
             <tr className="text-app-soft" style={{ background: "var(--app-surface-low)" }}>
@@ -575,6 +585,9 @@ function TeamTable({ members, focusId, openDrill }) {
               <th className={th}>Not interested</th>
               <th className={th}>Not reachable</th>
               <th className={th}>Booking rate</th>
+              <th className={th} style={groupStart}>Made</th>
+              <th className={th}>Answered</th>
+              <th className={th}>Avg talk</th>
             </tr>
           </thead>
           <tbody>
@@ -621,6 +634,17 @@ function TeamTable({ members, focusId, openDrill }) {
                   <td className={td}><Num value={pr.notInterested} label="Project pipeline not interested" onOpen={open("project", "notInterested", "Not Interested")} /></td>
                   <td className={td}><Num value={pr.notReachable} label="Project pipeline not reachable" onOpen={open("project", "notReachable", "Not Reachable")} /></td>
                   <td className={td}>{pr.totalAssigned > 0 ? <span className="font-semibold text-blue-500">{pr.conversionRate || 0}%</span> : <span className="text-app-soft">—</span>}</td>
+                  {(() => {
+                    const c = callsOf.get(String(m._id));
+                    const avg = c?.answered ? talk(c.talkSeconds / c.answered) : null;
+                    return (
+                      <>
+                        <td className={td} style={groupStart}>{c?.made ? <span className="font-semibold text-app">{c.made}</span> : <span className="text-app-soft">—</span>}</td>
+                        <td className={td}>{c?.made ? <span className="text-app">{c.answered}<span className="text-app-soft"> ({Math.round((c.answered / c.made) * 100)}%)</span></span> : <span className="text-app-soft">—</span>}</td>
+                        <td className={td}>{avg ? <span className="text-app">{avg}</span> : <span className="text-app-soft">—</span>}</td>
+                      </>
+                    );
+                  })()}
                 </tr>
               );
             })}

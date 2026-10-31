@@ -898,12 +898,19 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
               </div>
             ) : callHistory.map((call) => {
               const meta   = call.meta || {};
-              const st     = meta.status || "initiated";
-              const stColor = st === "answered" ? "#22c55e" : st === "missed" ? "#ef4444" : "#f97316";
-              const stBg    = st === "answered" ? "rgba(34,197,94,0.10)" : st === "missed" ? "rgba(239,68,68,0.10)" : "rgba(249,115,22,0.10)";
+              // A conversation Vistrow reports (widget, inbound or its own AI
+              // call) carries no telephony status: it is a Vistrow AI call, not
+              // a call of ours stuck at "initiated" (owner, 31 Oct 2026).
+              const isVistrow = call.performedBy === "Vistrow Voice";
+              const st     = meta.status || (isVistrow ? "vistrow ai" : "initiated");
+              const stColor = st === "answered" ? "#22c55e" : st === "missed" ? "#ef4444" : st === "vistrow ai" ? "#9333ea" : "#f97316";
+              const stBg    = st === "answered" ? "rgba(34,197,94,0.10)" : st === "missed" ? "rgba(239,68,68,0.10)" : st === "vistrow ai" ? "rgba(147,51,234,0.10)" : "rgba(249,115,22,0.10)";
+              const vistrowSecs = isVistrow ? Number((String(call.description || "").match(/\((\d+)s\)/) || [])[1]) || 0 : 0;
+              const direction = meta.direction || (isVistrow ? (/^outbound/i.test(call.description || "") ? "outbound" : /^inbound/i.test(call.description || "") ? "inbound" : "") : "");
               const isOpen  = expandedCall === call.activityId;
-              const dur     = meta.duration > 0
-                ? `${Math.floor(meta.duration / 60)}m ${meta.duration % 60}s`.replace("0m ", "")
+              const secs    = meta.duration > 0 ? meta.duration : vistrowSecs;
+              const dur     = secs > 0
+                ? `${Math.floor(secs / 60)}m ${secs % 60}s`.replace(/^0m /, "")
                 : null;
 
               return (
@@ -921,7 +928,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <DirectionBadge direction={meta.direction} />
+                        <DirectionBadge direction={direction} />
                         <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
                           style={{ background: stBg, color: stColor }}>{st}</span>
                         {dur && <span className="text-xs font-semibold text-app">{dur}</span>}
