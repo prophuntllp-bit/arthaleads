@@ -303,8 +303,8 @@ function DashboardClock() {
   const [submitting,    setSubmitting]    = useState(false);
 
   useEffect(() => {
-    // Only hours and minutes are shown, so a few seconds of lag is invisible.
-    const iv = setInterval(() => setNow(new Date()), 10000);
+    // The analog face has a second hand, so it ticks every second.
+    const iv = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(iv);
   }, []);
 
@@ -313,6 +313,28 @@ function DashboardClock() {
       .then(r => { setClockStatus(r.data.data); setRequireSelfie(r.data.requireSelfie ?? true); })
       .catch(() => {});
   }, []);
+
+  // Analog face (owner, 31 Oct 2026: bring the clock back), IST.
+  const tParts = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata", hour: "numeric", minute: "numeric", second: "numeric", hour12: false,
+  }).formatToParts(now);
+  const h = parseInt(tParts.find(p => p.type === "hour")?.value || "0");
+  const m = parseInt(tParts.find(p => p.type === "minute")?.value || "0");
+  const s = parseInt(tParts.find(p => p.type === "second")?.value || "0");
+  const hourAngle   = ((h % 12) + m / 60) * 30;
+  const minuteAngle = (m + s / 60) * 6;
+  const secondAngle = s * 6;
+  const SIZE = 80;
+  const cx = SIZE / 2, cy = SIZE / 2, r = SIZE / 2 - 3;
+  const mkHand = (angleDeg, length, width, color) => {
+    const rad = (angleDeg - 90) * (Math.PI / 180);
+    return (
+      <line x1={cx} y1={cy}
+        x2={cx + Math.cos(rad) * length} y2={cy + Math.sin(rad) * length}
+        stroke={color} strokeWidth={width} strokeLinecap="round"
+      />
+    );
+  };
 
   const digitalTime = now.toLocaleTimeString("en-IN", {
     timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true,
@@ -349,6 +371,26 @@ function DashboardClock() {
     <>
       <div className="hidden lg:flex flex-col items-stretch justify-center gap-2 border-l shrink-0 pl-5"
         style={{ borderColor: "var(--app-border)", minWidth: 150 }}>
+        <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} className="mx-auto" aria-hidden="true">
+          <circle cx={cx} cy={cy} r={r} fill="var(--app-surface-low)" stroke="var(--app-border)" strokeWidth="1.5" />
+          {Array.from({ length: 12 }, (_, i) => {
+            const a = (i * 30 - 90) * (Math.PI / 180);
+            const isQ = i % 3 === 0;
+            const outer = r - 3;
+            const inner = outer - (isQ ? 6 : 3);
+            return (
+              <line key={i}
+                x1={cx + Math.cos(a) * outer} y1={cy + Math.sin(a) * outer}
+                x2={cx + Math.cos(a) * inner} y2={cy + Math.sin(a) * inner}
+                stroke="var(--app-text-soft)" strokeWidth={isQ ? 2 : 1} strokeLinecap="round"
+              />
+            );
+          })}
+          {mkHand(hourAngle,   r * 0.50, 3,   "var(--app-text)")}
+          {mkHand(minuteAngle, r * 0.70, 2,   "var(--app-text)")}
+          {mkHand(secondAngle, r * 0.76, 1.2, "#f97316")}
+          <circle cx={cx} cy={cy} r={3.5} fill="#f97316" />
+        </svg>
         <div className="text-center">
           <p className="text-lg font-bold tabular-nums text-app leading-none">{digitalTime}</p>
           <p className="mt-1 text-[11px] text-app-soft leading-none">{dateStr}</p>

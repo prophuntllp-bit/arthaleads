@@ -312,6 +312,7 @@ export default function Inbox() {
   // Free monthly replies count as spendable — a tenant on zero balance can
   // still use those before anything is blocked.
   const freeLeft = credits?.freeService?.remaining || 0;
+  const unreadChats = conversations.filter((c) => c.unreadCount > 0).length;
   // spendablePaise includes the overdraft (balance may be negative); older
   // API responses only had availablePaise.
   const canSend = !credits
@@ -624,10 +625,18 @@ export default function Inbox() {
       <div className={`flex flex-col ${activeId ? "hidden md:flex" : "flex"} w-full md:w-[320px] shrink-0`}
         style={{ borderRight: "1px solid var(--app-border)" }}>
 
-        {/* No title or gear here: the sidebar and the "Chats" tab already say
-            where you are, and the Settings tab is the one way to settings. */}
-        <div className="flex items-center justify-end gap-2 px-4 py-3" style={{ borderBottom: "1px solid var(--app-border)" }}>
-          <div className="flex items-center gap-1">
+        {/* What the list holds (owner, 31 Oct 2026: the bar felt empty with only
+            the credits on it), then credits and refresh. Settings stay on the
+            Settings tab. */}
+        <div className="flex items-center justify-between gap-2 px-4 py-3" style={{ borderBottom: "1px solid var(--app-border)" }}>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-app leading-tight">Conversations</p>
+            <p className="mt-0.5 text-[11px] text-app-soft leading-tight">
+              {total.toLocaleString("en-IN")} chat{total === 1 ? "" : "s"}
+              {unreadChats > 0 && <> · <span className="font-semibold" style={{ color: "#15803d" }}>{unreadChats} unread</span></>}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
             {credits && (
               <button onClick={() => setShowTopUp(true)} title="WhatsApp credits — click to top up"
                 className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition mr-1"
