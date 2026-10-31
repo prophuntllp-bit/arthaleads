@@ -33,6 +33,9 @@ const initialForm = {
   whatsappConsent: "unknown"
 };
 
+// Dropdowns sized like .input (CLAUDE.md form rule).
+const SELECT_STYLE = { width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 };
+
 const CONSENT_OPTIONS = [
   { value: "unknown", label: "Not recorded" },
   { value: "granted", label: "Given — happy to receive WhatsApp updates" },
@@ -139,7 +142,7 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
 
       toast.success(lead ? "Lead updated" : "Lead created");
       if (!lead && data.duplicate) {
-        toast(`Note: this phone number matches an existing lead — ${data.duplicate.name}`, { icon: "⚠️", duration: 5000 });
+        toast(`Note: this phone number matches an existing lead: ${data.duplicate.name}`, { icon: "⚠️", duration: 5000 });
       }
       onSaved(data.data);
     } catch (err) {
@@ -149,88 +152,114 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
     }
   };
 
+  // Version C form (DESIGN.md): titled sections, required marks, the buttons
+  // in the pinned footer (they submit the form through its id).
+  const isProject = lead?._type === "project";
   return (
-    <Modal open={open} onClose={onClose} title={lead ? "Edit Lead" : "Add Lead"} size="xl">
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <FormField label="Name">
-          <input className="input" value={form.name} onChange={setValue("name")} required />
-        </FormField>
-        <FormField label="Phone">
-          <input className="input" value={form.phone} onChange={setValue("phone")} required />
-        </FormField>
-        {duplicate && (
-          <div className="md:col-span-2 -mt-2 rounded-xl px-4 py-2 text-sm" style={{ background: "rgba(234,88,12,0.1)", color: "#c2410c" }}>
-            ⚠️ A lead with this phone number already exists — <strong>{duplicate.name}</strong> ({duplicate.status}, {duplicate.source}), added {new Date(duplicate.createdAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" })}. You can still save this as a new lead if needed.
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={lead ? "Edit lead" : "Add lead"}
+      description={lead ? "Change any detail and save." : "Name and phone are enough. You can add the rest later."}
+      size="xl"
+      footer={(
+        <>
+          <button type="button" className="btn-secondary rounded-xl" onClick={onClose}>Cancel</button>
+          <button type="submit" form="lead-form" className="btn-primary rounded-xl" disabled={loading}>
+            {loading ? <Spinner size="sm" /> : lead ? "Save changes" : "Create lead"}
+          </button>
+        </>
+      )}
+    >
+      <form id="lead-form" onSubmit={handleSubmit} className="space-y-4">
+        <section className="modal-section">
+          <h3 className="modal-section-title">Contact</h3>
+          <p className="modal-section-desc">Who the lead is and how to reach them.</p>
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <FormField label="Name" required>
+              <input className="input" value={form.name} onChange={setValue("name")} required />
+            </FormField>
+            <FormField label="Phone" required>
+              <input className="input" value={form.phone} onChange={setValue("phone")} required />
+            </FormField>
+            {duplicate && (
+              <div className="md:col-span-2 -mt-2 rounded-xl px-4 py-2 text-sm" style={{ background: "rgba(234,88,12,0.1)", color: "#c2410c" }}>
+                A lead with this phone number already exists: <strong>{duplicate.name}</strong> ({duplicate.status}, {duplicate.source}), added {new Date(duplicate.createdAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" })}. You can still save this as a new lead if needed.
+              </div>
+            )}
+            <FormField label="Email">
+              <input className="input" type="email" value={form.email} onChange={setValue("email")} />
+            </FormField>
+            <FormField label="City">
+              <input className="input" value={form.city} onChange={setValue("city")} />
+            </FormField>
+            <FormField label="Street address" className="md:col-span-2">
+              <input className="input" value={form.streetAddress} onChange={setValue("streetAddress")} />
+            </FormField>
+            {!isProject && (
+              <FormField label="WhatsApp marketing consent" className="md:col-span-2">
+                <CustomSelect value={form.whatsappConsent} onChange={setField("whatsappConsent")} options={CONSENT_OPTIONS} style={SELECT_STYLE} />
+                <p className="text-xs text-app-soft mt-2">Only record consent the person actually gave. Campaigns skip anyone not marked as given.</p>
+              </FormField>
+            )}
           </div>
-        )}
-        <FormField label="Email">
-          <input className="input" type="email" value={form.email} onChange={setValue("email")} />
-        </FormField>
-        <FormField label="Street Address">
-          <input className="input" value={form.streetAddress} onChange={setValue("streetAddress")} />
-        </FormField>
-        <FormField label="City">
-          <input className="input" value={form.city} onChange={setValue("city")} />
-        </FormField>
-        <FormField label="Source">
-          <CustomSelect value={form.source} onChange={setField("source")} options={SOURCE_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
-        </FormField>
-        <FormField label="Status">
-          <CustomSelect value={form.status} onChange={setField("status")} options={STATUS_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
-        </FormField>
-        <FormField label="Priority">
-          <CustomSelect value={form.priority} onChange={setField("priority")} options={PRIORITY_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
-        </FormField>
-        <FormField label="Property Type">
-          <CustomSelect value={form.propertyType} onChange={setField("propertyType")} options={PROPERTY_TYPES} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
-        </FormField>
-        <FormField label="BHK">
-          <CustomSelect value={form.bhk} onChange={setField("bhk")} options={BHK_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
-        </FormField>
-        <FormField label="Purpose">
-          <CustomSelect value={form.purpose} onChange={setField("purpose")} options={PURPOSE_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
-        </FormField>
-        <FormField label="Preferred Location">
-          <input className="input" value={form.preferredLocation} onChange={setValue("preferredLocation")} />
-        </FormField>
-        <FormField label="Budget Min">
-          <input className="input" type="number" min="0" value={form.budgetMin} onChange={setValue("budgetMin")} />
-        </FormField>
-        <FormField label="Budget Max">
-          <input className="input" type="number" min="0" value={form.budgetMax} onChange={setValue("budgetMax")} />
-        </FormField>
-        <FormField label="Follow-up Date">
-          <AppDatePicker value={form.followUpDate} onChange={setField("followUpDate")} />
-        </FormField>
-        <FormField label="Assign To">
-          <CustomSelect
-            value={form.assignedTo}
-            onChange={setField("assignedTo")}
-            placeholder="Unassigned"
-            options={agents.map((a) => ({ value: a._id, label: `${a.name} (${a.role})` }))}
-            style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
-          />
-        </FormField>
-        {lead?._type !== "project" && (
-          <div className="md:col-span-2">
-            <FormField label="WhatsApp marketing consent">
-              <CustomSelect value={form.whatsappConsent} onChange={setField("whatsappConsent")} options={CONSENT_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
-              <p className="text-xs text-app-soft mt-1.5">Only record consent the person actually gave. Campaigns skip anyone not marked as given.</p>
+        </section>
+
+        <section className="modal-section">
+          <h3 className="modal-section-title">Requirement</h3>
+          <p className="modal-section-desc">What they are looking for, and where the lead stands.</p>
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <FormField label="Source">
+              <CustomSelect value={form.source} onChange={setField("source")} options={SOURCE_OPTIONS} style={SELECT_STYLE} />
+            </FormField>
+            <FormField label="Status">
+              <CustomSelect value={form.status} onChange={setField("status")} options={STATUS_OPTIONS} style={SELECT_STYLE} />
+            </FormField>
+            <FormField label="Priority">
+              <CustomSelect value={form.priority} onChange={setField("priority")} options={PRIORITY_OPTIONS} style={SELECT_STYLE} />
+            </FormField>
+            <FormField label="Purpose">
+              <CustomSelect value={form.purpose} onChange={setField("purpose")} options={PURPOSE_OPTIONS} style={SELECT_STYLE} />
+            </FormField>
+            <FormField label="Property type">
+              <CustomSelect value={form.propertyType} onChange={setField("propertyType")} options={PROPERTY_TYPES} style={SELECT_STYLE} />
+            </FormField>
+            <FormField label="BHK">
+              <CustomSelect value={form.bhk} onChange={setField("bhk")} options={BHK_OPTIONS} style={SELECT_STYLE} />
+            </FormField>
+            <FormField label="Budget min">
+              <input className="input" type="number" min="0" value={form.budgetMin} onChange={setValue("budgetMin")} />
+            </FormField>
+            <FormField label="Budget max">
+              <input className="input" type="number" min="0" value={form.budgetMax} onChange={setValue("budgetMax")} />
+            </FormField>
+            <FormField label="Preferred location" className="md:col-span-2">
+              <input className="input" value={form.preferredLocation} onChange={setValue("preferredLocation")} />
             </FormField>
           </div>
-        )}
-        <div className="md:col-span-2">
-          <FormField label="Follow-up Note">
-            <textarea className="textarea" value={form.followUpNote} onChange={setValue("followUpNote")} />
-          </FormField>
-        </div>
+        </section>
 
-        <div className="md:col-span-2 flex justify-end gap-3 pt-2">
-          <button type="button" className="btn-secondary rounded-xl" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn-primary rounded-xl" disabled={loading}>
-            {loading ? <Spinner size="sm" /> : lead ? "Update Lead" : "Create Lead"}
-          </button>
-        </div>
+        <section className="modal-section">
+          <h3 className="modal-section-title">Follow-up</h3>
+          <p className="modal-section-desc">Who handles the lead and when to get back to them.</p>
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <FormField label="Assign to">
+              <CustomSelect
+                value={form.assignedTo}
+                onChange={setField("assignedTo")}
+                placeholder="Unassigned"
+                options={agents.map((a) => ({ value: a._id, label: `${a.name} (${a.role})` }))}
+                style={SELECT_STYLE}
+              />
+            </FormField>
+            <FormField label="Follow-up date">
+              <AppDatePicker value={form.followUpDate} onChange={setField("followUpDate")} />
+            </FormField>
+            <FormField label="Follow-up note" className="md:col-span-2">
+              <textarea className="textarea" value={form.followUpNote} onChange={setValue("followUpNote")} />
+            </FormField>
+          </div>
+        </section>
       </form>
     </Modal>
   );

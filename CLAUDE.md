@@ -31,7 +31,7 @@ Every page's root element must use `className="stitch-page"` — nothing else. T
 ### Popups are solid
 Every dialog, sheet and pop-out menu panel is solid: use the shared `Modal` from `components/UI.jsx`, or put `className="modal-panel"` (styles.css) on the panel, or `background: "var(--app-surface-solid)"`. Never `var(--app-surface)`, `.card`, `.shell-panel` or `bg-app-surface` on something that floats over the page: those are see-through glass (58% in light mode) and the page bleeds through (owner, 30 Oct 2026). Glass stays for cards on the page and the top bars.
 
-Popups follow the page theme (31 Oct 2026, after peach, sand and dark-in-light were tried and dropped): white in light mode, one step lighter grey in dark mode, via `--app-modal-bg` / `.modal-panel` in `styles.css`. A hand-built popup panel uses `background: "var(--app-modal-bg)"` (or `.modal-panel`). The new popup design is being chosen by the owner from mock-ups; don't restyle popups until that is approved.
+Popup design is Version C (owner approved 31 Oct 2026): read `DESIGN.md` before building or changing any popup. Popups follow the page theme; use the shared `Modal` (title, description, footer) and the `.modal-*` classes in `styles.css`. A hand-built popup panel uses `.modal-panel` or `background: "var(--app-modal-bg)"`.
 
 ### Mobile sidebar
 The mobile drawer sidebar uses `.sidebar-glass` which has a CSS override below 1024px to be fully solid (no glass transparency). Do NOT add glass/blur to the mobile sidebar.

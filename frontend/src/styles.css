@@ -20,10 +20,17 @@
     --app-surface: rgba(255, 255, 255, 0.58);
     --app-surface-solid: #ffffff;
     --app-surface-low: rgba(255, 255, 255, 0.38);
-    /* Popups follow the page theme, one level above it (31 Oct 2026):
-       white in light mode, with a soft warm grey for boxes inside them. */
+    /* Popups: Version C, approved by the owner 31 Oct 2026 (DESIGN.md).
+       Follow the page theme. White panel, warm band at the top and bottom,
+       cream insets, white cards and fields, clearly visible lines. */
     --app-modal-bg: #ffffff;
-    --app-modal-inset: #f6f4f1;
+    --app-modal-inset: #fbf8f5;
+    --modal-zone: #f8f3ee;
+    --modal-zone-border: #ece4db;
+    --modal-card: #ffffff;
+    --modal-card-border: #e2d6c9;
+    --modal-divider: #e6dbcf;
+    --modal-field-border: #e3d9ce;
     --app-surface-high: rgba(255, 255, 255, 0.75);
     --app-text: #18181b;
     /* Soft text darkened from #71717a → #5f5f66 for AA contrast on glass surfaces,
@@ -52,9 +59,16 @@
     --app-surface: rgba(30, 29, 32, 0.75);
     --app-surface-solid: #1e1d20;
     --app-surface-low: rgba(22, 21, 24, 0.68);
-    /* Dark mode: one step lighter than the cards, so a popup reads as raised. */
-    --app-modal-bg: #242327;
-    --app-modal-inset: #2e2d32;
+    /* Dark mode: the panel is one step lighter than the page, the band one
+       step lighter again, cards and fields one step darker. */
+    --app-modal-bg: #222125;
+    --app-modal-inset: #242327;
+    --modal-zone: #28272b;
+    --modal-zone-border: rgba(255, 255, 255, 0.07);
+    --modal-card: #1c1b1f;
+    --modal-card-border: rgba(255, 255, 255, 0.08);
+    --modal-divider: rgba(255, 255, 255, 0.07);
+    --modal-field-border: rgba(255, 255, 255, 0.12);
     --app-surface-high: rgba(42, 40, 46, 0.84);
     --app-text: #ededed;
     --app-text-soft: #969696;
@@ -165,26 +179,95 @@
     transition: box-shadow 200ms ease, border-color 200ms ease;
   }
 
-  /* ── Popup panel: always solid ──
-     Dialogs, sheets and pop-out menus sit over the page, so a glass surface let
-     the page behind bleed through (owner, 30 Oct 2026). Every popup panel uses
-     this class (the shared Modal in components/UI.jsx does), or sets
-     background: var(--app-modal-bg) / var(--app-surface-solid) inline.
-     Popups follow the page theme (31 Oct 2026, after trying peach, sand and
-     dark-in-light): white in light mode, a lighter grey in dark mode. */
+  /* ── Popups (Version C, DESIGN.md) ──
+     Dialogs, sheets and pop-out menus are solid, never glass (owner, 30 Oct
+     2026). Every popup panel uses .modal-panel (the shared Modal in
+     components/UI.jsx does) or sets background: var(--app-modal-bg) inline.
+     Layout: a warm band at the top (.modal-zone: title or who-and-actions),
+     the body, and a warm band at the bottom (.modal-foot: buttons). Spacing
+     4/8/12/16/24 only; corners 16 popup, 12 cards, fields as .input. */
   .modal-panel {
     background: var(--app-modal-bg);
-    border: 1px solid var(--app-border);
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+    border: 1px solid var(--modal-card-border);
+    box-shadow: 0 24px 60px rgba(90, 50, 10, 0.16), 0 2px 6px rgba(90, 50, 10, 0.06);
   }
-  /* Inside any popup the see-through surfaces become solid shades, so rows,
-     inputs and boxes keep visible edges on the solid panel (a list on
-     Performance floated with no edges at all). */
+  :root.dark .modal-panel { box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); }
+  /* Inside any popup: solid shades for the see-through surfaces, visible
+     lines, and white (dark: deep grey) fields. */
   .modal-panel,
   [style*="--app-surface-solid"],
   [style*="--app-modal-bg"] {
     --app-surface-low: var(--app-modal-inset);
     --app-surface: var(--app-modal-bg);
+  }
+  .modal-panel,
+  [style*="--app-modal-bg"] {
+    --app-border: var(--modal-divider);
+    --app-field-bg: var(--modal-card);
+  }
+  .modal-zone {
+    background: var(--modal-zone);
+    border-bottom: 1px solid var(--modal-zone-border);
+    padding: 20px 24px;
+  }
+  .modal-foot {
+    display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+    background: var(--modal-zone);
+    border-top: 1px solid var(--modal-zone-border);
+    padding: 16px 24px;
+  }
+  .modal-title { @apply text-[17px] font-extrabold tracking-tight leading-tight; color: var(--app-text); }
+  .modal-desc { @apply text-[13px] mt-1; color: var(--app-text-soft); }
+  .modal-close {
+    @apply grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-colors;
+    color: var(--app-text-soft);
+  }
+  .modal-close:hover { color: var(--app-text); background: var(--modal-card); }
+  /* A card inside a popup; .modal-card-head is its top band (tabs live there). */
+  .modal-card {
+    background: var(--modal-card);
+    border: 1px solid var(--modal-card-border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .modal-card-head {
+    background: var(--app-modal-inset);
+    border-bottom: 1px solid var(--modal-divider);
+    padding: 12px 16px;
+  }
+  /* A titled group of fields in a popup form. */
+  .modal-section {
+    background: var(--app-modal-inset);
+    border: 1px solid var(--modal-card-border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .modal-section-title { @apply text-[13.5px] font-bold; color: var(--app-text); }
+  .modal-section-desc { @apply text-[12.5px] mt-0.5; color: var(--app-text-soft); }
+  /* Buttons in a popup's action row (36px, corners 12). */
+  .modal-btn {
+    @apply inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-[13px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-60;
+    background: var(--modal-card);
+    border: 1px solid var(--modal-field-border);
+    color: var(--app-text);
+  }
+  .modal-btn:hover:not(:disabled) { border-color: rgba(var(--app-primary-rgb), 0.45); }
+  .modal-btn-wa { background: #e9f8ef; border-color: #bfe8cf; color: #116b39; }
+  :root.dark .modal-btn-wa { background: rgba(37, 211, 102, 0.12); border-color: rgba(37, 211, 102, 0.32); color: #7ee2a5; }
+  .modal-btn-wa:hover:not(:disabled) { border-color: #25d366; }
+  .modal-btn-soft { background: #efe8e1; }
+  :root.dark .modal-btn-soft { background: #36343a; }
+  .modal-btn[aria-expanded="true"] {
+    border-color: rgba(var(--app-primary-rgb), 0.5);
+    box-shadow: 0 0 0 3px rgba(var(--app-primary-rgb), 0.12);
+  }
+  .modal-btn-danger { color: #b91c1c; border-color: rgba(185, 28, 28, 0.3); }
+  :root.dark .modal-btn-danger { color: #fca5a5; border-color: rgba(252, 165, 165, 0.28); }
+  /* Label / value rows in two columns with a line between them. */
+  .kv-row { @apply flex gap-3 py-3; border-top: 1px solid var(--app-border); }
+  @media (min-width: 640px) {
+    .kv-row.kv-right { padding-left: 24px; border-left: 1px solid var(--app-border); }
+    .kv-row.kv-left { padding-right: 24px; }
   }
 
   .card:hover {
@@ -196,7 +279,7 @@
   .input {
     @apply w-full rounded-2xl px-4 py-3 text-sm transition;
     border: 1px solid var(--app-border);
-    background: var(--app-surface-low);
+    background: var(--app-field-bg, var(--app-surface-low));
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     color: var(--app-text);
@@ -208,7 +291,7 @@
     outline: none;
     border-color: rgba(var(--app-primary-rgb), 0.45);
     box-shadow: 0 0 0 4px rgba(var(--app-primary-rgb), 0.12), 0 2px 12px rgba(var(--app-primary-rgb), 0.08);
-    background: var(--app-surface);
+    background: var(--app-field-bg, var(--app-surface));
   }
 
   .select   { @apply input appearance-none; }

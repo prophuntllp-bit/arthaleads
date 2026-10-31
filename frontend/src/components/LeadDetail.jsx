@@ -17,6 +17,7 @@ import SegmentTabs from "./SegmentTabs";
 import { originalSourceLabel } from "../utils/leadSource";
 import { fmtCurrency, fmtDate, fmtDateTime, STATUS_OPTIONS } from "../utils/constants";
 import WaMessageMedia, { messageText } from "./WaMessageMedia";
+import WhatsAppLogo from "./WhatsAppLogo";
 
 // Incoming (lead called us) vs outgoing (we called the lead). Kept visually
 // identical to the badge on the Calls page so the two screens agree.
@@ -104,20 +105,27 @@ const cleanRequirements = (text) => {
   return text.split("\n").filter(l => !/^Field\s+[a-f0-9]{5,}\s*:/i.test(l.trim())).join("\n").trim();
 };
 
-// A compact label / value list, two columns on wider screens. Rows marked
-// `wide` (long notes) take the full width. An empty value shows "—".
+// A compact label / value list, two columns on wider screens with a line
+// between them (Version C, DESIGN.md). Rows marked `wide` (long notes) take
+// the full width. An empty value shows "—".
 function DetailList({ items }) {
+  let col = 0;
   return (
-    <dl className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
-      {items.map((item, i) => (
-        <div key={`${item.label}-${i}`} className={`flex gap-3 border-b py-2.5 ${item.wide ? "sm:col-span-2" : ""}`}
-          style={{ borderColor: "var(--app-border)" }}>
-          <dt className="w-36 shrink-0 text-xs leading-5 text-app-soft">{item.label}</dt>
-          <dd className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm leading-5 text-app">
-            {isBlank(item.value) ? <EmptyValue /> : item.value}
-          </dd>
-        </div>
-      ))}
+    <dl className="grid grid-cols-1 px-4 sm:grid-cols-2">
+      {items.map((item, i) => {
+        const side = item.wide ? "" : col++ % 2 === 0 ? "kv-left" : "kv-right";
+        if (item.wide) col = 0;
+        // The first row (both columns on wider screens) has no line above it.
+        const top = i === 0 ? "!border-t-0" : i === 1 && !item.wide && !items[0].wide ? "sm:!border-t-0" : "";
+        return (
+          <div key={`${item.label}-${i}`} className={`kv-row ${side} ${top} ${item.wide ? "sm:col-span-2" : ""}`}>
+            <dt className="w-28 shrink-0 text-[12.5px] leading-5 text-app-soft">{item.label}</dt>
+            <dd className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[13.5px] font-medium leading-5 text-app">
+              {isBlank(item.value) ? <EmptyValue /> : item.value}
+            </dd>
+          </div>
+        );
+      })}
     </dl>
   );
 }
@@ -160,34 +168,31 @@ function ConsentCard({ lead, onUpdated }) {
   };
 
   return (
-    <div className="rounded-[1.35rem] p-4 stitch-surface-muted">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <p className="stitch-kicker mb-2">WhatsApp marketing consent</p>
-          <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: meta.bg, color: meta.fg }}>
-            {meta.label}
-          </span>
-          {current !== "unknown" && lead.whatsappConsent?.capturedAt && (
-            <p className="text-xs text-app-soft mt-2">
-              {CONSENT_SOURCE[lead.whatsappConsent.source] || lead.whatsappConsent.source || "recorded"}
-              {" · "}{fmtDateTime(lead.whatsappConsent.capturedAt)}
-            </p>
-          )}
-          {current === "unknown" && (
-            <p className="text-xs text-app-soft mt-2">Campaigns will skip this lead until consent is recorded.</p>
-          )}
-        </div>
-        <div className="flex gap-1.5 flex-wrap">
-          {CONSENT_STATES.filter((s) => s.value !== current).map((s) => (
-            <button key={s.value} type="button" onClick={() => set(s.value)} disabled={!!saving}
-              className="text-xs font-semibold px-3 py-1.5 rounded-full transition disabled:opacity-50"
-              style={{ border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
-              {saving === s.value ? "Saving…"
-                : s.value === "granted" ? "Mark as given"
-                : s.value === "denied" ? "Mark as refused" : "Clear"}
-            </button>
-          ))}
-        </div>
+    <div className="flex flex-wrap items-center gap-3 px-4 py-4"
+      style={{ borderTop: "1px solid var(--app-border)", background: "var(--app-modal-inset)" }}>
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full" style={{ background: "rgba(37,211,102,0.14)" }}>
+        <WhatsAppLogo className="h-[18px] w-[18px]" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-bold text-app">
+          WhatsApp marketing consent: <span style={{ color: current === "unknown" ? "var(--app-text)" : meta.fg }}>{meta.label.toLowerCase()}</span>
+        </p>
+        <p className="mt-0.5 text-[12.5px] text-app-soft">
+          {current === "unknown"
+            ? "Campaigns skip this lead until consent is recorded."
+            : [CONSENT_SOURCE[lead.whatsappConsent?.source] || lead.whatsappConsent?.source || "recorded",
+               lead.whatsappConsent?.capturedAt ? fmtDateTime(lead.whatsappConsent.capturedAt) : ""].filter(Boolean).join(" · ")}
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {CONSENT_STATES.filter((s) => s.value !== current).map((s) => (
+          <button key={s.value} type="button" onClick={() => set(s.value)} disabled={!!saving}
+            className={`modal-btn ${s.value === "denied" ? "modal-btn-danger" : ""}`}>
+            {saving === s.value ? "Saving…"
+              : s.value === "granted" ? "Mark as given"
+              : s.value === "denied" ? "Mark as refused" : "Clear"}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -243,6 +248,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   const [waLoading, setWaLoading] = useState(false);
   // Info tab: empty fields stay folded away until asked for.
   const [showEmpty, setShowEmpty] = useState(false);
+  // The AI tools row under the actions: closed until asked for (owner, 31 Oct 2026).
+  const [aiOpen, setAiOpen] = useState(false);
 
   const handleRetryFacebook = async () => {
     setRetrying(true);
@@ -269,6 +276,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     setWaMessages(null);
     setWaConversation(null);
     setShowEmpty(false);
+    setAiOpen(false);
   }, [lead?._id, open]);
 
   // Artha (or a background sync) changed data while this window is open:
@@ -490,185 +498,171 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     }
   };
 
-  return (
-    <Modal open={open} onClose={onClose} title="Lead Details" size="xl">
-      <div className="space-y-5">
-        <div className="rounded-[1.75rem] p-5 stitch-surface-muted">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-2xl font-black tracking-tight text-app">{lead.name}</h3>
-                <CopyButton value={[lead.name, lead.phone].filter(Boolean).join("\n")} label="Copy name and number" done="Name and number copied" />
-              </div>
-              {lead.email && <p className="mt-0.5 text-sm text-app-soft break-all">{lead.email}</p>}
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <PhoneActions phone={lead.phone} />
-                <WhatsAppLink phone={lead.phone} name={lead.name} leadId={!isProjectLead ? lead._id : undefined} />
-                {lead.phone && (
-                  <button
-                    type="button"
-                    onClick={callLead}
-                    disabled={calling}
-                    className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition cursor-pointer"
-                    style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
-                    title="Rings your phone first, then connects the customer"
-                  >
-                    {calling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Phone className="h-3.5 w-3.5 text-orange-500" />}
-                    {calling ? "Calling…" : "Call from my phone"}
-                  </button>
-                )}
-                {lead.phone && sp?.enabled && (
-                  <button
-                    type="button"
-                    onClick={callInBrowser}
-                    disabled={sp.status !== "idle"}
-                    className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition cursor-pointer disabled:opacity-50"
-                    style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
-                    title="Call this lead from your browser (no phone ring)"
-                  >
-                    <Headphones className="h-3.5 w-3.5 text-orange-500" />
-                    Call in browser
-                  </button>
-                )}
-                {/* AI call: the Vistrow AI agent calls the customer (indigo, like the AI-call status pill). Kept apart from the "you call" buttons above. */}
-                {lead.phone && vistrow.canAiCall && (
-                  <>
-                    <span className="h-5 w-px" style={{ background: "var(--app-border)" }} aria-hidden="true" />
-                    <button
-                      type="button"
-                      onClick={vistrow.requestCall}
-                      disabled={vistrow.calling || vistrow.busy}
-                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition cursor-pointer disabled:opacity-60 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-300"
-                      title="Your Vistrow AI agent calls the customer now. The result, transcript and details land on this lead."
-                    >
-                      {vistrow.calling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PhoneOutgoing className="h-3.5 w-3.5" />}
-                      {vistrow.busy ? "AI calling…" : vistrow.agentLabel ? `AI call · ${vistrow.agentLabel}` : "AI call"}
-                    </button>
-                  </>
-                )}
-                {lead.phone && !isProjectLead && (
-                  <button
-                    type="button"
-                    onClick={handleAiDraft}
-                    disabled={drafting}
-                    className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition cursor-pointer"
-                    style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
-                    title="Draft a personalized WhatsApp message with AI"
-                  >
-                    {drafting ? (
-                      <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                      </svg>
-                    ) : (
-                      <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-                    )}
-                    AI Draft
-                  </button>
-                )}
-                {/* Artha on this lead: the lead panel already tells Artha which lead is open. */}
-                {[{ label: "Summarise", q: "Summarise this lead in 3 lines: what they want, what has happened so far, and where it stands." },
-                  { label: "Next step", q: "What should I do next with this lead, and why?" }].map((b) => (
-                  <button key={b.label} type="button"
-                    onClick={() => window.dispatchEvent(new CustomEvent("helpbot:ask", { detail: { question: b.q } }))}
-                    className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition cursor-pointer"
-                    style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
-                    title={`Ask Artha: ${b.label.toLowerCase()} for this lead`}>
-                    <Sparkles className="h-3.5 w-3.5" style={{ color: "var(--app-primary, #ff6b00)" }} />
-                    {b.label}
-                  </button>
-                ))}
-              </div>
-              {aiDraft !== null && (
-                <div className="mt-3 rounded-xl p-3" style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.2)" }}>
-                  <div className="mb-2 flex items-center gap-2">
-                    <Sparkles className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400">AI Drafted Message</span>
-                    <span className="text-[10px] text-app-soft ml-1">(edit before sending)</span>
-                    <button type="button" onClick={() => setAiDraft(null)} className="ml-auto text-xs text-app-soft hover:text-app transition cursor-pointer">✕</button>
-                  </div>
-                  <textarea
-                    value={aiDraft}
-                    onChange={(e) => setAiDraft(e.target.value)}
-                    rows={3}
-                    className="input w-full resize-none rounded-xl text-sm"
-                    style={{ minHeight: 72 }}
-                  />
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => { navigator.clipboard.writeText(aiDraft); toast.success("Copied to clipboard!"); }}
-                      className="btn-secondary flex-1 rounded-lg text-xs cursor-pointer"
-                    >
-                      Copy
-                    </button>
-                    <a
-                      href={`https://wa.me/${toWaNumber(lead.phone)}?text=${encodeURIComponent(aiDraft)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-primary flex-1 rounded-lg text-center text-xs"
-                    >
-                      Send on WhatsApp
-                    </a>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* The one status control for this lead (it used to show twice:
-                  a pill here and a dropdown by the tabs). */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-app-soft">Status</span>
-                <CustomSelect
-                  value={status}
-                  onChange={handleStatus}
-                  options={STATUS_OPTIONS}
-                  style={{ minWidth: 150, fontWeight: 600 }}
-                />
-              </div>
-              {isAiCallStatus(lead) && (
-                <span className="badge inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-300" title="Updated by Vistrow Voice call">
-                  <PhoneOutgoing className="h-3 w-3" aria-hidden="true" /> Set by AI call
-                </span>
-              )}
-              <SoftSourceBadge source={lead.source} />
-              {lead.priority && <PriorityBadge priority={lead.priority} />}
-              {onEdit && (
-                <button
-                  type="button"
-                  onClick={() => { onClose(); onEdit(lead); }}
-                  title="Edit lead"
-                  aria-label="Edit lead"
-                  className="p-1.5 rounded-xl transition-colors"
-                  style={{ color: "var(--app-text-soft)" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(249,115,22,0.10)"; e.currentTarget.style.color = "var(--app-primary)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--app-text-soft)"; }}
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+  const initials = (lead.name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+  const ARTHA_ASKS = [
+    { label: "Summarise lead", q: "Summarise this lead in 3 lines: what they want, what has happened so far, and where it stands." },
+    { label: "Suggest next step", q: "What should I do next with this lead, and why?" },
+  ];
+
+  // Version C top band (DESIGN.md): who the lead is, status and close on the
+  // same line, then the actions lined up under the name. AI tools opens a
+  // second row with the three AI actions.
+  const header = (
+    <div>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-[15px] font-bold" aria-hidden="true"
+          style={{ background: "rgba(var(--app-primary-rgb),0.14)", color: "var(--app-primary-deep)" }}>
+          {initials}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h2 className="modal-title truncate !text-[19px]">{lead.name}</h2>
+            <CopyButton value={[lead.name, lead.phone].filter(Boolean).join("\n")} label="Copy name and number" done="Name and number copied" />
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-app-soft">
+            <PhoneActions phone={lead.phone} />
+            {lead.email && <span className="break-all">{lead.email}</span>}
+            <SoftSourceBadge source={lead.source} />
+            {lead.priority && <PriorityBadge priority={lead.priority} />}
+            {isAiCallStatus(lead) && (
+              <span className="badge inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-300" title="Updated by Vistrow Voice call">
+                <PhoneOutgoing className="h-3 w-3" aria-hidden="true" /> Set by AI call
+              </span>
+            )}
           </div>
         </div>
+        <div className="flex items-center gap-1.5 sm:ml-auto">
+          {/* The one status control for this lead. */}
+          <CustomSelect
+            value={status}
+            onChange={handleStatus}
+            options={STATUS_OPTIONS}
+            style={{ minWidth: 150, height: 36, padding: "0 12px", borderRadius: 12, fontWeight: 600 }}
+          />
+          {onEdit && (
+            <button type="button" onClick={() => { onClose(); onEdit(lead); }} title="Edit lead" aria-label="Edit lead" className="modal-close">
+              <Pencil className="h-4 w-4" />
+            </button>
+          )}
+          <button type="button" onClick={onClose} aria-label="Close dialog" className="modal-close">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
 
+      <div className="mt-4 flex flex-wrap items-center gap-2 sm:pl-14">
+        <WhatsAppLink phone={lead.phone} name={lead.name} leadId={!isProjectLead ? lead._id : undefined}
+          label="Message on WhatsApp" className="modal-btn modal-btn-wa" />
+        {lead.phone && (
+          <button type="button" onClick={callLead} disabled={calling} className="modal-btn"
+            title="Rings your phone first, then connects the customer">
+            {calling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Phone className="h-4 w-4 text-orange-500" />}
+            {calling ? "Calling…" : "Call"}
+          </button>
+        )}
+        {lead.phone && sp?.enabled && (
+          <button type="button" onClick={callInBrowser} disabled={sp.status !== "idle"} className="modal-btn"
+            title="Call this lead from your browser (no phone ring)">
+            <Headphones className="h-4 w-4 text-orange-500" /> Call in browser
+          </button>
+        )}
+        {/* AI call: the Vistrow AI agent calls the customer (indigo, like the AI-call status pill). */}
+        {lead.phone && vistrow.canAiCall && (
+          <button type="button" onClick={vistrow.requestCall} disabled={vistrow.calling || vistrow.busy} className="modal-btn"
+            title="Your Vistrow AI agent calls the customer now. The result, transcript and details land on this lead.">
+            {vistrow.calling ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneOutgoing className="h-4 w-4 text-indigo-500" />}
+            {vistrow.busy ? "AI calling…" : vistrow.agentLabel ? `AI call · ${vistrow.agentLabel}` : "AI call"}
+          </button>
+        )}
+        <button type="button" onClick={() => setAiOpen((v) => !v)} aria-expanded={aiOpen} className="modal-btn modal-btn-soft">
+          <Sparkles className="h-4 w-4" style={{ color: "var(--app-primary)" }} /> AI tools
+          <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform ${aiOpen ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+
+      {aiOpen && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 sm:pl-14">
+          {lead.phone && !isProjectLead && (
+            <button type="button" onClick={handleAiDraft} disabled={drafting} className="modal-btn"
+              title="Draft a personalised WhatsApp message with AI">
+              {drafting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-indigo-500" />}
+              Draft a message
+            </button>
+          )}
+          {/* Artha on this lead: the lead panel already tells Artha which lead is open. */}
+          {ARTHA_ASKS.map((b) => (
+            <button key={b.label} type="button" className="modal-btn"
+              onClick={() => window.dispatchEvent(new CustomEvent("helpbot:ask", { detail: { question: b.q } }))}
+              title={`Ask Artha: ${b.label.toLowerCase()}`}>
+              <Sparkles className="h-4 w-4" style={{ color: "var(--app-primary)" }} /> {b.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {aiDraft !== null && (
+        <div className="mt-3 rounded-xl p-3 sm:ml-14" style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.2)" }}>
+          <div className="mb-2 flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+            <span className="text-xs font-semibold text-indigo-500">Drafted message</span>
+            <span className="text-[11px] text-app-soft">Edit before sending</span>
+            <button type="button" onClick={() => setAiDraft(null)} aria-label="Close draft" className="ml-auto text-app-soft hover:text-app transition cursor-pointer">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <textarea
+            value={aiDraft}
+            onChange={(e) => setAiDraft(e.target.value)}
+            rows={3}
+            className="input w-full resize-none rounded-xl text-sm"
+            style={{ minHeight: 72 }}
+          />
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={() => { navigator.clipboard.writeText(aiDraft); toast.success("Copied to clipboard!"); }}
+              className="btn-secondary flex-1 rounded-lg text-xs cursor-pointer"
+            >
+              Copy
+            </button>
+            <a
+              href={`https://wa.me/${toWaNumber(lead.phone)}?text=${encodeURIComponent(aiDraft)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary flex-1 rounded-lg text-center text-xs"
+            >
+              Send on WhatsApp
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <Modal open={open} onClose={onClose} title="Lead details" header={header} size="xl">
+      <div className="space-y-6">
         <ArthaSuggestCard key={`${lead._id}:${lead.arthaSuggest?.at || ""}`} lead={lead}
           onChanged={(r) => { if (r?.lead) onUpdated?.({ ...lead, ...r.lead, arthaSuggest: undefined }); }} />
 
         {/* Vistrow AI calls: last AI call, tries, next scheduled AI call. Pipeline leads only (project copies have no delivery of their own). */}
         {!isProjectLead && <VistrowVoicePanel lead={lead} vistrow={vistrow} />}
 
-        <div className="flex flex-wrap items-center gap-2 border-b pb-3" style={{ borderColor: "var(--app-border)" }}>
-          {/* Shared tab strip (SegmentTabs), same look as the Leads status tabs */}
-          <SegmentTabs
-            ariaLabel="Lead details"
-            value={tab}
-            onChange={setTab}
-            tabs={tabList.map((item) => ({
-              value: item,
-              label: item[0].toUpperCase() + item.slice(1),
-              count: item === "notes" ? lead.notes?.length || 0 : item === "calls" && callHistory.length ? callHistory.length : undefined,
-            }))}
-          />
-        </div>
+        {/* The tabs are the top edge of the card they switch (Version C). */}
+        <div className="modal-card">
+          <div className="modal-card-head">
+            <SegmentTabs
+              ariaLabel="Lead details"
+              value={tab}
+              onChange={setTab}
+              tabs={tabList.map((item) => ({
+                value: item,
+                label: item[0].toUpperCase() + item.slice(1),
+                count: item === "notes" ? lead.notes?.length || 0 : item === "calls" && callHistory.length ? callHistory.length : undefined,
+              }))}
+            />
+          </div>
+          <div className={tab === "info" ? "" : "p-4"}>
 
         {tab === "info" && (() => {
           // Every field, in reading order. Filled ones show; empty ones fold
@@ -699,38 +693,36 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
           const empty = fields.filter((f) => isBlank(f.value));
           const answers = (lead.formResponses || []).filter((r) => !isBlank(r.value));
           return (
-            <div className="space-y-5">
-              <section>
-                {filled.length > 0
-                  ? <DetailList items={filled} />
-                  : <p className="text-sm text-app-soft">No details recorded yet.</p>}
-                {empty.length > 0 && (
-                  <div className="mt-2 flex flex-wrap items-center gap-3">
-                    <button type="button" onClick={() => setShowEmpty((v) => !v)}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-app-soft transition hover:text-app"
-                      aria-expanded={showEmpty}>
-                      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showEmpty ? "rotate-180" : ""}`} />
-                      {showEmpty ? "Hide empty fields" : `Show ${empty.length} empty field${empty.length !== 1 ? "s" : ""}`}
+            <div>
+              {filled.length > 0
+                ? <DetailList items={filled} />
+                : <p className="px-4 py-3 text-sm text-app-soft">No details recorded yet.</p>}
+              {empty.length > 0 && (
+                <div className="flex flex-wrap items-center gap-4 px-4 py-3" style={{ borderTop: "1px solid var(--app-border)" }}>
+                  <button type="button" onClick={() => setShowEmpty((v) => !v)}
+                    className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-app-soft transition hover:text-app"
+                    aria-expanded={showEmpty}>
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showEmpty ? "rotate-180" : ""}`} />
+                    {showEmpty ? "Hide empty fields" : `Show ${empty.length} empty field${empty.length !== 1 ? "s" : ""}`}
+                  </button>
+                  {onEdit && (
+                    <button type="button" onClick={() => { onClose(); onEdit(lead); }}
+                      className="inline-flex items-center gap-1 text-[12.5px] font-semibold transition hover:underline"
+                      style={{ color: "var(--app-primary)" }}>
+                      <Pencil className="h-3 w-3" /> Add details
                     </button>
-                    {onEdit && (
-                      <button type="button" onClick={() => { onClose(); onEdit(lead); }}
-                        className="inline-flex items-center gap-1 text-xs font-semibold transition hover:underline"
-                        style={{ color: "var(--app-primary)" }}>
-                        <Pencil className="h-3 w-3" /> Add details
-                      </button>
-                    )}
-                  </div>
-                )}
-                {showEmpty && empty.length > 0 && (
-                  <div className="mt-2"><DetailList items={empty} /></div>
-                )}
-              </section>
+                  )}
+                </div>
+              )}
+              {showEmpty && empty.length > 0 && (
+                <div style={{ borderTop: "1px solid var(--app-border)" }}><DetailList items={empty} /></div>
+              )}
 
               {answers.length > 0 && (
-                <section>
-                  <p className="stitch-kicker mb-1">Form answers</p>
+                <div style={{ borderTop: "1px solid var(--app-border)" }}>
+                  <p className="px-4 pt-3 text-[12.5px] font-semibold text-app">Form answers</p>
                   <DetailList items={answers.map((r) => ({ label: r.label || r.fieldKey, value: r.value }))} />
-                </section>
+                </div>
               )}
 
               {/* Project leads have no consent field and campaigns never reach them. */}
@@ -1245,6 +1237,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
             })}
           </div>
         )}
+          </div>
+        </div>
       </div>
     </Modal>
   );

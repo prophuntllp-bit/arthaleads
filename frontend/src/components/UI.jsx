@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { X, Loader2, Phone, MessageCircle, Inbox as InboxIcon, ChevronDown, Check, Calendar, ChevronLeft, ChevronRight, Sparkles, Headphones, Trash2, PhoneCall } from "lucide-react";
 import HoldToConfirmButton from "./HoldToConfirmButton";
+import WhatsAppLogo from "./WhatsAppLogo";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import { useSoftPhone } from "../context/SoftPhoneContext";
@@ -132,7 +133,11 @@ export function PageLoader() {
   );
 }
 
-export function Modal({ open, onClose, title, children, size = "md" }) {
+// Version C popup (DESIGN.md): a warm band at the top with the title and an
+// optional one-line description, the body, and an optional pinned footer band
+// for the buttons. `header` replaces the title band's content entirely (Lead
+// Details puts the lead and its actions there; it then draws its own close).
+export function Modal({ open, onClose, title, description, header, footer, children, size = "md" }) {
   // Escape-to-close + lock body scroll while open (hooks must run every render)
   useEffect(() => {
     if (!open) return;
@@ -162,18 +167,26 @@ export function Modal({ open, onClose, title, children, size = "md" }) {
         onClick={onClose}
       />
       <div
-        className={`modal-panel relative w-full ${widths[size]} max-h-[92vh] sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col`}
+        className={`modal-panel relative w-full ${widths[size]} max-h-[92vh] sm:max-h-[85vh] rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col`}
       >
-        <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: "1px solid var(--app-border)" }}>
-          <h2 className="text-base font-bold text-app">{title}</h2>
-          <button onClick={onClose} aria-label="Close dialog" className="text-app-soft hover:text-app transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+        <div className="modal-zone shrink-0">
+          {header || (
+            <div className="flex items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <h2 className="modal-title">{title}</h2>
+                {description && <p className="modal-desc">{description}</p>}
+              </div>
+              <button type="button" onClick={onClose} aria-label="Close dialog" className="modal-close -my-1.5 -mr-1.5">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
         {/* flex-1 lets this fill whatever height the max-h-[92vh] cap on mobile
             leaves it, instead of the old fixed 75vh — which left the sheet
             floating with a dead gap above it on a tall form like Edit Project. */}
         <div className="overflow-y-auto p-6 flex-1">{children}</div>
+        {footer && <div className="modal-foot shrink-0">{footer}</div>}
       </div>
     </div>,
     document.body
@@ -219,10 +232,10 @@ export function StatCard({ label, value, sub, delta, color = "text-brand-600", i
   );
 }
 
-export function FormField({ label, error, children }) {
+export function FormField({ label, error, required = false, className = "", children }) {
   return (
-    <div>
-      {label && <label className="label">{label}</label>}
+    <div className={className}>
+      {label && <label className="label">{label}{required && <span className="ml-0.5" style={{ color: "var(--app-primary)" }} aria-hidden="true">*</span>}</label>}
       {children}
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
@@ -601,7 +614,9 @@ function getWaStatus() {
 // Green "Chat on WhatsApp" button - pre-filled message + editable before send.
 // Dropdown is portal-rendered at document.body with position:fixed so it
 // always floats above tables regardless of overflow:hidden or z-index stacking.
-export function WhatsAppLink({ phone, name, leadId, projectId, onContact }) {
+// label/className: drawn as a full button (Lead Details: "Message on WhatsApp"
+// with the real WhatsApp logo); without them it is the small table chip.
+export function WhatsAppLink({ phone, name, leadId, projectId, onContact, label, className }) {
   const navigate = useNavigate();
   const [open, setOpen]               = useState(false);
   const [wabNotInstalled, setWabNotInstalled] = useState(false);
@@ -853,9 +868,9 @@ export function WhatsAppLink({ phone, name, leadId, projectId, onContact }) {
 
   return (
     <div className="inline-block">
-      <button ref={btnRef} type="button" onClick={handleToggle} className={btnCls}>
-        <MessageCircle className="h-3.5 w-3.5 flex-shrink-0" />
-        WhatsApp
+      <button ref={btnRef} type="button" onClick={handleToggle} className={className || btnCls} aria-expanded={open}>
+        {className ? <WhatsAppLogo className="h-4 w-4 flex-shrink-0" /> : <MessageCircle className="h-3.5 w-3.5 flex-shrink-0" />}
+        {label || "WhatsApp"}
         <ChevronDown className={`h-3 w-3 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && createPortal(dropdown, document.body)}
@@ -944,7 +959,7 @@ export function AppSelect({
           borderRadius: 10,
           fontSize: 13,
           border: open ? "1px solid var(--app-primary)" : "1px solid var(--app-border)",
-          background: "var(--app-surface-low)",
+          background: "var(--app-field-bg, var(--app-surface-low))",
           color: selectedItem?.color || (selectedItem ? "var(--app-text)" : "var(--app-text-soft)"),
           outline: "none",
           cursor: disabled ? "not-allowed" : "pointer",
@@ -1129,7 +1144,7 @@ export function AppDatePicker({ value, onChange, placeholder = "Pick date", clas
           borderRadius: 16,
           fontSize: 14,
           border: open ? "1px solid var(--app-primary)" : "1px solid var(--app-border)",
-          background: "var(--app-surface-low)",
+          background: "var(--app-field-bg, var(--app-surface-low))",
           color: value ? "var(--app-text)" : "var(--app-text-soft)",
           outline: "none",
           cursor: "pointer",
