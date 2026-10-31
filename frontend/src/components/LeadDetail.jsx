@@ -711,7 +711,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
           const answers = (lead.formResponses || []).filter((r) => !isBlank(r.value));
           return (
             <div className="lead-info-wrap">
-              <div className="lead-info-card space-y-5">
+              <div className="space-y-5">
               <section>
                 {filled.length > 0
                   ? <DetailList items={filled} />
