@@ -59,6 +59,7 @@ only be verified live so Claude Code or the owner can check it on production.
 ## Active work
 
 Format: `- [agent] 2026-10-15 14:30 IST: what, files`
+- [claude] 2026-10-31 IST: LIVE (main 8912db77, dd515705, 4dcd62fb): Performance uses the Calls page's Daily calls chart + agent list (shared components/CallAnalytics.jsx), Dashboard analog clock back, WhatsApp list header 'Conversations' + counts, Integrations section headings. No main drift in these files.
 - [claude] 2026-10-31 IST: LIVE (main ..d64c7743, 25 cherry-picks -x): CRM design clean-up batches 1-5 + popup Version C (DESIGN.md) + the 21 Oct PRs #6/#7 Lead Details work ported into the new design (staging 44fd6c47; those PRs had gone straight to main and never reached staging, so staging's LeadDetail/UI/Leads were behind main). Website session's staging work (home/site polish, SEO, /compare, cursor removal 8e7a1e23, 8788e954) NOT released. Note for everyone: changes merged straight to main must be brought back to staging.
 - [claude] 2026-10-30 IST: LIVE (main 281da6cb, 4e988060; staging 1b5a85e8, f304ddec): every popup solid via .modal-panel (shared Modal + custom dialogs/menus), CLAUDE.md rule 'Popups are solid'
 - [claude] 2026-10-30 IST: LIVE (staging a4756f9f): call transcripts keep clipped customer replies from 0.1 s, retry short empty pieces, show '(unclear)'
