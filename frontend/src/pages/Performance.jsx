@@ -559,7 +559,9 @@ function TeamTable({ members, focusId, openDrill, calls, onOpenCalls }) {
         <table className="w-full min-w-[1320px] text-xs">
           <thead>
             <tr className="text-app-soft" style={{ background: "var(--app-surface-low)" }}>
-              <th rowSpan={2} className="sticky left-0 z-[1] px-4 py-2 text-left font-semibold align-bottom" style={{ ...pinned, background: "var(--app-surface-low)" }}>Person</th>
+              <th rowSpan={2} className="sticky left-0 z-[2] px-4 py-2 text-left font-semibold align-bottom"
+                // Solid, so columns scrolled under the pinned name never show through.
+                style={{ background: "linear-gradient(var(--app-surface-low), var(--app-surface-low)), var(--app-surface-solid)" }}>Person</th>
               <th colSpan={6} className="px-2.5 pt-2 pb-1 text-left font-bold text-app" style={groupStart}>
                 <span className="inline-flex items-center gap-1.5"><Layers className="h-3.5 w-3.5 text-orange-500" /> Main pipeline</span>
               </th>
