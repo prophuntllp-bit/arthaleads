@@ -20,10 +20,10 @@
     --app-surface: rgba(255, 255, 255, 0.58);
     --app-surface-solid: #ffffff;
     --app-surface-low: rgba(255, 255, 255, 0.38);
-    /* Popups are dark in both themes (owner, 31 Oct 2026: use the dark
-       Lead Details window for light mode too). */
-    --app-modal-bg: #1e1d20;
-    --app-modal-inset: #29272c;
+    /* Popups follow the page theme, one level above it (31 Oct 2026):
+       white in light mode, with a soft warm grey for boxes inside them. */
+    --app-modal-bg: #ffffff;
+    --app-modal-inset: #f6f4f1;
     --app-surface-high: rgba(255, 255, 255, 0.75);
     --app-text: #18181b;
     /* Soft text darkened from #71717a → #5f5f66 for AA contrast on glass surfaces,
@@ -52,8 +52,9 @@
     --app-surface: rgba(30, 29, 32, 0.75);
     --app-surface-solid: #1e1d20;
     --app-surface-low: rgba(22, 21, 24, 0.68);
-    --app-modal-bg: #1e1d20;
-    --app-modal-inset: #29272c;
+    /* Dark mode: one step lighter than the cards, so a popup reads as raised. */
+    --app-modal-bg: #242327;
+    --app-modal-inset: #2e2d32;
     --app-surface-high: rgba(42, 40, 46, 0.84);
     --app-text: #ededed;
     --app-text-soft: #969696;
@@ -167,84 +168,24 @@
   /* ── Popup panel: always solid ──
      Dialogs, sheets and pop-out menus sit over the page, so a glass surface let
      the page behind bleed through (owner, 30 Oct 2026). Every popup panel uses
-     this class (the shared Modal in components/UI.jsx does), or the same
-     var(--app-surface-solid) background. */
+     this class (the shared Modal in components/UI.jsx does), or sets
+     background: var(--app-modal-bg) / var(--app-surface-solid) inline.
+     Popups follow the page theme (31 Oct 2026, after trying peach, sand and
+     dark-in-light): white in light mode, a lighter grey in dark mode. */
   .modal-panel {
     background: var(--app-modal-bg);
-    border: 1px solid var(--app-border-strong);
+    border: 1px solid var(--app-border);
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
   }
-  /* Inside a popup everything uses the dark colour set, whatever the page
-     theme (owner, 31 Oct 2026). Covers .modal-panel and the hand-built
-     popups whose panel sets background: var(--app-modal-bg). Pop-out menus
-     that set var(--app-surface-solid) only get solid inner shades. */
+  /* Inside any popup the see-through surfaces become solid shades, so rows,
+     inputs and boxes keep visible edges on the solid panel (a list on
+     Performance floated with no edges at all). */
   .modal-panel,
-  [style*="--app-modal-bg"],
-  /* Dropdowns and date pickers opened from a popup render at the end of the
-     page (outside the popup), so they pick up the same dark set while a popup
-     is open. */
-  body:has(.modal-panel, [style*="--app-modal-bg"]) > :is(.z-\[9999\], [style*="z-index: 9999"]) {
-    color-scheme: dark;
-    color: var(--app-text);
-    --app-bg: #111113;
+  [style*="--app-surface-solid"],
+  [style*="--app-modal-bg"] {
+    --app-surface-low: var(--app-modal-inset);
     --app-surface: var(--app-modal-bg);
-    --app-surface-solid: #1e1d20;
-    --app-surface-low: var(--app-modal-inset);
-    --app-surface-high: rgba(42, 40, 46, 0.84);
-    --app-card-solid: #1e1d20;
-    --wa-dropdown-bg: #1e1d20;
-    --app-text: #ededed;
-    --app-text-soft: #969696;
-    --app-border: rgba(255, 255, 255, 0.14);
-    --app-border-strong: rgba(var(--app-primary-rgb), 0.28);
-    --app-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255,255,255,0.08) inset;
-    --app-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255,255,255,0.10) inset;
-    --app-field-bg: var(--app-modal-inset);
-    --seg-strip: #2a292d; --seg-strip-border: var(--app-border);
-    --seg-pill: rgba(var(--app-primary-rgb), 0.22); --seg-ring: rgba(var(--app-primary-rgb), 0.85);
-    --seg-on: #ffffff; --seg-chip-on: #4a494f;
   }
-  [style*="--app-surface-solid"] {
-    --app-surface-low: var(--app-modal-inset);
-    --app-surface: var(--app-surface-solid);
-  }
-  :root:not(.dark) body:not(:has(.modal-panel, [style*="--app-modal-bg"])) [style*="--app-surface-solid"] { --app-surface-low: #f3efe9; }
-  .seg-accent {
-    --seg-strip: #2a292d; --seg-strip-border: rgba(255, 255, 255, 0.14);
-    --seg-pill: rgba(var(--app-primary-rgb), 0.22); --seg-ring: rgba(var(--app-primary-rgb), 0.85);
-    --seg-on: #ffffff; --seg-chip-on: #4a494f;
-  }
-  /* Dark versions of the light-only pieces, inside popups */
-  .modal-panel .wa-thread, [style*="--app-modal-bg"] .wa-thread { background-image: url("/wa-bg-dark.webp"); }
-  .modal-panel .wa-bubble-out, [style*="--app-modal-bg"] .wa-bubble-out {
-    background: #1f3d2b; color: #e6f4ea; border: 1px solid rgba(255, 255, 255, 0.07);
-  }
-  .modal-panel .pill-ok   { color: #6ee7b7; background: rgba(16, 185, 129, 0.18); border-color: rgba(110, 231, 183, 0.35); }
-  .modal-panel .pill-info { color: #67e8f9; background: rgba(6, 182, 212, 0.18);  border-color: rgba(103, 232, 249, 0.35); }
-
-  /* -- Lead Details popup, the owner's dark mock-up (30 Oct 2026) --
-     Top box warming to orange on the right, outlined orange tab, and the info
-     area on a light cream card (dark text) holding the consent box. */
-  .lead-hero {
-    background: linear-gradient(105deg, #262428 0%, #2b2526 45%, #4a2a17 80%, #6a3412 100%);
-    border: 1px solid rgba(var(--app-primary-rgb), 0.28);
-  }
-  /* Source and priority pills on the dark top box: tinted, not white. */
-  .lead-hero .badge {
-    background-color: color-mix(in srgb, currentColor 18%, transparent) !important;
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 35%, transparent);
-    filter: brightness(1.7) saturate(1.2);
-  }
-  .lead-info-wrap {
-    display: flex; flex-direction: column; gap: 1.25rem;
-    background: #f3efe9; border-radius: 1.5rem; padding: 0.75rem 1.5rem 1.5rem;
-    --app-text: #18181b; --app-text-soft: #5f5f66; --app-border: rgba(24, 24, 27, 0.10);
-    --app-surface-low: #ebe6df; --app-surface-solid: #ffffff; --app-field-bg: #ffffff;
-    color: var(--app-text);
-  }
-  .consent-card { background: #e4e8e2; border: 1px solid #d2d8cf; }
-  .consent-kicker { display: inline-block; padding-bottom: 0.4rem; border-bottom: 1px solid rgba(24, 24, 27, 0.18); }
-  .consent-logo { background: rgba(37, 211, 102, 0.18); color: #16a34a; }
 
   .card:hover {
     border-color: var(--app-border-strong);
@@ -255,7 +196,7 @@
   .input {
     @apply w-full rounded-2xl px-4 py-3 text-sm transition;
     border: 1px solid var(--app-border);
-    background: var(--app-field-bg, var(--app-surface-low));
+    background: var(--app-surface-low);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     color: var(--app-text);
@@ -267,7 +208,7 @@
     outline: none;
     border-color: rgba(var(--app-primary-rgb), 0.45);
     box-shadow: 0 0 0 4px rgba(var(--app-primary-rgb), 0.12), 0 2px 12px rgba(var(--app-primary-rgb), 0.08);
-    background: var(--app-field-bg, var(--app-surface));
+    background: var(--app-surface);
   }
 
   .select   { @apply input appearance-none; }

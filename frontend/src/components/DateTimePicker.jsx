@@ -171,7 +171,7 @@ export default function DateTimePicker({ value, onChange, placeholder = "dd-mm-y
         style={{
           padding: "4px 8px",
           borderColor: "var(--app-border)",
-          background: "var(--app-field-bg, var(--app-surface-low))",
+          background: "var(--app-surface-low)",
           color: value ? "var(--app-text)" : "#94a3b8",
           minWidth: 175,
           ...triggerStyle,
