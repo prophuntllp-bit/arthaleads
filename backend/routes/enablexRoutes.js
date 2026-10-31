@@ -189,8 +189,8 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
       console.warn("[enablex inbound] no agent phone found for org", orgId);
       // Notify all org admins that a call came in but couldn't be routed
       sendPushToAll({
-        title: "Missed Inbound Call",
-        body:  `A call came in${lead ? ` from ${lead.name}` : ""} but no agent has a phone number configured to receive it.`,
+        title: `Missed call${lead ? ` from ${lead.name}` : ""}`,
+        body:  "No team member has a phone number set to receive calls.",
         data:  { type: "missed_call", leadId: lead ? String(lead._id) : null },
       }, orgId).catch(() => {});
       return res.json({ message: "No available agent to route this call." });
@@ -244,8 +244,8 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
       // accept() above by this point, so this delay no longer costs them anything.
       if (agentUserId) {
         await sendPushToUser(String(agentUserId), {
-          title: "Incoming Call",
-          body:  lead ? `${lead.name} is calling — pick up your phone` : `Inbound call — pick up your phone`,
+          title: lead ? `${lead.name} is calling` : "Incoming call",
+          body:  "Pick up your phone.",
           data:  { type: "inbound_call", leadId: lead ? String(lead._id) : null },
         }).catch(() => {});
         await new Promise((resolve) => setTimeout(resolve, 1200));
@@ -499,8 +499,8 @@ async function processCallStateEvent(orgId, event, logPrefix) {
         const agentId = act.performedBy;
         if (agentId) {
           sendPushToUser(String(agentId), {
-            title: "Missed Call",
-            body:  `Missed call to ${lead.name} (${lead.phone})`,
+            title: `Missed call: ${lead.name}`,
+            body:  `Your call to ${lead.phone} was not answered.`,
             data:  { type: "missed_call", leadId: String(lead._id) },
           }).catch(() => {});
         }

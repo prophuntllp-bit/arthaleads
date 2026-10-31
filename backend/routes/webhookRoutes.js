@@ -797,8 +797,8 @@ router.post("/", express.json({ verify: verifyFbSignature }), noOperators, async
         } else {
           sendPushToAll({
             type: "new_lead",
-            title: "New Facebook Lead 🏠",
-            body: `${name} just submitted a lead from Facebook`,
+            title: `New Facebook lead: ${name}`,
+            body: "From a Facebook lead form. Not assigned to anyone yet.",
             data: { url: "/leads", leadId: String(createdLead._id), leadName: name, source: "Facebook" },
           }, orgId).catch((e) => logger.warn("Push notification failed:", e.message));
         }
@@ -972,8 +972,8 @@ router.post("/website", express.json(), noOperators, websiteLeadLimiter, async (
     } else {
       sendPushToAll({
         type: "new_lead",
-        title: "New Website Lead 🌐",
-        body: `${lead.name} submitted a form on your website`,
+        title: `New website lead: ${lead.name}`,
+        body: "Filled a form on your website. Not assigned to anyone yet.",
         data: { url: "/leads", leadId: String(lead._id), leadName: lead.name, source: "Website" },
       }, orgId).catch(() => {});
     }
@@ -1543,8 +1543,8 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
       } else {
         sendPushToAll({
           type: "new_lead",
-          title: "New Lead 📥",
-          body: `${lead.name} came in from ${sourceLabel}`,
+          title: `New lead: ${lead.name}`,
+          body: `From ${sourceLabel}. Not assigned to anyone yet.`,
           data: { url: "/leads", leadId: String(lead._id), leadName: lead.name, source: leadSource },
         }, orgId).catch(() => {});
       }
@@ -1644,8 +1644,8 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
     } else {
       sendPushToAll({
         type: "new_lead",
-        title: "New Lead 📥",
-        body: `${lead.name} came in from ${sourceLabel}`,
+        title: `New lead: ${lead.name}`,
+        body: `From ${sourceLabel}. Not assigned to anyone yet.`,
         data: { url: "/leads", leadId: String(lead._id), leadName: lead.name, source: leadSource },
       }, orgId).catch(() => {});
     }
@@ -1846,8 +1846,8 @@ router.post("/google", express.json(), noOperators, googleLeadLimiter, async (re
     } else if (!isTestLead) {
       sendPushToAll({
         type: "new_lead",
-        title: "New Google Lead 🔍",
-        body: `${lead.name} submitted a Google Ads lead form`,
+        title: `New Google lead: ${lead.name}`,
+        body: "From a Google Ads lead form. Not assigned to anyone yet.",
         data: { url: "/leads", leadId: String(lead._id), leadName: lead.name, source: "Google" },
       }, orgId).catch(() => {});
     }

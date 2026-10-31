@@ -230,7 +230,7 @@ test("a lead calls back: it rings the agent who last called them, recorded in st
   assert.equal(a.meta.provider, "plivo");
   assert.equal(a.meta.callUuid, "in-1");
   assert.equal(a.performedByName, "Sheetal Powar");
-  assert.ok(pushes.some((p) => p.title === "Incoming Call" && /Ravi Kulkarni is calling/.test(p.body)));
+  assert.ok(pushes.some((p) => p.title === "Ravi Kulkarni is calling" && /Pick up your phone/.test(p.body)));
 });
 
 test("incoming call answered: talk time from the agent leg, then the caller's hangup changes nothing", async () => {
@@ -258,7 +258,7 @@ test("incoming call nobody picks up: the caller hears a sorry message; missed, a
   const a = (await db.collection("leads").findOne({ _id: leadId })).activities.find((x) => x.meta?.callUuid === "in-3");
   assert.equal(a.meta.status, "missed");
   assert.match(a.description, /^Missed inbound call from Ravi Kulkarni/);
-  assert.ok(pushes.some((p) => /Missed call from Ravi Kulkarni/.test(p.body)));
+  assert.ok(pushes.some((p) => /Missed call from Ravi Kulkarni/.test(p.title)));
   assert.match((await callback(`/api/plivo/inbound-dialed/${ORG}?ref=x`, { DialStatus: "completed" })).text, /^<Response><Hangup\/><\/Response>$/);
 });
 

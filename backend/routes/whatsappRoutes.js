@@ -789,8 +789,8 @@ async function autoAssignConversation(org, conversation) {
     });
     sendPushToUser(assignee._id, {
       type: "conversation_assigned",
-      title: `WhatsApp: ${conversation.contactName || conversation.contactPhone}`,
-      body: "Assigned to you",
+      title: `${conversation.contactName || conversation.contactPhone}: WhatsApp chat assigned to you`,
+      body: "Open the chat to reply.",
       data: chatLink(conversation),
     }).catch(() => {});
   } catch { /* no active agents */ }
@@ -981,8 +981,8 @@ async function notifyHotSignal(org, conv, reason) {
     await WaConversation.updateOne({ _id: conv._id }, { $set: { hotAlertedAt: new Date() } });
     const payload = {
       type: "hot_lead",
-      title: `🔥 ${fresh.contactName || fresh.contactPhone} is interested`,
-      body: `${reason} on WhatsApp`,
+      title: `${fresh.contactName || fresh.contactPhone} is interested`,
+      body: `${String(reason).charAt(0).toUpperCase()}${String(reason).slice(1)} on WhatsApp`,
       data: chatLink(fresh),
     };
     if (fresh.assignedTo) return void sendPushToUser(fresh.assignedTo, payload).catch(() => {});
@@ -2591,18 +2591,31 @@ async function inferAnsweredFromTranscript(org, agent, conversation, questions) 
 // replies before they message again; leaving them on read because an agent
 // hasn't picked it up yet is how a lead goes cold. Bot OFF is a decision
 // only a human on the team makes explicitly, from the Inbox toggle.
+// What the team's phone shows when a chat is handed over (owner, 31 Oct 2026):
+// the title says what the lead wants, in full, and the second line what to do.
+// It used to read "AI assistant could not reply" for every handover, even a
+// lead tapping "Talk to Advisor", with the reason cut off in the small line.
+function handoffAlert(conversation, reason = "") {
+  const who = conversation.contactName || conversation.contactPhone || "A lead";
+  const r = String(reason || "");
+  const choice = (r.match(/^chose "(.+)"$/) || [])[1] || "";
+  if (/advisor|human|agent|expert|talk|call/i.test(choice) || /advisor/i.test(r)) {
+    return { type: "advisor_request", title: `${who} wants to talk to an advisor`,
+      body: choice ? `They tapped "${choice}" on WhatsApp. Reply or call them now.` : "They asked for an advisor on WhatsApp. Reply or call them now." };
+  }
+  if (choice) return { type: "handoff", title: `${who} chose "${choice}"`, body: "They are waiting for a reply from the team on WhatsApp." };
+  if (/site visit/i.test(r)) return { type: "site_visit_request", title: `${who} wants a site visit`, body: "Asked on WhatsApp. Confirm a day and time with them." };
+  if (/not configured/i.test(r)) return { type: "bot_failed", title: `${who} needs a reply from you`, body: "The AI assistant is not set up, so it could not answer on WhatsApp." };
+  return { type: "bot_failed", title: `${who} needs a reply from you`, body: "The AI assistant could not answer this message on WhatsApp." };
+}
+
 async function handOffToHuman(org, conversation, { notify = false, reason = "" } = {}) {
   await WaConversation.findByIdAndUpdate(conversation._id, { status: "open" });
   // Rule 1: the chat's one Vistrow call, if one is waiting on the assistant.
   if (conversation.leadId) await requestWhatsAppCall(conversation.leadId, "handoff");
   autoAssignConversation(org, conversation).catch(() => {});
   if (!notify) return;
-  const payload = {
-    type: "bot_failed",
-    title: "AI assistant could not reply",
-    body: `${conversation.contactName || conversation.contactPhone} is waiting for an answer${reason ? ` — ${reason}` : ""}`,
-    data: chatLink(conversation),
-  };
+  const payload = { ...handoffAlert(conversation, reason), data: chatLink(conversation) };
   const recipients = org.whatsapp?.notifyOn?.newConversation || [];
   if (recipients.length) recipients.forEach((u) => sendPushToUser(u, payload).catch(() => {}));
   else notifyUnclaimedLead(org, payload).catch(() => {});

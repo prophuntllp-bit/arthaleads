@@ -157,8 +157,8 @@ async function runTaskReminder() {
   for (const task of tasks) {
     await sendPushToUser(task.assignedTo, {
       type: "task_due",
-      title: "Task Due Today",
-      body: task.title,
+      title: `Due today: ${task.title}`,
+      body: "Open Tasks to mark it done.",
       data: { url: "/tasks", taskId: String(task._id) },
     });
   }

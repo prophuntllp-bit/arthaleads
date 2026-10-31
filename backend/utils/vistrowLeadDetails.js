@@ -112,8 +112,8 @@ async function notifyBrochureRequest({ orgId, leadId, callId, projectName = "" }
       });
       sendPushToUser(p._id, {
         type: "task_assigned",
-        title: "Send brochure",
-        body: `${lead?.name || "A caller"} asked for the brochure on a Vistrow Voice call`,
+        title: `${lead?.name || "A caller"} wants the brochure`,
+        body: "Asked on a Vistrow Voice call. Your task to send it is in Tasks.",
         data: { url: "/tasks", taskId: String(task._id), leadId: String(leadId) },
       }).catch(() => {});
     }
