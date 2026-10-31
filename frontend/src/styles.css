@@ -209,12 +209,22 @@
     background: var(--modal-zone);
     border-bottom: 1px solid var(--modal-zone-border);
     padding: 20px 24px;
+    /* follow the panel's corners when the panel does not clip them */
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
   }
   .modal-foot {
     display: flex; align-items: center; justify-content: flex-end; gap: 8px;
     background: var(--modal-zone);
     border-top: 1px solid var(--modal-zone-border);
     padding: 16px 24px;
+  }
+  /* The bottom band for hand-built popups that lay out their own footer. */
+  .modal-foot-band {
+    background: var(--modal-zone);
+    border-top: 1px solid var(--modal-zone-border) !important;
+    border-bottom-left-radius: inherit;
+    border-bottom-right-radius: inherit;
   }
   .modal-title { @apply text-[17px] font-extrabold tracking-tight leading-tight; color: var(--app-text); }
   .modal-desc { @apply text-[13px] mt-1; color: var(--app-text-soft); }
