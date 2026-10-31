@@ -13,6 +13,7 @@ import toast from "react-hot-toast";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { fmtDateTime } from "../utils/constants";
+import { conversationKind, ConversationKindBadge } from "./UI";
 
 const BASE = "/integrations/vistrow-outbound/leads";
 const KIND = { callback: "Scheduled call-back", visit_reminder: "Site-visit reminder", nurture: "Follow-up call" };
@@ -87,12 +88,13 @@ export default function VistrowVoicePanel({ lead, vistrow }) {
 
   // A website widget conversation is the visitor talking to the AI on the
   // site, not an AI call to them (owner, 31 Oct 2026).
-  const isWidget = !!last && /widget|web/i.test(String(last.channel || "")) && !last.followUpKind && !last.result;
+  const kind = last ? conversationKind(last) : "";
+  const isWidget = !!last && (kind === "text" || /widget|web/i.test(String(last.channel || ""))) && !last.followUpKind && !last.result;
   const talk = last?.durationSeconds > 0
     ? `${Math.floor(last.durationSeconds / 60)}m ${Math.round(last.durationSeconds % 60)}s`.replace(/^0m /, "")
     : null;
   const lastLine = last
-    ? [isWidget ? "Website widget conversation" : last.result || (last.followUpKind ? KIND[last.followUpKind] : null) || "Call made",
+    ? [isWidget ? (kind === "text" ? `${last.channel || "Text"} conversation` : "Website widget conversation") : last.result || (last.followUpKind ? KIND[last.followUpKind] : null) || "Call made",
        isWidget ? talk : null, last.createdAt ? fmtDateTime(last.createdAt) : null].filter(Boolean).join(" · ")
     : "No call yet";
 
@@ -103,7 +105,7 @@ export default function VistrowVoicePanel({ lead, vistrow }) {
           <PhoneOutgoing className="h-3.5 w-3.5" style={{ color: "#6366f1" }} />
           <span className="text-xs font-bold uppercase tracking-wider text-app-soft">Vistrow AI calls</span>
         </div>
-        <span className="text-sm text-app"><span className="text-app-soft">{isWidget ? "Last conversation:" : "Last AI call:"}</span> {lastLine}</span>
+        <span className="text-sm text-app inline-flex flex-wrap items-center gap-1.5"><span className="text-app-soft">{isWidget ? "Last conversation:" : "Last AI call:"}</span> {lastLine}{last && <ConversationKindBadge kind={kind} />}</span>
         {calls.length > 0 && !isWidget && <span className="text-sm text-app"><span className="text-app-soft">Tries:</span> {attempts}</span>}
         {nextCall && <span className="text-sm text-app"><span className="text-app-soft">Next AI call:</span> {fmtDateTime(nextCall)}</span>}
         {inFlight && <span className="text-sm text-app-soft">Sending to Vistrow...</span>}

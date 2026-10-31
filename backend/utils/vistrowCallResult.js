@@ -88,13 +88,45 @@ function reportedBooking(outcome) {
 }
 
 // One line for the lead's activity feed saying what this call was.
-function callDescription({ direction, followUpKind, attempts, booking, durationSeconds } = {}) {
+function callDescription({ direction, followUpKind, attempts, booking, durationSeconds, conversationType } = {}) {
   const secs = Number(durationSeconds) > 0 ? ` (${Math.round(Number(durationSeconds))}s)` : "";
   if (booking === "Not Reachable" && attempts) {
     return `Vistrow Voice could not reach this lead after ${attempts} ${attempts === 1 ? "try" : "tries"}`;
   }
   if (followUpKind && FOLLOW_UP_LABELS[followUpKind]) return `${FOLLOW_UP_LABELS[followUpKind]}${secs}`;
-  return `${direction === "outbound" ? "Outbound" : "Inbound"} Vistrow Voice call${secs}`;
+  return `${direction === "outbound" ? "Outbound" : "Inbound"} Vistrow Voice ${conversationType === "text" ? "text chat" : "call"}${secs}`;
+}
+
+// Voice call or text chat (31 Oct 2026): Vistrow's conversation_type when it
+// says "voice" or "text", else read from the channel. Chat / WhatsApp / text /
+// SMS channels are text; phone, website widget, web, or a call with a
+// duration or a recording is voice. "" when nothing tells.
+function conversationTypeOf(explicit, channel, { durationSeconds, recordingUrl } = {}) {
+  const t = typeof explicit === "string" ? explicit.trim().toLowerCase() : "";
+  if (t === "voice" || t === "text") return t;
+  const c = typeof channel === "string" ? channel.toLowerCase() : "";
+  if (/chat|whatsapp|text|sms|message/.test(c)) return "text";
+  if (/phone|widget|web|call|voice/.test(c) || Number(durationSeconds) > 0 || recordingUrl) return "voice";
+  return "";
+}
+
+// extracted_data as stored on the call: a plain object of at most 60 fields,
+// keys without "." or "$" (Mongo field names), text cut to 1,000 characters,
+// nested values kept as JSON text. null when nothing usable is left.
+function cleanExtractedData(v) {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+  const out = {};
+  for (const [rawKey, val] of Object.entries(v).slice(0, 60)) {
+    const k = String(rawKey).replace(/[.$]/g, "_").trim().slice(0, 60);
+    if (!k || val === null || val === undefined || val === "") continue;
+    if (typeof val === "string") out[k] = val.slice(0, 1000);
+    else if (typeof val === "number") { if (Number.isFinite(val)) out[k] = val; }
+    else if (typeof val === "boolean") out[k] = val;
+    else if (typeof val === "object") {
+      try { out[k] = JSON.stringify(val).slice(0, 1000); } catch { /* circular: dropped */ }
+    }
+  }
+  return Object.keys(out).length ? out : null;
 }
 
 /**
@@ -163,4 +195,4 @@ function planOutcome(current, outcome, now = new Date()) {
   return { set, activities, lines };
 }
 
-module.exports = { planOutcome, phoneFilter, cleanEmail, cleanName, last10, STATUS_ORDER, FOLLOW_UP_LABELS, followUpKindOf, attemptsOf, reportedBooking, callDescription };
+module.exports = { planOutcome, phoneFilter, cleanEmail, cleanName, last10, STATUS_ORDER, FOLLOW_UP_LABELS, followUpKindOf, attemptsOf, reportedBooking, callDescription, conversationTypeOf, cleanExtractedData };

@@ -20,9 +20,9 @@ const { mapGoogleLeadFields, fromWebhookColumns, googleAdRef, adRefLines, google
 const { mapCustomFieldsToLead } = require("../utils/formFieldMapper");
 const { samePhone } = require("../utils/phone");
 const OPTS = require("../constants/leadOptions");
-const { planOutcome, phoneFilter, cleanEmail, cleanName, FOLLOW_UP_LABELS, followUpKindOf, attemptsOf, reportedBooking, callDescription } = require("../utils/vistrowCallResult");
+const { planOutcome, phoneFilter, cleanEmail, cleanName, FOLLOW_UP_LABELS, followUpKindOf, attemptsOf, reportedBooking, callDescription, conversationTypeOf, cleanExtractedData } = require("../utils/vistrowCallResult");
 const { applyCallDetails, notifyBrochureRequest } = require("../utils/vistrowLeadDetails");
-const { looksLikeRealName, looksLikeCallerName } = require("../utils/personName");
+const { looksLikeRealName, looksLikeCallerName, isPlaceholderName } = require("../utils/personName");
 
 const router = express.Router();
 
@@ -995,7 +995,7 @@ router.post("/website", express.json(), noOperators, websiteLeadLimiter, async (
 const customLeadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 60, // 60 submissions per token per 15 min
-  keyGenerator: (req) => req.body?.token || req.query?.token || req.ip,
+  keyGenerator: (req) => asToken(req.body?.token) || asToken(req.query?.token) || req.ip,
   message: { success: false, message: "Too many submissions, please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -1091,15 +1091,15 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
     // Accept token from body or query string for sender flexibility
     const token = req.body?.token || req.query?.token;
     const {
-      name, phone, email, message, source_name,
+      name, phone, email, message: messageRaw, source_name: sourceNameRaw,
       // Optional Vistrow Voice enrichment (all backward-compatible — a payload
       // without any of these behaves exactly as before).
-      transcript, sentiment, duration_seconds, channel, language, agent_name, extracted_data,
+      transcript, sentiment, duration_seconds, channel: channelRaw, language: languageRaw, agent_name: agentNameRaw, extracted_data: extractedRaw,
       // Per-call identity + recording (Vistrow only). call_id is what makes a
       // re-sent webhook update the same call instead of creating a duplicate -
       // see the branching below. Unknown/future fields are simply never
       // destructured here, so they're silently ignored rather than rejected.
-      call_id, recording_url, recording_mime_type, page_path,
+      call_id, recording_url, recording_mime_type: recordingMimeRaw, page_path: pagePathRaw,
       // The page the visitor was on, as a full address (website widget).
       page_url, website_url,
       // Vistrow bridge (2026-10-15): the lead this call was placed for, the
@@ -1108,11 +1108,25 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
       // (an undelivered dial: no transcript, no recording, duration 0);
       // follow_up_kind (top level or custom_fields) marks a scheduled
       // call-back / site-visit reminder / nurture call Vistrow placed itself.
-      arthaleads_lead_id, crm_outcome, direction,
+      arthaleads_lead_id, crm_outcome, direction: directionRaw,
       // Vistrow's post-call analysis (16 Oct 2026), both optional: a summary
       // sentence and a list of key points, shown in the call's note.
       summary, key_points,
+      // "voice" or "text" (31 Oct 2026). Absent: read from the channel.
+      conversation_type,
     } = req.body || {};
+    // Every optional field is read defensively (31 Oct 2026): a wrong type,
+    // null or an over-long value is dropped or cut, never a 500.
+    const str = (v, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+    const channel = str(channelRaw, 100);
+    const language = str(languageRaw, 40);
+    const agent_name = str(agentNameRaw, 200);
+    const recording_mime_type = str(recordingMimeRaw, 100);
+    const page_path = str(pagePathRaw, 2000);
+    const source_name = str(sourceNameRaw, 200);
+    const message = str(messageRaw, 20000);
+    const direction = ["inbound", "outbound"].includes(str(directionRaw, 20).toLowerCase()) ? str(directionRaw, 20).toLowerCase() : "";
+    const extracted_data = cleanExtractedData(extractedRaw);
     const followUpKind = followUpKindOf(req.body);
     const callAttempts = attemptsOf(crm_outcome);
     const callResult = reportedBooking(crm_outcome);
@@ -1129,15 +1143,31 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
       return typeof v === "string" ? v.trim() : "";
     })();
 
-    if (!token) return res.status(400).json({ success: false, message: "Missing token" });
+    if (!asToken(token)) return res.status(400).json({ success: false, message: "Missing token" });
 
-    // Validate required fields (mirror createLeadSchema: name/phone required, email optional)
-    if (!name || String(name).trim().length < 2) {
-      return res.status(400).json({ success: false, message: "Field 'name' is required (min 2 chars)" });
+    // Phone is the one required field. The name is optional: a missing or
+    // placeholder name ("not provided", "unknown", "n/a", the phone itself)
+    // becomes the phone, and never replaces a real name on an existing lead.
+    const phoneStr = typeof phone === "string" || typeof phone === "number" ? String(phone).trim() : "";
+    const phoneDigits = phoneStr.replace(/\D/g, "").length;
+    if (!phoneStr) {
+      return res.status(400).json({ success: false, message: "Field 'phone' is required" });
     }
-    if (!phone || String(phone).trim().length < 7) {
-      return res.status(400).json({ success: false, message: "Field 'phone' is required (min 7 chars)" });
+    if (phoneDigits < 7 || phoneDigits > 20 || phoneStr.length > 40) {
+      return res.status(400).json({ success: false, message: "Field 'phone' must be a phone number with 7 to 20 digits" });
     }
+    const givenName = typeof name === "string" || typeof name === "number" ? cleanName(name) : "";
+    const nameIsPlaceholder = isPlaceholderName(givenName, phoneStr);
+    const leadName = nameIsPlaceholder ? phoneStr : givenName;
+
+    // call_id: a positive whole number, or absent ("" / null count as absent).
+    const callIdGiven = call_id !== undefined && call_id !== null && call_id !== "";
+    const callIdNum = callIdGiven && (typeof call_id === "number" || (typeof call_id === "string" && /^\s*\d+\s*$/.test(call_id)))
+      ? Number(call_id) : NaN;
+    if (callIdGiven && !(Number.isSafeInteger(callIdNum) && callIdNum > 0)) {
+      return res.status(400).json({ success: false, message: "Field 'call_id' must be a positive whole number" });
+    }
+    const hasCallId = callIdGiven;
 
     // Token-ingest platforms (Custom, Vistrow Voice, WhatsApp) share this endpoint
     // and are disambiguated purely by their token. Keep in sync with
@@ -1166,7 +1196,17 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
     // Vistrow Voice token produces "Vistrow Voice" leads, a WhatsApp token
     // produces "WhatsApp" leads, and anything else falls back to "Custom".
     const leadSource = TOKEN_INGEST_PLATFORMS.includes(automation.platform) ? automation.platform : "Custom";
-    const cleanPhone = String(phone).trim();
+    const cleanPhone = phoneStr;
+    // A side effect (status stamp, push, task, chat note, hand-off) failing
+    // must never fail the delivery: the lead is already stored by then.
+    const safely = async (what, fn) => {
+      try { return await fn(); } catch (e) { logger.warn(`[custom webhook] ${what} failed (lead kept): ${e.message}`); return undefined; }
+    };
+    const markConnected = () => safely("connection status", () =>
+      Automation.updateOne({ _id: automation._id }, { $set: { status: "connected", lastSyncAt: new Date() } }));
+    const brochure = (leadId) => (brochureRequested
+      ? safely("brochure request", () => notifyBrochureRequest({ orgId, leadId, callId: callIdNum, projectName: brochureProject }))
+      : undefined);
 
     // ── call_id: the real idempotency key for a Vistrow call ──────────────────
     // Present only on Vistrow's per-call webhook. When present, it (not the
@@ -1174,14 +1214,12 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
     // create-vs-update-vs-append, so a legitimate second call from the same
     // number minutes apart is never mistaken for a duplicate delivery of the
     // first one.
-    const callIdNum = call_id !== undefined && call_id !== null && call_id !== "" ? Number(call_id) : NaN;
-    const hasCallId = Number.isFinite(callIdNum);
 
     const org = await Organization.findById(orgId).select("autoAssign plan").lean();
     // The connection name the admin gave (e.g. "Shapoorji Pallonji Treetopia")
     // is the primary source label; source_name from the payload is a fallback.
     const sourceLabel = automation.name || source_name || automation.leadSourceLabel || "Custom";
-    const msg = message ? String(message).trim() : "";
+    const msg = message;
 
     // Build the optional Vistrow Voice call payload. Everything here is
     // defensive: any missing/malformed field is dropped, and if nothing usable
@@ -1190,16 +1228,17 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
     const SENTIMENTS = ["positive", "neutral", "negative"];
     const cleanTranscript = Array.isArray(transcript)
       ? transcript
-          .filter((t) => t && typeof t === "object")
+          .slice(0, 2000)
+          .filter((t) => t && typeof t === "object" && !Array.isArray(t))
           .map((t) => ({
-            speaker: (t.speaker === "Caller" || t.speaker === "Agent") ? t.speaker : String(t.speaker ?? ""),
-            text: typeof t.text === "string" ? t.text : String(t.text ?? ""),
+            speaker: (t.speaker === "Caller" || t.speaker === "Agent") ? t.speaker : str(t.speaker, 40),
+            text: typeof t.text === "string" ? t.text.slice(0, 5000) : (typeof t.text === "number" ? String(t.text) : ""),
           }))
           .filter((t) => t.text.trim())
       : [];
-    const durNum = Number(duration_seconds);
-    const hasExtracted = extracted_data && typeof extracted_data === "object"
-      && !Array.isArray(extracted_data) && Object.keys(extracted_data).length > 0;
+    const durNum = typeof duration_seconds === "number" || (typeof duration_seconds === "string" && duration_seconds.trim())
+      ? Number(duration_seconds) : NaN;
+    const hasExtracted = !!extracted_data;
     const safeRecordingUrl = sanitizeVistrowRecordingUrl(recording_url);
     const pagePathClean = page_path && typeof page_path === "string" ? page_path.trim() : "";
     // Website widget conversations (owner, 31 Oct 2026: a widget lead must show
@@ -1208,30 +1247,32 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
     // lead's sourcePage / sourceDomain, the same fields a website form fills,
     // so the lists show "site.com/page" for it too.
     const widgetPage = [page_url, website_url, page_path]
-      .map((v) => (typeof v === "string" ? v.trim() : ""))
+      .map((v) => str(v, 2000))
       .find((v) => /^https?:\/\//i.test(v)) || "";
     const widgetDomain = (() => { try { return widgetPage ? new URL(widgetPage).hostname.replace(/^www\./, "") : ""; } catch { return ""; } })();
     // A widget conversation is the visitor talking to the AI on the site, so
     // it is incoming even when Vistrow sends no direction.
-    const callDirection = direction || (/widget|web/i.test(String(channel || "")) ? "inbound" : "");
+    const callDirection = direction || (/widget|web/i.test(channel) ? "inbound" : "");
+    // Voice call or text chat: conversation_type, else read from the channel.
+    const conversationType = conversationTypeOf(conversation_type, channel, { durationSeconds: durNum, recordingUrl: safeRecordingUrl });
+    const explicitType = ["voice", "text"].includes(str(conversation_type, 10).toLowerCase());
 
     let voiceCall;
     if (hasCallId || cleanTranscript.length || SENTIMENTS.includes(sentiment) || Number.isFinite(durNum)
-        || channel || language || agent_name || hasExtracted || safeRecordingUrl) {
+        || channel || language || agent_name || hasExtracted || safeRecordingUrl || explicitType) {
       voiceCall = {};
       if (hasCallId) voiceCall.externalCallId = callIdNum;
       if (cleanTranscript.length) voiceCall.transcript = cleanTranscript;
       if (SENTIMENTS.includes(sentiment)) voiceCall.sentiment = sentiment;
-      if (Number.isFinite(durNum) && durNum > 0) voiceCall.durationSeconds = durNum;
-      if (channel && typeof channel === "string") voiceCall.channel = channel.trim();
-      if (language && typeof language === "string") voiceCall.language = language.trim();
-      if (agent_name && typeof agent_name === "string") voiceCall.agentName = agent_name.trim();
+      if (Number.isFinite(durNum) && durNum > 0 && durNum < 7 * 86400) voiceCall.durationSeconds = durNum;
+      if (channel) voiceCall.channel = channel;
+      if (conversationType) voiceCall.conversationType = conversationType;
+      if (language) voiceCall.language = language;
+      if (agent_name) voiceCall.agentName = agent_name;
       if (pagePathClean || widgetPage) voiceCall.pagePath = pagePathClean || widgetPage;
       if (safeRecordingUrl) {
         voiceCall.recordingUrl = safeRecordingUrl;
-        if (recording_mime_type && typeof recording_mime_type === "string") {
-          voiceCall.recordingMimeType = recording_mime_type.trim();
-        }
+        if (recording_mime_type) voiceCall.recordingMimeType = recording_mime_type;
       }
       if (hasExtracted) voiceCall.extractedData = extracted_data;
       if (callAttempts) voiceCall.attempts = callAttempts;
@@ -1252,6 +1293,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
         ? `${Math.floor(vc.durationSeconds / 60)}m ${Math.round(vc.durationSeconds % 60)}s`.replace(/^0m /, "")
         : null;
       const metaBits = [
+        vc.conversationType ? (vc.conversationType === "text" ? "Text chat" : "Voice call") : null,
         vc.sentiment ? `Sentiment: ${cap(vc.sentiment)}` : null,
         durStr ? `Duration: ${durStr}` : null,
         vc.language ? `Language: ${vc.language}` : null,
@@ -1266,7 +1308,8 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
         `${k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}: ${v}`);
       const heading = callResult === "Not Reachable" && callAttempts
         ? `📞 ${callDescription({ booking: callResult, attempts: callAttempts })}`
-        : followUpKind ? `📞 ${FOLLOW_UP_LABELS[followUpKind]} (${sourceLabel})` : `📞 ${sourceLabel} call summary`;
+        : followUpKind ? `📞 ${FOLLOW_UP_LABELS[followUpKind]} (${sourceLabel})`
+          : vc.conversationType === "text" ? `💬 ${sourceLabel} chat summary` : `📞 ${sourceLabel} call summary`;
       return {
         noteText: [
           heading,
@@ -1298,6 +1341,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
         if (voiceCall.sentiment)         setOps["voiceCalls.$.sentiment"] = voiceCall.sentiment;
         if (voiceCall.durationSeconds)   setOps["voiceCalls.$.durationSeconds"] = voiceCall.durationSeconds;
         if (voiceCall.channel)           setOps["voiceCalls.$.channel"] = voiceCall.channel;
+        if (voiceCall.conversationType)  setOps["voiceCalls.$.conversationType"] = voiceCall.conversationType;
         if (voiceCall.language)          setOps["voiceCalls.$.language"] = voiceCall.language;
         if (voiceCall.agentName)         setOps["voiceCalls.$.agentName"] = voiceCall.agentName;
         if (voiceCall.pagePath)          setOps["voiceCalls.$.pagePath"] = voiceCall.pagePath;
@@ -1318,10 +1362,8 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
           try { await applyCallDetails(existingByCallId._id, mapVistrowExtractedFields(extracted_data)); }
           catch (e) { logger.warn(`[custom webhook] details from call ${callIdNum} failed: ${e.message}`); }
         }
-        if (brochureRequested) await notifyBrochureRequest({ orgId, leadId: existingByCallId._id, callId: callIdNum, projectName: brochureProject });
-        automation.status = "connected";
-        automation.lastSyncAt = new Date();
-        await automation.save();
+        await brochure(existingByCallId._id);
+        await markConnected();
         logger.info(`[custom webhook] Vistrow call ${callIdNum} updated (re-send) on lead ${existingByCallId._id}`);
         return res.status(200).json({ success: true, message: "Call updated", leadId: existingByCallId._id });
       }
@@ -1363,13 +1405,14 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
         }
         const callActivity = {
           type: "called",
-          description: callDescription({ direction, followUpKind, attempts: callAttempts, booking: callResult, durationSeconds: voiceCall.durationSeconds }),
+          description: callDescription({ direction, followUpKind, attempts: callAttempts, booking: callResult, durationSeconds: voiceCall.durationSeconds, conversationType }),
           performedByName: "Vistrow Voice",
-          meta: { callId: callIdNum, direction: callDirection, followUpKind, attempts: callAttempts, booking: callResult },
+          meta: { callId: callIdNum, direction: callDirection, followUpKind, attempts: callAttempts, booking: callResult, conversationType: conversationType || undefined },
         };
-        // Same rule as the WhatsApp chat reader: never over a real name.
-        const callName = cleanName(name);
-        const rename = looksLikeCallerName(callName) && !looksLikeRealName(existingByPhone.name) ? callName : "";
+        // Same rule as the WhatsApp chat reader: never over a real name, and
+        // a placeholder ("not provided", the phone) is never a name.
+        const callName = nameIsPlaceholder ? "" : givenName;
+        const rename = callName && looksLikeCallerName(callName) && !looksLikeRealName(existingByPhone.name) ? callName : "";
         const renameActivity = rename
           ? [{ type: "vistrow_voice", description: `Name updated from Vistrow Voice call: ${existingByPhone.name} → ${rename}`, performedByName: "Vistrow Voice", meta: { callId: callIdNum } }]
           : [];
@@ -1402,7 +1445,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
             }).select("_id").lean();
             if (winner) {
               logger.info(`[custom webhook] push/push race resolved for call ${callIdNum} - lead ${winner._id} already has it`);
-              if (brochureRequested) await notifyBrochureRequest({ orgId, leadId: winner._id, callId: callIdNum, projectName: brochureProject });
+              await brochure(winner._id);
               return res.status(200).json({ success: true, message: "Call updated", leadId: winner._id });
             }
           }
@@ -1410,17 +1453,17 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
         }
         if (pushed && pushed.matchedCount === 0) {
           // This lead already has this call (a re-send that raced the lookup).
-          if (brochureRequested) await notifyBrochureRequest({ orgId, leadId: existingByPhone._id, callId: callIdNum, projectName: brochureProject });
+          await brochure(existingByPhone._id);
           return res.status(200).json({ success: true, message: "Call updated", leadId: existingByPhone._id });
         }
-        if (brochureRequested) await notifyBrochureRequest({ orgId, leadId: existingByPhone._id, callId: callIdNum, projectName: brochureProject });
+        await brochure(existingByPhone._id);
         // The website the widget conversation came from, only where the lead
         // has none yet (never over a form's own page).
         if (widgetDomain) {
-          await Lead.updateOne(
+          await safely("widget website", () => Lead.updateOne(
             { _id: existingByPhone._id, $or: [{ sourceDomain: "" }, { sourceDomain: null }, { sourceDomain: { $exists: false } }] },
             { $set: { sourcePage: widgetPage, sourceDomain: widgetDomain } }
-          );
+          ));
         }
         if (rename) {
           try {
@@ -1429,16 +1472,14 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
             for (const c of convs) if (!looksLikeRealName(c.contactName)) await WaConversation.updateOne({ _id: c._id }, { contactName: rename });
           } catch (e) { logger.warn(`[custom webhook] chat name from call ${callIdNum} failed: ${e.message}`); }
         }
-        automation.status = "connected";
-        automation.lastSyncAt = new Date();
-        await automation.save();
+        await markConnected();
         if (existingByPhone.assignedTo) {
-          sendPushToUser(existingByPhone.assignedTo, {
+          await safely("push", () => sendPushToUser(existingByPhone.assignedTo, {
             type: "lead_assigned",
-            title: `Vistrow Voice call: ${rename || existingByPhone.name || cleanName(name)}`,
-            body: plan.lines.length ? plan.lines.join(" · ") : "New call on this lead",
+            title: `Vistrow Voice ${conversationType === "text" ? "chat" : "call"}: ${rename || existingByPhone.name || leadName}`,
+            body: plan.lines.length ? plan.lines.join(" · ") : `New ${conversationType === "text" ? "chat" : "call"} on this lead`,
             data: { url: "/leads", leadId: String(existingByPhone._id) },
-          }).catch(() => {});
+          }));
         }
         // The lead's WhatsApp chat gets the result as a team-only note, and its
         // assistant comes back on if it was paused for this call.
@@ -1461,9 +1502,9 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
       const plan = planOutcome({ status: "New", booking: "" }, crm_outcome);
       const newCallActivity = {
         type: "called",
-        description: callDescription({ direction, followUpKind, attempts: callAttempts, booking: callResult, durationSeconds: voiceCall.durationSeconds }),
+        description: callDescription({ direction, followUpKind, attempts: callAttempts, booking: callResult, durationSeconds: voiceCall.durationSeconds, conversationType }),
         performedByName: "Vistrow Voice",
-        meta: { callId: callIdNum, direction: callDirection, followUpKind, attempts: callAttempts, booking: callResult },
+        meta: { callId: callIdNum, direction: callDirection, followUpKind, attempts: callAttempts, booking: callResult, conversationType: conversationType || undefined },
       };
 
       let lead;
@@ -1471,7 +1512,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
         lead = await Lead.create({
           // Cleaned so a mis-heard email or an over-long name can't fail
           // the whole delivery with a 500 (the email field has a format check).
-          name: cleanName(name),
+          name: leadName,
           phone: cleanPhone,
           email: cleanEmail(email),
           source: leadSource,
@@ -1521,33 +1562,40 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
           }).select("_id").lean();
           if (winner) {
             logger.info(`[custom webhook] create/create race resolved for call ${callIdNum} - lead ${winner._id} already has it`);
-            if (brochureRequested) await notifyBrochureRequest({ orgId, leadId: winner._id, callId: callIdNum, projectName: brochureProject });
-              return res.status(200).json({ success: true, message: "Call updated", leadId: winner._id });
+            await brochure(winner._id);
+            return res.status(200).json({ success: true, message: "Call updated", leadId: winner._id });
           }
         }
         throw createErr;
       }
 
-      automation.status = "connected";
-      automation.lastSyncAt = new Date();
-      await automation.save();
-      if (brochureRequested) await notifyBrochureRequest({ orgId, leadId: lead._id, callId: callIdNum, projectName: brochureProject });
+      // Two deliveries of one new call_id at once can each create a lead (the
+      // call id index is not unique, see models/Lead.js): the oldest lead with
+      // this call wins and the newer copy is removed, on both racers alike.
+      const twins = await safely("duplicate call check", () => Lead.find({ orgId, "voiceCalls.externalCallId": callIdNum })
+        .sort({ _id: 1 }).limit(2).select("_id").lean());
+      if (Array.isArray(twins) && twins.length > 1 && String(twins[0]._id) !== String(lead._id)) {
+        await Lead.deleteOne({ _id: lead._id });
+        logger.info(`[custom webhook] create/create race resolved for call ${callIdNum} - lead ${twins[0]._id} already has it`);
+        return res.status(200).json({ success: true, message: "Call updated", leadId: twins[0]._id });
+      }
 
-      if (assignee?._id) {
-        sendPushToUser(assignee._id, {
+      await markConnected();
+      await brochure(lead._id);
+
+      await safely("push", () => (assignee?._id
+        ? sendPushToUser(assignee._id, {
           type: "lead_assigned",
           title: `New Lead: ${lead.name}`,
           body: [cleanPhone, sourceLabel].filter(Boolean).join(" · "),
           data: { url: "/leads", leadId: String(lead._id) },
-        }).catch(() => {});
-      } else {
-        sendPushToAll({
+        })
+        : sendPushToAll({
           type: "new_lead",
           title: `New lead: ${lead.name}`,
           body: `From ${sourceLabel}. Not assigned to anyone yet.`,
           data: { url: "/leads", leadId: String(lead._id), leadName: lead.name, source: leadSource },
-        }, orgId).catch(() => {});
-      }
+        }, orgId)));
 
       logger.info(`[custom webhook] lead created: ${lead.name} | ${cleanPhone} | source: ${sourceLabel} | call: ${callIdNum}`);
       return res.status(201).json({ success: true, message: "Lead received", leadId: lead._id });
@@ -1558,7 +1606,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
     const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
     const recent = await Lead.findOne({ orgId, phone: samePhone(cleanPhone) || cleanPhone, createdAt: { $gte: twoMinsAgo } }).lean();
     if (recent) {
-      logger.info(`[custom webhook] duplicate skipped: ${name} | ${cleanPhone} | original: ${recent.createdAt}`);
+      logger.info(`[custom webhook] duplicate skipped: ${leadName} | ${cleanPhone} | original: ${recent.createdAt}`);
       return res.status(200).json({ success: true, message: "Duplicate lead ignored" });
     }
 
@@ -1580,9 +1628,9 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
     const mapped = voiceCall ? mapVistrowExtractedFields(hasExtracted ? extracted_data : null) : {};
 
     const lead = await Lead.create({
-      name: String(name).trim(),
+      name: leadName,
       phone: cleanPhone,
-      email: (email && String(email).trim()) || "",
+      email: cleanEmail(email),
       source: leadSource,
       status: "New",
       requirements: reqText,
@@ -1620,40 +1668,43 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
       ],
     });
 
-    automation.status = "connected";
-    automation.lastSyncAt = new Date();
-    await automation.save();
+    await markConnected();
 
     // New-lead hand-off to Vistrow, for partner/bot token sources only. A lead that
     // arrives FROM Vistrow (its platform, or any call data) is its own result
     // coming back, never a new lead to send out again: that would loop.
-    emitLeadCreated(lead, {
+    await safely("Vistrow hand-off", () => emitLeadCreated(lead, {
       origin: "webhook-custom", vistrowOrigin: automation.platform === "Vistrow Voice" || !!voiceCall,
       // Only a WhatsApp provider token counts as the WhatsApp source; "Custom" never auto-calls.
       routeSource: automation.platform === "WhatsApp" ? "whatsapp" : undefined,
-    });
+    }));
 
     // Push notification — targeted to assignee if assigned, broadcast otherwise
-    if (assignee?._id) {
-      sendPushToUser(assignee._id, {
+    await safely("push", () => (assignee?._id
+      ? sendPushToUser(assignee._id, {
         type: "lead_assigned",
         title: `New Lead: ${lead.name}`,
         body: [cleanPhone, sourceLabel].filter(Boolean).join(" · "),
         data: { url: "/leads", leadId: String(lead._id) },
-      }).catch(() => {});
-    } else {
-      sendPushToAll({
+      })
+      : sendPushToAll({
         type: "new_lead",
         title: `New lead: ${lead.name}`,
         body: `From ${sourceLabel}. Not assigned to anyone yet.`,
         data: { url: "/leads", leadId: String(lead._id), leadName: lead.name, source: leadSource },
-      }, orgId).catch(() => {});
-    }
+      }, orgId)));
 
     logger.info(`[custom webhook] lead created: ${lead.name} | ${cleanPhone} | source: ${sourceLabel}`);
     res.status(201).json({ success: true, message: "Lead received", leadId: lead._id });
   } catch (err) {
     logger.error(`[custom webhook] error: ${err.message} | code: ${err.code} | stack: ${err.stack}`);
+    // A value the lead itself rejects is the sender's to fix: say which.
+    if (err?.name === "ValidationError" || err?.name === "CastError") {
+      const detail = err.name === "ValidationError"
+        ? Object.values(err.errors || {}).map((e) => e.path).filter(Boolean).join(", ")
+        : err.path;
+      return res.status(400).json({ success: false, message: `Invalid value${detail ? ` for ${detail}` : ""}` });
+    }
     res.status(500).json({ success: false, message: "Failed to process lead" });
   }
 });

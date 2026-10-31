@@ -63,6 +63,10 @@ const voiceCallSchema = new mongoose.Schema(
     sentiment:       { type: String, enum: ["positive", "neutral", "negative"], default: undefined },
     durationSeconds: { type: Number, default: undefined },
     channel:         { type: String, trim: true, default: undefined },
+    // "voice" (a spoken call: phone, website widget) or "text" (a typed chat:
+    // website chat, WhatsApp). Sent as conversation_type, else read from the
+    // channel; older calls have none and read as voice (31 Oct 2026).
+    conversationType: { type: String, enum: ["voice", "text"], default: undefined },
     language:        { type: String, trim: true, default: undefined },
     agentName:       { type: String, trim: true, default: undefined },
     // Page the call/chat widget was opened from (Vistrow's page_path).
@@ -489,18 +493,29 @@ leadSchema.index({ "vistrowEmit.quietDueAt": 1 }, { sparse: true });
 // domain filter
 leadSchema.index({ orgId: 1, sourceDomain: 1 });
 
-// Vistrow Voice call idempotency: within one org+source, the same external
-// call_id must never be attached to two different leads/array entries. A
-// partial index (only applies where the field is actually set) — every other
-// lead source never populates voiceCalls.externalCallId, so this can't
-// collide with unrelated leads. POST /webhook/lead relies on this at the DB
-// level to close a create/create race between two near-simultaneous
-// deliveries of a brand-new call_id (see that route for the retry-as-update
-// handling of the resulting E11000 duplicate-key error).
+// Vistrow Voice call lookups by call id (POST /webhook/lead). NOT unique
+// (31 Oct 2026): a unique multikey index gives every call stored without an
+// id (older deliveries, the voiceCall migration) the key null, so a second
+// lead in the same org+source holding one id-less and one id'd call made
+// every new call on it fail with E11000 (calls 1702/1703 answered 500). The
+// route keeps one lead per call id itself ($ne guard on append, winner check
+// after create). server.js drops the old unique index on boot.
 leadSchema.index(
-  { orgId: 1, source: 1, "voiceCalls.externalCallId": 1 },
-  { unique: true, partialFilterExpression: { "voiceCalls.externalCallId": { $exists: true } } }
+  { orgId: 1, "voiceCalls.externalCallId": 1 },
+  { name: "orgId_1_voiceCalls.externalCallId_1", partialFilterExpression: { "voiceCalls.externalCallId": { $exists: true } } }
 );
+const LEGACY_CALL_ID_INDEX = "orgId_1_source_1_voiceCalls.externalCallId_1";
+// Drops the old unique index where it still exists (boot, server.js). Index
+// only: no lead changes. true when it was there and is now gone.
+leadSchema.statics.dropLegacyCallIdIndex = async function dropLegacyCallIdIndex() {
+  try {
+    await this.collection.dropIndex(LEGACY_CALL_ID_INDEX);
+    return true;
+  } catch (e) {
+    if (e?.codeName === "IndexNotFound" || e?.code === 27 || e?.codeName === "NamespaceNotFound" || e?.code === 26) return false;
+    throw e;
+  }
+};
 
 // Activity added while Artha acts on someone's behalf is marked "(via Artha)".
 leadSchema.plugin(require("../utils/requestContext").attributionPlugin);

@@ -8,7 +8,7 @@ import useAppRefresh from "../hooks/useAppRefresh";
 import ArthaSuggestCard from "./ArthaSuggestCard";
 import VistrowVoicePanel, { useVistrowCall } from "./VistrowVoicePanel";
 import fetchLeadToOpen from "../utils/fetchLeadToOpen";
-import { ConfirmDialog, Modal, PriorityBadge, Spinner, PhoneActions, WhatsAppLink, toWaNumber, isAiCallStatus } from "./UI";
+import { ConfirmDialog, Modal, PriorityBadge, Spinner, PhoneActions, WhatsAppLink, toWaNumber, isAiCallStatus, conversationKind, ConversationKindBadge } from "./UI";
 import { SoftSourceBadge, EmptyValue, isBlank } from "./leads/LeadBits";
 import { useSoftPhone } from "../context/SoftPhoneContext";
 import CustomSelect from "./CustomSelect";
@@ -931,6 +931,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                         <DirectionBadge direction={direction} />
                         <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
                           style={{ background: stBg, color: stColor }}>{st}</span>
+                        {isVistrow && <ConversationKindBadge kind={meta.conversationType === "text" || /text chat/i.test(call.description || "") ? "text" : "voice"} />}
                         {dur && <span className="text-xs font-semibold text-app">{dur}</span>}
                         {meta.recordingUrl && <Mic      className="w-3 h-3 text-orange-400" />}
                         {meta.summary      && <Sparkles className="w-3 h-3 text-indigo-400" />}
@@ -1101,6 +1102,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
               const dur = secs > 0 ? `${Math.floor(secs / 60)}m ${Math.round(secs % 60)}s`.replace(/^0m /, "") : null;
               const langLabel = vc.language ? (LANG_NAMES[vc.language] || String(vc.language).toUpperCase()) : null;
               const turns = vc.transcript || [];
+              const kind = conversationKind(vc);
+              const KindIcon = kind === "text" ? MessageCircle : Mic;
 
               return (
                 <div key={callKey} className="rounded-[1.25rem] overflow-hidden stitch-surface-muted">
@@ -1111,17 +1114,20 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                   >
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                       style={{ background: VISTROW_GRADIENT }}>
-                      <Mic className="w-3.5 h-3.5 text-white" />
+                      <KindIcon className="w-3.5 h-3.5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-app">
-                        {voiceCalls.length > 1 ? `Call ${voiceCalls.length - idx}` : "Voice Call"}
+                        {voiceCalls.length > 1
+                          ? `${kind === "text" ? "Chat" : "Call"} ${voiceCalls.length - idx}`
+                          : (kind === "text" ? "Text chat" : "Voice call")}
                         {dur ? ` · ${dur}` : ""}
                       </p>
                       <p className="text-xs text-app-soft truncate">
                         {vc.createdAt ? fmtDateTime(vc.createdAt) : "—"}
                       </p>
                     </div>
+                    <ConversationKindBadge kind={kind} />
                     {sent && (
                       <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide shrink-0"
                         style={{ background: `${sentColor}18`, color: sentColor }}>
@@ -1155,7 +1161,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                         <div className="rounded-[1.25rem] p-6 text-center stitch-surface-muted">
                           <AlignLeft className="w-8 h-8 mx-auto mb-2 text-app-soft opacity-40" />
                           <p className="text-sm font-semibold text-app">No transcript</p>
-                          <p className="text-xs text-app-soft mt-1">This call came in without a conversation transcript.</p>
+                          <p className="text-xs text-app-soft mt-1">This {kind === "text" ? "chat" : "call"} came in without a conversation transcript.</p>
                         </div>
                       ) : (
                         <div className="space-y-2">

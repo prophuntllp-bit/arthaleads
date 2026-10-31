@@ -188,6 +188,14 @@ connectDB().then(async () => {
     try { require("./instrument").captureException(e, { tags: { migration: "voiceCall-to-voiceCalls" } }); } catch {}
   }
 
+  // The unique (orgId, source, voiceCalls.externalCallId) index made Vistrow
+  // calls fail with E11000 on a null key once two leads of one source held a
+  // call without an id (calls 1702/1703, 31 Oct 2026). It is replaced by the
+  // non-unique index in models/Lead.js. Index only, no lead data changes.
+  try {
+    if (await require("./models/Lead").dropLegacyCallIdIndex()) console.log("[MIGRATION] dropped unique index orgId_1_source_1_voiceCalls.externalCallId_1");
+  } catch (e) { console.error("[MIGRATION] dropping the old voice call index failed:", e.message); }
+
 }).catch((e) => {
   console.error("[BOOT] DB connection failed - cannot start:", e.message);
   process.exit(1);

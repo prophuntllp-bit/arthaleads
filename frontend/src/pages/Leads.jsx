@@ -6,7 +6,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   StatusBadge, PriorityBadge,
-  PageLoader, EmptyState, ConfirmDialog, Spinner, PhoneActions, WhatsAppLink, toWaNumber, ImportResultModal,
+  PageLoader, EmptyState, ConfirmDialog, Spinner, PhoneActions, WhatsAppLink, toWaNumber, ImportResultModal, conversationKind,
 } from "../components/UI";
 import { SoftSourceBadge, EmptyValue, isBlank } from "../components/leads/LeadBits";
 import LeadForm from "../components/LeadForm";
@@ -745,7 +745,7 @@ export default function Leads() {
         const team = (lead.activities || []).filter((a) => a.type === "called").map((a) => ({
           at: a.createdAt, what: { answered: "Answered", missed: "Missed", initiated: "Dialled" }[a.meta?.status] || "Called",
         }));
-        const ai = (lead.voiceCalls || []).map((c) => ({ at: c.createdAt, what: `AI call${c.sentiment ? `: ${c.sentiment}` : ""}` }));
+        const ai = (lead.voiceCalls || []).map((c) => ({ at: c.createdAt, what: `${conversationKind(c) === "text" ? "AI chat" : "AI call"}${c.sentiment ? `: ${c.sentiment}` : ""}` }));
         const all = [...team, ...ai].sort((x, y) => new Date(y.at || 0) - new Date(x.at || 0));
         return { count: all.length || "", last: all[0] ? `${all[0].what}${all[0].at ? `, ${fmtDate(all[0].at)}` : ""}` : "" };
       };

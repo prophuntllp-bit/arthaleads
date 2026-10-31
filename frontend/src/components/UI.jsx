@@ -3,7 +3,7 @@ import { STATUS_COLORS, PRIORITY_COLORS, SOURCE_COLORS, ROLE_COLORS } from "../u
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { X, Loader2, Phone, MessageCircle, Inbox as InboxIcon, ChevronDown, Check, Calendar, ChevronLeft, ChevronRight, Sparkles, Headphones, Trash2, PhoneCall } from "lucide-react";
+import { X, Loader2, Phone, MessageCircle, Inbox as InboxIcon, ChevronDown, Check, Calendar, ChevronLeft, ChevronRight, Sparkles, Headphones, Trash2, PhoneCall, Mic } from "lucide-react";
 import HoldToConfirmButton from "./HoldToConfirmButton";
 import WhatsAppLogo from "./WhatsAppLogo";
 import toast from "react-hot-toast";
@@ -122,6 +122,32 @@ export function leadHadAiCall(lead) {
     c?.transcript?.length || c?.sentiment || c?.channel || c?.durationSeconds || c?.agentName || c?.recordingUrl);
 }
 
+// Voice call or text chat for one Vistrow conversation (lead.voiceCalls[]):
+// the stored conversationType, else read from the channel the same way the
+// backend does (chat / WhatsApp / text / SMS = text). Older calls are voice.
+export function conversationKind(vc) {
+  const t = vc?.conversationType;
+  if (t === "voice" || t === "text") return t;
+  return /chat|whatsapp|text|sms|message/i.test(String(vc?.channel || "")) ? "text" : "voice";
+}
+
+const KIND_STYLE = {
+  voice: { label: "Voice call", icon: Mic, color: "#9333ea", bg: "rgba(147,51,234,0.10)" },
+  text: { label: "Text chat", icon: MessageCircle, color: "#0284c7", bg: "rgba(2,132,199,0.10)" },
+};
+
+// Small pill saying "Voice call" or "Text chat" (31 Oct 2026).
+export function ConversationKindBadge({ kind }) {
+  const k = KIND_STYLE[kind] || KIND_STYLE.voice;
+  const Icon = k.icon;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide shrink-0"
+      style={{ background: k.bg, color: k.color }}>
+      <Icon className="w-3 h-3" />{k.label}
+    </span>
+  );
+}
+
 export function SourceBadge({ source, lead }) {
   const color = SOURCE_COLORS[source] || "bg-gray-100 text-gray-600";
   if (lead && source !== "Vistrow Voice" && leadHadAiCall(lead)) {
@@ -135,12 +161,12 @@ export function SourceBadge({ source, lead }) {
       <span
         className="badge justify-between gap-2 text-white"
         style={{ background: `linear-gradient(90deg, ${hex} 0%, ${hex} 40%, #9333ea 78%, #ec4899 100%)` }}
-        title={`Came in via ${source}, then a Vistrow AI call${when}`}
+        title={`Came in via ${source}, then a Vistrow AI ${conversationKind(last) === "text" ? "chat" : "call"}${when}`}
       >
         {/* One pill blending the source colour into Vistrow purple: no hard
             line between the two (owner, 21 Oct 2026). */}
         <span>{source}</span>
-        <span className="font-semibold">AI call</span>
+        <span className="font-semibold">{conversationKind(last) === "text" ? "AI chat" : "AI call"}</span>
       </span>
     );
   }
