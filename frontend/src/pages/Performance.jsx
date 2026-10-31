@@ -12,6 +12,7 @@ import LeadDetail from "../components/LeadDetail";
 import { useAuth } from "../context/AuthContext";
 import UpgradeWall from "../components/UpgradeWall";
 import { canAccess } from "../utils/plan";
+import CallAnalytics from "../components/CallAnalytics";
 
 export default function Performance() {
   useEffect(() => { document.title = "Performance - Arthaleads CRM"; }, []);
@@ -444,76 +445,9 @@ export default function Performance() {
           onSelect={(source) => navigate("/leads", { state: { ...leadsRangeState(range), presetSource: source } })} />
       )}
 
-      {/* Call Analytics */}
+      {/* Calls: the same chart and agent list as the Calls page */}
       {callAnalytics && (callAnalytics.volumeByDay?.length > 0 || callAnalytics.durationByAgent?.length > 0) && (
-        <section className="card p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <Phone className="w-4 h-4 text-orange-500" />
-            <h2 className="text-sm font-bold text-app">Call Analytics</h2>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {/* Volume: every one of the last 14 days (IST), days without calls
-                included, one stacked bar per day on a shared scale. */}
-            <div>
-              <p className="text-xs font-semibold text-app-soft mb-3">Daily volume · last 14 days</p>
-              {(() => {
-                const byKey = new Map((callAnalytics.volumeByDay || []).map((d) => [`${d._id.y}-${d._id.m}-${d._id.d}`, d]));
-                const days = Array.from({ length: 14 }, (_, i) => {
-                  const at = new Date(Date.now() - (13 - i) * 86400000);
-                  const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "numeric", day: "numeric" })
-                    .format(at).split("-").map(Number);
-                  const row = byKey.get(`${y}-${m}-${d}`) || {};
-                  const answered = row.answered || 0, missed = row.missed || 0, total = row.total || 0;
-                  return { key: `${y}-${m}-${d}`, label: `${d} ${at.toLocaleDateString("en-IN", { month: "short", timeZone: "Asia/Kolkata" })}`,
-                    answered, missed, other: Math.max(total - answered - missed, 0), total };
-                });
-                const max = Math.max(...days.map((d) => d.total), 1);
-                const seg = (n) => `${(n / max) * 100}%`;
-                return (
-                  <div className="space-y-1.5">
-                    {days.map((d) => (
-                      <div key={d.key} className="flex items-center gap-3"
-                        title={`${d.label}: ${d.total} calls, ${d.answered} answered, ${d.missed} missed${d.other ? `, ${d.other} other` : ""}`}>
-                        <span className="w-12 shrink-0 text-right text-[11px] tabular-nums text-app-soft">{d.label}</span>
-                        <div className="flex h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: "var(--app-surface-low)" }}>
-                          <div className="h-full" style={{ width: seg(d.answered), background: "var(--viz-answered)" }} />
-                          <div className="h-full" style={{ width: seg(d.missed), background: "var(--viz-missed)", opacity: 0.75 }} />
-                          <div className="h-full" style={{ width: seg(d.other), background: "var(--app-text-soft)", opacity: 0.3 }} />
-                        </div>
-                        <span className={`w-8 shrink-0 text-right text-[11px] font-semibold tabular-nums ${d.total ? "text-app" : "text-app-soft"}`}>{d.total}</span>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-              <div className="mt-3 flex flex-wrap gap-4 text-[11px] text-app-soft">
-                <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "var(--viz-answered)" }} /> Answered</span>
-                <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "var(--viz-missed)", opacity: 0.75 }} /> Missed</span>
-                <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "var(--app-text-soft)", opacity: 0.3 }} /> Other</span>
-              </div>
-            </div>
-            {/* Agent stats */}
-            <div>
-              <p className="text-xs font-semibold text-app-soft mb-2">Answered calls by agent · last 30 days</p>
-              {callAnalytics.durationByAgent.length === 0 ? (
-                <p className="text-xs text-app-soft">No answered calls yet.</p>
-              ) : callAnalytics.durationByAgent.map(a => (
-                <div key={a._id} className="flex items-center justify-between py-1.5 border-b last:border-0"
-                  style={{ borderColor: "var(--app-border)" }}>
-                  <span className="text-xs text-app font-medium truncate">{a.name || "Unknown"}</span>
-                  <div className="text-right shrink-0 ml-2">
-                    <span className="text-xs font-bold text-app">{a.totalCalls}</span>
-                    {a.avgDuration > 0 && (
-                      <span className="text-[11px] text-app-soft ml-1.5">
-                        {a.avgDuration >= 60 ? `${Math.floor(a.avgDuration / 60)}m ${Math.round(a.avgDuration % 60)}s` : `${Math.round(a.avgDuration)}s`} avg
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <CallAnalytics data={callAnalytics} />
       )}
 
       {/* Goal, closing pace and projects */}
