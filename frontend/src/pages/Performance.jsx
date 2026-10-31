@@ -450,35 +450,51 @@ export default function Performance() {
           <div className="flex items-center gap-2">
             <Phone className="w-4 h-4 text-orange-500" />
             <h2 className="text-sm font-bold text-app">Call Analytics</h2>
-            <span className="text-xs text-app-soft">· last 30 days</span>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {/* Volume bar chart */}
+            {/* Volume: every one of the last 14 days (IST), days without calls
+                included, one stacked bar per day on a shared scale. */}
             <div>
-              <p className="text-xs font-semibold text-app-soft mb-2">Daily volume</p>
-              {callAnalytics.volumeByDay.slice(-14).map((d, i) => {
-                const max   = Math.max(...callAnalytics.volumeByDay.slice(-14).map(x => x.total), 1);
-                const date  = new Date(d._id.y, d._id.m - 1, d._id.d);
-                const label = date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+              <p className="text-xs font-semibold text-app-soft mb-3">Daily volume · last 14 days</p>
+              {(() => {
+                const byKey = new Map((callAnalytics.volumeByDay || []).map((d) => [`${d._id.y}-${d._id.m}-${d._id.d}`, d]));
+                const days = Array.from({ length: 14 }, (_, i) => {
+                  const at = new Date(Date.now() - (13 - i) * 86400000);
+                  const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "numeric", day: "numeric" })
+                    .format(at).split("-").map(Number);
+                  const row = byKey.get(`${y}-${m}-${d}`) || {};
+                  const answered = row.answered || 0, missed = row.missed || 0, total = row.total || 0;
+                  return { key: `${y}-${m}-${d}`, label: `${d} ${at.toLocaleDateString("en-IN", { month: "short", timeZone: "Asia/Kolkata" })}`,
+                    answered, missed, other: Math.max(total - answered - missed, 0), total };
+                });
+                const max = Math.max(...days.map((d) => d.total), 1);
+                const seg = (n) => `${(n / max) * 100}%`;
                 return (
-                  <div key={i} className="flex items-center gap-2 mb-1">
-                    <span className="text-[9px] text-app-soft w-9 shrink-0 text-right">{label}</span>
-                    <div className="flex-1 flex gap-0.5 h-3 rounded-full overflow-hidden" style={{ background: "var(--app-surface-low)" }}>
-                      <div className="h-full bg-green-500/70 rounded-full" style={{ width: `${(d.answered / max) * 100}%` }} />
-                      <div className="h-full bg-red-400/50 rounded-full"  style={{ width: `${(d.missed  / max) * 100}%` }} />
-                    </div>
-                    <span className="text-[9px] font-semibold text-app w-4 text-right">{d.total}</span>
+                  <div className="space-y-1.5">
+                    {days.map((d) => (
+                      <div key={d.key} className="flex items-center gap-3"
+                        title={`${d.label}: ${d.total} calls, ${d.answered} answered, ${d.missed} missed${d.other ? `, ${d.other} other` : ""}`}>
+                        <span className="w-12 shrink-0 text-right text-[11px] tabular-nums text-app-soft">{d.label}</span>
+                        <div className="flex h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: "var(--app-surface-low)" }}>
+                          <div className="h-full" style={{ width: seg(d.answered), background: "var(--viz-answered)" }} />
+                          <div className="h-full" style={{ width: seg(d.missed), background: "var(--viz-missed)", opacity: 0.75 }} />
+                          <div className="h-full" style={{ width: seg(d.other), background: "var(--app-text-soft)", opacity: 0.3 }} />
+                        </div>
+                        <span className={`w-8 shrink-0 text-right text-[11px] font-semibold tabular-nums ${d.total ? "text-app" : "text-app-soft"}`}>{d.total}</span>
+                      </div>
+                    ))}
                   </div>
                 );
-              })}
-              <div className="flex gap-3 mt-2 text-[9px] text-app-soft">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500/70 inline-block" /> Answered</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400/50  inline-block" /> Missed</span>
+              })()}
+              <div className="mt-3 flex flex-wrap gap-4 text-[11px] text-app-soft">
+                <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "var(--viz-answered)" }} /> Answered</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "var(--viz-missed)", opacity: 0.75 }} /> Missed</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "var(--app-text-soft)", opacity: 0.3 }} /> Other</span>
               </div>
             </div>
             {/* Agent stats */}
             <div>
-              <p className="text-xs font-semibold text-app-soft mb-2">Answered calls by agent</p>
+              <p className="text-xs font-semibold text-app-soft mb-2">Answered calls by agent · last 30 days</p>
               {callAnalytics.durationByAgent.length === 0 ? (
                 <p className="text-xs text-app-soft">No answered calls yet.</p>
               ) : callAnalytics.durationByAgent.map(a => (
@@ -488,8 +504,8 @@ export default function Performance() {
                   <div className="text-right shrink-0 ml-2">
                     <span className="text-xs font-bold text-app">{a.totalCalls}</span>
                     {a.avgDuration > 0 && (
-                      <span className="text-[10px] text-app-soft ml-1">
-                        {Math.floor(a.avgDuration / 60)}m{Math.round(a.avgDuration % 60)}s avg
+                      <span className="text-[11px] text-app-soft ml-1.5">
+                        {a.avgDuration >= 60 ? `${Math.floor(a.avgDuration / 60)}m ${Math.round(a.avgDuration % 60)}s` : `${Math.round(a.avgDuration)}s`} avg
                       </span>
                     )}
                   </div>
