@@ -801,9 +801,9 @@ export default function Attendance() {
           style={{ background: "rgba(0,0,0,0.6)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setSettingsModal(false); }}>
           <div className="w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col sm:max-h-[88vh] max-h-[90vh] sm:mx-0 mx-3"
-            style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
+            style={{ background: "var(--app-modal-bg)", border: "1px solid var(--app-border)" }}>
             {/* Header */}
-            <div className="flex items-center justify-between px-4 pt-4 pb-3 flex-shrink-0" style={{ borderBottom: "1px solid var(--app-border)" }}>
+            <div className="modal-zone flex items-center justify-between px-4 pt-4 pb-3 flex-shrink-0" style={{ borderBottom: "1px solid var(--app-border)" }}>
               <h2 className="text-sm font-bold text-app flex items-center gap-2">
                 <Settings className="w-4 h-4 text-orange-500" /> Shift &amp; Attendance Settings
               </h2>

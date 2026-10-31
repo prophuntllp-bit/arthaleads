@@ -1010,7 +1010,7 @@ function TicketDetailModal({ ticket: initialTicket, onClose, onUpdated }) {
         style={{ maxHeight: "94vh", background: "var(--app-modal-bg)", border: "1px solid var(--app-border)" }}>
 
         {/* Header */}
-        <div className="flex items-start justify-between px-6 py-4 border-b flex-shrink-0"
+        <div className="modal-zone flex items-start justify-between px-6 py-4 border-b flex-shrink-0"
           style={{ borderColor: "var(--app-border)" }}>
           <div className="flex items-start gap-3 min-w-0">
             <div className="flex h-9 w-9 items-center justify-center rounded-2xl flex-shrink-0"

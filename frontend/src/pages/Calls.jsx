@@ -459,7 +459,7 @@ function LeadCallModal({ lead, onClose }) {
       <div className="modal-panel w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col" style={{ maxHeight: "92vh" }}>
 
         {/* Header */}
-        <div className="p-5 shrink-0" style={{ borderBottom: "1px solid var(--app-border)" }}>
+        <div className="modal-zone p-5 shrink-0" style={{ borderBottom: "1px solid var(--app-border)" }}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="text-base font-bold text-app">{lead.leadName || "Unknown"}</h2>

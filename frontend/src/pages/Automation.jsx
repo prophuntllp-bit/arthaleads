@@ -318,7 +318,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
         style={{ maxHeight: "92dvh" }}>
 
         {/* ── Header ── */}
-        <div className="flex items-center gap-3 px-6 py-5 flex-shrink-0"
+        <div className="modal-zone flex items-center gap-3 px-6 py-5 flex-shrink-0"
           style={{ borderBottom: "1px solid var(--app-border)" }}>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1877F2] overflow-hidden">
             <FacebookIcon />
@@ -587,7 +587,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
         </div>
 
         {/* ── Footer ── */}
-        <div className="flex items-center justify-between gap-3 px-6 py-4 flex-shrink-0"
+        <div className="modal-foot-band flex items-center justify-between gap-3 px-6 py-4 flex-shrink-0"
           style={{ borderTop: "1px solid var(--app-border)" }}>
           <button type="button" className="btn-secondary rounded-xl" onClick={onClose}>Cancel</button>
           {step === "select" && (
@@ -1139,7 +1139,7 @@ function GoogleWizard({ open, onClose, onChanged }) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full sm:max-w-lg sm:rounded-[1.75rem] rounded-t-[1.75rem] modal-panel overflow-hidden">
-        <div className="flex items-center gap-3 p-6" style={{ borderBottom: "1px solid var(--app-border)" }}>
+        <div className="modal-zone flex items-center gap-3 p-6" style={{ borderBottom: "1px solid var(--app-border)" }}>
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-red-500">
             <SearchCheck className="h-5 w-5 text-white" />
           </div>

@@ -496,7 +496,7 @@ function RaiseTicketModal({ onClose, onSuccess }) {
       <div className="w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
         style={{ background: "var(--app-modal-bg)", border: "1px solid var(--app-border)" }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b flex-shrink-0" style={{ borderColor: "var(--app-border)" }}>
+        <div className="modal-zone flex items-center justify-between px-6 py-5 border-b flex-shrink-0" style={{ borderColor: "var(--app-border)" }}>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl" style={{ background: "rgba(var(--app-primary-rgb),0.10)" }}>
               <TicketIcon className="h-5 w-5" style={{ color: "var(--app-primary)" }} />
@@ -710,7 +710,7 @@ function TicketThreadModal({ ticketId, onClose, onUpdated }) {
         style={{ maxHeight: "92vh", background: "var(--app-modal-bg)", border: "1px solid var(--app-border)" }}>
 
         {/* Header */}
-        <div className="flex items-start justify-between px-6 py-5 border-b flex-shrink-0"
+        <div className="modal-zone flex items-start justify-between px-6 py-5 border-b flex-shrink-0"
           style={{ borderColor: "var(--app-border)" }}>
           {loading || !ticket ? (
             <div className="flex items-center gap-3">

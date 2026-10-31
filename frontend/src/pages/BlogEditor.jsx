@@ -484,7 +484,7 @@ function ImportModal({ onImport, onClose }) {
       <div className="w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col"
         style={{ background: "var(--app-modal-bg)", border: "1px solid var(--app-border)", maxHeight: "85vh" }}>
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: "var(--app-border)" }}>
+        <div className="modal-zone flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: "var(--app-border)" }}>
           <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center">
             <ClipboardPaste className="w-4 h-4 text-orange-500" />
           </div>
