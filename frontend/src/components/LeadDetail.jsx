@@ -531,14 +531,17 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1.5 sm:ml-auto">
-          {/* The one status control for this lead. */}
+        {/* The one status control for this lead. On a phone it takes its own
+            line under the name, so the name is never squeezed. */}
+        <div className="order-last w-full sm:order-none sm:w-auto">
           <CustomSelect
             value={status}
             onChange={handleStatus}
             options={STATUS_OPTIONS}
-            style={{ minWidth: 150, height: 36, padding: "0 12px", borderRadius: 12, fontWeight: 600 }}
+            style={{ width: "100%", minWidth: 150, height: 36, padding: "0 12px", borderRadius: 12, fontWeight: 600 }}
           />
+        </div>
+        <div className="flex items-center gap-1.5">
           {onEdit && (
             <button type="button" onClick={() => { onClose(); onEdit(lead); }} title="Edit lead" aria-label="Edit lead" className="modal-close">
               <Pencil className="h-4 w-4" />
