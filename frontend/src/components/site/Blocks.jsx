@@ -109,7 +109,8 @@ const CARD_POS = [
  */
 export function PhotoVisual({ name, alt, cards = [], aspect = "aspect-[4/3]", position = "object-center", priority = true }) {
   return (
-    <div className="relative mx-auto w-full max-w-[540px] px-3 sm:px-6 lg:px-0">
+    <div className="relative mx-auto w-full max-w-[540px] px-3 sm:px-6 lg:px-0 lg:mx-5 lg:w-auto">
+      {/* lg:mx-5: the glass frame (inset -20px) ends on the container edge, not past it. */}
       <div aria-hidden="true" className="hero-glass" />
       <div className="relative overflow-hidden rounded-[28px] border" style={{ borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
         <SiteImage name={name} width={1536} height={1024} priority={priority} sizes="(min-width: 1024px) 540px, 92vw" alt={alt}
@@ -126,7 +127,7 @@ export function PhotoVisual({ name, alt, cards = [], aspect = "aspect-[4/3]", po
             {(c) => (
               <span className="min-w-0 block">
                 <span className="block text-[13px] font-semibold site-ink leading-tight">{c.title}</span>
-                {c.sub && <span className="block text-[11px] site-muted leading-tight mt-0.5">{c.sub}</span>}
+                {c.sub && <span className="block text-[12px] site-muted leading-tight mt-0.5">{c.sub}</span>}
               </span>
             )}
           </Cycle>

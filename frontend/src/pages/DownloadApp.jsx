@@ -23,7 +23,7 @@ const INSTALL_STEPS = [
   },
   {
     title: "Open the file",
-    desc: "Pull down your notifications and tap the finished download, or find the arthaleads APK in your Files app under Downloads.",
+    desc: "Tap the finished download in your notifications, or find the arthaleads APK in Files under Downloads.",
   },
   {
     title: "Allow the install",
@@ -31,15 +31,15 @@ const INSTALL_STEPS = [
   },
   {
     title: "Install and sign in",
-    desc: "Tap Install, then Open. Sign in with the same email and password you use on the web dashboard, or tap Sign up to create an account from the phone.",
+    desc: "Tap Install, then Open. Sign in with your web dashboard email and password, or tap Sign up.",
   },
 ];
 
 const FEATURES = [
-  { icon: Bell,      title: "Instant lead alerts",   desc: "A push notification the moment a lead lands, so the first call goes out in minutes rather than hours." },
-  { icon: Phone,     title: "Call from the app",     desc: "Dial a lead, and the call is logged against them automatically with duration and recording." },
-  { icon: MapPin,    title: "Attendance with location", desc: "Field staff clock in with a selfie and location, so site visits are recorded where they happened." },
-  { icon: WifiOff,   title: "Built for weak signal", desc: "Screens load from cache first, so a lead list still opens in a basement showroom." },
+  { icon: Bell,      title: "Instant lead alerts",   desc: "A push the moment a lead lands." },
+  { icon: Phone,     title: "Call from the app",     desc: "Calls log themselves, with duration and recording." },
+  { icon: MapPin,    title: "Attendance with location", desc: "Clock in with a selfie and location." },
+  { icon: WifiOff,   title: "Built for weak signal", desc: "Lead lists open even in a basement showroom." },
 ];
 
 const FAQS = [
@@ -147,7 +147,7 @@ function DownloadAppInner() {
       <PageHero
         eyebrow="Android app"
         title={<>Your pipeline, <span className="site-dim">in your pocket</span></>}
-        lede="Get a push the moment a lead arrives, call them without leaving the app, and log site visits from where they happen. Free with any Arthaleads account."
+        lede="Lead alerts, one-tap calls and site visits logged where they happen. Free with any Arthaleads account."
         visual={<PhoneAlerts />}
         actions={
           <div className="mt-7 flex flex-wrap gap-2.5 sm:gap-3 justify-center lg:justify-start">
@@ -167,15 +167,15 @@ function DownloadAppInner() {
       <Section tone="tint">
         <Container>
           <SectionHeader eyebrow="What the app adds" title="Built for agents in the field" />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {FEATURES.map(({ icon: Icon, title, desc }, i) => (
               <Reveal key={title} delay={i * 80} className="min-w-0 flex">
-                <Card glow className="w-full p-6">
-                  <span className="site-icon w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
+                <Card glow className="w-full p-4 sm:p-6">
+                  <span className="site-icon w-11 h-11 rounded-xl flex items-center justify-center mb-4 sm:mb-5" style={iconTile}>
                     <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                   </span>
-                  <h3 className="font-display text-base font-bold site-ink mb-2">{title}</h3>
-                  <p className="text-[14px] leading-relaxed">{desc}</p>
+                  <h3 className="site-h4 mb-1.5">{title}</h3>
+                  <p className="text-[14px] leading-snug sm:leading-relaxed">{desc}</p>
                 </Card>
               </Reveal>
             ))}
@@ -183,17 +183,17 @@ function DownloadAppInner() {
         </Container>
       </Section>
 
-      {/* Install steps */}
-      <Section tone="white">
+      {/* Install steps: the page's signature band */}
+      <Section tone="sand">
         <Container className="grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16">
           <div className="lg:sticky lg:top-28 self-start">
             <SectionHeader eyebrow="Installing it" title="Four steps, about a minute" className="!mb-6"
-              lede="Android asks for permission partway through because the app comes from us rather than the Play Store. That is expected." />
+              lede="Android asks for permission partway through because the app is not from the Play Store. That is expected." />
             <Card className="p-5 flex gap-3" style={{ background: "rgba(255,107,0,0.06)", borderColor: "rgba(255,107,0,0.25)" }}>
               <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
               <p className="text-sm leading-relaxed">
-                <strong className="site-ink">The warning is about the source, not the file.</strong> Android shows it for anything
-                installed outside the Play Store. This build is signed with the Arthaleads release key, and the app verifies its own updates against our servers.
+                <strong className="site-ink">The warning is about the source, not the file.</strong> This build is signed with
+                the Arthaleads release key, and the app checks its own updates against our servers.
               </p>
             </Card>
           </div>
@@ -204,7 +204,7 @@ function DownloadAppInner() {
                   <span className="font-display shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-base font-extrabold text-white"
                     style={{ background: "var(--brand-btn)", boxShadow: "0 12px 26px -12px rgba(204,75,0,0.7)" }}>{i + 1}</span>
                   <div className="min-w-0">
-                    <h3 className="font-display font-bold site-ink mb-1">{s.title}</h3>
+                    <h3 className="site-h4 mb-1">{s.title}</h3>
                     <p className="text-[15px] leading-relaxed">{s.desc}</p>
                   </div>
                 </Card>
@@ -215,10 +215,12 @@ function DownloadAppInner() {
       </Section>
 
       {/* Requirements and release notes */}
-      <Section tone="tint">
-        <Container className={`grid gap-4 ${dl.releaseNotes ? "lg:grid-cols-2" : "max-w-3xl"}`}>
+      <Section tone="white">
+        <Container>
+          {/* max-w on Container itself is ignored (.site-container wins), so the narrower single card is a wrapper. */}
+          <div className={dl.releaseNotes ? "grid gap-4 lg:grid-cols-2" : "max-w-3xl"}>
           <Card raised className="p-6 sm:p-8">
-            <h2 className="font-display text-xl font-bold site-ink mb-5">Before you start</h2>
+            <h2 className="site-h3 mb-5">Before you start</h2>
             <ul className="space-y-3">
               {[
                 `An Android phone running ${minAndroid} or later`,
@@ -242,27 +244,28 @@ function DownloadAppInner() {
           </Card>
           {dl.releaseNotes && (
             <Card raised className="p-6 sm:p-8">
-              <h2 className="font-display text-xl font-bold site-ink mb-4">What&rsquo;s new in {version ? `v${version}` : "the latest build"}</h2>
+              <h2 className="site-h3 mb-4">What&rsquo;s new in {version ? `v${version}` : "the latest build"}</h2>
               <p className="text-[15px] leading-relaxed whitespace-pre-line">{dl.releaseNotes}</p>
             </Card>
           )}
+          </div>
         </Container>
       </Section>
 
-      <FaqSection title="Questions about the app" items={FAQS.map(({ q, a }) => [q, a])} tone="white" />
+      <FaqSection title="Questions about the app" items={FAQS.map(({ q, a }) => [q, a])} tone="tint" />
 
       {/* Close */}
-      <Section tone="white" className="!pt-0">
+      <Section tone="white">
         <Container>
           <Reveal>
             <div className="site-cta-panel relative overflow-hidden rounded-[28px] sm:rounded-[32px] p-6 sm:p-12 text-center">
-              <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[30px] sm:text-[40px]" style={{ textWrap: "balance" }}>
+              <h2 className="site-h2">
                 Put it on your <span className="site-dim">team&rsquo;s phones</span>
               </h2>
               <p className="mt-4 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">Send them this page. They sign in with the account you already created for them.</p>
               <div className="mt-8 flex flex-wrap gap-3 justify-center">
                 <DownloadButton url={url} release={release} />
-                <SiteButton to="/book-demo" variant="secondary" className="!px-6 sm:!px-7 sm:min-h-[3.5rem] sm:text-base">Book a Demo</SiteButton>
+                <SiteButton to="/book-demo" variant="secondary" className="!px-6 sm:!px-7 sm:min-h-[3.5rem] sm:text-base">Book a demo</SiteButton>
               </div>
             </div>
           </Reveal>

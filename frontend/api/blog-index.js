@@ -49,7 +49,7 @@ function card(p) {
     + `<div class="p-3 pb-0"><div class="blog-cover relative overflow-hidden" style="aspect-ratio:16 / 9">${cover}</div></div>`
     + `<div class="flex flex-col flex-1 p-6"><div class="flex items-center justify-between gap-3 mb-3">${category(p)}`
     + `<span class="text-xs shrink-0 site-muted">${p.readingTime || 1} min read</span></div>`
-    + `<h3 class="font-display site-ink font-bold text-[1.15rem] leading-snug tracking-[-0.01em] mb-3 line-clamp-3 transition-colors group-hover:text-[color:var(--site-brand-ink)]" style="text-wrap:balance">${esc(p.title)}</h3>`
+    + `<h3 class="site-h4 mb-3 line-clamp-3 transition-colors group-hover:text-[color:var(--site-brand-ink)]" style="text-wrap:balance">${esc(p.title)}</h3>`
     + (p.excerpt ? `<p class="text-[15px] leading-relaxed line-clamp-3 mb-5">${esc(p.excerpt)}</p>` : "")
     + `<div class="mt-auto pt-4 flex items-center justify-between gap-3 text-xs site-muted" style="border-top:1px solid var(--site-line)">`
     + `<span>${esc(date(p.publishedAt))} · ${esc(authorOf(p))}</span>${arrowUpRight()}</div></div></a>`;
@@ -64,7 +64,7 @@ function featured(p) {
     + `<div class="blog-cover relative self-center overflow-hidden aspect-video m-3 sm:m-4 lg:m-5 !rounded-[18px] sm:!rounded-[22px]">${cover}</div>`
     + `<div class="flex flex-col justify-between p-6 sm:p-8 lg:p-10"><div>`
     + `<div class="flex flex-wrap items-center gap-x-3 gap-y-2 mb-5"><span class="site-eyebrow !text-xs">Latest</span>${category(p)}</div>`
-    + `<h3 class="font-display site-ink font-extrabold text-[26px] sm:text-[32px] xl:text-[36px] leading-[1.12] tracking-[-0.02em] mb-4 transition-colors group-hover:text-[color:var(--site-brand-ink)]" style="text-wrap:balance">${esc(p.title)}</h3>`
+    + `<h3 class="site-h3 mb-4 transition-colors group-hover:text-[color:var(--site-brand-ink)]" style="text-wrap:balance">${esc(p.title)}</h3>`
     + (p.excerpt ? `<p class="text-base leading-relaxed line-clamp-3">${esc(p.excerpt)}</p>` : "")
     + `</div><div class="flex items-center justify-between gap-4 mt-7 pt-5" style="border-top:1px solid var(--site-line)">`
     + `<span class="text-xs site-muted">${esc(date(p.publishedAt))} · ${p.readingTime || 1} min read</span>`
@@ -73,7 +73,7 @@ function featured(p) {
 
 // ListHead
 const listHead = (title, note) => `<div class="mb-7">`
-  + `<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-2"><h2 class="font-display site-ink font-extrabold tracking-[-0.02em] text-[26px] sm:text-[32px]">${esc(title)}</h2>`
+  + `<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-2"><h2 class="site-h2">${esc(title)}</h2>`
   + `${note ? `<span class="text-sm site-muted">${esc(note)}</span>` : ""}</div></div>`;
 const grid = (ps) => `<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">${ps.map((p) => `<div class="h-full">${card(p)}</div>`).join("")}</div>`;
 
@@ -98,7 +98,7 @@ function headHtml(topic) {
   return `<nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-2 text-sm site-muted mb-6">${link("/", "Home")}${chevron()}`
     + `${link("/blog", "Blog")}${chevron()}<span style="color:var(--site-text)" aria-current="page">${esc(topic.name)}</span></nav>`
     + `<p class="site-eyebrow mb-4">Topic</p>`
-    + `<h1 class="font-display site-ink font-extrabold tracking-[-0.03em] text-[34px] leading-[1.08] sm:text-[46px] lg:text-[52px]" style="text-wrap:balance">${esc(topic.name)}</h1>`
+    + `<h1 class="site-h1">${esc(topic.name)}</h1>`
     + `<p class="mt-5 text-base sm:text-[17px] leading-relaxed max-w-[38rem]" style="text-wrap:pretty">${esc(topic.intro || topic.description)}</p>`;
 }
 
@@ -118,7 +118,7 @@ const TOPIC_HUB = {
 function topicGuideHtml(topic) {
   const guide = topic.guide || [], faqs = topic.faqs || [];
   if (!guide.length && !faqs.length) return "";
-  const h2 = (t) => `<h2 class="font-display site-ink font-extrabold tracking-[-0.02em] text-[24px] sm:text-[28px] mb-4">${esc(t)}</h2>`;
+  const h2 = (t) => `<h2 class="site-h2 mb-4">${esc(t)}</h2>`;
   return `<div class="mt-16 lg:mt-20 grid lg:grid-cols-[1fr_1fr] gap-10 lg:gap-16">`
     + (guide.length ? `<div>${h2(`About ${topic.name}`)}<div class="space-y-4 text-base leading-relaxed">${guide.map((p) => `<p>${esc(p)}</p>`).join("")}${TOPIC_HUB[topic.slug] ? `<p><a href="${TOPIC_HUB[topic.slug][0]}" class="font-semibold site-ink underline underline-offset-4">${esc(TOPIC_HUB[topic.slug][1])}</a></p>` : ""}</div></div>` : "")
     + (faqs.length ? `<div>${h2("Common questions")}<div class="space-y-3">${faqs.map((f, i) => `<details class="site-card px-5 py-4 group"${i === 0 ? " open" : ""}>`

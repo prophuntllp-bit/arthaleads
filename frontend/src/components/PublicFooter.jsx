@@ -7,16 +7,18 @@ const WaIcon = ({ strokeWidth, ...props }) => <WhatsAppLogo {...props} color="cu
 import { PHONE_DISPLAY, PHONE_TEL, waLink, WA_MESSAGES, SOCIAL_LINKS } from "../utils/crmLinks";
 import { usePublicTheme } from "../context/PublicThemeContext";
 
-// One column of footer links. Every link always shows; on phones the rows are
-// tight (28px) and the groups sit two to a row (Product beside Company, Compare
-// beside Legal, so the rows are even); from md up the columns keep their order.
-function FooterGroup({ title, links, text, heading, className = "" }) {
+// One column of footer links. Every link always shows (owner: no accordions);
+// each link is a 32px hit area with no gap between rows, so the list is no
+// longer than before. On phones the groups sit two to a row (Product beside
+// Company, Compare beside Legal, so the rows are even); from md up the columns
+// keep their order.
+function FooterGroup({ title, links, className = "" }) {
   return (
     <div className={className}>
-      <p style={{ color: heading }} className="font-semibold text-sm mb-2 md:mb-4">{title}</p>
-      <div className="md:space-y-2.5">
+      <p className="font-semibold text-sm mb-1 md:mb-2" style={{ color: "var(--site-ink)" }}>{title}</p>
+      <div>
         {links.map(([label, href]) => (
-          <Link key={label} to={href} style={{ color: text }} className="block py-1 md:py-0 text-[13px] md:text-sm leading-5 hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
+          <Link key={label} to={href} className="block py-1.5 text-[13px] md:text-sm leading-5 text-[color:var(--site-text)] hover:text-[color:var(--brand-text)] transition-colors">{label}</Link>
         ))}
       </div>
     </div>
@@ -29,10 +31,10 @@ const PRODUCT = [
   ["WhatsApp CRM",       "/whatsapp-crm"],
   ["AI CRM",             "/ai-crm"],
   ["Builder CRM",        "/builder-crm"],
-  ["Download App",       "/download-app"],
-  ["WordPress Plugin",   "/wordpress-plugin"],
-  ["API Docs",           "/api-docs"],
-  ["Refer & Earn",       "/refer"],
+  ["Download app",       "/download-app"],
+  ["WordPress plugin",   "/wordpress-plugin"],
+  ["API docs",           "/api-docs"],
+  ["Refer and earn",      "/refer"],
 ];
 const COMPARE = [
   ["All comparisons",        "/compare"],
@@ -41,14 +43,14 @@ const COMPARE = [
   ["Arthaleads vs Kylas",    "/compare/kylas-alternative"],
 ];
 const COMPANY = [
-  ["About Us",        "/about-us"],
+  ["About us",        "/about-us"],
   ["Careers",         "/careers"],
   ["Blog",            "/blog"],
-  ["Product Updates", "/product-updates"],
-  ["Help Guide",      "/help-guide"],
+  ["Product updates", "/product-updates"],
+  ["Help guide",      "/help-guide"],
   ["Security",        "/security"],
-  ["Book a Demo",     "/book-demo"],
-  ["Contact Us",      "/contact"],
+  ["Book a demo",     "/book-demo"],
+  ["Contact us",      "/contact"],
 ];
 const LEGAL = [
   ["Privacy Policy",   "/privacy"],
@@ -59,15 +61,15 @@ const LEGAL = [
 
 export default function PublicFooter() {
   const { isDark } = usePublicTheme();
-  const bg      = isDark ? "#0d0d1a" : "#f9fafb";
-  const text    = isDark ? "rgba(255,255,255,0.5)" : "#6b7280";
-  const heading = isDark ? "#fff" : "#111827";
-  const border  = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
+  // Warm site tokens (they switch with the public theme on their own).
+  const text    = "var(--site-text)";
+  const heading = "var(--site-ink)";
+  const border  = "var(--site-line)";
 
   return (
-    <footer style={{ background: bg, borderTop: `1px solid ${border}` }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-6 gap-y-6 md:gap-8 mb-6 md:mb-10">
+    <footer style={{ background: "var(--site-tint)", borderTop: `1px solid ${border}` }}>
+      <div className="site-container py-8 md:py-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-6 gap-y-5 md:gap-8 mb-6 md:mb-10">
 
           {/* Brand */}
           <div className="col-span-2 md:col-span-4 lg:col-span-2">
@@ -86,14 +88,14 @@ export default function PublicFooter() {
             <a
               href="mailto:contact@arthaleads.com"
               style={{ color: text }}
-              className="block text-sm mt-2 md:mt-4 hover:text-[color:var(--brand-text)] transition-colors"
+              className="block w-fit py-1.5 text-sm mt-1 md:mt-3 hover:text-[color:var(--brand-text)] transition-colors"
             >
               contact@arthaleads.com
             </a>
             {/* The phone number is the fastest way to reach sales: shown as a highlighted call chip. */}
             <a href={PHONE_TEL}
               className="inline-flex items-center gap-2 mt-2.5 md:mt-3 pl-1.5 pr-3.5 py-2 rounded-full text-[15px] font-bold transition-transform duration-200 hover:-translate-y-0.5"
-              style={{ color: isDark ? "#ffffff" : "#111827", background: "rgba(255,107,0,0.10)", border: "1px solid rgba(255,107,0,0.35)" }}>
+              style={{ color: heading, background: "rgba(255,107,0,0.10)", border: "1px solid rgba(255,107,0,0.35)" }}>
               <span className="w-7 h-7 rounded-full flex items-center justify-center text-white" style={{ background: "var(--brand-btn)" }}>
                 <Phone className="w-3.5 h-3.5" aria-hidden="true" />
               </span>
@@ -115,7 +117,7 @@ export default function PublicFooter() {
                 <a key={label} href={href} aria-label={label} title={label}
                   {...(href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                   className="w-11 h-11 rounded-xl flex items-center justify-center border transition-transform duration-200 hover:-translate-y-0.5"
-                  style={{ color: text, borderColor: border, background: isDark ? "rgba(255,255,255,0.03)" : "#ffffff" }}
+                  style={{ color: text, borderColor: border, background: "var(--site-card)" }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = hover; e.currentTarget.style.borderColor = hover; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = text; e.currentTarget.style.borderColor = border; }}>
                   <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} />
@@ -124,15 +126,15 @@ export default function PublicFooter() {
             </div>
           </div>
 
-          <FooterGroup title="Product" links={PRODUCT} text={text} heading={heading} className="md:order-1" />
-          <FooterGroup title="Company" links={COMPANY} text={text} heading={heading} className="md:order-3" />
-          <FooterGroup title="Compare" links={COMPARE} text={text} heading={heading} className="md:order-2" />
-          <FooterGroup title="Legal" links={LEGAL} text={text} heading={heading} className="md:order-4" />
+          <FooterGroup title="Product" links={PRODUCT} className="md:order-1" />
+          <FooterGroup title="Company" links={COMPANY} className="md:order-3" />
+          <FooterGroup title="Compare" links={COMPARE} className="md:order-2" />
+          <FooterGroup title="Legal" links={LEGAL} className="md:order-4" />
 
         </div>
 
         <div style={{ borderTop: `1px solid ${border}` }} className="pt-4 md:pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p style={{ color: text }} className="text-xs">© {new Date().getFullYear()} Arthaleads, operated by Prophunt LLP · Pune, India</p>
+          <p style={{ color: "var(--site-muted)" }} className="text-xs">© {new Date().getFullYear()} Arthaleads, operated by Prophunt LLP · Pune, India</p>
         </div>
       </div>
     </footer>

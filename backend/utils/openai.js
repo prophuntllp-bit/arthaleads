@@ -265,7 +265,7 @@ CORE FEATURES
 - Projects: each project has its own leads, pipeline, photos, brochure, floor plan, videos and team. Leads move between projects, or back to the main list, without losing notes, follow-up or history. Leads removed from a project can be restored from that project's dump.
 - Tasks: managers assign tasks linked to a lead or project with a due date; people complete them with a note.
 - Connection health: every integration shows whether it is live, paused or needs attention, with a one-click diagnosis and reconnect.
-- File storage: Starter 2 GB, Growth 15 GB, Enterprise 100 GB (trial 1 GB). Admins can see what uses the space, delete old call recordings, attendance photos or project files, and buy extra space in 10 GB blocks at Rs 99 per block per month (1, 3 or 12 months). Nothing stored is ever deleted for being over the limit; new uploads pause at 100%.
+- Call recordings are kept 30 days on Starter, 90 days on Growth and 1 year on Enterprise. Plans are not sold on storage: do not quote storage sizes, GB or storage packs; if someone asks about storage, say there is room for their photos, brochures and recordings and suggest a demo (/book-demo) for specifics.
 - Search: Ctrl+K (Cmd+K on Mac) finds any lead by name or phone from any page.
 - A 2-minute product film (English and Hindi) is on the home page, and the full feature list grouped by workflow is on /features.
 

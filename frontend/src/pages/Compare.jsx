@@ -1,7 +1,7 @@
 // pages/Compare.jsx - /compare, the Arthaleads / Sell.Do / Leadrat / Kylas comparison
 // (retitled 30 Oct 2026: the 'best real estate CRM' query belongs to the five-CRM blog post), on
 // the shared marketing theme (components/site/*).
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { waLink } from "../utils/crmLinks";
 import { Check, X, Minus, Search, ArrowRight } from "lucide-react";
@@ -78,19 +78,19 @@ const CATEGORIES = [
 // does, so it never makes claims about other products beyond the table above.
 const CHOOSING = [
   { title: "Every lead source lands on its own",
-    body: "List where your enquiries come from today: Facebook and Instagram lead forms, Google Ads, property portals, your website and WhatsApp. Each one should arrive in the CRM automatically, with its source and campaign attached. Anything that still needs a spreadsheet download will be forgotten on a busy day.",
+    body: "Facebook, Instagram, Google Ads, portals, your website and WhatsApp should each arrive automatically, with source and campaign attached.",
     link: { to: "/blog/real-estate-lead-management-enquiry-to-site-visit", label: "How lead management works, step by step" } },
   { title: "Speed to the first call",
-    body: "Buyers enquire with several projects at once, so the first useful reply often wins. Look for instant assignment to the right person, a push alert on their phone, and a way to answer on WhatsApp at night when nobody is at a desk.",
+    body: "The first useful reply often wins, so look for instant assignment, a push alert and night-time WhatsApp replies.",
     link: { to: "/blog/reply-to-property-enquiries-on-whatsapp-fast", label: "Replying to property enquiries on WhatsApp" } },
   { title: "Project-wise work for developers",
-    body: "If you sell more than one project, each needs its own pipeline, team and reports, while managers still see everything together. Check that a lead can be moved or copied into a project without losing its history." },
+    body: "Each project needs its own pipeline, team and reports, and leads should move between projects with their history." },
   { title: "Follow-ups that cannot slip",
-    body: "Every conversation should end with a dated next step, and every person should start the day with a list of overdue and due follow-ups. This one habit decides more bookings than any feature list." },
+    body: "Every conversation ends with a dated next step, and every day starts with the list of due follow-ups." },
   { title: "Numbers a manager can trust",
-    body: "Response time, contact rate, site visits booked and done, and bookings by source, per person and per campaign, without anyone compiling a report by hand. If the numbers need a spreadsheet, they will arrive late and be argued about." },
+    body: "Response time, site visits and bookings by source, person and campaign, without a hand-made spreadsheet." },
   { title: "Clear pricing and a quick start",
-    body: "Published per-user prices, GST shown separately, and a trial you can run on your own leads. A CRM your team is using in the first week is worth more than a more powerful one that takes a month to set up.",
+    body: "Published per-user prices, GST shown separately, and a trial you can run on your own leads.",
     link: { to: "/pricing", label: "See Arthaleads plans and pricing" } },
 ];
 
@@ -138,6 +138,136 @@ const GUIDE_JSONLD = JSON.stringify({
 const PARTIAL = "var(--site-amber, #d97706)";
 const brandInk = { color: "var(--site-brand-ink)" };
 const COLS = "minmax(0,1.6fr) repeat(4, minmax(0,1fr))";
+
+/** True while a sideways-scrolling box has more to its right (drives the swipe fade on phones). */
+function useMoreRight(ref, deps = []) {
+  const [more, setMore] = useState(false);
+  const check = useCallback(() => {
+    const el = ref.current;
+    if (el) setMore(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, [ref]);
+  useEffect(() => {
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [check, ...deps]);
+  return [more, check];
+}
+
+// A solid fill (no see-through rows behind sticky cells) with an optional orange wash.
+const SOLID = "var(--card-bg, var(--site-card))";
+const washed = (a) => `linear-gradient(rgba(255,107,0,${a}), rgba(255,107,0,${a})), ${SOLID}`;
+// Hides the rows scrolling past between the nav and a stuck header (audit: a strip showed there).
+function StickyCap() {
+  // Inset by the card's corner radius; its bottom line stands in for the card's top border.
+  return <span aria-hidden="true" className="absolute h-3 pointer-events-none" style={{ left: 20, right: 20, bottom: "100%", background: "var(--site-sand)", boxShadow: "inset 0 -1px 0 var(--site-line)" }} />;
+}
+function SwipeFade({ show }) {
+  return (
+    <div aria-hidden="true" className={`sm:hidden pointer-events-none absolute right-0 top-0 bottom-0 w-14 rounded-r-[20px] z-30 transition-opacity duration-300 ${show ? "opacity-100" : "opacity-0"}`}
+      style={{ background: `linear-gradient(to left, ${SOLID} 10%, transparent)` }} />
+  );
+}
+
+/**
+ * The feature table. Header row sticks under the nav (solid, with a cap);
+ * on phones the CRM columns scroll sideways under a sticky feature column,
+ * the header follows the scroll, and a fade on the right edge says there is more.
+ */
+function FeatureTable({ filtered, query }) {
+  const headRef = useRef(null);
+  const bodyRef = useRef(null);
+  const [more, check] = useMoreRight(bodyRef, [filtered]);
+  const onScroll = () => {
+    if (headRef.current && bodyRef.current) headRef.current.scrollLeft = bodyRef.current.scrollLeft;
+    check();
+  };
+  // Sticky only where the table scrolls sideways (phones); isolate keeps the
+  // rows in their own layer, below the stuck header row.
+  const featureCell = "max-sm:sticky max-sm:left-0 z-[1] px-4 sm:px-5";
+  const edge = { boxShadow: "1px 0 0 var(--site-line)" };
+  return (
+    <Card raised className="relative">
+      <div className="sticky site-sticky-top z-20">
+        <StickyCap />
+        <div ref={headRef} className="overflow-hidden rounded-t-[20px]" style={{ background: SOLID, borderBottom: "1px solid var(--site-line)" }}>
+          <div className="grid min-w-[540px] sm:min-w-0" style={{ gridTemplateColumns: COLS }}>
+            <div className={`${featureCell} py-4 text-xs font-semibold site-muted flex items-center rounded-tl-[20px]`} style={{ background: SOLID, ...edge }}>Feature</div>
+            {COMPETITORS.map((c, i) => (
+              <div key={c} className={`px-2 py-4 text-center text-[13px] font-bold flex items-center justify-center ${i ? "site-ink" : ""}`}
+                style={i === 0 ? { ...brandInk, background: washed(0.07) } : undefined}>{c}</div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div ref={bodyRef} onScroll={onScroll} className="relative isolate overflow-x-auto sm:overflow-visible rounded-b-[20px] overscroll-x-contain">
+        <div className="min-w-[540px] sm:min-w-0">
+          {filtered.length === 0 && (
+            <p className="px-5 py-10 text-center text-sm site-muted">No features match "{query}". Try another search.</p>
+          )}
+          {filtered.map((cat, ci) => (
+            <div key={cat.name}>
+              <div className="text-xs font-semibold" style={{ ...brandInk, background: washed(0.05), borderBottom: "1px solid var(--site-line)" }}>
+                <span className="max-sm:sticky max-sm:left-0 inline-block px-4 sm:px-5 py-2.5">{cat.name}</span>
+              </div>
+              {cat.rows.map(([label, vals], ri) => {
+                const last = ci === filtered.length - 1 && ri === cat.rows.length - 1;
+                return (
+                  <div key={label} className="grid" style={{ gridTemplateColumns: COLS, borderBottom: last ? undefined : "1px solid var(--site-line)" }}>
+                    <div className={`${featureCell} py-3.5 text-sm site-ink flex items-center ${last ? "rounded-bl-[20px]" : ""}`} style={{ background: SOLID, ...edge }}>{label}</div>
+                    {vals.map((v, i) => (
+                      <div key={i} className="px-2 py-3.5 text-center flex items-center justify-center" style={i === 0 ? { background: "rgba(255,107,0,0.04)" } : undefined}>
+                        <Cell val={v} />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+      <SwipeFade show={more} />
+    </Card>
+  );
+}
+
+/** The price table: on phones it scrolls sideways under a sticky CRM-name column. */
+function CostTable() {
+  const ref = useRef(null);
+  const [more, check] = useMoreRight(ref);
+  return (
+    <Card raised className="relative">
+      <div ref={ref} onScroll={check} className="relative overflow-x-auto rounded-[20px] overscroll-x-contain">
+        <table className="w-full min-w-[640px] text-sm border-collapse">
+          <caption className="sr-only">Real estate CRM prices in India compared</caption>
+          <thead>
+            <tr style={{ borderBottom: "1px solid var(--site-line)" }}>
+              {["CRM", "How it is priced", "Published price", "Try before you buy"].map((h, i) => (
+                <th key={h} scope="col" className={`text-left font-semibold px-4 sm:px-5 py-4 site-muted ${i === 0 ? "sticky left-0 z-[1] w-[16%]" : i === 2 ? "w-[34%]" : ""}`}
+                  style={i === 0 ? { background: SOLID, boxShadow: "1px 0 0 var(--site-line)" } : undefined}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {COST_ROWS.map(([name, model, price, trial], i) => (
+              <tr key={name} className="align-top" style={{ borderBottom: i < COST_ROWS.length - 1 ? "1px solid var(--site-line)" : undefined, background: i === 0 ? "rgba(255,107,0,0.05)" : undefined }}>
+                <th scope="row" className="sticky left-0 z-[1] text-left font-bold px-4 sm:px-5 py-4"
+                  style={{ ...(i === 0 ? brandInk : { color: "var(--site-ink)" }), background: i === 0 ? washed(0.05) : SOLID, boxShadow: "1px 0 0 var(--site-line)" }}>{name}</th>
+                <td className="px-4 sm:px-5 py-4 leading-relaxed">{model}</td>
+                <td className="px-4 sm:px-5 py-4 leading-relaxed site-ink">{price}</td>
+                <td className="px-4 sm:px-5 py-4 leading-relaxed">{trial}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <SwipeFade show={more} />
+    </Card>
+  );
+}
 
 function Cell({ val }) {
   if (val === "y") return <span><Check aria-hidden="true" className="w-4 h-4 mx-auto" style={{ color: "#16a34a" }} /><span className="sr-only">Yes</span></span>;
@@ -188,9 +318,9 @@ export default function Compare() {
             {WHO_FITS.map((w, i) => (
               <Reveal key={w.name} delay={(i % 2) * 90} className="min-w-0 flex">
                 <Card glow className="w-full p-6 flex flex-col" style={i === 0 ? { borderColor: "rgba(255,107,0,0.45)" } : undefined}>
-                  <h3 className="font-display text-lg font-bold site-ink mb-2" style={i === 0 ? brandInk : undefined}>{w.name}</h3>
+                  <h3 className="site-h3 mb-2" style={i === 0 ? brandInk : undefined}>{w.name}</h3>
                   <p className="text-[15px] leading-relaxed flex-1">{w.fit}</p>
-                  {w.to && <Link to={w.to} className="site-link mt-4 text-sm">Arthaleads vs {w.name} <ArrowRight className="w-4 h-4" /></Link>}
+                  {w.to && <Link to={w.to} className="site-link mt-4 text-sm py-3 -my-3">Arthaleads vs {w.name} <ArrowRight className="w-4 h-4" /></Link>}
                 </Card>
               </Reveal>
             ))}
@@ -198,56 +328,20 @@ export default function Compare() {
         </Container>
       </Section>
 
-      {/* Feature comparison */}
-      <Section tone="white" id="feature-table">
-        <Container narrow>
+      {/* Feature comparison: the page's signature band (sand), full container width */}
+      <Section tone="sand" id="feature-table">
+        <Container>
           <SectionHeader eyebrow="Feature by feature" title="Arthaleads, Leadrat, Sell.Do and Kylas" />
-          <div className="relative mb-6">
+          <div className="relative mb-4 sm:mb-6 max-w-xl">
             <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 site-muted" aria-hidden="true" />
             <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search a feature"
               placeholder="Search a feature (e.g. WhatsApp, API, analytics)…"
               className="w-full pl-11 pr-4 py-3 rounded-2xl text-sm outline-none transition focus:ring-2 focus:ring-[color:var(--site-brand)]"
               style={{ background: "var(--site-card)", border: "1px solid var(--site-field-line)", color: "var(--site-ink)" }} />
           </div>
+          <p className="sm:hidden mb-3 flex items-center gap-1.5 text-xs font-semibold site-muted">Swipe the table to see all four CRMs <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" /></p>
 
-          {/* Below sm the five columns would crush into ~340px: scroll sideways instead. */}
-          <div className="relative overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0">
-            <Card raised className="min-w-[560px] sm:min-w-0">
-              <div className="grid sm:sticky site-sticky-top z-10 rounded-t-[20px]"
-                style={{ gridTemplateColumns: COLS, background: "var(--site-card)", borderBottom: "1px solid var(--site-line)" }}>
-                <div className="px-5 py-4 text-xs font-semibold site-muted flex items-center">Feature</div>
-                {COMPETITORS.map((c, i) => (
-                  <div key={c} className={`px-2 py-4 text-center text-[13px] font-display font-bold flex items-center justify-center ${i ? "site-ink" : ""}`}
-                    style={i === 0 ? { ...brandInk, background: "rgba(255,107,0,0.07)" } : undefined}>{c}</div>
-                ))}
-              </div>
-
-              {filtered.length === 0 && (
-                <p className="px-5 py-10 text-center text-sm site-muted">No features match "{query}". Try another search.</p>
-              )}
-
-              {filtered.map((cat, ci) => (
-                <div key={cat.name}>
-                  <div className="px-5 py-2.5 text-xs font-semibold" style={{ ...brandInk, background: "rgba(255,107,0,0.05)", borderBottom: "1px solid var(--site-line)" }}>
-                    {cat.name}
-                  </div>
-                  {cat.rows.map(([label, vals], ri) => {
-                    const last = ci === filtered.length - 1 && ri === cat.rows.length - 1;
-                    return (
-                      <div key={label} className="grid items-center" style={{ gridTemplateColumns: COLS, borderBottom: last ? undefined : "1px solid var(--site-line)" }}>
-                        <div className="px-5 py-3.5 text-sm site-ink">{label}</div>
-                        {vals.map((v, i) => (
-                          <div key={i} className="px-2 py-3.5 text-center self-stretch flex items-center justify-center" style={i === 0 ? { background: "rgba(255,107,0,0.04)" } : undefined}>
-                            <Cell val={v} />
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </Card>
-          </div>
+          <FeatureTable filtered={filtered} query={query} />
 
           {/* Legend */}
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-6 text-xs site-muted">
@@ -260,12 +354,12 @@ export default function Compare() {
             Each competitor is marked from its own website and help pages as checked on {CHECKED}:{" "}
             {SOURCES.map(([n, u], i) => (
               <span key={n}>
-                <a href={u} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{n}</a>{i < SOURCES.length - 1 ? ", " : ". "}
+                <a href={u} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 py-3 px-1 -mx-1">{n}</a>{i < SOURCES.length - 1 ? ", " : ". "}
               </span>
             ))}
             Products change, and some features sit on higher plans or add-ons. Spotted something out of date?{" "}
             <a href={waLink("Hi Arthaleads, something on your CRM comparison page looks out of date: ")} target="_blank" rel="noopener noreferrer"
-              className="font-semibold hover:underline" style={brandInk}>Let us know</a> and we will correct it.
+              className="font-semibold hover:underline py-3 px-1 -mx-1" style={brandInk}>Let us know</a> and we will correct it.
             {" "}Leadrat, Sell.Do and Kylas are trademarks of their owners; Arthaleads is not affiliated with them.
           </p>
         </Container>
@@ -283,7 +377,7 @@ export default function Compare() {
             ].map(([name, to, body], i) => (
               <Reveal key={to} delay={i * 90} className="min-w-0 flex">
                 <Card as={Link} to={to} glow className="group w-full p-6 flex flex-col transition-transform duration-300 hover:-translate-y-1">
-                  <h3 className="font-display text-lg font-bold site-ink mb-2">Arthaleads vs {name}</h3>
+                  <h3 className="site-h4 mb-2">Arthaleads vs {name}</h3>
                   <p className="text-[15px] leading-relaxed mb-4 flex-1">{body}</p>
                   <span className="site-link text-sm">Read the comparison <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" /></span>
                 </Card>
@@ -297,16 +391,18 @@ export default function Compare() {
       <Section tone="white">
         <Container>
           <SectionHeader eyebrow="How to choose" title="Six questions that decide it"
-            lede={<>A feature table only tells part of the story. These six questions decide whether a CRM actually helps your team close more bookings, whichever product you pick. For a wider look that adds Privyr, see <Link to="/blog/best-real-estate-crm-software-india" className="font-semibold site-ink underline underline-offset-4">five real estate CRMs compared</Link>.</>} />
+            lede={<>These decide whether a CRM helps your team close more bookings, whichever you pick. For a wider look that adds Privyr, see <Link to="/blog/best-real-estate-crm-software-india" className="font-semibold site-ink underline underline-offset-4">five real estate CRMs compared</Link>.</>} />
           <ol className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {CHOOSING.map((c, i) => (
               <Reveal as="li" key={c.title} delay={(i % 3) * 80} className="min-w-0 flex">
-                <Card glow className="w-full p-6 flex flex-col">
-                  <span className="font-display w-10 h-10 rounded-full flex items-center justify-center text-base font-extrabold text-white mb-5"
+                <Card glow className="w-full p-5 sm:p-6 flex gap-4 sm:flex-col sm:gap-0">
+                  <span className="w-10 h-10 rounded-full flex items-center justify-center text-base font-extrabold text-white shrink-0 sm:mb-5"
                     style={{ background: "var(--brand-btn)", boxShadow: "0 12px 26px -12px rgba(204,75,0,0.7)" }}>{i + 1}</span>
-                  <h3 className="font-display text-lg font-bold site-ink mb-2">{c.title}</h3>
-                  <p className="text-[15px] leading-relaxed flex-1">{c.body}</p>
-                  {c.link && <Link to={c.link.to} className="site-link mt-4 text-sm">{c.link.label} <ArrowRight className="w-4 h-4" /></Link>}
+                  <div className="min-w-0 flex-1 flex flex-col">
+                    <h3 className="site-h4 mb-1.5 sm:mb-2">{c.title}</h3>
+                    <p className="text-[15px] leading-relaxed flex-1">{c.body}</p>
+                    {c.link && <Link to={c.link.to} className="site-link mt-4 text-sm py-3 -my-3">{c.link.label} <ArrowRight className="w-4 h-4" /></Link>}
+                  </div>
                 </Card>
               </Reveal>
             ))}
@@ -314,33 +410,12 @@ export default function Compare() {
         </Container>
       </Section>
 
-      {/* What it costs */}
+      {/* What it costs: full container width so cells stop wrapping */}
       <Section tone="tint">
-        <Container narrow>
+        <Container>
           <SectionHeader eyebrow="Pricing" title="What does a real estate CRM cost in India?"
             lede={`List prices as published on each company's website on ${CHECKED}. Some prices exclude GST, and billing may be monthly or yearly.`} />
-          <Card raised className="relative overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm border-collapse">
-              <caption className="sr-only">Real estate CRM prices in India compared</caption>
-              <thead>
-                <tr style={{ borderBottom: "1px solid var(--site-line)" }}>
-                  {["CRM", "How it is priced", "Published price", "Try before you buy"].map((h) => (
-                    <th key={h} scope="col" className="text-left font-semibold px-5 py-4 site-muted">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {COST_ROWS.map(([name, model, price, trial], i) => (
-                  <tr key={name} className="align-top" style={{ borderBottom: i < COST_ROWS.length - 1 ? "1px solid var(--site-line)" : undefined, background: i === 0 ? "rgba(255,107,0,0.05)" : undefined }}>
-                    <th scope="row" className="text-left font-display font-bold px-5 py-4" style={i === 0 ? brandInk : { color: "var(--site-ink)" }}>{name}</th>
-                    <td className="px-5 py-4 leading-relaxed">{model}</td>
-                    <td className="px-5 py-4 leading-relaxed site-ink">{price}</td>
-                    <td className="px-5 py-4 leading-relaxed">{trial}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
+          <CostTable />
         </Container>
       </Section>
 

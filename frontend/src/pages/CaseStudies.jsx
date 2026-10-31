@@ -34,8 +34,8 @@ function PostCard({ post }) {
         </div>
       )}
       <div className="flex-1 p-5 sm:p-6">
-        {post.category && <p className="site-eyebrow !text-[11px] mb-2.5">{post.category.name}</p>}
-        <h2 className="font-display text-[17px] font-bold site-ink leading-snug mb-2 line-clamp-2 group-hover:text-[color:var(--site-brand-ink)] transition-colors">
+        {post.category && <p className="site-eyebrow !text-[12px] mb-2.5">{post.category.name}</p>}
+        <h2 className="site-h4 !mb-2 line-clamp-2 group-hover:text-[color:var(--site-brand-ink)] transition-colors">
           {post.title}
         </h2>
         {post.excerpt && <p className="text-[14px] leading-relaxed line-clamp-3 mb-4">{post.excerpt}</p>}
@@ -108,8 +108,8 @@ function CaseStudiesInner() {
         actions={null}
       />
 
-      {/* Posts or empty state */}
-      <Section tone="tint" className="!pt-12 sm:!pt-16">
+      {/* Posts or empty state: the page's signature sand band */}
+      <Section tone="sand" className="!pt-12 sm:!pt-16">
         <Container>
           {loading ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5" aria-busy="true">
@@ -124,10 +124,10 @@ function CaseStudiesInner() {
                   style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
                   <BookOpen className="w-6 h-6" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                 </span>
-                <h2 className="font-display text-xl sm:text-2xl font-bold site-ink mb-2">No case studies published yet.</h2>
+                <h2 className="site-h3 !mb-2">No case studies published yet.</h2>
                 <p className="text-[15px] leading-relaxed">Check back soon!</p>
                 <div className="mt-7 flex flex-wrap justify-center gap-3">
-                  <SiteButton to="/book-demo">Book a Demo <ArrowRight className="w-4 h-4" /></SiteButton>
+                  <SiteButton to="/book-demo">Book a demo <ArrowRight className="w-4 h-4" /></SiteButton>
                   <SiteButton to="/blog" variant="secondary">Read the blog</SiteButton>
                 </div>
               </Card>

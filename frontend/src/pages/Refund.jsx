@@ -9,9 +9,9 @@ import { CheckCircle2, XCircle, CalendarDays } from "lucide-react";
 function RefundChecker() {
   const { isDark } = usePublicTheme();
   const [paidOn, setPaidOn] = useState("");
-  const cardBg = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
-  const border = isDark ? "rgba(255,255,255,0.1)" : "#e5e7eb";
-  const label  = isDark ? "rgba(255,255,255,0.7)" : "#374151";
+  const cardBg = "var(--site-card)";
+  const border = "var(--site-line)";
+  const label  = "var(--site-text)";
 
   let result = null;
   if (paidOn) {
@@ -24,9 +24,9 @@ function RefundChecker() {
     <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: "0.75rem", padding: "1.25rem" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
         <CalendarDays style={{ width: 18, height: 18, color: "#ff6b00" }} />
-        <span style={{ fontSize: 14, fontWeight: 700, color: isDark ? "#fff" : "#111827" }}>
+        <h3 className="site-h4">
           Check your refund eligibility
-        </span>
+        </h3>
       </div>
       <label style={{ display: "block", fontSize: 13, color: label, marginBottom: 6 }}>
         When did you make the payment?
@@ -38,8 +38,8 @@ function RefundChecker() {
         onChange={(e) => setPaidOn(e.target.value)}
         style={{
           width: "100%", padding: "10px 12px", borderRadius: 8,
-          border: `1px solid ${border}`, background: isDark ? "rgba(255,255,255,0.05)" : "#f9fafb",
-          color: isDark ? "#fff" : "#111827", fontSize: 14, cursor: "pointer",
+          border: `1px solid ${border}`, background: "var(--site-tint)",
+          color: "var(--site-ink)", fontSize: 16, minHeight: 46, cursor: "pointer",
         }}
       />
       {result && (
@@ -61,7 +61,7 @@ function RefundChecker() {
           </span>
         </div>
       )}
-      <p style={{ fontSize: 11, color: isDark ? "rgba(255,255,255,0.55)" : "#6b7280", marginTop: 10 }}>
+      <p style={{ fontSize: 12, color: "var(--site-muted)", marginTop: 10 }}>
         This tool is for guidance only. Final eligibility is confirmed by our team.
       </p>
     </div>
@@ -89,7 +89,7 @@ export default function Refund() {
 
       <Section title="2. 7-Day Money-Back Guarantee">
         <p>
-          We offer a <strong style={{ color: "var(--app-text)" }}>7-day money-back guarantee</strong> on
+          We offer a <strong style={{ color: "var(--site-ink)" }}>7-day money-back guarantee</strong> on
           your first payment for any paid plan. If you are not satisfied for any reason, request a full
           refund within 7 calendar days of the payment date and we will refund 100% of the amount paid — no
           questions asked.
@@ -110,7 +110,7 @@ export default function Refund() {
 
       <Section title="4. How to Request a Refund">
         <ul className="list-disc pl-5 space-y-1.5">
-          <li>Email us at <strong style={{ color: "var(--app-text)" }}>contact@arthaleads.com</strong> from your registered account email.</li>
+          <li>Email us at <strong style={{ color: "var(--site-ink)" }}>contact@arthaleads.com</strong> from your registered account email.</li>
           <li>Include your organisation name and the date of payment.</li>
           <li>Our team confirms eligibility and processes approved refunds within 5–7 business days.</li>
           <li>Refunds are credited back to the original payment method.</li>
@@ -119,7 +119,7 @@ export default function Refund() {
 
       <Section title="5. How to Cancel Your Subscription">
         <p>
-          You can cancel anytime by emailing <strong style={{ color: "var(--app-text)" }}>contact@arthaleads.com</strong>{" "}
+          You can cancel anytime by emailing <strong style={{ color: "var(--site-ink)" }}>contact@arthaleads.com</strong>{" "}
           or messaging us on WhatsApp. There are no cancellation fees and no lock-in contracts. After
           cancellation:
         </p>
@@ -156,16 +156,16 @@ export default function Refund() {
       <Section title="9. Contact Us">
         <p>For any billing, refund, or cancellation request, reach us at:</p>
         <ContactBox>
-          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Arthaleads — Billing Support</p>
-          <p style={{ color: "var(--app-text-soft)" }}>
+          <p className="font-bold mb-1" style={{ color: "var(--site-ink)" }}>Arthaleads — Billing Support</p>
+          <p style={{ color: "var(--site-muted)" }}>
             Email:{" "}
-            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">
+            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--site-brand-ink)" }} className="hover:underline">
               contact@arthaleads.com
             </a>
           </p>
-          <p style={{ color: "var(--app-text-soft)" }}>
+          <p style={{ color: "var(--site-muted)" }}>
             WhatsApp:{" "}
-            <a href={waLink(WA_MESSAGES.support)} target="_blank" rel="noopener noreferrer" style={{ color: "var(--brand-text)" }} className="hover:underline">
+            <a href={waLink(WA_MESSAGES.support)} target="_blank" rel="noopener noreferrer" style={{ color: "var(--site-brand-ink)" }} className="hover:underline">
               +91 90670 97779
             </a>
           </p>

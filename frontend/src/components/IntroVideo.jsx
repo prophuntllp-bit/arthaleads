@@ -47,13 +47,13 @@ export default function IntroVideo({ id = "tour", chapters = false, seek = null 
       {chapters && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: filmJsonLd({ chapters: true }) }} />}
       <div className="flex flex-wrap items-center justify-end gap-3 mb-4">
         <a href={YOUTUBE_FILM[lang]} target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold site-ink hover:underline underline-offset-4">
+          className="inline-flex items-center gap-1.5 min-h-[44px] text-sm font-semibold site-ink hover:underline underline-offset-4">
           <Youtube className="w-[18px] h-[18px]" style={{ color: "#FF0000" }} strokeWidth={2} aria-hidden="true" /> Watch on YouTube
         </a>
-        <div role="group" aria-label="Video language" className="site-card inline-flex p-1 !rounded-full">
+        <div role="group" aria-label="Video language" className="site-card inline-flex p-0.5 !rounded-full">
           {Object.entries(INTRO_VIDEOS).map(([k, item]) => (
             <button key={k} type="button" onClick={() => setLang(k)} aria-pressed={k === lang}
-              className="px-4 py-1.5 rounded-full text-sm font-semibold transition-colors"
+              className="min-h-[44px] px-4 rounded-full text-sm font-semibold transition-colors"
               style={k === lang ? { background: "var(--brand-btn)", color: "#fff" } : { color: "var(--site-text)" }}>
               {item.label}
             </button>

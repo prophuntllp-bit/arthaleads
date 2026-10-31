@@ -16,10 +16,10 @@ const PILLARS = [
     label: "Data protection",
     icon: Database,
     points: [
-      ["Encryption in transit", "All traffic is served over HTTPS/TLS. Data moving between your browser and our servers is always encrypted."],
-      ["Encryption at rest", "Your database is stored on MongoDB Atlas (AWS, Mumbai, India) with encryption at rest. Stored access tokens get an extra layer of field-level encryption."],
-      ["Tenant isolation", "Every organisation's data is strictly scoped by a unique org ID. One customer can never see another's leads."],
-      ["Backups", "The whole database is backed up every day into private Backblaze storage in the USA, and each backup is deleted after at most 12 months. Uploaded files (photos, documents, recordings) are kept separately in private storage and served only to signed-in users allowed to see them."],
+      ["Encryption in transit", "All traffic between your browser and our servers runs over HTTPS/TLS."],
+      ["Encryption at rest", "MongoDB Atlas (AWS, Mumbai) encrypted at rest; stored access tokens get extra field-level encryption."],
+      ["Tenant isolation", "Every organisation's data is scoped by its own org ID, so no customer sees another's leads."],
+      ["Backups", "Daily database backups to private Backblaze storage (USA), kept at most 12 months. Uploaded files sit in private storage, served only to signed-in users allowed to see them."],
     ],
   },
   {
@@ -27,10 +27,10 @@ const PILLARS = [
     label: "Access control",
     icon: UserCheck,
     points: [
-      ["Role-based access", "Admin, Manager, and Agent roles each have precisely scoped permissions. Agents only see leads assigned to them."],
-      ["Secure authentication", "Passwords are hashed with bcrypt. Login is protected by httpOnly session cookies that JavaScript cannot read."],
-      ["Email verification", "New accounts confirm their email address with a one-time code at signup."],
-      ["Brute-force protection", "Login attempts are rate-limited to block password-guessing attacks."],
+      ["Role-based access", "Admin, Manager and Agent roles with scoped permissions; agents see only their assigned leads."],
+      ["Secure authentication", "Passwords hashed with bcrypt; sessions in httpOnly cookies that JavaScript cannot read."],
+      ["Email verification", "New accounts confirm their email with a one-time code."],
+      ["Brute-force protection", "Login attempts are rate-limited to block password guessing."],
     ],
   },
   {
@@ -38,10 +38,10 @@ const PILLARS = [
     label: "Infrastructure",
     icon: Server,
     points: [
-      ["Hardened headers", "We apply Helmet security headers (CSP, HSTS, X-Frame-Options) on every response."],
-      ["Rate limiting", "API endpoints are rate-limited to absorb abuse and keep the service stable for everyone."],
-      ["Error monitoring", "Sentry tracks errors in real time so we catch and fix issues fast."],
-      ["Signed webhooks", "Incoming Facebook lead webhooks are verified with HMAC-SHA256 signatures, so nobody can send in spoofed leads."],
+      ["Hardened headers", "Helmet security headers (CSP, HSTS, X-Frame-Options) on every response."],
+      ["Rate limiting", "API endpoints are rate-limited to absorb abuse."],
+      ["Error monitoring", "Sentry tracks errors in real time."],
+      ["Signed webhooks", "Facebook lead webhooks are verified with HMAC-SHA256 signatures, so spoofed leads are rejected."],
     ],
   },
   {
@@ -49,10 +49,10 @@ const PILLARS = [
     label: "Privacy and compliance",
     icon: Eye,
     points: [
-      ["DPDP Act and Rules", "Built to follow India's Digital Personal Data Protection Act, 2023 and DPDP Rules, 2025, with a published sub-processor list, breach notification and a Grievance Officer."],
-      ["No data selling", "We never sell or rent your leads. They are shared only with the service providers that run the CRM, and used only to run it for you."],
-      ["Facebook reviewed", "Our Meta app is App-Review approved for lead retrieval and held to Meta's data-use standards."],
-      ["Full data export", "On Growth and Enterprise, export all your leads as CSV or Excel at any time. Your data belongs to you."],
+      ["DPDP Act and Rules", "Built to follow the DPDP Act, 2023 and DPDP Rules, 2025: published sub-processors, breach notification and a Grievance Officer."],
+      ["No data selling", "We never sell or rent your leads; they are shared only with the providers that run the CRM."],
+      ["Facebook reviewed", "Our Meta app is App Review approved for lead retrieval."],
+      ["Full data export", "On Growth and Enterprise, export all your leads as CSV or Excel at any time."],
     ],
   },
 ];
@@ -82,7 +82,7 @@ export default function Security() {
       <PageHero
         eyebrow="Security"
         title={<>Your leads are <span className="site-dim">safe with us</span></>}
-        lede="Arthaleads is built security-first: encryption, strict access control, signed webhooks and compliance with India's data protection law, so your most valuable asset, your pipeline, stays protected."
+        lede="Encryption, strict access control, signed webhooks and India's data protection law, so your pipeline stays protected."
         actions={[
           { label: "See how we protect data", href: "#pillars" },
           { label: "Report an issue", href: "mailto:contact@arthaleads.com?subject=Security%20Disclosure", Icon: Mail },
@@ -102,8 +102,9 @@ export default function Security() {
         </ul>
       </PageHero>
 
-      {/* The four pillars, all on the page (no tabs) so every point is readable and indexable */}
-      <Section tone="tint" id="pillars">
+      {/* The four pillars, all on the page (no tabs) so every point is readable and indexable.
+          The page's signature sand band. */}
+      <Section tone="sand" id="pillars">
         <Container>
           <SectionHeader eyebrow="How we protect your data" title="Four pillars of Arthaleads security" />
           <div className="grid md:grid-cols-2 gap-4">
@@ -114,14 +115,14 @@ export default function Security() {
                     <span className="site-icon w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
                       <p.icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                     </span>
-                    <h3 className="font-display text-xl font-bold site-ink">{p.label}</h3>
+                    <h3 className="site-h3">{p.label}</h3>
                   </div>
                   <ul className="space-y-4">
                     {p.points.map(([title, desc]) => (
                       <li key={title} className="flex items-start gap-3">
                         <CheckCircle2 className="w-[18px] h-[18px] shrink-0 mt-0.5" style={{ color: "#16a34a" }} aria-hidden="true" />
                         <span className="min-w-0">
-                          <span className="block font-semibold site-ink text-[15px] mb-0.5">{title}</span>
+                          <span className="block site-h4 !text-[15px] !mb-0.5">{title}</span>
                           <span className="block text-[14px] leading-relaxed">{desc}</span>
                         </span>
                       </li>
@@ -136,16 +137,16 @@ export default function Security() {
 
       {/* Responsible disclosure */}
       <Section tone="white">
-        <Container narrow>
+        <Container>
           <Reveal>
             <Card raised className="p-6 sm:p-10 flex flex-col sm:flex-row sm:items-center gap-6">
               <span className="site-icon w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={iconTile}>
                 <Shield className="w-7 h-7" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
               </span>
               <div className="min-w-0 flex-1">
-                <h2 className="font-display text-xl sm:text-2xl font-bold site-ink mb-2">Found a security issue?</h2>
+                <h2 className="site-h3 !mb-2">Found a security issue?</h2>
                 <p className="text-[15px] leading-relaxed">
-                  If you believe you've found a vulnerability, please report it privately and we'll respond quickly. We appreciate responsible disclosure.
+                  Report a vulnerability privately and we will respond quickly.
                 </p>
               </div>
               <SiteButton href="mailto:contact@arthaleads.com?subject=Security%20Disclosure" variant="secondary" className="shrink-0">

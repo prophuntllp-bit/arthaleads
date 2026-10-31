@@ -24,7 +24,8 @@ const FAQ_JSONLD = JSON.stringify({
   "mainEntity": FAQS.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } })),
 }).replace(/</g, "\\u003c");
 
-const inputCls = "w-full rounded-2xl px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-[color:var(--site-brand)]";
+// 16px text on phones so iOS does not zoom on focus; 46px tall like every site form.
+const inputCls = "w-full min-h-[46px] rounded-2xl px-4 py-3 text-base sm:text-sm leading-5 outline-none transition focus:ring-2 focus:ring-[color:var(--site-brand)]";
 const inputStyle = { background: "var(--site-bg)", border: "1px solid var(--site-field-line)", color: "var(--site-ink)" };
 const EMPTY = { name: "", email: "", phone: "", company: "", message: "" };
 
@@ -88,27 +89,32 @@ export default function Contact() {
         trust={["Replies within 24 hours on weekdays", "Real people in Pune"]}
       />
 
-      <Section tone="tint" className="!pt-12 sm:!pt-16">
+      {/* The page's signature sand band; the FAQ after it is white. */}
+      <Section tone="sand" className="!pt-12 sm:!pt-16">
         <Container className="grid lg:grid-cols-[0.9fr_1.1fr] gap-6 lg:gap-10 items-start">
           {/* Left: ways to reach us */}
           <div className="grid gap-4 min-w-0">
             <Card raised className="p-6 sm:p-7">
-              <h2 className="font-display text-xl font-bold site-ink mb-6">Contact information</h2>
-              <ul className="space-y-5">
-                {INFO.map(({ icon: Icon, label, val, href, note }) => (
-                  <li key={label} className="flex items-center gap-4">
-                    <span className="site-icon w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
-                      <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-xs site-muted mb-0.5">{label}</span>
-                      {href
-                        ? <a href={href} className="block text-[15px] font-semibold site-ink hover:underline underline-offset-4 break-words">{val}</a>
-                        : <span className="block text-[15px] font-semibold site-ink">{val}</span>}
-                      {note && <span className="block text-xs site-muted mt-0.5">{note}</span>}
-                    </span>
-                  </li>
-                ))}
+              <h2 className="site-h3 !mb-5">Contact information</h2>
+              {/* Each row is one link, at least 48px tall, so it is easy to tap on phones. */}
+              <ul className="space-y-2">
+                {INFO.map(({ icon: Icon, label, val, href, note }) => {
+                  const Row = href ? "a" : "div";
+                  return (
+                    <li key={label}>
+                      <Row {...(href ? { href } : {})} className={`group flex items-center gap-4 min-h-[48px] py-1.5 -mx-2 px-2 rounded-2xl ${href ? "transition-colors hover:bg-[color:var(--site-tint)]" : ""}`}>
+                        <span className="site-icon w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
+                          <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-[13px] site-muted mb-0.5">{label}</span>
+                          <span className={`block text-[15px] font-semibold site-ink break-words ${href ? "group-hover:underline underline-offset-4" : ""}`}>{val}</span>
+                          {note && <span className="block text-[13px] site-muted mt-0.5">{note}</span>}
+                        </span>
+                      </Row>
+                    </li>
+                  );
+                })}
               </ul>
               <SiteButton href={waLink(WA_MESSAGES.sales)} external variant="whatsapp" className="mt-7 w-full sm:w-auto">
                 <WhatsAppLogo className="w-[18px] h-[18px]" color="#fff" /> Chat on WhatsApp
@@ -119,28 +125,28 @@ export default function Contact() {
               <span className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 text-white" style={{ background: "var(--brand-btn)" }}>
                 <CalendarCheck2 className="w-5 h-5" aria-hidden="true" />
               </span>
-              <h2 className="font-display text-xl font-bold site-ink mb-2">Want to see it working?</h2>
-              <p className="text-[15px] leading-relaxed mb-5">Book a 30-minute demo. We set Arthaleads up on your own leads and answer every question live.</p>
-              <SiteButton to="/book-demo">Book a Demo <ArrowRight className="w-4 h-4" /></SiteButton>
+              <h2 className="site-h3 !mb-2">Want to see it working?</h2>
+              <p className="text-[15px] leading-relaxed mb-5">A 30-minute demo on your own leads, every question answered live.</p>
+              <SiteButton to="/book-demo" className="w-full sm:w-auto">Book a demo <ArrowRight className="w-4 h-4" /></SiteButton>
             </Card>
           </div>
 
           {/* Right: the form */}
-          <Card raised className="p-6 sm:p-8 min-w-0">
+          <Card raised className="p-5 sm:p-8 min-w-0">
             {sent ? (
               <div className="flex flex-col items-center justify-center text-center py-16" role="status">
                 <span className="w-16 h-16 rounded-full flex items-center justify-center mb-5" style={{ background: "rgba(22,163,74,0.12)" }}>
                   <Check className="w-8 h-8" style={{ color: "#16a34a" }} aria-hidden="true" />
                 </span>
-                <h2 className="font-display font-extrabold text-2xl site-ink mb-2">Message sent</h2>
+                <h2 className="site-h3 !mb-2">Message sent</h2>
                 <p className="text-[15px] leading-relaxed max-w-sm">
                   Thanks for reaching out. We'll get back to you at <strong className="site-ink">{form.email}</strong> within 24 hours.
                 </p>
-                <button type="button" onClick={() => { setSent(false); setForm(EMPTY); }} className="site-link mt-6">Send another message</button>
+                <button type="button" onClick={() => { setSent(false); setForm(EMPTY); }} className="site-link mt-4 min-h-[44px] px-2">Send another message</button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <h2 className="font-display font-bold text-xl site-ink mb-2">Send us a message</h2>
+                <h2 className="site-h3 !mb-2">Send us a message</h2>
                 <div className="grid sm:grid-cols-2 gap-4">
                   {[
                     { id: "name",    label: "Your name",      type: "text",  ph: "Rajesh Patil",         req: true,  ac: "name" },
@@ -166,7 +172,7 @@ export default function Contact() {
                     className={`${inputCls} resize-none`} style={inputStyle} />
                 </div>
                 {error && <p className="text-sm text-center" style={{ color: "#dc2626" }} role="alert">{error}</p>}
-                <SiteButton type="submit" disabled={loading} className="w-full disabled:opacity-60 disabled:cursor-not-allowed">
+                <SiteButton type="submit" disabled={loading} className="w-full sm:w-auto disabled:opacity-60 disabled:cursor-not-allowed">
                   {loading ? "Sending…" : <>Send message <ArrowRight className="w-4 h-4" /></>}
                 </SiteButton>
               </form>

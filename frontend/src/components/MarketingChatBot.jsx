@@ -15,6 +15,7 @@ import { X, Send, ArrowRight, Sparkles, MessageCircle, ChevronDown } from "lucid
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import { track } from "../utils/analytics";
+import { useLauncherState, launcherMotion } from "./WhatsAppWidget";
 
 // One random id per visit, so the saved conversation (backend models/WebsiteChat.js)
 // keeps a visitor's questions together. Not stored anywhere in the browser.
@@ -83,6 +84,7 @@ function CtaChip({ cta }) {
 export default function MarketingChatBot() {
   const { isDark } = usePublicTheme();
   const t = isDark ? THEME.dark : THEME.light;
+  const launcher = useLauncherState();
 
   const [open, setOpen]         = useState(false);
   const [messages, setMessages] = useState([]); // {role:'user'|'bot', text, cta?}
@@ -143,19 +145,23 @@ export default function MarketingChatBot() {
   return (
     <>
       {/* Floating button with pulse ring — exact match to the in-app HelpBot launcher */}
-      {!open && (
-        <div className="mkt-chat-launcher fixed z-[997] transition-[bottom,opacity] duration-300" style={{ right: 20, bottom: `calc(20px + max(var(--mcta-h, 0px), var(--cookie-h-full, 0px)) + env(safe-area-inset-bottom, 0px))` }}>
-          {/* "Ask Artha" pill: a label says what the face is for. */}
+      {/* Launcher: hidden until the cookie choice is made; slides away on
+          scroll down below 1024px and while the footer is in view (rules in
+          WhatsAppWidget.jsx). Phones/tablets: the 48px avatar alone. */}
+      {!open && launcher.consented && (
+        <div className="mkt-chat-launcher fixed z-[997]"
+          style={{ right: launcher.compact ? 16 : 20, bottom: `calc(${launcher.compact ? 16 : 20}px + env(safe-area-inset-bottom, 0px))`, ...launcherMotion(launcher.hidden, launcher.reduce) }}>
+          {/* Desktop "Ask Artha" pill: a label says what the face is for. */}
           <button
             type="button"
             onClick={() => { setOpen(true); track("artha_open"); }}
             aria-label="Ask Artha, the Arthaleads assistant"
-            className="relative flex items-center gap-2.5 rounded-full pl-4 pr-1.5 py-1.5 cursor-pointer transition hover:-translate-y-0.5"
+            className="relative flex items-center gap-2.5 rounded-full cursor-pointer transition hover:-translate-y-0.5 lg:pl-4 lg:pr-1.5 lg:py-1.5"
             style={{ background: t.bg, border: `1px solid ${t.border}`, boxShadow: "0 14px 34px -12px rgba(0,0,0,0.35), 0 0 0 4px rgba(255,107,0,0.10)" }}
           >
-            <span className="text-[14px] font-bold leading-[1.05] text-left" style={{ color: t.text }}>Ask<br />Artha</span>
-            <span className="relative block w-11 h-11 shrink-0">
-              <img src="/ai-avatar2-96.webp" width="96" height="96" alt="" className="w-11 h-11 rounded-full object-cover" style={{ boxShadow: "0 0 0 2px #ff6b00" }} />
+            <span className="hidden lg:block text-[14px] font-bold leading-[1.05] text-left" style={{ color: t.text }}>Ask<br />Artha</span>
+            <span className="relative block w-[46px] h-[46px] lg:w-11 lg:h-11 shrink-0">
+              <img src="/ai-avatar2-96.webp" width="96" height="96" alt="" className="w-full h-full rounded-full object-cover" style={{ boxShadow: "0 0 0 2px #ff6b00" }} />
               <span className="absolute top-0 right-0 w-3 h-3 rounded-full bg-green-500" style={{ border: `2px solid ${t.bg}` }} />
             </span>
           </button>
@@ -177,7 +183,7 @@ export default function MarketingChatBot() {
           }}
         >
           {/* Header */}
-          <div className="flex items-center gap-2.5 px-4 py-3 shrink-0" style={{ borderBottom: `1px solid ${t.border}`, background: "linear-gradient(to right, rgba(255,107,0,0.08), transparent)" }}>
+          <div className="flex items-center gap-2.5 px-4 py-1.5 shrink-0" style={{ borderBottom: `1px solid ${t.border}`, background: "linear-gradient(to right, rgba(255,107,0,0.08), transparent)" }}>
             <div className="relative shrink-0">
               <div className="w-9 h-9 rounded-full overflow-hidden">
                 <img src="/ai-avatar2-96.webp" width="96" height="96" alt="Artha" className="w-full h-full object-cover" />
@@ -191,13 +197,13 @@ export default function MarketingChatBot() {
             <div className="flex items-center gap-1">
               {messages.length > 0 && (
                 <button type="button" onClick={resetChat} aria-label="Back to home" title="Back to quick answers"
-                  className="p-1.5 rounded-lg transition cursor-pointer" style={{ color: t.textSoft }}>
+                  className="flex h-11 w-11 items-center justify-center rounded-xl transition cursor-pointer hover:bg-black/5" style={{ color: t.textSoft }}>
                   <MessageCircle className="h-4 w-4" />
                 </button>
               )}
               <button type="button" onClick={() => setOpen(false)} aria-label="Close"
-                className="p-1.5 rounded-lg transition cursor-pointer" style={{ color: t.textSoft }}>
-                <X className="h-4 w-4" />
+                className="-mr-2 flex h-11 w-11 items-center justify-center rounded-xl transition cursor-pointer hover:bg-black/5" style={{ color: t.textSoft }}>
+                <X className="h-5 w-5" />
               </button>
             </div>
           </div>
@@ -276,14 +282,14 @@ export default function MarketingChatBot() {
               placeholder="Ask about Arthaleads..."
               maxLength={500}
               disabled={loading}
-              className="flex-1 rounded-full px-4 py-2 text-sm focus:outline-none"
+              className="min-w-0 flex-1 h-11 rounded-full px-4 text-[16px] lg:text-sm focus:outline-none"
               style={{ background: t.surfaceLow, border: `1px solid ${t.border}`, color: t.text }}
             />
             <button
               type="submit"
               disabled={loading || !input.trim()}
               aria-label="Send"
-              className="flex h-9 w-9 items-center justify-center rounded-full shrink-0 cursor-pointer disabled:opacity-50 transition hover:opacity-90"
+              className="flex h-11 w-11 items-center justify-center rounded-full shrink-0 cursor-pointer disabled:opacity-50 transition hover:opacity-90"
               style={{ background: PRIMARY, color: "#fff" }}
             >
               <Send className="h-4 w-4" />

@@ -55,7 +55,8 @@ function nextDays() {
   return out;
 }
 
-const inputCls = "w-full rounded-2xl px-4 py-3 text-sm outline-none transition-shadow focus:ring-2 focus:ring-[color:var(--site-brand)]";
+// 16px text on phones so iOS does not zoom on focus; 46px tall like every site form.
+const inputCls = "w-full min-h-[46px] rounded-2xl px-4 py-3 text-base sm:text-sm leading-5 outline-none transition-shadow focus:ring-2 focus:ring-[color:var(--site-brand)]";
 const inputStyle = { background: "var(--site-bg)", border: "1px solid var(--site-line-strong)", color: "var(--site-ink)" };
 
 function Field({ label, required, hint, children, htmlFor }) {
@@ -70,14 +71,14 @@ function Field({ label, required, hint, children, htmlFor }) {
   );
 }
 
-function Choice({ options, value, onChange, multi = false, name }) {
+function Choice({ options, value, onChange, multi = false, name, required = false }) {
   const isOn = (o) => (multi ? value.includes(o) : value === o);
   const toggle = (o) => onChange(multi ? (value.includes(o) ? value.filter((x) => x !== o) : [...value, o]) : o);
   return (
-    <div role={multi ? "group" : "radiogroup"} aria-label={name} className="flex flex-wrap gap-2">
+    <div role={multi ? "group" : "radiogroup"} aria-label={name} aria-required={required || undefined} className="flex flex-wrap gap-2">
       {options.map((o) => (
         <button key={o} type="button" role={multi ? "checkbox" : "radio"} aria-checked={isOn(o)} onClick={() => toggle(o)}
-          className="rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors"
+          className="min-h-[44px] rounded-full px-4 py-2 text-[14px] sm:text-[13px] font-medium transition-colors"
           style={isOn(o)
             ? { background: "rgba(255,107,0,0.12)", color: "var(--site-brand-ink)", border: "1px solid var(--site-brand)" }
             : { background: "var(--site-bg)", color: "var(--site-text)", border: "1px solid var(--site-line-strong)" }}>
@@ -100,7 +101,8 @@ const INTRO_CHAPTERS = [
 /** The intro film, on the shared YouTube player (components/site/YouTubePlayer.jsx). */
 function IntroFilm() {
   return (
-    <div className="relative min-w-0">
+    // lg:mx-5 keeps the glass frame (inset -20px) inside the container edge.
+    <div className="relative min-w-0 lg:mx-5">
       <div aria-hidden="true" className="hero-glass" />
       <div className="relative rounded-[22px] sm:rounded-[26px] p-1.5 sm:p-2" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
         <YouTubePlayer videoId={INTRO_ID} poster="/video/intro-film-poster-1280.webp"
@@ -184,7 +186,7 @@ export default function BookDemo() {
         <Container className="relative grid lg:grid-cols-[0.9fr_1.1fr] lg:grid-rows-[auto_1fr] gap-x-14 gap-y-8 items-start">
           <div className="lg:col-start-1 lg:row-start-1">
             <p className="site-eyebrow mb-4">Book a demo</p>
-            <h1 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[32px] sm:text-[40px] lg:text-[44px]">
+            <h1 className="site-h1">
               See Arthaleads <span className="site-dim">on your own leads.</span>
             </h1>
             <p className="mt-5 text-base sm:text-[17px] leading-relaxed max-w-lg">
@@ -199,7 +201,7 @@ export default function BookDemo() {
                     {Icon === WhatsAppLogo ? <Icon className="w-[18px] h-[18px]" /> : <Icon className="w-[18px] h-[18px]" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />}
                   </span>
                   <span>
-                    <span className="block font-display text-[15px] font-bold site-ink leading-tight">{title}</span>
+                    <span className="block site-h4 !text-[15px] !leading-tight">{title}</span>
                     <span className="block mt-1 text-[13px] leading-snug">{body}</span>
                   </span>
                 </li>
@@ -218,7 +220,7 @@ export default function BookDemo() {
                 <span className="mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-5" style={{ background: "rgba(22,163,74,0.12)" }}>
                   <CircleCheck className="w-7 h-7" style={{ color: "#16a34a" }} aria-hidden="true" />
                 </span>
-                <h2 className="font-display text-2xl font-extrabold site-ink">Request received</h2>
+                <h2 className="site-h3">Request received</h2>
                 <p className="mt-3 text-[15px] leading-relaxed max-w-md mx-auto">
                   Thanks, {f.name.split(" ")[0]}. We will contact you on {f.phone} to confirm
                   {dayLabel ? ` ${dayLabel}${f.preferredTime ? `, ${f.preferredTime.split(" (")[0].toLowerCase()}` : ""}` : " a time"}.
@@ -245,19 +247,19 @@ export default function BookDemo() {
 
                 {step === 0 && (
                   <div className="grid sm:grid-cols-2 gap-4">
-                    <Field label="Full name" required htmlFor="bd-name"><input id="bd-name" className={inputCls} style={inputStyle} autoComplete="name" value={f.name} onChange={set("name")} placeholder="Rajesh Patil" /></Field>
-                    <Field label="Work email" required htmlFor="bd-email"><input id="bd-email" type="email" className={inputCls} style={inputStyle} autoComplete="email" value={f.email} onChange={set("email")} placeholder="rajesh@company.com" /></Field>
-                    <Field label="Mobile (WhatsApp)" required htmlFor="bd-phone"><input id="bd-phone" type="tel" className={inputCls} style={inputStyle} autoComplete="tel" value={f.phone} onChange={set("phone")} placeholder="+91 98765 43210" /></Field>
-                    <Field label="City" required htmlFor="bd-city"><input id="bd-city" className={inputCls} style={inputStyle} autoComplete="address-level2" value={f.city} onChange={set("city")} placeholder="Pune" /></Field>
+                    <Field label="Full name" required htmlFor="bd-name"><input id="bd-name" required className={inputCls} style={inputStyle} autoComplete="name" value={f.name} onChange={set("name")} placeholder="Rajesh Patil" /></Field>
+                    <Field label="Work email" required htmlFor="bd-email"><input id="bd-email" type="email" required className={inputCls} style={inputStyle} autoComplete="email" value={f.email} onChange={set("email")} placeholder="rajesh@company.com" /></Field>
+                    <Field label="Mobile (WhatsApp)" required htmlFor="bd-phone"><input id="bd-phone" type="tel" required className={inputCls} style={inputStyle} autoComplete="tel" value={f.phone} onChange={set("phone")} placeholder="+91 98765 43210" /></Field>
+                    <Field label="City" required htmlFor="bd-city"><input id="bd-city" required className={inputCls} style={inputStyle} autoComplete="address-level2" value={f.city} onChange={set("city")} placeholder="Pune" /></Field>
                   </div>
                 )}
 
                 {step === 1 && (
                   <div className="space-y-5">
-                    <Field label="Company name" required htmlFor="bd-company"><input id="bd-company" className={inputCls} style={inputStyle} autoComplete="organization" value={f.company} onChange={set("company")} placeholder="Milestone Properties" /></Field>
-                    <Field label="Your role" required><Choice name="Your role" options={ROLES} value={f.role} onChange={set("role")} /></Field>
-                    <Field label="Type of business" required><Choice name="Type of business" options={BUSINESS} value={f.businessType} onChange={set("businessType")} /></Field>
-                    <Field label="Sales team size" required><Choice name="Sales team size" options={TEAM} value={f.teamSize} onChange={set("teamSize")} /></Field>
+                    <Field label="Company name" required htmlFor="bd-company"><input id="bd-company" required className={inputCls} style={inputStyle} autoComplete="organization" value={f.company} onChange={set("company")} placeholder="Milestone Properties" /></Field>
+                    <Field label="Your role" required><Choice required name="Your role" options={ROLES} value={f.role} onChange={set("role")} /></Field>
+                    <Field label="Type of business" required><Choice required name="Type of business" options={BUSINESS} value={f.businessType} onChange={set("businessType")} /></Field>
+                    <Field label="Sales team size" required><Choice required name="Sales team size" options={TEAM} value={f.teamSize} onChange={set("teamSize")} /></Field>
                     <Field label="Leads per month" hint="optional"><Choice name="Leads per month" options={LEADS} value={f.monthlyLeads} onChange={set("monthlyLeads")} /></Field>
                     <Field label="Where your leads come from" hint="pick all that apply"><Choice multi name="Lead sources" options={SOURCES} value={f.leadSources} onChange={set("leadSources")} /></Field>
                     <Field label="What you use today" hint="optional" htmlFor="bd-tool"><input id="bd-tool" className={inputCls} style={inputStyle} value={f.currentTool} onChange={set("currentTool")} placeholder="Excel, another CRM (which one), nothing yet" /></Field>
@@ -281,11 +283,12 @@ export default function BookDemo() {
 
                 {error && <p role="alert" className="mt-5 text-sm font-medium" style={{ color: "#dc2626" }}>{error}</p>}
 
-                <div className="mt-7 flex items-center justify-between gap-3">
+                {/* Phones: full-width buttons, Next on top (same as /contact). */}
+                <div className="mt-7 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
                   {step > 0
-                    ? <SiteButton variant="secondary" onClick={back}><ArrowLeft className="w-4 h-4" /> Back</SiteButton>
-                    : <span className="text-[12px] site-muted">Takes about a minute</span>}
-                  <SiteButton type="submit" disabled={sending} className="disabled:cursor-not-allowed">
+                    ? <SiteButton variant="secondary" onClick={back} className="w-full sm:w-auto"><ArrowLeft className="w-4 h-4" /> Back</SiteButton>
+                    : <span className="text-[13px] site-muted text-center sm:text-left">Takes about a minute</span>}
+                  <SiteButton type="submit" disabled={sending} className="w-full sm:w-auto disabled:cursor-not-allowed">
                     {step < 2 ? <>Next <ArrowRight className="w-4 h-4" /></> : sending ? "Sending..." : <>Book my demo <ArrowRight className="w-4 h-4" /></>}
                   </SiteButton>
                 </div>
@@ -303,10 +306,11 @@ export default function BookDemo() {
           ZybPiXyK2vQ), different from the 1 AM tour film on the home page and
           /product-tour. A thumbnail until clicked, then YouTube's
           privacy-enhanced player, so nothing from YouTube loads by default. */}
-      <Section tone="tint">
+      {/* The page's signature sand band: the film is its most visual part. */}
+      <Section tone="sand">
         <Container className="grid lg:grid-cols-[0.8fr_1.2fr] gap-8 lg:gap-14 items-center">
           <div className="min-w-0">
-            <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[28px] sm:text-[36px]" style={{ textWrap: "balance" }}>
+            <h2 className="site-h2">
               What is Arthaleads? <span className="site-dim">Explained in 2 minutes.</span>
             </h2>
             <p className="mt-4 text-base sm:text-[17px] leading-relaxed max-w-lg">

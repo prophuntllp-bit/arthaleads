@@ -15,10 +15,10 @@ import { useAuth } from "../context/AuthContext";
 import { useSEO } from "../utils/useSEO";
 
 const STEPS = [
-  { icon: Share2,   title: "Share your link",  desc: "Send your unique referral link to other real estate teams, brokers, or channel partners." },
-  { icon: UserPlus, title: "They sign up",     desc: "When they create an Arthaleads account using your link, we tag them as your referral." },
-  { icon: CreditCard, title: "They subscribe", desc: "Once they upgrade to any paid plan and complete their first payment, the reward unlocks." },
-  { icon: Gift,     title: "You both earn",    desc: "You get 1 free month added to your plan, and they get 1 free month too. Everybody wins." },
+  { icon: Share2,   title: "Share your link",  desc: "Send your link to other real estate teams." },
+  { icon: UserPlus, title: "They sign up",     desc: "Their account is tagged as your referral." },
+  { icon: CreditCard, title: "They subscribe", desc: "Their first paid plan unlocks the reward." },
+  { icon: Gift,     title: "You both earn",    desc: "One free month each, added to both plans." },
 ];
 
 const TERMS = [
@@ -69,13 +69,13 @@ function ReferralBox() {
         <span className="site-icon w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
           <Gift className="w-[22px] h-[22px]" style={brandInk} aria-hidden="true" />
         </span>
-        <h2 className="font-display text-xl font-bold site-ink mb-2">Get your referral link</h2>
+        <h2 className="site-h3 !mb-2">Get your referral link</h2>
         <p className="text-[15px] leading-relaxed mb-6 max-w-sm">
-          Log in to your Arthaleads account to generate your unique referral link and start earning free months.
+          Log in to get your unique link and start earning free months.
         </p>
         <div className="flex items-center justify-center gap-3 flex-wrap">
-          <SiteButton href={CRM_LOGIN_URL} {...CRM_LINK_PROPS} variant="secondary">Log In</SiteButton>
-          <SiteButton href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}>Create Account</SiteButton>
+          <SiteButton href={CRM_LOGIN_URL} {...CRM_LINK_PROPS} variant="secondary">Log in</SiteButton>
+          <SiteButton href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}>Create account</SiteButton>
         </div>
       </Card>
     );
@@ -85,7 +85,7 @@ function ReferralBox() {
     <Card raised className="h-full p-6 sm:p-7">
       <div className="flex items-center gap-2 mb-1.5">
         <Sparkles className="w-4 h-4" style={brandInk} aria-hidden="true" />
-        <h2 className="font-display text-[15px] font-bold site-ink">Your referral link</h2>
+        <h2 className="site-h4">Your referral link</h2>
       </div>
       <p className="text-[14px] leading-relaxed mb-4">Share this link. You both get a free month when they subscribe.</p>
 
@@ -121,8 +121,8 @@ function EarningsCalculator() {
 
   return (
     <Card raised className="h-full p-6 sm:p-7">
-      <h2 className="font-display text-[17px] font-bold site-ink mb-1">How much can you earn?</h2>
-      <p className="text-[14px] leading-relaxed mb-5">Drag to see your free months based on how many teams you refer.</p>
+      <h2 className="site-h3 !mb-1">How much can you earn?</h2>
+      <p className="text-[14px] leading-relaxed mb-5">Drag to see your free months.</p>
 
       <div className="flex items-center justify-between mb-2">
         <label htmlFor="ref-count" className="text-[13px] site-muted">Referrals who subscribe</label>
@@ -132,7 +132,7 @@ function EarningsCalculator() {
         id="ref-count"
         type="range" min="1" max="12" value={count}
         onChange={(e) => setCount(Number(e.target.value))}
-        className="w-full cursor-pointer"
+        className="w-full h-11 cursor-pointer"
         style={{ accentColor: "#ff6b00" }}
       />
 
@@ -141,7 +141,7 @@ function EarningsCalculator() {
         <p className="font-display text-[30px] sm:text-[32px] font-extrabold leading-tight"><span className="site-dim">{capped} free month{capped !== 1 ? "s" : ""}</span></p>
         {months > 6 && (
           <p className="text-xs site-muted mt-1.5">
-            (Capped at 6 free months per year, but keep referring: it resets annually!)
+            Capped at 6 free months a year; the cap resets every year.
           </p>
         )}
       </div>
@@ -161,7 +161,7 @@ export default function ReferEarn() {
       <PageHero
         eyebrow="Refer and earn"
         title={<>Give a month, <span className="site-dim">get a month</span></>}
-        lede="Love Arthaleads? Refer another real estate team. When they subscribe, you both get a free month. No limits on how many friends you invite."
+        lede="Refer another real estate team. When they subscribe, you both get a free month."
         actions={[
           { label: "Get your referral link", href: "#refer" },
           { label: "How it works", href: "#how-it-works" },
@@ -171,30 +171,29 @@ export default function ReferEarn() {
 
       {/* Referral box + calculator */}
       <Section tone="tint" id="refer" className="!pt-12 sm:!pt-16">
-        <Container className="!max-w-[960px] grid md:grid-cols-2 gap-4 sm:gap-5 items-stretch">
+        <Container className="grid md:grid-cols-2 gap-4 sm:gap-5 items-stretch">
           <Reveal className="min-w-0"><ReferralBox /></Reveal>
           <Reveal delay={100} className="min-w-0"><EarningsCalculator /></Reveal>
         </Container>
       </Section>
 
-      {/* How it works */}
-      <Section tone="white" id="how-it-works">
+      {/* How it works: the page's signature sand band */}
+      <Section tone="sand" id="how-it-works">
         <Container>
-          <SectionHeader eyebrow="Four steps" title="How it works" align="center"
-            lede="Four simple steps from sharing to earning." />
-          <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <SectionHeader eyebrow="Four steps" title="How it works" align="center" />
+          <ol className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {STEPS.map((s, i) => (
               <Reveal as="li" key={s.title} delay={i * 80} className="min-w-0 flex">
-                <Card glow className="w-full p-6">
-                  <div className="flex items-center justify-between mb-5">
+                <Card glow className="w-full p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-4 sm:mb-5">
                     <span className="font-display w-10 h-10 rounded-full flex items-center justify-center text-base font-extrabold text-white"
                       style={{ background: "var(--brand-btn)", boxShadow: "0 12px 26px -12px rgba(204,75,0,0.7)" }}>{i + 1}</span>
-                    <span className="site-icon w-10 h-10 rounded-xl flex items-center justify-center" style={iconTile}>
+                    <span className="site-icon hidden min-[380px]:flex w-10 h-10 rounded-xl items-center justify-center" style={iconTile}>
                       <s.icon className="w-5 h-5" style={brandInk} aria-hidden="true" />
                     </span>
                   </div>
-                  <h3 className="font-display text-lg font-bold site-ink mb-2">{s.title}</h3>
-                  <p className="text-[15px] leading-relaxed">{s.desc}</p>
+                  <h3 className="site-h4 !mb-1.5">{s.title}</h3>
+                  <p className="text-[14px] sm:text-[15px] leading-relaxed">{s.desc}</p>
                 </Card>
               </Reveal>
             ))}
@@ -204,16 +203,16 @@ export default function ReferEarn() {
 
       {/* Terms */}
       <Section tone="tint">
-        <Container narrow>
+        <Container>
           <Reveal>
-            <Card raised className="p-6 sm:p-9">
-              <div className="flex items-center gap-3 mb-6">
+            <Card raised className="p-6 sm:p-9 lg:grid lg:grid-cols-[260px_1fr] lg:gap-12">
+              <div className="flex lg:flex-col items-center lg:items-start gap-3 mb-6 lg:mb-0">
                 <span className="site-icon w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={iconTile}>
                   <Users className="w-5 h-5" style={brandInk} aria-hidden="true" />
                 </span>
-                <h2 className="font-display text-xl sm:text-2xl font-bold site-ink">Program terms</h2>
+                <h2 className="site-h3">Program terms</h2>
               </div>
-              <ul className="space-y-3.5">
+              <ul className="space-y-3.5 max-w-[720px]">
                 {TERMS.map((t) => (
                   <li key={t} className="flex items-start gap-3">
                     <Check className="w-4 h-4 shrink-0 mt-1" style={{ color: "#16a34a" }} aria-hidden="true" />

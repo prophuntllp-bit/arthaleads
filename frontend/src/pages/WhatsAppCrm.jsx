@@ -8,9 +8,9 @@
 // data/plans.js, the WhatsApp feature copy from data/features.js.
 import { Link } from "react-router-dom";
 import { Bot, Inbox, UserCheck, Megaphone, ShieldCheck, Clock, Wallet, Sparkles, CalendarCheck2 } from "lucide-react";
-import SolutionPage, { solutionJsonLd } from "../components/SolutionPage";
+import SolutionPage, { solutionJsonLd, MiniChat } from "../components/SolutionPage";
 import HeroChat from "../components/HeroChat";
-import { FloatCard, Cycle, CaptureViz } from "../components/site/HomeVisuals";
+import { FloatCard, Cycle } from "../components/site/HomeVisuals";
 import { FacebookLogo } from "../components/site/BrandLogos";
 import { useSEO } from "../utils/useSEO";
 import { waLink, WA_MESSAGES } from "../utils/crmLinks";
@@ -35,19 +35,21 @@ const FAQS = [
    `The shared inbox and automatic lead capture are on Starter (₹${PLAN_PRICING.starter.monthly} per user per month). The WhatsApp AI agent, AI-written replies, templates and campaigns are on Growth (₹${PLAN_PRICING.growth.monthly} per user per month). Every plan starts with a 14-day free trial.`],
 ];
 
-/** The hero: the home page's WhatsApp phone with two status cards beside it. */
+/** The hero: the home page's WhatsApp phone with two status cards beside it.
+    The phone is a fixed 290px wide (was 0.53 x height, about 236px on a 1024 x
+    768 tablet, which cut "Raj Patil" and the quick replies: UI audit 31 Oct 2026). */
 function PhoneVisual() {
   return (
-    <div className="relative mx-auto w-full max-w-[290px]" style={{ "--hc-h": "clamp(420px, 58svh, 480px)", "--hc-w": "calc(var(--hc-h) * 0.53)" }}>
+    <div className="relative mx-auto w-full max-w-[290px]" style={{ "--hc-h": "clamp(470px, 64svh, 540px)", "--hc-w": "290px" }}>
       <div aria-hidden="true" className="hero-glass" />
       <div className="relative py-4"><HeroChat /></div>
-      <FloatCard index={0} className="hidden sm:flex -left-10 lg:-left-20 top-[3%] items-center gap-3 !py-3 max-w-[240px]">
+      <FloatCard index={0} className="hidden sm:flex -left-10 lg:-left-16 xl:-left-24 top-[1%] items-center gap-3 !py-3 max-w-[240px]">
         <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(24,119,242,0.12)" }}><FacebookLogo className="w-[18px] h-[18px]" /></span>
-        <Cycle items={["Riverview Heights campaign", "Skyline Residency campaign", "Green Acres campaign"]} offset={600}>{(c) => <span className="min-w-0 block"><span className="block text-[13px] font-semibold site-ink leading-tight">New lead · Facebook ad</span><span className="block text-[11px] site-muted leading-tight mt-0.5">{c}</span></span>}</Cycle>
+        <Cycle items={["Riverview Heights campaign", "Skyline Residency campaign", "Green Acres campaign"]} offset={600}>{(c) => <span className="min-w-0 block"><span className="block text-[13px] font-semibold site-ink leading-tight">New lead · Facebook ad</span><span className="block text-[12px] site-muted leading-tight mt-0.5">{c}</span></span>}</Cycle>
       </FloatCard>
-      <FloatCard index={1} className="hidden sm:flex -right-10 lg:-right-20 bottom-[14%] items-center gap-3 !py-3 max-w-[240px]">
+      <FloatCard index={1} className="hidden sm:flex -right-10 lg:-right-16 xl:-right-24 bottom-[2%] items-center gap-3 !py-3 max-w-[240px]">
         <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(22,163,74,0.12)" }}><CalendarCheck2 className="w-[18px] h-[18px]" style={{ color: "var(--site-green)" }} /></span>
-        <Cycle items={["Saturday · 11:00 AM", "Sunday · 4:00 PM", "Monday · 10:30 AM"]} offset={2200}>{(v) => <span className="min-w-0 block"><span className="block text-[13px] font-semibold site-ink leading-tight">Site visit booked</span><span className="block text-[11px] site-muted leading-tight mt-0.5">{v}</span></span>}</Cycle>
+        <Cycle items={["Saturday · 11:00 AM", "Sunday · 4:00 PM", "Monday · 10:30 AM"]} offset={2200}>{(v) => <span className="min-w-0 block"><span className="block text-[13px] font-semibold site-ink leading-tight">Site visit booked</span><span className="block text-[12px] site-muted leading-tight mt-0.5">{v}</span></span>}</Cycle>
       </FloatCard>
     </div>
   );
@@ -63,6 +65,7 @@ export default function WhatsAppCrm() {
   return (
     <SolutionPage
       jsonLd={solutionJsonLd({ name: "WhatsApp CRM", path: "/whatsapp-crm", faqs: FAQS })}
+      signature={{ tone: "dark", layout: "split" }}
       hero={{
         eyebrow: "WhatsApp CRM",
         actions: [
@@ -71,47 +74,52 @@ export default function WhatsAppCrm() {
         ],
         trust: ["Official WhatsApp Business Platform", "One shared team inbox", "AI replies day and night"],
         lines: ["The WhatsApp CRM", "for real estate teams"],
-        lede: "Buyers message you on WhatsApp first. Arthaleads answers them in seconds with an AI agent, saves every chat as a lead with the buyer's budget and needs filled in, and gives your whole team one inbox to follow up from.",
+        lede: "Buyers message you on WhatsApp first. Arthaleads answers in seconds with an AI agent, saves every chat as a lead and gives your team one inbox.",
         visual: <PhoneVisual />,
       }}
       answer={{
         q: "Why property teams need a WhatsApp CRM",
         paras: [
           "In Indian real estate, many enquiries now start on WhatsApp. A buyer taps an ad, messages at 10 PM, and expects an answer before they message the next builder. If that chat sits on one agent's phone, it is answered late, the buyer's budget and timeline live only in that chat, and nobody else on the team knows it exists.",
-          <>A WhatsApp CRM fixes that. The chat, the buyer's details and the next step all live in one lead record the whole team can see. Replies go out in seconds, even at night, and the manager knows which ads produce real buyers. It is the same lead management discipline described in our guide to{" "}
-            <Link to="/blog/real-estate-lead-management-enquiry-to-site-visit" className={linkCls} style={brandInk}>real estate lead management</Link>, applied to the channel your buyers use most.</>,
+          <>A WhatsApp CRM puts the chat, the buyer's details and the next step in one lead the whole team can see. It is the{" "}
+            <Link to="/blog/real-estate-lead-management-enquiry-to-site-visit" className={linkCls} style={brandInk}>real estate lead management</Link> discipline, on the channel your buyers use most.</>,
         ],
       }}
       steps={{
         title: "How the WhatsApp CRM works",
         intro: "From the first message to a booked site visit, in four steps.",
         items: [
-          { title: "A buyer messages you", body: "From a Facebook or Instagram click-to-WhatsApp ad, the button on your website, a hoarding QR code or a number they saved. Every chat arrives in one team inbox, not on one agent's phone." },
-          { title: "The AI agent replies in seconds", body: "Day or night, in the buyer's language. It answers questions about your project, asks what they need, their budget and when they plan to buy, and shares the brochure and location." },
-          { title: "The chat becomes a lead", body: "The lead is created with the buyer's answers already filled in and the ad or source it came from. Routing rules give it an owner and their phone gets a push alert." },
-          { title: "Your team takes it from there", body: "The agent sees the whole conversation, takes over the chat whenever they like, books the site visit and sets the next follow-up, all from the same screen." },
+          { title: "A buyer messages you", body: "From a click-to-WhatsApp ad, your website, a hoarding QR code or a saved number, into one team inbox." },
+          { title: "The AI agent replies in seconds", body: "Day or night, in the buyer's language: project questions, budget, timeline, brochure and location." },
+          { title: "The chat becomes a lead", body: "With the buyer's answers and the ad it came from, routed to an owner with a push alert." },
+          { title: "Your team takes it from there", body: "The agent reads the chat, takes over, books the site visit and sets the next follow-up." },
         ],
       }}
       features={{
-        visual: <CaptureViz />,
+        visual: <MiniChat contact={{ name: "Raj Patil", sub: "Facebook ad · Riverview Heights" }} note="Replies here are sent by the Arthaleads AI agent" messages={[
+          ["buyer", "Hi, is the 2 BHK at Riverview Heights still available? What's the price?"],
+          ["ai", "Hi Raj, yes it is. 2 BHK homes start at ₹82 L. Are you buying to live in or as an investment?"],
+          ["buyer", "To live in. Can I see it this weekend?"],
+          ["ai", "Of course. Saturday 11 AM or Sunday 4 PM?"],
+        ]} />,
         title: "Everything your team needs on WhatsApp",
-        intro: "Built on the official WhatsApp Business Platform. The plan each feature starts on is shown on its card.",
+        intro: "On the official WhatsApp Business Platform. Each card shows the plan it starts on.",
         items: [
-          { icon: Inbox,       title: "Shared WhatsApp inbox",        body: "One business number for the whole team. Managers see every chat, and nothing is lost when an agent is on leave or leaves.", plan: "all" },
-          { icon: UserCheck,   title: "Every chat becomes a lead",    body: "New WhatsApp contacts are added as leads automatically, with the ad name for click-to-WhatsApp chats, so you know what each campaign brought in.", plan: "all" },
-          { icon: Bot,         title: "WhatsApp AI agent",            body: "Answers buyers 24/7 in English, Hinglish, Hindi or Marathi, qualifies them and books site visits. Your team can take over any chat at any time.", plan: "Growth" },
-          { icon: Sparkles,    title: "AI-written replies",           body: "For any lead, AI drafts a personal message using their name, project interest and budget. The agent reviews it and sends in seconds.", plan: "Growth" },
-          { icon: Megaphone,   title: "Templates and campaigns",      body: "Send approved WhatsApp templates to a filtered list of leads, for launches, price updates and site visit reminders.", plan: "Growth" },
-          { icon: ShieldCheck, title: "Consent on every lead",        body: "Each lead carries a WhatsApp consent status. Marketing templates skip anyone who said no, and you can filter your audience by consent before you send.", plan: "Growth" },
-          { icon: Clock,       title: "Business hours and routing",   body: "Set your business profile, working hours with an automatic away message, and who gets each new conversation.", plan: "all" },
-          { icon: Wallet,      title: "Prepaid credits, clear bills", body: "WhatsApp messages are paid from a prepaid credit balance. Top up online and see a statement of every charge.", plan: "all" },
+          { icon: Inbox,       title: "Shared WhatsApp inbox",        body: "One business number for the whole team, and no chat lost when an agent leaves.", plan: "all" },
+          { icon: UserCheck,   title: "Every chat becomes a lead",    body: "New contacts become leads automatically, with the ad name for click-to-WhatsApp chats.", plan: "all" },
+          { icon: Bot,         title: "WhatsApp AI agent",            body: "Answers 24/7 in English, Hinglish, Hindi or Marathi and books site visits.", plan: "Growth" },
+          { icon: Sparkles,    title: "AI-written replies",           body: "A personal draft with the buyer's name, project and budget, ready to review and send.", plan: "Growth" },
+          { icon: Megaphone,   title: "Templates and campaigns",      body: "Approved templates to filtered leads for launches, price updates and visit reminders.", plan: "Growth" },
+          { icon: ShieldCheck, title: "Consent on every lead",        body: "Marketing templates skip anyone who said no to WhatsApp messages.", plan: "Growth" },
+          { icon: Clock,       title: "Business hours and routing",   body: "Working hours, an automatic away message and who gets each new chat.", plan: "all" },
+          { icon: Wallet,      title: "Prepaid credits, clear bills", body: "Messages are paid from a prepaid balance, with a statement of every charge.", plan: "all" },
         ],
       }}
       compare={{
         // Plain-language comparison with the free WhatsApp Business app, which is
         // what most brokers use today. No claims about other CRMs here.
         title: "WhatsApp Business app vs a WhatsApp CRM",
-        intro: "The free WhatsApp Business app is fine for one person. Once several agents handle enquiries, this is what changes.",
+        intro: "The free app is fine for one person. With several agents, this is what changes.",
         cols: ["WhatsApp Business app", "Arthaleads WhatsApp CRM"],
         rows: [
           ["Who can reply", "Whoever holds the phone", "The whole team, from one shared inbox"],

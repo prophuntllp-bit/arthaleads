@@ -44,15 +44,11 @@ export default function ProductTour() {
         <div aria-hidden="true" className="hero-warm" style={{ opacity: 0.55 }} />
         <Container className="relative">
           <div className="max-w-4xl">
-            <h1 className="font-display site-ink font-extrabold tracking-[-0.03em]">
-              <span className="site-eyebrow block mb-4 sm:mb-5">Product tour</span>{" "}
-              <span className="block text-[32px] leading-[1.1] sm:text-[44px] lg:text-[50px]" style={{ textWrap: "balance" }}>
-                Arthaleads in 2 minutes: <span className="site-dim">the real estate CRM that answers buyers at 1 AM</span>
-              </span>
+            <h1 className="site-h1">
+              Arthaleads in 2 minutes: <span className="site-dim">the real estate CRM that answers buyers at 1 AM</span>
             </h1>
             <p className="mt-5 mb-8 text-base sm:text-[17px] leading-relaxed max-w-2xl">
-              See the WhatsApp AI agent qualify a buyer and book the site visit, every answer land in the
-              lead, and your team start the morning knowing exactly who to call. In English and Hindi.
+              The WhatsApp AI agent qualifies a buyer, books the visit and fills in the lead. In English and Hindi.
             </p>
           </div>
           <IntroVideo isDark={isDark} id="film" chapters seek={seek} />
@@ -60,10 +56,11 @@ export default function ProductTour() {
       </Section>
 
       {/* Chapters */}
-      <Section tone="tint">
-        <Container narrow>
+      {/* Signature band: the chapter grid, full container width. */}
+      <Section tone="sand">
+        <Container>
           <SectionHeader eyebrow="Chapters" title="Jump to the part you care about" />
-          <ol className="grid sm:grid-cols-2 gap-3">
+          <ol className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {CHAPTERS.map((c) => (
               <li key={c.t}>
                 <Card as="button" type="button" glow onClick={() => jump(c.t)}
@@ -84,10 +81,11 @@ export default function ProductTour() {
           <SectionHeader eyebrow="Transcript" title="Everything the film says" />
           <Card raised className="p-6 sm:p-8 space-y-5">
             {TRANSCRIPT.map((p) => (
-              <div key={p.t} className="flex gap-4">
+              <div key={p.t} className="flex gap-3">
+                {/* 44px hit area around the small time stamp (it stays visually compact). */}
                 <button type="button" onClick={() => jump(p.t)} aria-label={`Play from ${fmtTime(p.t)}`}
-                  className={`${stamp} h-fit hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ff6b00]`} style={stampStyle}>
-                  {fmtTime(p.t)}
+                  className="group shrink-0 self-start -mt-[9px] -ml-1 min-h-[44px] min-w-[52px] px-1 flex items-center rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ff6b00]">
+                  <span className={`${stamp} group-hover:underline`} style={stampStyle}>{fmtTime(p.t)}</span>
                 </button>
                 <p className="text-base leading-relaxed site-ink">{p.text}</p>
               </div>

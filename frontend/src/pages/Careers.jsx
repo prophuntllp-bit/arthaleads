@@ -78,10 +78,10 @@ const JOBS = [
 ];
 
 const PERKS = [
-  { icon: TrendingUp, title: "Growth-first culture",  desc: "Direct access to founders. Your ideas ship, not sit in queues." },
-  { icon: Zap,        title: "Fast-moving team",      desc: "Small team, big impact. No bureaucracy, no endless meetings." },
-  { icon: Users,      title: "Real estate exposure",  desc: "Work closely with the developers and channel partners who use the product." },
-  { icon: Heart,      title: "Competitive pay",       desc: "Market-rate salary + performance incentives + growth track." },
+  { icon: TrendingUp, title: "Growth-first culture",  desc: "Direct access to the founders." },
+  { icon: Zap,        title: "Fast-moving team",      desc: "Small team, no bureaucracy." },
+  { icon: Users,      title: "Real estate exposure",  desc: "Work with the builders who use it." },
+  { icon: Heart,      title: "Competitive pay",       desc: "Market salary plus incentives." },
 ];
 
 const EXP_OPTIONS = [
@@ -93,24 +93,24 @@ const EXP_OPTIONS = [
 ];
 
 const STATS = [
-  { label: "Open Positions",   value: "2" },
-  { label: "Minutes to Apply", value: "5 min" },
-  { label: "Full-time Roles",  value: "2" },
-  { label: "Based In",         value: "Pune" },
+  { label: "Open positions",   value: "2" },
+  { label: "Minutes to apply", value: "5 min" },
+  { label: "Full-time roles",  value: "2" },
+  { label: "Based in",         value: "Pune" },
 ];
 
 const CULTURE = [
-  { icon: Rocket,     title: "Ship every week",            desc: "We don't wait for perfection. We ship, learn, and improve continuously." },
-  { icon: Target,     title: "Direct ownership",            desc: "You own your work end-to-end. No hand-offs, no waiting for approvals." },
-  { icon: Eye,        title: "Transparent by default",     desc: "All company metrics, decisions, and direction shared with the full team." },
-  { icon: Lightbulb,  title: "Build from first principles", desc: "We question everything. If there's a better way, we do it that way." },
-  { icon: TrendingUp, title: "Grow with us",                desc: "Take on more as the company grows. Early team members shape how it is built." },
-  { icon: Handshake,  title: "Customer-obsessed",           desc: "Our best ideas come from spending time with real estate teams in Pune." },
+  { icon: Rocket,     title: "Ship every week",            desc: "Ship, learn, improve." },
+  { icon: Target,     title: "Direct ownership",            desc: "You own your work end to end." },
+  { icon: Eye,        title: "Transparent by default",     desc: "Metrics and decisions shared with all." },
+  { icon: Lightbulb,  title: "Build from first principles", desc: "If there is a better way, we take it." },
+  { icon: TrendingUp, title: "Grow with us",                desc: "Early joiners shape the company." },
+  { icon: Handshake,  title: "Customer-obsessed",           desc: "Ideas come from real estate teams." },
 ];
 
 const iconTile = { background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" };
 const brandInk = { color: "var(--site-brand-ink)" };
-const inputCls = "w-full rounded-2xl px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-[color:var(--site-brand)]";
+const inputCls = "w-full min-h-[46px] rounded-2xl px-4 py-3 text-base sm:text-sm leading-5 outline-none transition focus:ring-2 focus:ring-[color:var(--site-brand)]";
 const inputStyle = { background: "var(--site-bg)", border: "1px solid var(--site-field-line)", color: "var(--site-ink)" };
 
 const MAX_RESUME_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -237,10 +237,10 @@ function ApplyModal({ job, onClose }) {
               <Briefcase className="w-5 h-5" style={brandInk} aria-hidden="true" />
             </span>
             <div>
-              <h2 id="apply-title" className="font-display text-base sm:text-lg font-bold site-ink leading-tight">{job.title}</h2>
+              <h2 id="apply-title" className="site-h3">{job.title}</h2>
             </div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="p-1 mt-0.5 shrink-0 site-muted hover:opacity-80">
+          <button type="button" onClick={onClose} aria-label="Close" className="w-11 h-11 -mr-2 -mt-2 flex items-center justify-center rounded-full shrink-0 site-muted hover:opacity-80">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -251,7 +251,7 @@ function ApplyModal({ job, onClose }) {
             <span className="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-5" style={{ background: "rgba(22,163,74,0.12)" }}>
               <CheckCircle className="w-8 h-8" style={{ color: "#16a34a" }} aria-hidden="true" />
             </span>
-            <h3 className="font-display text-2xl font-extrabold site-ink mb-2.5">Application Submitted!</h3>
+            <h3 className="site-h3 !mb-2.5">Application submitted</h3>
             <p className="text-[15px] leading-relaxed max-w-sm mx-auto mb-7">
               Thanks for applying for <strong className="site-ink">{job.title}</strong>. Our HR team will review your application and get back to you at <strong style={brandInk}>{form.email}</strong>.
             </p>
@@ -314,11 +314,11 @@ function ApplyModal({ job, onClose }) {
                   <>
                     <Paperclip className="w-4 h-4 shrink-0" style={brandInk} aria-hidden="true" />
                     <span className="flex-1 min-w-0 truncate text-[13px] site-ink">{resumeFile.name}</span>
-                    <span className="text-[11px] site-muted shrink-0">{(resumeFile.size / 1024).toFixed(0)} KB</span>
+                    <span className="text-xs site-muted shrink-0">{(resumeFile.size / 1024).toFixed(0)} KB</span>
                     <button
                       type="button" aria-label="Remove file"
                       onClick={e => { e.stopPropagation(); setResumeFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
-                      className="p-0.5 shrink-0 site-muted"
+                      className="w-9 h-9 -my-2 -mr-2 flex items-center justify-center shrink-0 site-muted"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -328,7 +328,7 @@ function ApplyModal({ job, onClose }) {
                     <Upload className="w-4 h-4 shrink-0 site-muted" aria-hidden="true" />
                     <span className="text-[13px] site-muted">
                       Click to upload PDF, DOC, or DOCX
-                      <span className="ml-1.5 text-[11px]">(max 5 MB)</span>
+                      <span className="ml-1.5 text-xs">(max 5 MB)</span>
                     </span>
                   </>
                 )}
@@ -353,7 +353,7 @@ function ApplyModal({ job, onClose }) {
               <SiteButton type="submit" disabled={status === "loading"} className="disabled:opacity-60 disabled:cursor-not-allowed">
                 {status === "loading"
                   ? <><Loader className="w-4 h-4 animate-spin" /> Submitting...</>
-                  : <><Mail className="w-4 h-4" /> Submit Application</>}
+                  : <><Mail className="w-4 h-4" /> Submit application</>}
               </SiteButton>
               <span className="text-xs site-muted">Sent to hr@arthaleads.com</span>
             </div>
@@ -390,7 +390,7 @@ function JobCard({ job, onApply }) {
                 <span style={brandInk}>{job.department}</span>
                 <span className="site-muted"> · {job.type}</span>
               </p>
-              <h3 className="font-display text-lg sm:text-xl font-bold site-ink leading-tight mb-1.5">{job.title}</h3>
+              <h3 className="site-h3 !mb-1.5">{job.title}</h3>
               <p className="text-[14px] leading-relaxed mb-3">{job.tagline}</p>
               <div className="flex flex-wrap gap-x-4 gap-y-1.5">
                 {[
@@ -423,13 +423,13 @@ function JobCard({ job, onApply }) {
         <div className="border-t px-5 sm:px-7 pt-6 pb-7 sm:pb-8" style={{ borderColor: "var(--site-line)" }}>
           <p className="text-[15px] leading-relaxed mb-6">{job.about}</p>
 
-          <div className="grid md:grid-cols-2 gap-7">
+          <div className="grid md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-7">
             {[
               { label: "Responsibilities", items: job.responsibilities },
               { label: "Requirements",     items: job.requirements },
             ].map(({ label, items }) => (
               <div key={label} className="min-w-0">
-                <h4 className="site-eyebrow !text-[12px] mb-3">{label}</h4>
+                <h4 className="site-h4 !mb-3">{label}</h4>
                 <ul className="space-y-2">
                   {items.map(r => (
                     <li key={r} className="flex items-start gap-2.5 text-[14px] leading-relaxed">
@@ -444,7 +444,7 @@ function JobCard({ job, onApply }) {
 
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <SiteButton onClick={() => onApply(job)}>
-              <Mail className="w-4 h-4" /> Apply Now <ArrowRight className="w-4 h-4" />
+              <Mail className="w-4 h-4" /> Apply now <ArrowRight className="w-4 h-4" />
             </SiteButton>
             <span className="text-xs site-muted">Takes ~5 minutes</span>
           </div>
@@ -473,14 +473,14 @@ export default function Careers() {
       <PageHero
         eyebrow="We're actively hiring"
         title={<>Build the future of <span className="site-dim">real estate tech</span></>}
-        lede="We're a small, fast-moving team building the CRM that powers property sales across Maharashtra. Join us before we get big."
+        lede="A small, fast team building the CRM for property sales in Maharashtra. Join early."
         actions={
           <div className="mt-7 flex flex-wrap gap-2.5 sm:gap-3 justify-center lg:justify-start">
             <SiteButton onClick={scrollToPositions} className="!px-6 sm:!px-7 sm:min-h-[3.5rem] sm:text-base">
-              View Open Positions <ArrowRight className="w-4 h-4" />
+              View open positions <ArrowRight className="w-4 h-4" />
             </SiteButton>
             <SiteButton href="mailto:hr@arthaleads.com" variant="secondary" className="!px-6 sm:!px-7 sm:min-h-[3.5rem] sm:text-base">
-              <Mail className="w-4 h-4" /> Say Hello
+              <Mail className="w-4 h-4" /> Say hello
             </SiteButton>
           </div>
         }
@@ -513,10 +513,10 @@ export default function Careers() {
 
       {/* Open positions */}
       <Section tone="white" id="open-positions">
-        <Container narrow>
-          <SectionHeader eyebrow="2 positions open" title="Open Positions" align="center"
-            lede="Click a role to see the full details, then hit Apply Now." />
-          <div className="space-y-4">
+        <Container>
+          <SectionHeader eyebrow="2 positions open" title="Open positions" align="center"
+            lede="Open a role for the details, then apply." />
+          <div className="grid lg:grid-cols-2 gap-4 items-start">
             {JOBS.map((job, i) => (
               <Reveal key={job.id} delay={i * 120}>
                 <JobCard job={job} onApply={setApplyJob} />
@@ -526,20 +526,19 @@ export default function Careers() {
         </Container>
       </Section>
 
-      {/* Culture */}
-      <Section tone="tint">
+      {/* Culture: the page's signature sand band */}
+      <Section tone="sand">
         <Container>
-          <SectionHeader eyebrow="Life at Arthaleads" title="How we work" align="center"
-            lede="Six principles that define how our team operates every day." />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <SectionHeader eyebrow="Life at Arthaleads" title="How we work" align="center" />
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {CULTURE.map(({ icon: Icon, title, desc }, i) => (
               <Reveal key={title} delay={(i % 3) * 80} className="min-w-0 flex">
-                <Card glow className="w-full p-6 sm:p-7">
-                  <span className="site-icon w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
-                    <Icon className="w-[22px] h-[22px]" style={brandInk} aria-hidden="true" />
+                <Card glow className="w-full p-4 sm:p-7">
+                  <span className="site-icon w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-4 sm:mb-5" style={iconTile}>
+                    <Icon className="w-5 h-5 sm:w-[22px] sm:h-[22px]" style={brandInk} aria-hidden="true" />
                   </span>
-                  <h3 className="font-display text-lg font-bold site-ink mb-2">{title}</h3>
-                  <p className="text-[15px] leading-relaxed">{desc}</p>
+                  <h3 className="site-h4 !mb-1.5">{title}</h3>
+                  <p className="text-[14px] sm:text-[15px] leading-relaxed">{desc}</p>
                 </Card>
               </Reveal>
             ))}
@@ -552,16 +551,16 @@ export default function Careers() {
         <Container>
           <SectionHeader eyebrow="Why join us" align="center"
             title={<>Built for people who want to <span className="site-dim">make an impact</span></>}
-            lede="Small team. Big real-estate market. Every person here shapes how the product works." />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            lede="Every person here shapes how the product works." />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {PERKS.map(({ icon: Icon, title, desc }, i) => (
               <Reveal key={title} delay={i * 80} className="min-w-0 flex">
-                <Card glow className="w-full p-6">
-                  <span className="site-icon w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
-                    <Icon className="w-[22px] h-[22px]" style={brandInk} aria-hidden="true" />
+                <Card glow className="w-full p-4 sm:p-6">
+                  <span className="site-icon w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-4 sm:mb-5" style={iconTile}>
+                    <Icon className="w-5 h-5 sm:w-[22px] sm:h-[22px]" style={brandInk} aria-hidden="true" />
                   </span>
-                  <h3 className="font-display text-lg font-bold site-ink mb-2">{title}</h3>
-                  <p className="text-[15px] leading-relaxed">{desc}</p>
+                  <h3 className="site-h4 !mb-1.5">{title}</h3>
+                  <p className="text-[14px] sm:text-[15px] leading-relaxed">{desc}</p>
                 </Card>
               </Reveal>
             ))}
@@ -571,15 +570,15 @@ export default function Careers() {
 
       {/* Open application */}
       <Section tone="tint">
-        <Container narrow>
+        <Container>
           <Reveal>
-            <Card raised className="overflow-hidden grid sm:grid-cols-[1fr_220px]">
+            <Card raised className="overflow-hidden grid sm:grid-cols-[1fr_240px] lg:grid-cols-[1fr_320px]">
               <div className="p-6 sm:p-10">
-                <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.15] text-[26px] sm:text-[32px] mb-3">
+                <h2 className="site-h2 !mb-3">
                   Don't see the right role?
                 </h2>
                 <p className="text-[15px] leading-relaxed mb-7 max-w-md">
-                  We're always open to hearing from talented people excited about real estate tech. Drop us a note. We review every message.
+                  Excited about real estate tech? Drop us a note. We read every one.
                 </p>
                 <div className="flex flex-wrap items-center gap-3">
                   <SiteButton href="mailto:hr@arthaleads.com?subject=General Application - Arthaleads">
@@ -596,8 +595,8 @@ export default function Careers() {
                   { val: "Full-time", label: "Roles" },
                 ].map(({ val, label }) => (
                   <li key={label} className="text-center">
-                    <p className="font-display text-[22px] font-extrabold leading-none" style={brandInk}>{val}</p>
-                    <p className="text-[12px] site-muted mt-1 font-medium">{label}</p>
+                    <p className="site-h3 leading-none" style={brandInk}>{val}</p>
+                    <p className="text-[13px] site-muted mt-1 font-medium">{label}</p>
                   </li>
                 ))}
               </ul>

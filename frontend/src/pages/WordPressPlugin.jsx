@@ -65,22 +65,22 @@ function WordPressMark({ size = 18 }) {
 }
 
 const INSTALL_STEPS = [
-  { title: "Find It in WordPress", desc: "In your WordPress admin, go to Plugins → Add New Plugin and search for “Arthaleads”. Installing from WordPress.org means you get update notices automatically." },
-  { title: "Install & Activate", desc: "Click Install Now, then Activate. Can't reach WordPress.org from your site? Download the ZIP above and use Upload Plugin instead." },
-  { title: "Open Arthaleads Settings", desc: "In the WordPress sidebar, click Arthaleads to open the settings panel." },
-  { title: "Copy Your Token", desc: "Log in to arthaleads.com/automation and copy your account token." },
-  { title: "Paste Token & Name", desc: "Paste the token in the Account Token field and enter your website name." },
-  { title: "Select Your Forms", desc: "Toggle ON the contact forms you want to capture leads from." },
-  { title: "Save & Test", desc: "Click Save Settings, then Send Test Lead to verify the connection works." },
+  { title: "Find it in WordPress", desc: "In WordPress admin, go to Plugins → Add New Plugin and search “Arthaleads”. You get update notices automatically." },
+  { title: "Install and activate", desc: "Click Install Now, then Activate. No WordPress.org access? Upload the ZIP with Upload Plugin." },
+  { title: "Open Arthaleads settings", desc: "In the WordPress sidebar, click Arthaleads to open the settings panel." },
+  { title: "Copy your token", desc: "Log in to arthaleads.com/automation and copy your account token." },
+  { title: "Paste token and name", desc: "Paste the token in the Account Token field and enter your website name." },
+  { title: "Select your forms", desc: "Switch on the contact forms you want to capture leads from." },
+  { title: "Save and test", desc: "Click Save Settings, then Send Test Lead to verify the connection works." },
 ];
 
 const FEATURES = [
-  { icon: Zap,       title: "Instant Capture",        desc: "Leads arrive in your CRM within seconds of a form submission. No delays, no missed enquiries." },
-  { icon: RefreshCw, title: "Auto-Assigned",           desc: "Route each lead to the right agent based on your project rules automatically." },
-  { icon: Shield,    title: "Duplicate Detection",     desc: "The same phone number won't create duplicate leads. Existing records are updated instead." },
-  { icon: Globe,     title: "Any WordPress Site",      desc: "Works on single sites, multisite, and WooCommerce. No server-side configuration needed." },
-  { icon: Bell,      title: "Instant Notifications",   desc: "Your team gets a push notification the moment a new website lead comes in." },
-  { icon: Code2,     title: "Zero Code Required",      desc: "No webhooks, no API calls from your side. Install, connect your token, done." },
+  { icon: Zap,       title: "Instant capture",        desc: "Leads arrive within seconds of a submission." },
+  { icon: RefreshCw, title: "Auto-assigned",           desc: "Routed to the right agent by your project rules." },
+  { icon: Shield,    title: "Duplicate detection",     desc: "A repeat phone number updates the existing lead." },
+  { icon: Globe,     title: "Any WordPress site",      desc: "Single sites, multisite and WooCommerce." },
+  { icon: Bell,      title: "Instant notifications",   desc: "A push the moment a website lead comes in." },
+  { icon: Code2,     title: "Zero code required",      desc: "No webhooks or API calls. Install, paste the token, done." },
 ];
 
 const FAQS = [
@@ -174,7 +174,7 @@ function PluginCard({ plugin }) {
         <p className={imgOk ? "text-[13px] font-bold site-ink leading-tight" : "font-display text-base font-bold site-ink leading-tight"}>{plugin.name}</p>
         <p className="text-xs site-muted mt-1">{plugin.users === "Premium" ? "Premium plugin" : `${plugin.users} installs`}</p>
       </div>
-      <span className="inline-flex items-center gap-1 text-[11px] font-semibold" style={{ color: "var(--site-green)" }}>
+      <span className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: "var(--site-green-ink)" }}>
         <Check className="w-3.5 h-3.5" aria-hidden="true" /> Supported
       </span>
     </Card>
@@ -214,9 +214,9 @@ function LiveNotification() {
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[13px] font-semibold site-ink leading-tight truncate">New lead: {lead.name}</span>
-        <span className="block text-[11px] site-muted leading-tight mt-0.5 truncate">{lead.form} · {lead.site}</span>
+        <span className="block text-xs site-muted leading-tight mt-0.5 truncate">{lead.form} · {lead.site}</span>
       </span>
-      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0" style={{ background: "rgba(22,163,74,0.14)", color: "var(--site-green-ink)" }}>Live</span>
+      <span className="text-xs font-bold px-1.5 py-0.5 rounded-md shrink-0" style={{ background: "rgba(22,163,74,0.14)", color: "var(--site-green-ink)" }}>Live</span>
     </div>
   );
 }
@@ -225,7 +225,7 @@ function LiveNotification() {
 function FormToCrmViz() {
   const fields = [["Full name", "Rahul Sharma"], ["Phone", "98765 43210"], ["Interested in", "2 BHK, Riverview Heights"]];
   return (
-    <div className="relative mx-auto w-full max-w-[460px] px-3 sm:px-6 lg:px-0 pb-16 sm:pb-12">
+    <div className="relative mx-auto lg:mx-5 w-full lg:w-auto max-w-[460px] px-3 sm:px-6 lg:px-0 pb-16 sm:pb-12">
       <div aria-hidden="true" className="hero-glass" />
       <div className="relative rounded-[24px] border overflow-hidden text-left" role="img"
         aria-label="A contact form on a WordPress property website, with each submission arriving in Arthaleads as a new lead"
@@ -234,7 +234,7 @@ function FormToCrmViz() {
           <span className="flex gap-1.5" aria-hidden="true">
             {[0, 1, 2].map((d) => <span key={d} className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--site-line-strong)" }} />)}
           </span>
-          <span className="ml-2 flex-1 min-w-0 flex items-center gap-2 rounded-lg px-2.5 py-1 text-[11px] site-muted site-chip truncate">
+          <span className="ml-2 flex-1 min-w-0 flex items-center gap-2 rounded-lg px-2.5 py-1 text-xs site-muted site-chip truncate">
             <WordPressMark size={13} /> yourprojectwebsite.in/contact
           </span>
         </div>
@@ -244,7 +244,7 @@ function FormToCrmViz() {
           <div className="mt-4 space-y-3">
             {fields.map(([label, value]) => (
               <div key={label}>
-                <span className="block text-[11px] font-semibold site-muted mb-1">{label}</span>
+                <span className="block text-xs font-semibold site-muted mb-1">{label}</span>
                 <span className="block rounded-xl border px-3 py-2 text-[13px] site-ink" style={{ borderColor: "var(--site-line-strong)" }}>{value}</span>
               </div>
             ))}
@@ -252,7 +252,7 @@ function FormToCrmViz() {
           <span className="mt-4 flex items-center justify-center rounded-xl py-2.5 text-[13px] font-bold text-white" style={{ background: "var(--brand-btn)" }}>Send enquiry</span>
         </div>
       </div>
-      <div className="absolute left-0 right-0 sm:left-auto sm:-right-2 lg:-right-8 bottom-0 mx-3 sm:mx-0 sm:w-[300px]">
+      <div className="absolute left-0 right-0 sm:left-auto sm:-right-2 lg:-right-4 bottom-0 mx-3 sm:mx-0 sm:w-[300px]">
         <LiveNotification />
       </div>
     </div>
@@ -276,23 +276,23 @@ function WordPressPluginInner() {
       {/* ── Hero ── */}
       <PageHero
         eyebrow="WordPress plugin"
-        title={<>Every Website Enquiry <span className="site-dim">Lands in Your CRM</span></>}
-        lede="Connect Contact Form 7, WPForms, Elementor and 5 more form builders to Arthaleads in under 5 minutes. No code needed."
+        title={<>Every website enquiry <span className="site-dim">lands in your CRM</span></>}
+        lede="Connect Contact Form 7, WPForms, Elementor and 5 more form builders in under 5 minutes. No code."
         visual={<FormToCrmViz />}
         actions={
           <div className="mt-7 flex flex-wrap gap-2.5 sm:gap-3 justify-center lg:justify-start">
-            <SiteButton href="/arthaleads-integration.zip" download className={btnLg}><Download className="w-5 h-5" /> Download Plugin Free</SiteButton>
-            <SiteButton href={CRM_SIGNUP_URL} external variant="secondary" className={btnLg}>Get Free CRM Account <ArrowRight className="w-4 h-4" /></SiteButton>
+            <SiteButton href="/arthaleads-integration.zip" download className={btnLg}><Download className="w-5 h-5" /> Download plugin free</SiteButton>
+            <SiteButton href={CRM_SIGNUP_URL} external variant="secondary" className={btnLg}>Get a free CRM account <ArrowRight className="w-4 h-4" /></SiteButton>
           </div>
         }
         trust={false}
       >
         <a href={WP_ORG_URL} target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 mt-6 text-sm font-semibold site-ink hover:underline underline-offset-4">
+          className="inline-flex items-center gap-2 mt-4 min-h-[44px] text-sm font-semibold site-ink hover:underline underline-offset-4">
           <WordPressMark />
           Also on WordPress.org: search “Arthaleads” in Plugins → Add New
         </a>
-        <p className="text-[13px] site-muted mt-3">
+        <p className="text-[13px] site-muted mt-1">
           v{PLUGIN_VERSION}, free forever, 8 form plugins, no credit card
         </p>
       </PageHero>
@@ -320,8 +320,8 @@ function WordPressPluginInner() {
       {/* ── Supported Form Plugins ── */}
       <Section tone="white">
         <Container>
-          <SectionHeader eyebrow="Supported form builders" title="Works With Every Major Form Builder" align="center"
-            lede="The form builders most WordPress sites already run. Install counts are from WordPress.org (October 2026); Gravity Forms is a paid plugin sold outside it." />
+          <SectionHeader eyebrow="Supported form builders" title="Works with every major form builder" align="center"
+            lede="Install counts from WordPress.org, October 2026. Gravity Forms is a paid plugin sold outside it." />
           <ul className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-5xl mx-auto">
             {FORM_PLUGINS.map((plugin, i) => (
               <Reveal as="li" key={plugin.name} delay={(i % 4) * 60} className="min-w-0">
@@ -335,15 +335,15 @@ function WordPressPluginInner() {
         </Container>
       </Section>
 
-      {/* ── How it works (3-step) ── */}
-      <Section tone="tint">
+      {/* ── How it works (3-step): the page's signature band ── */}
+      <Section tone="sand">
         <Container>
-          <SectionHeader eyebrow="How it works" title="How It Works" lede="Three steps. Five minutes. Done." />
+          <SectionHeader eyebrow="How it works" title="How it works" lede="Three steps. Five minutes." />
           <ol className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              { n: "01", icon: Download, title: "Install Plugin", desc: "Install it from WordPress.org (search “Arthaleads”) or upload the ZIP. Takes about a minute." },
-              { n: "02", icon: PlugZap,  title: "Paste Your Token", desc: "Copy your Arthaleads account token and paste it in the plugin settings." },
-              { n: "03", icon: Zap,      title: "Leads Flow In",   desc: "Every form submission arrives in your CRM instantly, assigned to the right agent." },
+              { n: "01", icon: Download, title: "Install the plugin", desc: "From WordPress.org (search “Arthaleads”) or the ZIP." },
+              { n: "02", icon: PlugZap,  title: "Paste your token", desc: "Your Arthaleads account token, in the plugin settings." },
+              { n: "03", icon: Zap,      title: "Leads flow in",   desc: "Every submission lands in your CRM, assigned to an agent." },
             ].map(({ n, icon: Icon, title, desc }, i) => (
               <Reveal as="li" key={n} delay={i * 80} className="min-w-0 flex">
                 <Card glow className="w-full p-6">
@@ -353,7 +353,7 @@ function WordPressPluginInner() {
                     </span>
                     <span className="font-display text-sm font-extrabold site-muted">{n}</span>
                   </div>
-                  <h3 className="font-display text-base font-bold site-ink mb-2">{title}</h3>
+                  <h3 className="site-h4 mb-2">{title}</h3>
                   <p className="text-[14px] leading-relaxed">{desc}</p>
                 </Card>
               </Reveal>
@@ -366,10 +366,10 @@ function WordPressPluginInner() {
       <Section tone="white" id="setup">
         <Container className="grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16">
           <div className="lg:sticky lg:top-28 self-start">
-            <SectionHeader eyebrow="Setup guide" title="Step-by-Step Setup Guide" className="!mb-6"
-              lede="Be up and running in under 5 minutes. No developer needed." />
+            <SectionHeader eyebrow="Setup guide" title="Step-by-step setup guide" className="!mb-6"
+              lede="Up and running in under 5 minutes. No developer needed." />
             <div className="flex flex-wrap gap-3">
-              <SiteButton href="/arthaleads-integration.zip" download><Download className="w-4 h-4" /> Download Plugin ZIP</SiteButton>
+              <SiteButton href="/arthaleads-integration.zip" download><Download className="w-4 h-4" /> Download plugin ZIP</SiteButton>
               <SiteButton href={WP_ORG_URL} external variant="secondary"><WordPressMark /> View on WordPress.org</SiteButton>
             </div>
           </div>
@@ -393,7 +393,7 @@ function WordPressPluginInner() {
                         {i + 1}
                       </span>
                       <span className="flex-1 min-w-0 pt-1.5">
-                        <span className="block font-display font-bold site-ink">{title}</span>
+                        <span className="block site-h4">{title}</span>
                       </span>
                       <ChevronDown className={`w-4 h-4 shrink-0 mt-2.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
                         style={{ color: open ? "var(--site-brand-ink)" : "var(--site-muted)" }} aria-hidden="true" />
@@ -413,17 +413,17 @@ function WordPressPluginInner() {
       {/* ── Features ── */}
       <Section tone="tint">
         <Container>
-          <SectionHeader eyebrow="Features" title="Everything Your Team Needs"
-            lede="More than just a form-to-CRM bridge. Built for real estate teams." />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <SectionHeader eyebrow="Features" title="Everything your team needs"
+            lede="More than a form-to-CRM bridge." />
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {FEATURES.map(({ icon: Icon, title, desc }, i) => (
               <Reveal key={title} delay={(i % 3) * 80} className="min-w-0 flex">
-                <Card glow className="w-full p-6">
-                  <span className="site-icon w-11 h-11 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
+                <Card glow className="w-full p-4 sm:p-6">
+                  <span className="site-icon w-11 h-11 rounded-xl flex items-center justify-center mb-4 sm:mb-5" style={iconTile}>
                     <Icon className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                   </span>
-                  <h3 className="font-display text-base font-bold site-ink mb-2">{title}</h3>
-                  <p className="text-[14px] leading-relaxed">{desc}</p>
+                  <h3 className="site-h4 mb-1.5">{title}</h3>
+                  <p className="text-[14px] leading-snug sm:leading-relaxed">{desc}</p>
                 </Card>
               </Reveal>
             ))}
@@ -432,7 +432,7 @@ function WordPressPluginInner() {
       </Section>
 
       {/* ── FAQ ── */}
-      <FaqSection title="Frequently Asked Questions" items={FAQS.map(({ q, a }) => [q, a])} tone="white" />
+      <FaqSection title="Frequently asked questions" items={FAQS.map(({ q, a }) => [q, a])} tone="white" />
       <Section tone="white" className="!pt-0 !pb-12 sm:!pb-16">
         <Container>
           <p className="text-center text-sm site-muted">
@@ -450,16 +450,16 @@ function WordPressPluginInner() {
               <span className="site-icon relative w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6" style={iconTile}>
                 <Globe className="w-6 h-6" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
               </span>
-              <h2 className="relative font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[30px] sm:text-[40px]" style={{ textWrap: "balance" }}>
-                Your Website Leads Deserve <span className="site-dim">a Better CRM</span>
+              <h2 className="relative site-h2">
+                Your website leads deserve <span className="site-dim">a better CRM</span>
               </h2>
               <p className="relative mt-4 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
-                Stop copy-pasting form submissions into Excel. Connect your WordPress site and let Arthaleads handle lead capture, follow-ups, and team routing automatically.
+                Stop copying form submissions into Excel. Arthaleads handles capture, follow-ups and routing.
               </p>
               <div className="relative mt-8 flex flex-wrap gap-3 justify-center">
-                <SiteButton href="/arthaleads-integration.zip" download className={btnLg}><Download className="w-5 h-5" /> Download Plugin Free</SiteButton>
-                <SiteButton to="/book-demo" variant="secondary" className={btnLg}>Book a Demo</SiteButton>
-                <SiteButton href={CRM_SIGNUP_URL} external variant="secondary" className={btnLg}>Create Free Account <ArrowRight className="w-4 h-4" /></SiteButton>
+                <SiteButton href="/arthaleads-integration.zip" download className={btnLg}><Download className="w-5 h-5" /> Download plugin free</SiteButton>
+                <SiteButton to="/book-demo" variant="secondary" className={btnLg}>Book a demo</SiteButton>
+                <SiteButton href={CRM_SIGNUP_URL} external variant="secondary" className={btnLg}>Create a free account <ArrowRight className="w-4 h-4" /></SiteButton>
               </div>
             </div>
           </Reveal>

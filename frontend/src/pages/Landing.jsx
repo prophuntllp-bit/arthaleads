@@ -49,15 +49,15 @@ function Hero() {
       <div aria-hidden="true" className="hero-warm" />
       <Container className="relative grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-center">
         <div className="text-center lg:text-left">
-          <h1 className="site-ink font-extrabold">
+          <h1 className="site-h1">
             {/* The keyword label stays in the H1; the spaces keep the words apart for search engines (audit, 29 Oct 2026). */}
-            <span className="block mb-3 sm:mb-4 text-[15px] sm:text-base font-semibold site-muted">Real estate CRM software for India</span>{" "}
-            <span className="font-display tracking-[-0.03em] block text-[35px] leading-[1.06] sm:text-[48px] lg:text-[52px] xl:text-[58px] min-[1700px]:text-[64px]">Every enquiry answered.</span>{" "}
-            <span className="font-display tracking-[-0.03em] block text-[35px] leading-[1.1] sm:text-[48px] lg:text-[52px] xl:text-[58px] min-[1700px]:text-[64px]"><span className="site-gradient-text">Even at 1 AM.</span></span>
+            <span className="block mb-3 sm:mb-4 font-sans text-[15px] sm:text-base font-semibold tracking-normal leading-snug site-muted">Real estate CRM software for India</span>{" "}
+            <span className="block">Every enquiry answered.</span>{" "}
+            <span className="block"><span className="site-gradient-text">Even at 1 AM.</span></span>
           </h1>
           <p className="mt-5 text-base sm:text-[17px] min-[1700px]:text-lg leading-relaxed max-w-[35rem] mx-auto lg:mx-0" style={{ textWrap: "pretty" }}>
             Facebook, Google and WhatsApp enquiries land in one place. A WhatsApp AI agent replies in seconds,
-            qualifies the buyer and books the site visit, so your team starts the day with buyers ready to talk.
+            qualifies the buyer and books the site visit.
           </p>
           {/* Phones: two compact buttons side by side instead of two full-width slabs. */}
           <div className="mt-7 flex flex-wrap gap-2.5 sm:gap-3 justify-center lg:justify-start">
@@ -94,15 +94,15 @@ const SOURCES = [
 function WorksWith() {
   return (
     <Section tone="tint" className="!py-8 sm:!py-10" aria-label="Lead sources Arthaleads works with">
-      <Container className="!max-w-[1400px]">
+      <Container>
         <Reveal className="flex flex-col items-center gap-4">
           <p className="text-center text-[13px] site-muted">
             <span className="font-display text-[15px] font-bold site-ink">Every lead source, one list.</span>{" "}
             <span className="hidden sm:inline">Portal leads (99acres, MagicBricks, Housing.com) come in by sheet import.</span>
           </p>
-          <ul className="flex flex-wrap justify-center gap-2 lg:gap-1.5 xl:gap-2">
+          <ul className="flex flex-wrap justify-center gap-2 lg:gap-1.5">
             {SOURCES.map(({ Logo, Icon, label, note }) => (
-              <li key={label} className="flex items-center gap-1.5 rounded-full pl-2.5 pr-3 py-1.5 text-[12.5px] xl:text-[13px] font-medium site-ink"
+              <li key={label} className="flex items-center gap-1.5 rounded-full pl-2.5 pr-3 lg:pl-2 lg:pr-2.5 py-1.5 text-[12.5px] font-medium site-ink"
                 style={{ background: "var(--site-card)", border: "1px solid var(--site-line)", boxShadow: "var(--site-shadow-sm)" }}>
                 {Logo ? <Logo className="w-4 h-4 shrink-0" /> : <Icon className="w-4 h-4 shrink-0" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />}
                 <span className="whitespace-nowrap">{label}{note && <span className="text-[11px] font-normal site-muted"> · {note}</span>}</span>
@@ -156,7 +156,7 @@ function AiBand() {
                       <Icon className="w-[18px] h-[18px]" style={{ color: "#ff8a3d" }} aria-hidden="true" />
                     </span>
                     <span className="min-w-0">
-                      <h3 className="font-display text-[15px] font-bold site-ink leading-tight mb-1">{title}</h3>
+                      <h3 className="site-h4 !mb-1">{title}</h3>
                       <p className="text-[13px] leading-snug">{body}</p>
                     </span>
                   </Card>
@@ -174,12 +174,13 @@ function AiBand() {
 // Three wide + three narrow cards fill a 3-column grid exactly, zig-zagging
 // the wide one left, right, left.
 const FEATURE_CARDS = [
-  { title: "Every lead in one list", body: "Ad, WhatsApp, website and QR leads arrive with their source, duplicates flagged and an owner assigned.", Viz: CaptureViz, wide: true },
-  { title: "Pipeline and follow-ups", body: "Move buyers from New to Site Visit to Booked, with reminders that turn red when a follow-up is late.", Viz: PipelineViz },
-  { title: "Project-wise sales", body: "Each project keeps its own leads, team, brochures and floor plans.", Viz: ProjectViz },
-  { title: "Site visits on a calendar", body: "Visits booked by your team or the AI agent show up with the buyer's details.", Viz: VisitViz, wide: true },
-  { title: "Bookings and invoices", body: "Close a deal and get a branded invoice with brokerage and GST worked out.", Viz: BookingViz, wide: true },
-  { title: "Team performance", body: "Selfie attendance, calls and conversions per agent, so you coach on facts.", Viz: TeamViz },
+  { title: "Every lead in one list", body: "Every source in one list, duplicates flagged, an owner assigned.", Viz: CaptureViz, wide: true },
+  // The two content-sized visuals keep the shared 232px stage height here so each row lines up.
+  { title: "Pipeline and follow-ups", body: "New to Site Visit to Booked, with late follow-ups in red.", Viz: PipelineViz, vizClass: "sm:min-h-[232px] flex flex-col justify-center" },
+  { title: "Project-wise sales", body: "Each project keeps its own leads, team, brochures and floor plans.", Viz: ProjectViz, vizClass: "sm:min-h-[232px]" },
+  { title: "Site visits on a calendar", body: "Visits booked by your team or the AI agent, with the buyer's details.", Viz: VisitViz, wide: true },
+  { title: "Bookings and invoices", body: "A branded invoice with brokerage and GST worked out.", Viz: BookingViz, wide: true },
+  { title: "Team performance", body: "Selfie attendance, calls and conversions per agent.", Viz: TeamViz },
 ];
 
 function Features() {
@@ -187,15 +188,15 @@ function Features() {
     <Section id="features" tone="white">
       <Container>
         <SectionHeader title={<>From first message to booking.<br className="hidden sm:block" /> In one place.</>}
-          lede="Everything a property sales team uses every day, built for how builders, brokers and channel partners in India actually sell."
+          lede="Everything a property sales team in India uses every day."
           action={<Link to="/features" className="site-link text-[15px]">See every feature <ArrowRight className="w-4 h-4" /></Link>} />
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {FEATURE_CARDS.map(({ title, body, Viz, wide }, i) => (
+          {FEATURE_CARDS.map(({ title, body, Viz, vizClass, wide }, i) => (
             <Reveal key={title} delay={(i % 3) * 90} className={wide ? "min-w-0 lg:col-span-2" : "min-w-0"}>
               <Card glow className="h-full p-3 flex flex-col">
-                <Viz />
+                <Viz className={vizClass} />
                 <div className="px-3 pt-5 pb-3">
-                  <h3 className="font-display text-lg font-bold site-ink mb-1.5">{title}</h3>
+                  <h3 className="site-h3 !mb-1.5">{title}</h3>
                   <p className="text-[15px] leading-relaxed">{body}</p>
                 </div>
               </Card>
@@ -209,11 +210,11 @@ function Features() {
 
 // ── 5. Built for ───────────────────────────────────────────────────────────────
 const PERSONAS = [
-  { img: "builder", title: "Builders and developers", body: "Run every project's sales from one screen, with leads routed to the right telecaller in seconds.", to: "/builder-crm", link: "Builder CRM",
+  { img: "builder", title: "Builders and developers", body: "Every project's sales on one screen, leads routed in seconds.", to: "/builder-crm", link: "Builder CRM",
     alt: "A sales head explaining a scale model of residential towers to a young couple in a sales gallery" },
-  { img: "broker", title: "Brokers", body: "Answer every enquiry on WhatsApp, follow up on time and never lose a buyer to a faster agent.", to: "/whatsapp-crm", link: "WhatsApp CRM",
+  { img: "broker", title: "Brokers", body: "Answer every WhatsApp enquiry and follow up on time.", to: "/whatsapp-crm", link: "WhatsApp CRM",
     alt: "A broker showing a bright new apartment to a family" },
-  { img: "partner", title: "Channel partners", body: "Sell for several developers at once and keep each project's leads, visits and bookings apart.", to: "/features", link: "See the features",
+  { img: "partner", title: "Channel partners", body: "Sell for several developers and keep each project apart.", to: "/features", link: "See the features",
     alt: "Three colleagues in a small office working together at a laptop" },
 ];
 
@@ -222,7 +223,7 @@ function BuiltFor() {
     <Section tone="white">
       <Container>
         <SectionHeader title={<>Built for how property<br className="hidden sm:block" /> is sold in India.</>}
-          lede="Builders, brokers and channel partners sell differently. Arthaleads fits each of them." />
+          lede="Builders, brokers and channel partners sell differently. Arthaleads fits each." />
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {PERSONAS.map(({ img, title, body, to, link, alt }, i) => (
             <Reveal key={title} delay={i * 100} className={i === 2 ? "min-w-0 sm:col-span-2 lg:col-span-1" : "min-w-0"}>
@@ -232,7 +233,7 @@ function BuiltFor() {
                     className="block w-full h-full aspect-[3/2] object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
                 </div>
                 <div className="p-6 flex flex-col flex-1 justify-center lg:justify-start">
-                  <h3 className="font-display text-lg font-bold site-ink mb-2">{title}</h3>
+                  <h3 className="site-h3 !mb-2">{title}</h3>
                   <p className="text-[15px] leading-relaxed flex-1">{body}</p>
                   <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold" style={{ color: "var(--site-brand-ink)" }}>
                     {link} <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
@@ -308,17 +309,17 @@ function StepClose() {
 }
 
 const STEPS = [
-  { title: "Connect your lead sources", body: "Link Facebook lead ads and your WhatsApp Business number, add your website form, and import existing leads from Excel.", Viz: StepConnect },
-  { title: "Let the AI take the first reply", body: "Tell the AI agent about your projects. It answers buyers, asks the right questions and books visits, day and night.", Viz: StepReply },
-  { title: "Your team closes", body: "Agents get every lead with the chat and a score, call from the Android app, and move deals to booking.", Viz: StepClose },
+  { title: "Connect your lead sources", body: "Link Facebook lead ads, WhatsApp and your website form, and import leads from Excel.", Viz: StepConnect },
+  { title: "Let the AI take the first reply", body: "Tell the AI agent about your projects. It answers buyers and books visits, day and night.", Viz: StepReply },
+  { title: "Your team closes", body: "Agents get each lead with the chat and a score, and call from the Android app.", Viz: StepClose },
 ];
 
 function HowItWorks() {
   return (
-    <Section tone="tint">
+    <Section tone="sand">
       <Container>
         <SectionHeader title={<>Live in a day,<br className="hidden sm:block" /> not a quarter.</>}
-          lede="No setup project and no consultants. You can connect your lead sources and see the AI reply on the same day."
+          lede="No setup project and no consultants. Connect your sources and see the AI reply the same day."
           action={<Link to="/download-app" className="site-link text-[15px]"><Download className="w-4 h-4" /> Get the Android app</Link>} />
         <ol className="relative grid md:grid-cols-3 gap-5">
           {/* The line joining the three numbers (desktop). */}
@@ -327,13 +328,12 @@ function HowItWorks() {
             <Reveal as="li" key={title} delay={i * 100} className="relative min-w-0">
               <div className="flex justify-center mb-5">
                 <span className="font-display relative z-[1] w-14 h-14 rounded-full flex items-center justify-center text-xl font-extrabold text-white"
-                  style={{ background: "var(--brand-btn)", boxShadow: "0 0 0 8px var(--site-tint), 0 14px 30px -12px rgba(204,75,0,0.7)" }}>{i + 1}</span>
+                  style={{ background: "var(--brand-btn)", boxShadow: "0 0 0 8px var(--site-sand), 0 14px 30px -12px rgba(204,75,0,0.7)" }}>{i + 1}</span>
               </div>
               <Card glow className="h-full p-3 flex flex-col">
                 <Viz />
                 <div className="px-3 pt-5 pb-3">
-                  <p className="text-[13px] font-semibold site-muted mb-1.5">Step {i + 1}</p>
-                  <h3 className="font-display text-lg font-bold site-ink mb-1.5">{title}</h3>
+                  <h3 className="site-h3 !mb-1.5"><span className="sr-only">Step {i + 1}: </span>{title}</h3>
                   <p className="text-[15px] leading-relaxed">{body}</p>
                 </div>
               </Card>
@@ -382,8 +382,8 @@ function Trust() {
             <Card glow className="site-section--dark site-feature-glow h-full p-7 sm:p-9 grid sm:grid-cols-[1fr_280px] gap-8 items-center">
               <div>
                 <TrustIcon Icon={WhatsAppLogo} green />
-                <h3 className="font-display text-xl sm:text-2xl font-bold site-ink mb-3" style={{ textWrap: "balance" }}>Official WhatsApp Business Platform</h3>
-                <p className="text-[15px] leading-relaxed max-w-md">Your own verified business number on Meta's official API, not a grey-market tool that can get your number banned. Templates, campaigns and the AI agent run on it.</p>
+                <h3 className="site-h3 !mb-3">Official WhatsApp Business Platform</h3>
+                <p className="text-[15px] leading-relaxed max-w-md">Your own verified number on Meta's official API, not a grey-market tool that can get it banned.</p>
               </div>
               <div className="rounded-2xl p-4" style={{ background: "var(--site-stage)", border: "1px solid var(--site-line)" }}>
                 <div className="flex items-center gap-3 mb-3.5">
@@ -404,8 +404,8 @@ function Trust() {
           <Reveal className="min-w-0" delay={80}>
             <Card glow className="h-full p-7 flex flex-col">
               <TrustIcon Icon={Lock} />
-              <h3 className="font-display text-lg font-bold site-ink mb-2">Your data stays yours</h3>
-              <p className="text-[15px] leading-relaxed mb-5">Each company's data is kept apart. On Growth and Enterprise you can export all your leads, and you can delete your account any time.</p>
+              <h3 className="site-h4 !mb-2">Your data stays yours</h3>
+              <p className="text-[15px] leading-relaxed mb-5">Each company's data is kept apart. Export your leads (Growth and above) or delete your account any time.</p>
               <ul className="mt-auto space-y-1.5">
                 <TrustRow left="All leads as Excel" right="Export" tone={T_ORANGE} />
                 <TrustRow left="Delete account" right="Self-serve" tone={T_PLAIN} />
@@ -415,7 +415,7 @@ function Trust() {
           <Reveal className="min-w-0">
             <Card glow className="h-full p-7 flex flex-col">
               <TrustIcon Icon={ShieldCheck} />
-              <h3 className="font-display text-lg font-bold site-ink mb-2">Roles and permissions</h3>
+              <h3 className="site-h4 !mb-2">Roles and permissions</h3>
               <p className="text-[15px] leading-relaxed mb-5">Decide who sees what, on the web and in the Android app.</p>
               <ul className="mt-auto space-y-1.5">
                 <TrustRow left="Admin" right="Everything" tone={T_ORANGE} />
@@ -427,8 +427,8 @@ function Trust() {
           <Reveal className="min-w-0" delay={80}>
             <Card glow className="h-full p-7 flex flex-col">
               <TrustIcon Icon={MapPin} />
-              <h3 className="font-display text-lg font-bold site-ink mb-2">Made in Pune</h3>
-              <p className="text-[15px] leading-relaxed mb-5">Built by Prophunt LLP for Indian sales teams, with real people answering on WhatsApp.</p>
+              <h3 className="site-h4 !mb-2">Made in Pune</h3>
+              <p className="text-[15px] leading-relaxed mb-5">Built by Prophunt LLP, with real people answering on WhatsApp.</p>
               <ul className="mt-auto space-y-1.5">
                 <TrustRow left="Built in" right="Pune, India" tone={T_ORANGE} />
                 <TrustRow left="Support" right="WhatsApp and phone" tone={T_PLAIN} />
@@ -439,8 +439,8 @@ function Trust() {
           <Reveal className="min-w-0" delay={160}>
             <Card glow className="h-full p-7 flex flex-col">
               <TrustIcon Icon={Repeat2} />
-              <h3 className="font-display text-lg font-bold site-ink mb-2">Switching from another CRM?</h3>
-              <p className="text-[15px] leading-relaxed mb-5">See how Arthaleads compares, feature by feature, and bring your leads over from Excel.</p>
+              <h3 className="site-h4 !mb-2">Switching from another CRM?</h3>
+              <p className="text-[15px] leading-relaxed mb-5">Compare feature by feature and bring your leads over from Excel.</p>
               <ul className="mt-auto space-y-1.5">
                 {[["Sell.Do", "/compare/sell-do-alternative"], ["Leadrat", "/compare/leadrat-alternative"], ["Kylas", "/compare/kylas-alternative"]].map(([n, to]) => (
                   <li key={n}>
@@ -498,9 +498,9 @@ function Faq() {
             const isOpen = open === i;
             return (
               <Card key={q} className="overflow-hidden">
-                <h3 className="m-0">
+                <h3 className="site-h4">
                   <button type="button" onClick={() => setOpen(isOpen ? -1 : i)} aria-expanded={isOpen} aria-controls={`faq-${i}`}
-                    className="w-full flex items-center justify-between gap-4 text-left px-5 sm:px-6 py-5 font-display text-[15px] sm:text-base font-bold site-ink">
+                    className="w-full min-h-[44px] flex items-center justify-between gap-4 text-left px-5 sm:px-6 py-5">
                     {q}
                     <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "var(--site-tint)" }}>
                       {isOpen ? <Minus className="w-4 h-4" aria-hidden="true" /> : <Plus className="w-4 h-4" aria-hidden="true" />}
@@ -532,7 +532,7 @@ function FinalCta() {
               silk={0.25} grainAmount={0.06} clickSwirl={false} stir={0.5}
               style={{ WebkitMaskImage: "radial-gradient(90% 120% at 100% 100%, #000 20%, transparent 75%)", maskImage: "radial-gradient(90% 120% at 100% 100%, #000 20%, transparent 75%)", opacity: isDark ? 0.9 : 0.7 }} />
             <div className="relative">
-              <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[30px] sm:text-[38px] lg:text-[40px] xl:text-[44px]" style={{ textWrap: "balance" }}>
+              <h2 className="site-h2">
                 Stop losing buyers to whoever replies first.
               </h2>
               <p className="mt-5 text-base sm:text-lg leading-relaxed max-w-lg">Book a 30-minute demo on your own leads, or start the 14-day free trial yourself.</p>

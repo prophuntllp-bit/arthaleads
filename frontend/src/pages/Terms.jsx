@@ -61,11 +61,11 @@ export default function Terms() {
           <li>Misrepresent your identity or affiliation when using the platform.</li>
           <li>Interfere with or disrupt the integrity or performance of the Service.</li>
           <li>Attempt to gain unauthorised access to any part of the platform or its infrastructure.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Scraping:</strong> Automated extraction of data using bots, crawlers, or similar tools.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Reverse engineering:</strong> Attempting to decompile, disassemble, or otherwise derive the source code or underlying logic of the platform.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Spam:</strong> Using lead data or platform features to send unsolicited bulk communications in violation of applicable telecommunications or data protection laws.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Malicious activity:</strong> Uploading malware, viruses, or any code intended to damage or disrupt the Service or its users.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Reselling:</strong> Sublicensing, reselling, or commercially exploiting the Service without Arthaleads' prior written consent.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Scraping:</strong> Automated extraction of data using bots, crawlers, or similar tools.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Reverse engineering:</strong> Attempting to decompile, disassemble, or otherwise derive the source code or underlying logic of the platform.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Spam:</strong> Using lead data or platform features to send unsolicited bulk communications in violation of applicable telecommunications or data protection laws.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Malicious activity:</strong> Uploading malware, viruses, or any code intended to damage or disrupt the Service or its users.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Reselling:</strong> Sublicensing, reselling, or commercially exploiting the Service without Arthaleads' prior written consent.</li>
         </ul>
         <p>Violations of this section may result in immediate account suspension or termination.</p>
       </Section>
@@ -74,11 +74,11 @@ export default function Terms() {
         <p>
           All lead data that you import into, create within, or generate through Arthaleads belongs to your
           organisation. Arthaleads does not claim ownership over your lead data. Prophunt LLP acts as
-          a <strong style={{ color: "var(--app-text)" }}>Data Processor</strong> on your behalf, storing and
+          a <strong style={{ color: "var(--site-ink)" }}>Data Processor</strong> on your behalf, storing and
           presenting your lead data solely to provide the CRM service to you.
         </p>
         <p>
-          You, as the organisation using Arthaleads, are the <strong style={{ color: "var(--app-text)" }}>Data Fiduciary</strong> for the personal
+          You, as the organisation using Arthaleads, are the <strong style={{ color: "var(--site-ink)" }}>Data Fiduciary</strong> for the personal
           data of your leads and customers under India's DPDP Act, 2023. You are responsible for:
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
@@ -95,22 +95,22 @@ export default function Terms() {
           of these Terms.
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
-          <li><strong style={{ color: "var(--app-text)" }}>Your instructions:</strong> We process this data only to provide the Service and only on your documented instructions, which include these Terms, your settings and integrations in the CRM, and your requests to support. We do not use it for any other purpose.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Confidentiality:</strong> Our staff and contractors who can access this data are bound to keep it confidential and access it only when needed to run or support the Service.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Security safeguards:</strong> We protect the data with reasonable security safeguards, including encryption in transit (HTTPS/TLS), hashed passwords, encryption of stored access tokens, private file storage served only to authorised users, role-based access control, and logging of access and activity.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Your instructions:</strong> We process this data only to provide the Service and only on your documented instructions, which include these Terms, your settings and integrations in the CRM, and your requests to support. We do not use it for any other purpose.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Confidentiality:</strong> Our staff and contractors who can access this data are bound to keep it confidential and access it only when needed to run or support the Service.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Security safeguards:</strong> We protect the data with reasonable security safeguards, including encryption in transit (HTTPS/TLS), hashed passwords, encryption of stored access tokens, private file storage served only to authorised users, role-based access control, and logging of access and activity.</li>
           <li>
-            <strong style={{ color: "var(--app-text)" }}>Sub-processors:</strong> You authorise us to use the
+            <strong style={{ color: "var(--site-ink)" }}>Sub-processors:</strong> You authorise us to use the
             sub-processors listed in our{" "}
-            <a href="/privacy#10-sub-processors" style={{ color: "var(--brand-text)" }} className="hover:underline">Privacy Policy</a>.
+            <a href="/privacy#10-sub-processors" style={{ color: "var(--site-brand-ink)" }} className="hover:underline">Privacy Policy</a>.
             {" "}We will update that list before adding a new sub-processor and tell you about material changes
             through the app or by email. We hold each sub-processor to data protection obligations suited to
             the service it provides.
           </li>
-          <li><strong style={{ color: "var(--app-text)" }}>Breach notification:</strong> We will notify you without undue delay after becoming aware of a personal data breach affecting your data, share the information you need, and help you inform the affected people and the Data Protection Board of India.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Data principal requests:</strong> If one of your leads contacts us about their data, we will pass the request to you, and we will help you respond to requests for access, correction, completion or erasure.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Retention:</strong> Call recordings are deleted automatically after the period set by your plan, as described in the Privacy Policy. Other data stays until you delete it or the Service ends.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Deletion or return at the end of the Service:</strong> Before closing your account, an admin can export your lead data in CSV or Excel format. When your organisation's account is deleted, we delete its data within 30 days. Copies in our database backups are deleted as those backups expire, within 12 months. We keep two things the law requires: our billing records for the organisation (plan payments and credit or storage purchases, with its billing name and GST details) for up to 8 years for tax purposes, and its activity log, which is deleted automatically after about one year.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Your responsibility:</strong> You are responsible for giving notice to, and having consent from, the people whose data you upload or capture, and for the lawfulness of your instructions to us.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Breach notification:</strong> We will notify you without undue delay after becoming aware of a personal data breach affecting your data, share the information you need, and help you inform the affected people and the Data Protection Board of India.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Data principal requests:</strong> If one of your leads contacts us about their data, we will pass the request to you, and we will help you respond to requests for access, correction, completion or erasure.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Retention:</strong> Call recordings are deleted automatically after the period set by your plan, as described in the Privacy Policy. Other data stays until you delete it or the Service ends.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Deletion or return at the end of the Service:</strong> Before closing your account, an admin can export your lead data in CSV or Excel format. When your organisation's account is deleted, we delete its data within 30 days. Copies in our database backups are deleted as those backups expire, within 12 months. We keep two things the law requires: our billing records for the organisation (plan payments and credit or storage purchases, with its billing name and GST details) for up to 8 years for tax purposes, and its activity log, which is deleted automatically after about one year.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Your responsibility:</strong> You are responsible for giving notice to, and having consent from, the people whose data you upload or capture, and for the lawfulness of your instructions to us.</li>
         </ul>
       </Section>
 
@@ -146,13 +146,13 @@ export default function Terms() {
           The following conditions apply to all Support Access:
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
-          <li><strong style={{ color: "var(--app-text)" }}>Reason required:</strong> A stated reason (e.g. Customer Support, Bug Investigation, Onboarding) is mandatory before any support session begins.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Audit logging:</strong> All support access is recorded in a tamper-resistant audit trail, including who accessed the account, when, and for what stated reason.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Organisation notification:</strong> Your organisation's administrator will receive a push notification when a support access request is made or when a session is active. A visible banner is displayed inside the CRM for the duration of any active support session.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Approval option:</strong> Your administrator may be asked to approve support access before it begins. You can also end any active support session at any time from Settings → Security.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Access log:</strong> A complete history of all support access is available to your organisation administrator in Settings → Security.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Purpose limitation:</strong> Support access is used exclusively to diagnose technical issues, provide onboarding assistance, or perform authorised data operations. Your data is never read, copied, shared, or monetised for any other purpose.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Session duration:</strong> Support sessions are time-limited (maximum 2 hours per session) and are automatically terminated when the platform administrator logs out.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Reason required:</strong> A stated reason (e.g. Customer Support, Bug Investigation, Onboarding) is mandatory before any support session begins.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Audit logging:</strong> All support access is recorded in a tamper-resistant audit trail, including who accessed the account, when, and for what stated reason.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Organisation notification:</strong> Your organisation's administrator will receive a push notification when a support access request is made or when a session is active. A visible banner is displayed inside the CRM for the duration of any active support session.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Approval option:</strong> Your administrator may be asked to approve support access before it begins. You can also end any active support session at any time from Settings → Security.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Access log:</strong> A complete history of all support access is available to your organisation administrator in Settings → Security.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Purpose limitation:</strong> Support access is used exclusively to diagnose technical issues, provide onboarding assistance, or perform authorised data operations. Your data is never read, copied, shared, or monetised for any other purpose.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Session duration:</strong> Support sessions are time-limited (maximum 2 hours per session) and are automatically terminated when the platform administrator logs out.</li>
         </ul>
         <p>
           By agreeing to these Terms, you acknowledge and consent to this support access mechanism as
@@ -163,14 +163,14 @@ export default function Terms() {
       <Section title="10. Data & Privacy">
         <p>
           By using Arthaleads, you acknowledge that we collect and process certain data as described in our{" "}
-          <a href="/privacy" style={{ color: "var(--brand-text)" }} className="hover:underline">Privacy Policy</a>.
+          <a href="/privacy" style={{ color: "var(--site-brand-ink)" }} className="hover:underline">Privacy Policy</a>.
           {" "}This includes account data, lead data, and integration data from connected platforms (Meta, Google,
           WhatsApp, telephony providers). Some of this data is stored or processed outside India by the
           sub-processors listed there. Your continued use of the Service constitutes acceptance of our data
           practices as outlined in the Privacy Policy.
         </p>
         <p>
-          Arthaleads is committed to compliance with the <strong style={{ color: "var(--app-text)" }}>Digital Personal Data Protection (DPDP) Act, 2023</strong>, the
+          Arthaleads is committed to compliance with the <strong style={{ color: "var(--site-ink)" }}>Digital Personal Data Protection (DPDP) Act, 2023</strong>, the
           DPDP Rules, 2025, and other applicable Indian data protection laws.
         </p>
       </Section>
@@ -190,9 +190,9 @@ export default function Terms() {
           Paid plans are billed in advance for the chosen billing period. You can cancel at any time, with
           no lock-in; your plan stays active until the end of the current billing cycle. We offer a 7-day
           money-back guarantee on your first payment. Full details on refunds and cancellations are in our{" "}
-          <a href="/refund" style={{ color: "var(--brand-text)" }} className="hover:underline">Refund &amp; Cancellation Policy</a>.
+          <a href="/refund" style={{ color: "var(--site-brand-ink)" }} className="hover:underline">Refund &amp; Cancellation Policy</a>.
           {" "}Our use of cookies is described in our{" "}
-          <a href="/cookie-policy" style={{ color: "var(--brand-text)" }} className="hover:underline">Cookie Policy</a>.
+          <a href="/cookie-policy" style={{ color: "var(--site-brand-ink)" }} className="hover:underline">Cookie Policy</a>.
         </p>
       </Section>
 
@@ -211,10 +211,10 @@ export default function Terms() {
           notice, if we determine that you have violated these Terms or engaged in conduct harmful to the
           platform, other users, or third parties. You may also terminate your account at any time from the
           app, from our{" "}
-          <a href="/delete-account" style={{ color: "var(--brand-text)" }} className="hover:underline">Delete Account</a>
+          <a href="/delete-account" style={{ color: "var(--site-brand-ink)" }} className="hover:underline">Delete Account</a>
           {" "}page, or by contacting us. Upon termination, your access to the platform will be revoked and your
           data will be deleted as described in Section 6 and our{" "}
-          <a href="/privacy" style={{ color: "var(--brand-text)" }} className="hover:underline">Privacy Policy</a>.
+          <a href="/privacy" style={{ color: "var(--site-brand-ink)" }} className="hover:underline">Privacy Policy</a>.
         </p>
       </Section>
 
@@ -244,19 +244,19 @@ export default function Terms() {
           contact us:
         </p>
         <ContactBox>
-          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Prophunt LLP (Arthaleads)</p>
-          <p style={{ color: "var(--app-text-soft)" }}>
+          <p className="font-bold mb-1" style={{ color: "var(--site-ink)" }}>Prophunt LLP (Arthaleads)</p>
+          <p style={{ color: "var(--site-muted)" }}>
             Email:{" "}
-            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">
+            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--site-brand-ink)" }} className="hover:underline">
               contact@arthaleads.com
             </a>
           </p>
-          <p style={{ color: "var(--app-text-soft)" }}>
+          <p style={{ color: "var(--site-muted)" }}>
             Address: 1, Utkarsha Bungalow, Late Babanrao Shripati Dhankude Road, Baner, Pune, Maharashtra 411045, India
           </p>
-          <p style={{ color: "var(--app-text-soft)" }}>
+          <p style={{ color: "var(--site-muted)" }}>
             Platform:{" "}
-            <a href="https://www.arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">
+            <a href="https://www.arthaleads.com" style={{ color: "var(--site-brand-ink)" }} className="hover:underline">
               https://arthaleads.com
             </a>
           </p>

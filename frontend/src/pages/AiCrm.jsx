@@ -17,7 +17,7 @@
 // visit; booking a slot is the Enterprise button flow.
 import { Bot, Sparkles, MessageSquareText, Gauge, Headphones, PhoneCall, Image as ImageIcon, Flame } from "lucide-react";
 import { WhatsAppLogo } from "../components/site/BrandLogos";
-import SolutionPage, { solutionJsonLd, MiniChat } from "../components/SolutionPage";
+import SolutionPage, { solutionJsonLd } from "../components/SolutionPage";
 import { useSEO } from "../utils/useSEO";
 import { PLAN_PRICING } from "../utils/plan";
 
@@ -38,6 +38,36 @@ const FAQS = [
    `The WhatsApp AI agent, AI lead scoring, AI-written replies and Artha, the AI copilot, are on Growth (₹${PLAN_PRICING.growth.monthly} per user per month plus GST). Call transcripts and AI voice calling are on Enterprise. Every team can try Growth free for 14 days, no credit card needed.`],
 ];
 
+/** The signature band's visual: the Hot Today list with the AI's one-line
+    reasons, and Artha's suggestion under it (coded UI, not a screenshot; the
+    same scores and reasons as the hero cards). */
+const HOT = [
+  ["Kabir Jain", 91, "Hot", "Loan approved, wants a 2 BHK"],
+  ["Ananya Iyer", 87, "Hot", "Asked for a site visit Saturday"],
+  ["Rohan Patil", 74, "Warm", "Budget confirmed on WhatsApp"],
+];
+function HotTodayViz() {
+  return (
+    <div className="site-stage p-3 sm:p-4 space-y-2" aria-hidden="true">
+      <p className="flex items-center gap-1.5 text-[13px] font-semibold site-ink px-1 pb-1"><Flame className="w-4 h-4" style={{ color: "var(--site-brand)" }} /> Hot Today</p>
+      {HOT.map(([name, score, tag, why]) => (
+        <div key={name} className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: "var(--site-card)", border: "1px solid var(--site-line)" }}>
+          <span className="w-10 h-10 rounded-full flex items-center justify-center text-[14px] font-extrabold shrink-0"
+            style={tag === "Hot" ? { background: "rgba(255,107,0,0.14)", color: "var(--site-brand-ink)" } : { background: "rgba(180,83,9,0.12)", color: "var(--site-amber)" }}>{score}</span>
+          <span className="min-w-0">
+            <span className="block text-[13px] font-semibold site-ink leading-tight">{name} · {tag}</span>
+            <span className="block text-[12px] site-muted leading-snug mt-0.5">{why}</span>
+          </span>
+        </div>
+      ))}
+      <div className="flex items-center gap-2.5 rounded-xl px-3 py-2.5" style={{ background: "linear-gradient(rgba(255,107,0,0.08), rgba(255,107,0,0.08)), var(--site-card)", border: "1px solid rgba(255,107,0,0.3)" }}>
+        <Sparkles className="w-4 h-4 shrink-0" style={{ color: "var(--site-brand-ink)" }} />
+        <span className="text-[12.5px] site-ink leading-snug"><b>Artha:</b> 3 follow-ups due today. Apply all in one tap.</span>
+      </div>
+    </div>
+  );
+}
+
 export default function AiCrm() {
   useSEO({
     title: "AI CRM for Real Estate in India | Arthaleads",
@@ -48,9 +78,10 @@ export default function AiCrm() {
   return (
     <SolutionPage
       jsonLd={solutionJsonLd({ name: "AI CRM for real estate", path: "/ai-crm", faqs: FAQS })}
+      signature={{ tone: "sand", layout: "bento" }}
       hero={{
         lines: ["AI CRM for real estate", "built for Indian sales teams"],
-        lede: "Arthaleads replies to every property enquiry in seconds with a WhatsApp AI agent, fills in the lead from the chat, scores it from what the buyer said and tells your team who to call first. Artha, the AI copilot, answers questions about your pipeline and updates leads when you ask.",
+        lede: "A WhatsApp AI agent replies to every enquiry in seconds, fills in the lead and scores it from what the buyer said. Artha, the AI copilot, tells your team who to call first.",
         eyebrow: "AI real estate CRM",
         actions: [
           { label: "Book an AI demo", to: "/book-demo" },
@@ -69,42 +100,37 @@ export default function AiCrm() {
         q: "What is an AI CRM for real estate?",
         paras: [
           "An AI CRM for real estate is a CRM that does part of the sales work itself. It replies to new enquiries, asks buyers the qualifying questions, records their answers on the lead and drafts follow-up messages, so agents start each conversation already knowing the buyer's budget, location and timeline.",
-          "In India that work happens mostly on WhatsApp, often late in the evening and in more than one language. Arthaleads is built around that: the AI agent answers on your official WhatsApp Business number in English, Hinglish, Hindi or Marathi, and every chat becomes a lead your whole team can see.",
-          "The AI does not rank leads by guesswork. Each score starts from rules you can read, the AI adjusts it from what the buyer actually said and gives its reason in one line, and a person always books the site visit and closes the deal.",
+          "In India that work happens on WhatsApp, late in the evening and in more than one language, so the AI agent answers in English, Hinglish, Hindi or Marathi. Scores start from rules you can read, and a person always closes the deal.",
         ],
       }}
       steps={{
         title: "How the AI works on a new enquiry",
         intro: "From a buyer's first message to a call your agent is ready for.",
         items: [
-          { title: "A buyer messages at 11 PM", body: "From a click-to-WhatsApp ad, your website button or a site hoarding. The chat lands in the team inbox, not on one agent's phone." },
-          { title: "The AI agent replies", body: "Within seconds, in the buyer's language. It answers questions about the project and its location, sends the brochure, photos and floor plans, and asks what they need, their budget and when they plan to buy." },
-          { title: "The lead fills itself in", body: "The buyer's answers are saved on the lead with the ad it came from. The lead gets an owner, that agent's phone gets a push alert, and the AI scores the lead from the chat once the buyer goes quiet." },
-          { title: "Your agent takes over", body: "In the morning Hot Today shows who to call first and why. The agent reads the chat, sends an AI-drafted follow-up, calls the buyer and books the site visit." },
+          { title: "A buyer messages at 11 PM", body: "From an ad, your website or a hoarding, into the team inbox, not one agent's phone." },
+          { title: "The AI agent replies", body: "In seconds, in the buyer's language, with the brochure, floor plans and the qualifying questions." },
+          { title: "The lead fills itself in", body: "Answers and the source ad are saved, an owner is alerted, and the AI scores the chat." },
+          { title: "Your agent takes over", body: "Hot Today shows who to call first and why; the agent calls and books the visit." },
         ],
       }}
       features={{
-        visual: <MiniChat messages={[
-          ["buyer", "Is the 2 BHK at Riverview Heights still available?"],
-          ["ai", "Yes, 2 BHK homes start at ₹82 L. Can you visit this Saturday, 11 AM or 4 PM?"],
-          ["buyer", "11 AM works"],
-        ]} />,
+        visual: <HotTodayViz />,
         title: "The AI features, and the plan each is on",
-        intro: "Built on the official WhatsApp Business Platform. Nothing here is a demo-only feature.",
+        intro: "On the official WhatsApp Business Platform. Nothing here is demo-only.",
         items: [
-          { icon: Bot, title: "WhatsApp AI agent", body: "Replies to buyers 24/7 in English, Hinglish, Hindi or Marathi, qualifies them and offers a site visit. Any agent can take over the chat.", plan: "Growth" },
-          { icon: Flame, title: "AI lead scoring", body: "The AI reads each buyer's recent WhatsApp chat and moves the lead's score up or down, with a one-line reason and a next step on the Hot Today list.", plan: "Growth" },
-          { icon: MessageSquareText, title: "Artha, the AI copilot", body: "Ask about your leads, follow-ups and team in plain words or by voice, on the web or the Android app. Artha prepares follow-ups, status changes and notes for you to apply.", plan: "Growth" },
-          { icon: ImageIcon, title: "Reads the photos buyers send", body: "When a buyer sends a photo on WhatsApp, such as a floor plan or a site board, the AI agent looks at it and replies to what it shows.", plan: "Growth" },
-          { icon: Sparkles, title: "AI-written follow-ups", body: "For any lead, AI drafts a personal WhatsApp message using their name, project interest and budget. The agent reviews it and sends it.", plan: "Growth" },
-          { icon: Headphones, title: "Call transcripts and summaries", body: "Recorded calls are transcribed, with the buyer's intent, a summary and the next step. Switch it on and a call that books a site visit moves the lead's stage.", plan: "Enterprise" },
-          { icon: PhoneCall, title: "AI voice calling", body: "An AI calling agent phones new leads, qualifies them and hands them over with the call transcript and the language they spoke.", plan: "Enterprise" },
-          { icon: Gauge, title: "Rule-based lead score", body: "Every lead gets a 0 to 100 score from rules on budget, recency, stage and activity, so your team can always see why a lead ranks where it does.", plan: "all" },
+          { icon: Flame, title: "AI lead scoring", body: "The AI reads each buyer's recent chat, moves the score with a one-line reason, and ranks Hot Today.", plan: "Growth" },
+          { icon: Bot, title: "WhatsApp AI agent", body: "Replies 24/7 in English, Hinglish, Hindi or Marathi and offers a site visit.", plan: "Growth" },
+          { icon: MessageSquareText, title: "Artha, the AI copilot", body: "Ask about leads and follow-ups by text or voice, and apply its suggested updates.", plan: "Growth" },
+          { icon: ImageIcon, title: "Reads the photos buyers send", body: "Floor plans or site boards sent on WhatsApp get a reply about what they show.", plan: "Growth" },
+          { icon: Sparkles, title: "AI-written follow-ups", body: "A personal draft with the buyer's name, project and budget, for the agent to send.", plan: "Growth" },
+          { icon: Headphones, title: "Call transcripts and summaries", body: "Recorded calls get a transcript, the buyer's intent and the next step.", plan: "Enterprise" },
+          { icon: PhoneCall, title: "AI voice calling", body: "An AI agent calls new leads, qualifies them and hands over the transcript.", plan: "Enterprise" },
+          { icon: Gauge, title: "Rule-based lead score", body: "A 0 to 100 score from budget, recency, stage and activity that anyone can read.", plan: "all" },
         ],
       }}
       compare={{
         title: "A regular CRM vs an AI CRM",
-        intro: "What changes for a property sales team when the CRM does the first reply and the typing.",
+        intro: "What changes when the CRM does the first reply and the typing.",
         cols: ["Regular CRM", "Arthaleads AI CRM"],
         rows: [
           ["Buyer messages at 11 PM", "Waits until an agent sees it the next morning", "The AI agent replies in seconds and asks the qualifying questions"],

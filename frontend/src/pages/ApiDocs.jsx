@@ -39,15 +39,15 @@ function CodeBlock({ samples }) {
 
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: "#0f1117", border: `1px solid ${border}`, boxShadow: "var(--site-shadow)" }}>
-      <div className="flex items-center justify-between gap-2 px-3 py-2" style={{ borderBottom: `1px solid ${border}` }}>
-        <div className="flex items-center gap-1 min-w-0">
+      <div className="flex items-center justify-between gap-2 px-2 py-1" style={{ borderBottom: `1px solid ${border}` }}>
+        <div className="flex items-center gap-0.5 min-w-0 overflow-x-auto">
           {langs.map((l) => (
             <button
               key={l}
               type="button"
               aria-pressed={lang === l}
               onClick={() => setLang(l)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+              className="min-h-[44px] px-3 sm:px-3.5 rounded-lg text-[13px] font-semibold cursor-pointer transition-colors shrink-0"
               style={{
                 background: lang === l ? "rgba(255,107,0,0.16)" : "transparent",
                 color: lang === l ? "#ff8a3d" : "rgba(230,230,230,0.6)",
@@ -57,7 +57,7 @@ function CodeBlock({ samples }) {
             </button>
           ))}
         </div>
-        <button type="button" onClick={copy} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer shrink-0" style={{ color: copied ? "#4ade80" : "rgba(230,230,230,0.7)" }}>
+        <button type="button" onClick={copy} className="flex items-center gap-1.5 min-h-[44px] px-3 rounded-lg text-[13px] font-semibold cursor-pointer shrink-0" style={{ color: copied ? "#4ade80" : "rgba(230,230,230,0.7)" }}>
           {copied ? <Check className="w-3.5 h-3.5" aria-hidden="true" /> : <Copy className="w-3.5 h-3.5" aria-hidden="true" />}
           {copied ? "Copied" : "Copy"}
         </button>
@@ -75,7 +75,7 @@ const ENDPOINTS = [
     method: "POST",
     path: "/api/leads",
     title: "Create a lead",
-    desc: "Push a new lead into your CRM pipeline. Use this from your website, landing pages, or any external system.",
+    desc: "Push a new lead into your pipeline from a website, landing page or any external system.",
     samples: {
       cURL: `curl -X POST https://api.arthaleads.com/api/leads \\
   -H "Authorization: Bearer YOUR_API_TOKEN" \\
@@ -121,7 +121,7 @@ requests.post(
     method: "GET",
     path: "/api/leads",
     title: "List leads",
-    desc: "Retrieve leads from your pipeline with pagination and filtering. Returns leads scoped to your organisation only.",
+    desc: "Page through and filter your leads. Only your organisation's leads are returned.",
     samples: {
       cURL: `curl https://api.arthaleads.com/api/leads?page=1&limit=50 \\
   -H "Authorization: Bearer YOUR_API_TOKEN"`,
@@ -187,7 +187,7 @@ requests.post(
 function ApiHeroCode() {
   const line = (k, v) => <><span style={{ color: "#7dd3fc" }}>{k}</span>{v}</>;
   return (
-    <div className="relative mx-auto w-full max-w-[520px]">
+    <div className="relative mx-auto lg:mx-5 w-full lg:w-auto max-w-[520px]">
       <div aria-hidden="true" className="hero-glass" />
       <div className="relative rounded-[22px] overflow-hidden text-left" style={{ background: "#0f1117", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "var(--site-shadow-lg)" }}>
         <div className="flex items-center gap-2 px-4 h-10" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
@@ -231,7 +231,7 @@ export default function ApiDocs() {
       <PageHero
         eyebrow="Developers"
         title={<>Arthaleads <span className="site-dim">API</span></>}
-        lede="A simple REST API to push leads into your CRM, list your pipeline, and connect any form on the web. Available on the Enterprise plan."
+        lede="Push leads into your CRM, list your pipeline and connect any web form. On the Enterprise plan."
         actions={[
           { label: "Read the endpoints", href: "#endpoints" },
           { label: "Get API access", to: "/book-demo" },
@@ -240,7 +240,8 @@ export default function ApiDocs() {
         visual={<ApiHeroCode />}
       />
 
-      <Section tone="tint" id="endpoints" className="!pt-12 sm:!pt-16">
+      {/* Signature band: the endpoint reference */}
+      <Section tone="sand" id="endpoints" className="!pt-12 sm:!pt-16">
         <Container className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-10 items-start">
           {/* Sidebar */}
           <nav aria-label="Endpoints" className="hidden lg:block sticky top-28">
@@ -252,13 +253,13 @@ export default function ApiDocs() {
                     type="button"
                     onClick={() => scrollTo(e.id)}
                     aria-current={activeId === e.id ? "true" : undefined}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-sm font-medium cursor-pointer transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-3 rounded-xl text-left text-sm font-medium cursor-pointer transition-colors"
                     style={{
                       background: activeId === e.id ? "rgba(255,107,0,0.10)" : "transparent",
                       color: activeId === e.id ? "var(--site-brand-ink)" : "var(--site-muted)",
                     }}
                   >
-                    <span className="font-bold w-9 shrink-0" style={{ color: METHOD_TEXT[e.method] || METHOD_COLORS[e.method], fontSize: 10 }}>{e.method}</span>
+                    <span className="font-bold w-10 shrink-0 text-xs" style={{ color: METHOD_TEXT[e.method] || METHOD_COLORS[e.method] }}>{e.method}</span>
                     {e.title}
                   </button>
                 </li>
@@ -274,7 +275,7 @@ export default function ApiDocs() {
                   <KeyRound className="w-5 h-5" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
-                  <h2 className="font-display text-lg font-bold site-ink mb-2">Authentication</h2>
+                  <h2 className="site-h3 mb-2">Authentication</h2>
                   <p className="text-[15px] leading-relaxed">
                     Lead capture endpoints (website form, Google, custom source) use the token of the connection you created. Find it under{" "}
                     <strong className="site-ink">Integrations</strong> in your CRM, on that connection's card, and send it in the request body as <code className={inlineCode}>token</code>. The CRM endpoints below (leads and so on) take a Bearer token: sign in with POST /api/auth/login and use the token it returns as YOUR_API_TOKEN. It acts as that user, with that user's role and access.
@@ -292,7 +293,7 @@ export default function ApiDocs() {
                     <span className="px-2.5 py-1 rounded-lg text-xs font-bold text-white" style={{ background: METHOD_COLORS[e.method] }}>{e.method}</span>
                     <code className="text-sm font-mono site-ink">{e.path}</code>
                   </div>
-                  <h2 className="font-display text-xl sm:text-2xl font-bold site-ink mb-2">{e.title}</h2>
+                  <h2 className="site-h3 mb-2">{e.title}</h2>
                   <p className="text-[15px] mb-5 leading-relaxed">{e.desc}</p>
                   <CodeBlock samples={e.samples} />
                 </div>
@@ -304,24 +305,23 @@ export default function ApiDocs() {
 
       {/* Help CTA */}
       <Section tone="white">
-        <Container narrow>
+        <Container>
           <Reveal>
             <Card raised className="p-6 sm:p-10 flex flex-col sm:flex-row sm:items-start gap-6">
               <span className="site-icon w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={iconTile}>
                 <Terminal className="w-7 h-7" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
               </span>
               <div className="min-w-0 flex-1">
-                <h2 className="font-display text-xl sm:text-2xl font-bold site-ink mb-2">Need a custom integration?</h2>
+                <h2 className="site-h3 mb-2">Need a custom integration?</h2>
                 <p className="text-[15px] leading-relaxed">
-                  Our team can help you connect Arthaleads to your existing tools and portals. Reach out and we'll
-                  get you set up.
+                  We can connect Arthaleads to your existing tools and portals.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-3">
                   <SiteButton href="mailto:contact@arthaleads.com?subject=API%20Integration" variant="secondary">
                     <Mail className="w-4 h-4" /> contact@arthaleads.com
                   </SiteButton>
                   <SiteButton to="/wordpress-plugin" variant="secondary">
-                    WordPress Plugin <ArrowRight className="w-4 h-4" />
+                    WordPress plugin <ArrowRight className="w-4 h-4" />
                   </SiteButton>
                 </div>
               </div>

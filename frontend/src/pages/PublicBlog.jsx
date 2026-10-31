@@ -92,8 +92,7 @@ export function SiteBlogCard({ post, eager = false }) {
           <PostCategory post={post} />
           <span className="text-xs shrink-0 site-muted">{post.readingTime || 1} min read</span>
         </div>
-        <h3 className="font-display site-ink font-bold text-[1.15rem] leading-snug tracking-[-0.01em] mb-3 line-clamp-3 transition-colors group-hover:text-[color:var(--site-brand-ink)]"
-          style={{ textWrap: "balance" }}>
+        <h3 className="site-h4 mb-3 line-clamp-3 transition-colors group-hover:text-[color:var(--site-brand-ink)]">
           {post.title}
         </h3>
         {post.excerpt && <p className="text-[15px] leading-relaxed line-clamp-3 mb-5">{post.excerpt}</p>}
@@ -124,8 +123,7 @@ function FeaturedCard({ post }) {
             <span className="site-eyebrow !text-xs">Latest</span>
             <PostCategory post={post} />
           </div>
-          <h3 className="font-display site-ink font-extrabold text-[26px] sm:text-[32px] xl:text-[36px] leading-[1.12] tracking-[-0.02em] mb-4 transition-colors group-hover:text-[color:var(--site-brand-ink)]"
-            style={{ textWrap: "balance" }}>
+          <h3 className="site-h3 mb-4 transition-colors group-hover:text-[color:var(--site-brand-ink)]">
             {post.title}
           </h3>
           {post.excerpt && <p className="text-base leading-relaxed line-clamp-3">{post.excerpt}</p>}
@@ -146,7 +144,7 @@ function ListHead({ title, note }) {
   return (
     <div className="mb-7">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-        <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] text-[26px] sm:text-[32px]">{title}</h2>
+        <h2 className="site-h2">{title}</h2>
         {note && <span className="text-sm site-muted">{note}</span>}
       </div>
     </div>
@@ -251,19 +249,19 @@ function BlogPageInner() {
         <div aria-hidden="true" className="hero-warm" style={{ opacity: 0.55 }} />
         <Container className="relative grid lg:grid-cols-[1.35fr_1fr] gap-10 lg:gap-14 items-end">
           <header id="blog-head">
-            <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm site-muted mb-6">
-              <Link to="/" className="hover:text-[color:var(--site-brand-ink)] transition-colors">Home</Link>
+            <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-x-2 text-sm site-muted -mt-3 mb-3">
+              <Link to="/" className="inline-flex items-center min-h-[44px] hover:text-[color:var(--site-brand-ink)] transition-colors">Home</Link>
               <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
               {topic ? (
                 <>
-                  <Link to="/blog" className="hover:text-[color:var(--site-brand-ink)] transition-colors">Blog</Link>
+                  <Link to="/blog" className="inline-flex items-center min-h-[44px] hover:text-[color:var(--site-brand-ink)] transition-colors">Blog</Link>
                   <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                   <span style={{ color: "var(--site-text)" }} aria-current="page">{topic.name}</span>
                 </>
               ) : <span style={{ color: "var(--site-text)" }} aria-current="page">Blog</span>}
             </nav>
             <p className="site-eyebrow mb-4">{topic ? "Topic" : "The Arthaleads Journal"}</p>
-            <h1 className="font-display site-ink font-extrabold tracking-[-0.03em] text-[34px] leading-[1.08] sm:text-[46px] lg:text-[52px]" style={{ textWrap: "balance" }}>
+            <h1 className="site-h1">
               {topic ? topic.name : <>How real estate teams <span className="site-dim">win more leads</span></>}
             </h1>
             <p className="mt-5 text-base sm:text-[17px] leading-relaxed max-w-[38rem]" style={{ textWrap: "pretty" }}>
@@ -272,7 +270,7 @@ function BlogPageInner() {
           </header>
 
           <Card raised className="p-5 sm:p-6">
-            <label htmlFor="blog-search" className="block font-display site-ink font-bold text-base mb-3">What do you want to solve?</label>
+            <label htmlFor="blog-search" className="block site-h4 mb-3">What do you want to solve?</label>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 site-muted" aria-hidden="true" />
               <input id="blog-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search guides, e.g. site visits"
@@ -312,7 +310,7 @@ function BlogPageInner() {
               <div className="flex flex-wrap items-center gap-2 text-sm mb-6">
                 {tagFilter && <Chip onClear={() => setTagFilter("")}>#{tagFilter}</Chip>}
                 {search && <Chip onClear={() => setSearch("")}>"{search}"</Chip>}
-                <button type="button" onClick={clearFilters} className="text-xs underline underline-offset-2 ml-1 site-muted hover:text-[color:var(--site-ink)]">Clear all</button>
+                <button type="button" onClick={clearFilters} className="inline-flex items-center min-h-[44px] px-1 text-sm underline underline-offset-2 site-muted hover:text-[color:var(--site-ink)]">Clear all</button>
               </div>
             )}
             {loading ? (
@@ -322,7 +320,7 @@ function BlogPageInner() {
                 <span className="site-icon w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5" style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" }}>
                   <BookOpen className="w-6 h-6" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                 </span>
-                <h2 className="font-display site-ink text-xl font-bold mb-2">{unknownTopic ? "Topic not found" : filtering ? "No articles match" : "New articles are on the way"}</h2>
+                <h2 className="site-h3 mb-2">{unknownTopic ? "Topic not found" : filtering ? "No articles match" : "New articles are on the way"}</h2>
                 <p className="text-sm">{unknownTopic ? "This topic does not exist or has no articles yet." : filtering ? "Try a different search or topic." : "Check back soon."}</p>
                 {(filtering || unknownTopic) && <SiteButton to="/blog" onClick={clearFilters} className="mt-6">Show all guides</SiteButton>}
               </Card>
@@ -370,10 +368,10 @@ function BlogPageInner() {
           <Reveal>
             <div className="site-cta-panel relative overflow-hidden rounded-[28px] sm:rounded-[32px] p-6 sm:p-10 lg:p-12 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 lg:gap-12">
               <div className="max-w-xl">
-                <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] leading-[1.1] text-[28px] sm:text-[36px] lg:text-[40px]" style={{ textWrap: "balance" }}>
+                <h2 className="site-h2">
                   Put these ideas to work <span className="site-dim">on your own leads</span>
                 </h2>
-                <p className="mt-4 text-base sm:text-lg leading-relaxed">Arthaleads brings every enquiry, WhatsApp chat and follow-up into one workspace for your sales team.</p>
+                <p className="mt-4 text-base sm:text-lg leading-relaxed">Every enquiry, WhatsApp chat and follow-up in one workspace.</p>
               </div>
               <div className="shrink-0 flex flex-col items-start lg:items-end gap-4">
                 <DemoActions className="!justify-start" />
@@ -408,20 +406,20 @@ function TopicGuide({ topic }) {
     <div className="mt-16 lg:mt-20 grid lg:grid-cols-[1fr_1fr] gap-10 lg:gap-16">
       {guide.length > 0 && (
         <div>
-          <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] text-[24px] sm:text-[28px] mb-4">About {topic.name}</h2>
+          <h2 className="site-h2 mb-4">About {topic.name}</h2>
           <div className="space-y-4 text-base leading-relaxed">{guide.map((p, i) => <p key={i}>{p}</p>)}{TOPIC_HUB[topic.slug] && <p><Link to={TOPIC_HUB[topic.slug][0]} className="font-semibold site-ink underline underline-offset-4">{TOPIC_HUB[topic.slug][1]}</Link></p>}</div>
         </div>
       )}
       {faqs.length > 0 && (
         <div>
-          <h2 className="font-display site-ink font-extrabold tracking-[-0.02em] text-[24px] sm:text-[28px] mb-4">Common questions</h2>
+          <h2 className="site-h2 mb-4">Common questions</h2>
           <div className="space-y-3">
             {faqs.map((f, i) => (
-              <details key={i} className="site-card px-5 py-4 group" open={i === 0}>
-                <summary className="cursor-pointer list-none font-semibold site-ink flex items-start justify-between gap-4">
+              <details key={i} className="site-card group" open={i === 0}>
+                <summary className="cursor-pointer list-none font-semibold site-ink flex items-start justify-between gap-4 px-5 py-4">
                   <span>{f.question}</span><span aria-hidden="true" className="site-muted transition-transform group-open:rotate-45">+</span>
                 </summary>
-                <p className="mt-3 text-[15px] leading-relaxed">{f.answer}</p>
+                <p className="px-5 pb-4 -mt-1 text-[15px] leading-relaxed">{f.answer}</p>
               </details>
             ))}
           </div>
@@ -441,7 +439,7 @@ function TopicTab({ to, on, label, count }) {
 }
 
 function Pager({ page, pages, onGo }) {
-  const btn = "w-10 h-10 rounded-xl flex items-center justify-center transition disabled:opacity-30 disabled:cursor-not-allowed hover:border-[color:var(--site-brand)] site-ink";
+  const btn = "w-11 h-11 rounded-xl flex items-center justify-center transition disabled:opacity-30 disabled:cursor-not-allowed hover:border-[color:var(--site-brand)] site-ink";
   const plain = { border: "1px solid var(--site-line-strong)", background: "var(--site-card)" };
   return (
     <nav aria-label="Pages" className="flex flex-wrap items-center justify-center gap-2 mt-12">
@@ -452,7 +450,7 @@ function Pager({ page, pages, onGo }) {
         const on = page === i + 1;
         return (
           <button type="button" key={i} onClick={() => onGo(i + 1)} aria-current={on ? "page" : undefined}
-            className={`w-10 h-10 rounded-xl text-sm font-semibold tabular-nums transition ${on ? "text-white" : "hover:border-[color:var(--site-brand)] site-ink"}`}
+            className={`w-11 h-11 rounded-xl text-sm font-semibold tabular-nums transition ${on ? "text-white" : "hover:border-[color:var(--site-brand)] site-ink"}`}
             style={on ? { background: "var(--brand-btn)" } : plain}>
             {i + 1}
           </button>
@@ -467,10 +465,11 @@ function Pager({ page, pages, onGo }) {
 
 function Chip({ children, onClear }) {
   return (
-    <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full text-xs font-semibold"
+    <span className="inline-flex items-center gap-1.5 pl-3 pr-1 py-1 rounded-full text-[13px] font-semibold"
       style={{ background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)", color: "var(--site-brand-ink)" }}>
       {children}
-      <button type="button" onClick={onClear} aria-label="Remove filter" className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-[#ff6b00]/20"><X className="w-3 h-3" /></button>
+      {/* 24px to look at, 44px to tap (the ::after extends the hit area). */}
+      <button type="button" onClick={onClear} aria-label="Remove filter" className="relative w-6 h-6 rounded-full flex items-center justify-center hover:bg-[#ff6b00]/20 after:content-[''] after:absolute after:-inset-[10px]"><X className="w-3.5 h-3.5" aria-hidden="true" /></button>
     </span>
   );
 }

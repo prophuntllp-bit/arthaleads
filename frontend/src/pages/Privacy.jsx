@@ -1,8 +1,8 @@
 import LegalLayout, { Section, ContactBox } from "../components/LegalLayout";
 import { useSEO } from "../utils/useSEO";
 
-const strong = { color: "var(--app-text)" };
-const link = { color: "var(--brand-text)" };
+const strong = { color: "var(--site-ink)" };
+const link = { color: "var(--site-brand-ink)" };
 
 export default function Privacy() {
   useSEO({
@@ -365,16 +365,16 @@ export default function Privacy() {
         </p>
         <ContactBox>
           <p className="font-bold mb-1" style={strong}>Grievance Officer, Prophunt LLP (Arthaleads)</p>
-          <p style={{ color: "var(--app-text-soft)" }}>
+          <p style={{ color: "var(--site-muted)" }}>
             Email:{" "}
             <a href="mailto:contact@arthaleads.com" style={link} className="hover:underline">
               contact@arthaleads.com
             </a>
           </p>
-          <p style={{ color: "var(--app-text-soft)" }}>
+          <p style={{ color: "var(--site-muted)" }}>
             Address: 1, Utkarsha Bungalow, Late Babanrao Shripati Dhankude Road, Baner, Pune, Maharashtra 411045, India
           </p>
-          <p style={{ color: "var(--app-text-soft)" }}>Response time: within 30 days of receipt.</p>
+          <p style={{ color: "var(--site-muted)" }}>Response time: within 30 days of receipt.</p>
         </ContactBox>
       </Section>
 
@@ -394,16 +394,16 @@ export default function Privacy() {
         </p>
         <ContactBox>
           <p className="font-bold mb-1" style={strong}>Prophunt LLP (Arthaleads)</p>
-          <p style={{ color: "var(--app-text-soft)" }}>
+          <p style={{ color: "var(--site-muted)" }}>
             Email:{" "}
             <a href="mailto:contact@arthaleads.com" style={link} className="hover:underline">
               contact@arthaleads.com
             </a>
           </p>
-          <p style={{ color: "var(--app-text-soft)" }}>
+          <p style={{ color: "var(--site-muted)" }}>
             Address: 1, Utkarsha Bungalow, Late Babanrao Shripati Dhankude Road, Baner, Pune, Maharashtra 411045, India
           </p>
-          <p style={{ color: "var(--app-text-soft)" }}>
+          <p style={{ color: "var(--site-muted)" }}>
             Platform:{" "}
             <a href="https://www.arthaleads.com" style={link} className="hover:underline">
               https://arthaleads.com

@@ -90,9 +90,10 @@ export default function AndroidLockScreen() {
               <div className="relative mx-2.5 mt-6" style={{ height: ALERTS.length * (CARD_H + GAP) }}>
                 {ALERTS.map(({ Icon, tint, title, body }, k) => {
                   const shown = k < n;
-                  const slot = n - 1 - k;
+                  // Not yet arrived: slot would be negative ("-3 min" in the DOM), so clamp it.
+                  const slot = Math.max(0, n - 1 - k);
                   return (
-                    <div key={title} className="absolute inset-x-0 top-0 rounded-[22px] px-3 py-2.5 flex items-start gap-2.5"
+                    <div key={title} aria-hidden={shown ? undefined : true} className="absolute inset-x-0 top-0 rounded-[22px] px-3 py-2.5 flex items-start gap-2.5"
                       style={{
                         height: CARD_H,
                         background: "rgba(255,255,255,0.86)",

@@ -392,3 +392,34 @@
   .card-nav:not([data-narrow]) .card-nav__end { grid-column: 2; padding-right: 2px; }
   .card-nav:not([data-narrow]) .card-nav__end .card-nav__cta { display: none; }
 }
+
+/* Arthaleads (31 Oct 2026 audit): 44px link rows in a two-column grid, lists
+   top-aligned under the card title, cards 2x2 on tablets, and the open menu
+   scrolls inside itself when it is taller than the screen. */
+.card-nav__content {
+  max-height: calc(100dvh - var(--cn-top, 10px) - var(--cn-bar) - 12px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.card-nav__card,
+.card-nav[data-narrow] .card-nav__card { gap: 6px; }
+.card-nav__links,
+.card-nav[data-narrow] .card-nav__links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 12px;
+  margin: 0;
+}
+.card-nav__link {
+  display: flex;
+  min-height: 44px;
+  padding: 0;
+  opacity: 0.88;
+}
+.card-nav__link:hover { opacity: 1; }
+.card-nav:not([data-narrow]) .card-nav__cards { flex-wrap: wrap; }
+.card-nav:not([data-narrow]) .card-nav__card { flex: 1 1 calc(50% - var(--cn-gap)); }
+/* Phones: the card descriptions cost a screen of scrolling; the titles say enough. */
+.card-nav[data-narrow] .card-nav__description { display: none; }
+@media (max-width: 583px) { .card-nav__description { display: none; } }

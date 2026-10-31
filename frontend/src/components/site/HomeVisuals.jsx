@@ -74,7 +74,8 @@ const HERO_SCORES = ["Lead score 87 · Hot", "Lead score 74 · Warm", "Lead scor
 export function HeroVisual() {
   return (
     <div className="hero-visual relative mx-auto w-full max-w-[520px] lg:max-w-[440px] xl:max-w-[460px] px-3 sm:px-6 lg:px-0">
-      {/* Frosted glass panel the photo stands on (styles.css .hero-glass). */}
+      {/* Frosted glass panel the photo stands on (styles.css .hero-glass). At lg-xl (1024-1279)
+          the cards move to the frame edges so none covers her face (UI audit 31 Oct 2026). */}
       <div aria-hidden="true" className="hero-glass" />
       <div className="relative overflow-hidden rounded-[28px] border" style={{ borderColor: "var(--site-line)", boxShadow: "var(--site-shadow-lg)" }}>
         <SiteImage name="hero" width={1024} height={1280} priority sizes="(min-width: 1024px) 460px, 86vw"
@@ -82,7 +83,7 @@ export function HeroVisual() {
           className="block w-full h-auto aspect-[4/5] lg:aspect-[6/7] object-cover object-[50%_30%]" />
       </div>
 
-      <FloatCard index={0} className="left-0 top-6 sm:-left-2 lg:-left-6 xl:-left-12 w-[230px] sm:w-[250px]">
+      <FloatCard index={0} className="left-0 top-6 sm:-left-2 lg:-left-10 xl:-left-12 w-[230px] sm:w-[250px] lg:w-[220px] xl:w-[250px]">
         <Cycle items={HERO_ENQUIRIES} offset={600}>
           {(e) => (
             <>
@@ -101,7 +102,7 @@ export function HeroVisual() {
         </Cycle>
       </FloatCard>
 
-      <FloatCard index={1} className="hidden sm:block right-0 lg:-right-3 xl:-right-10 top-[42%] w-[240px]">
+      <FloatCard index={1} className="hidden sm:block right-0 lg:-right-3 xl:-right-10 top-[42%] lg:top-[54%] xl:top-[42%] w-[240px]">
         <p className="flex items-center gap-1.5 text-[11px] font-semibold" style={{ color: "var(--site-brand-ink)" }}>
           <Sparkles className="w-3.5 h-3.5" /> AI agent replied in seconds
         </p>
@@ -122,7 +123,7 @@ export function HeroVisual() {
         </div>
       </FloatCard>
 
-      <FloatCard index={3} className="hidden sm:flex right-4 top-6 lg:right-2 xl:-right-6 items-center gap-2 !py-2.5 !px-3">
+      <FloatCard index={3} className="hidden sm:flex right-4 top-6 lg:top-auto lg:bottom-5 lg:-right-4 xl:top-6 xl:bottom-auto xl:-right-6 items-center gap-2 !py-2.5 !px-3">
         <Flame className="w-4 h-4" style={{ color: "#ff6b00" }} />
         <Cycle items={HERO_SCORES} offset={1500}>{(s) => <span className="text-[12px] font-semibold site-ink">{s}</span>}</Cycle>
       </FloatCard>
@@ -217,7 +218,7 @@ function Avatar({ name, i = 0, size = 26 }) {
   const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2);
   return (
     <span className="rounded-full flex items-center justify-center shrink-0 font-semibold text-white"
-      style={{ width: size, height: size, fontSize: size * 0.38, background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>
+      style={{ width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.38)), background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>
       {initials}
     </span>
   );
@@ -227,9 +228,13 @@ function Badge({ tone, children }) {
   return <span className="text-[10px] font-semibold rounded-md px-1.5 py-0.5 whitespace-nowrap" style={tone}>{children}</span>;
 }
 
-/** The dotted stage every feature visual sits on. */
-export function Stage({ children, className }) {
-  return <div className={cx("site-stage p-4 sm:h-[232px]", className)}>{children}</div>;
+/**
+ * The dotted stage every feature visual sits on: 232px tall on sm+ so cards in
+ * a row line up. `auto` lets a visual size to its content instead (Projects +
+ * Pipeline, UI audit 31 Oct 2026).
+ */
+export function Stage({ children, className, auto = false }) {
+  return <div className={cx("site-stage p-4", !auto && "sm:h-[232px]", className)}>{children}</div>;
 }
 
 export function CaptureViz() {
@@ -266,26 +271,29 @@ export function CaptureViz() {
   );
 }
 
-export function PipelineViz() {
+// Compact kanban: content-sized, one short row per card (name, badge beside it
+// or below it when the column is narrow). `className` lets the home bento give
+// it the shared 232px stage height, centred.
+export function PipelineViz({ className }) {
   const cols = [
     ["New", 12, [["Kabir J.", "3 BHK"], ["Meera S.", "2 BHK"]]],
     ["Site visit", 5, [["Raj P.", "Sat 11 AM", "hot"], ["Vikram R.", "Overdue", "late"]]],
     ["Booked", 2, [["Asha K.", "Flat 1204", "won"]]],
   ];
   return (
-    <Stage>
-      <div className="grid grid-cols-3 gap-2 h-full">
+    <Stage auto className={cx("!p-3 sm:!p-4", className)}>
+      <div className="grid grid-cols-3 gap-2 items-start">
         {cols.map(([name, count, cards]) => (
-          <div key={name} className="rounded-xl p-2 site-chip">
-            <p className="flex items-center justify-between text-[11px] font-semibold site-muted mb-2 px-0.5">
+          <div key={name} className="rounded-xl p-1.5 site-chip">
+            <p className="flex items-center justify-between text-[11px] font-semibold site-muted mb-1.5 px-1">
               <span className="truncate">{name}</span><span className="site-ink">{count}</span>
             </p>
             <div className="space-y-1.5">
               {cards.map(([n, tag, state]) => (
-                <div key={n} className={cx(tile, "px-2 py-1.5")}
+                <div key={n} className={cx(tile, "flex flex-wrap items-center justify-between gap-x-1.5 gap-y-0.5 px-2 py-1.5 min-h-[34px]")}
                   style={{ ...tileStyle, ...(state === "late" ? { borderColor: "rgba(220,38,38,0.55)" } : state === "hot" ? { borderColor: "rgba(255,107,0,0.6)" } : {}) }}>
-                  <p className="text-[11px] font-semibold site-ink truncate">{n}</p>
-                  <p className="mt-0.5"><Badge tone={state === "late" ? RED : state === "won" ? GREEN : state === "hot" ? ORANGE : { background: "var(--site-chip)", color: "var(--site-muted)" }}>{tag}</Badge></p>
+                  <span className="text-[11px] font-semibold site-ink truncate leading-tight">{n}</span>
+                  <Badge tone={state === "late" ? RED : state === "won" ? GREEN : state === "hot" ? ORANGE : { background: "var(--site-chip)", color: "var(--site-muted)" }}>{tag}</Badge>
                 </div>
               ))}
             </div>
@@ -296,27 +304,31 @@ export function PipelineViz() {
   );
 }
 
-export function ProjectViz() {
+// A wide 12:5 project photo (made for this box) with the project's numbers
+// under it. Content-sized; the home bento passes a min height.
+export function ProjectViz({ className }) {
   return (
-    <Stage className="flex flex-col">
+    <Stage auto className={cx("!p-3 sm:!p-4 flex flex-col", className)}>
       <div className={cx(tile, "overflow-hidden flex-1 flex flex-col")} style={tileStyle}>
-        <div className="relative h-[84px] overflow-hidden">
-          <SiteImage name="builder" width={640} height={427} sizes="380px" alt="" className="w-full h-full object-cover object-[50%_70%]" />
-          <span className="absolute top-2 left-2"><Badge tone={{ background: "rgba(15,18,34,0.7)", color: "#fff" }}>RERA registered</Badge></span>
+        <div className="relative aspect-[12/5] overflow-hidden">
+          <SiteImage name="project" width={1600} height={667} sizes="(min-width: 1024px) 560px, 92vw" alt=""
+            className="absolute inset-0 w-full h-full object-cover object-center" />
+          <span className="absolute top-2 left-2"><Badge tone={{ background: "rgba(15,18,34,0.72)", color: "#fff" }}>RERA registered</Badge></span>
         </div>
-        <div className="px-3 py-2.5">
+        <div className="px-3 py-2 flex-1 flex flex-col justify-center">
           <div className="flex items-center justify-between gap-2">
             <p className="text-[12.5px] font-semibold site-ink truncate">Riverview Heights</p>
             <span className="text-[11px] font-semibold site-ink shrink-0">₹82 L+</span>
           </div>
-          <p className="text-[11px] site-muted flex items-center gap-1"><MapPin className="w-3 h-3" /> Baner, Pune</p>
-          <div className="mt-2 grid grid-cols-3 gap-1.5 text-center">
-            {[["128", "Leads"], ["24", "Visits"], ["6", "Booked"]].map(([v, l]) => (
-              <div key={l} className="site-chip rounded-lg py-1">
-                <p className="text-[12px] font-bold site-ink leading-none">{v}</p>
-                <p className="text-[9.5px] site-muted mt-0.5">{l}</p>
-              </div>
-            ))}
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+            <p className="text-[11px] site-muted flex items-center gap-1"><MapPin className="w-3 h-3" aria-hidden="true" /> Baner, Pune</p>
+            <div className="flex gap-1">
+              {[["128", "leads"], ["24", "visits"], ["6", "booked"]].map(([v, l]) => (
+                <span key={l} className="site-chip rounded-md px-1.5 py-0.5 text-[10px] site-muted whitespace-nowrap">
+                  <b className="text-[11px] font-bold site-ink">{v}</b> {l}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -338,7 +350,7 @@ export function VisitViz() {
           return (
             <div key={d} className={cx(tile, "py-1.5 text-center")}
               style={on ? { background: "var(--brand-btn)", borderColor: "transparent", color: "#fff" } : { ...tileStyle, boxShadow: "none" }}>
-              <p className="text-[9.5px] font-medium" style={on ? undefined : { color: "var(--site-muted)" }}>{d}</p>
+              <p className="text-[10px] font-medium" style={on ? undefined : { color: "var(--site-muted)" }}>{d}</p>
               <p className="text-[13px] font-bold leading-tight" style={on ? undefined : { color: "var(--site-ink)" }}>{n}</p>
               <p className="flex justify-center gap-0.5 h-1.5 mt-0.5">
                 {Array.from({ length: dots }).map((_, k) => <span key={k} className="w-1 h-1 rounded-full" style={{ background: on ? "#fff" : "#ff6b00" }} />)}

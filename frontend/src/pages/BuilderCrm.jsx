@@ -45,9 +45,10 @@ export default function BuilderCrm() {
   return (
     <SolutionPage
       jsonLd={solutionJsonLd({ name: "Builder CRM", path: "/builder-crm", faqs: FAQS })}
+      signature={{ tone: "sand", layout: "split-reverse" }}
       hero={{
         lines: ["Builder CRM", "for real estate developers"],
-        lede: "Run every project's sales in one place. Leads from Facebook and Google ads, WhatsApp, portals and the site office land in the right project, reach the right telecaller in seconds, and are tracked through site visit to booking.",
+        lede: "Every project's sales in one place. Leads from ads, WhatsApp, portals and the site office land in the right project and reach the right telecaller in seconds.",
         eyebrow: "Builder CRM software",
         actions: [
           { label: "Book a builder demo", to: "/book-demo" },
@@ -66,33 +67,32 @@ export default function BuilderCrm() {
         q: "What is a builder CRM?",
         paras: [
           "A builder CRM is sales software for real estate developers. It collects enquiries for each project from ads, WhatsApp, property portals and the site office, gives every lead an owner, reminds the team to follow up, and tracks each buyer from first call to site visit and booking, project by project.",
-          "Most developer sales teams in India start with Excel sheets per campaign and WhatsApp groups. That works for one launch. With several projects, a telecalling team and ads running every week, leads get called twice or not at all, site visits are counted from memory, and nobody can say which campaign sold flats.",
-          "Arthaleads keeps each project's leads, team and media together, so the sales head sees every project on one screen and every agent sees only what is theirs.",
+          "Excel sheets and WhatsApp groups work for one launch. With several projects and weekly ads, leads get called twice or not at all. Arthaleads keeps each project's leads, team and media together, so the sales head sees every project on one screen.",
         ],
       }}
       steps={{
         title: "How a project runs in Arthaleads",
         intro: "From launch to booking, in four steps.",
         items: [
-          { title: "Set up the project", body: "Add the project with its RERA number, location, price range and configurations, upload brochures, floor plans and videos, and assign the sales team." },
-          { title: "Leads arrive", body: "Facebook and Instagram lead ads and WhatsApp chats come in automatically, and Google lead forms do too on Enterprise. Portal sheets are imported, and walk-ins scan the project's QR code at the site office." },
-          { title: "Telecallers follow up", body: "Each lead gets an owner and a push alert. Follow-ups are dated, overdue ones turn red, Hot Today shows who to call first, and the WhatsApp AI agent answers buyers at night." },
-          { title: "Visits, bookings, reports", body: "Leads move through Site Visit and Negotiation to Closed Won, and managers see conversion by project, by source and by agent." },
+          { title: "Set up the project", body: "RERA number, location, prices, brochures, floor plans and the sales team." },
+          { title: "Leads arrive", body: "Ads and WhatsApp automatically (Google forms on Enterprise), portal sheets by import, walk-ins by QR code." },
+          { title: "Telecallers follow up", body: "Each lead gets an owner and an alert; overdue follow-ups turn red and Hot Today ranks who to call." },
+          { title: "Visits, bookings, reports", body: "Site Visit, Negotiation, Closed Won, with conversion by project, source and agent." },
         ],
       }}
       features={{
         visual: <ProjectViz />,
         title: "Built for developer sales teams",
-        intro: "The plan each feature starts on is shown on its card.",
+        intro: "Each card shows the plan it starts on.",
         items: [
-          { icon: Building2, title: "Project-wise leads", body: "Each project keeps its own leads, team and media. Two projects on Starter, unlimited on Growth. Move leads between projects with their history.", plan: "Starter" },
-          { icon: QrCode, title: "QR codes for the site office", body: "Every project gets a QR code for hoardings, brochures and expo stalls. A visitor scans it, fills a short form and becomes a lead, tagged by source.", plan: "Starter" },
-          { icon: FacebookLogo, title: "Facebook lead ads, automatic", body: "Leads from Facebook and Instagram lead forms arrive in seconds with the campaign attached. No downloading sheets from Ads Manager. Google Ads lead forms are on Enterprise.", plan: "Starter" },
-          { icon: FileSpreadsheet, title: "Portal leads by import", body: "Bring in leads from 99acres, MagicBricks and Housing.com by importing the CSV or Excel export. Duplicate phone numbers are skipped.", plan: "Starter" },
-          { icon: Shuffle, title: "Routing to telecallers", body: "Every new lead gets an owner the moment it arrives, shared out evenly across the team, so no lead waits and none is called twice. Add routing rules by campaign on top.", plan: "Growth" },
-          { icon: MapPin, title: "Site visit tracking", body: "Site Visit is a stage in the pipeline, so visits are counted per project and per agent instead of being remembered at the weekly meeting.", plan: "Starter" },
-          { icon: Camera, title: "Selfie attendance", body: "Site and field staff clock in from their phone with a selfie and location. Admins see who is in today and export attendance reports.", plan: "Growth" },
-          { icon: BarChart3, title: "Project-wise reports", body: "Conversion by project, leads by source, team performance and stale-lead alerts, so the sales head sees every project on one screen.", plan: "Growth" },
+          { icon: Building2, title: "Project-wise leads", body: "Own leads, team and media per project: two on Starter, unlimited on Growth.", plan: "Starter" },
+          { icon: QrCode, title: "QR codes for the site office", body: "Visitors scan a project QR code on hoardings or stalls and become tagged leads.", plan: "Starter" },
+          { icon: FacebookLogo, title: "Facebook lead ads, automatic", body: "Facebook and Instagram leads arrive in seconds with the campaign (Google forms on Enterprise).", plan: "Starter" },
+          { icon: FileSpreadsheet, title: "Portal leads by import", body: "Import 99acres, MagicBricks and Housing.com exports; duplicate numbers are skipped.", plan: "Starter" },
+          { icon: Shuffle, title: "Routing to telecallers", body: "Every new lead gets an owner instantly, shared out evenly, with rules by campaign.", plan: "Growth" },
+          { icon: MapPin, title: "Site visit tracking", body: "Site Visit is a pipeline stage, counted per project and per agent.", plan: "Starter" },
+          { icon: Camera, title: "Selfie attendance", body: "Field staff clock in with a selfie and location; export attendance reports.", plan: "Growth" },
+          { icon: BarChart3, title: "Project-wise reports", body: "Conversion by project, leads by source, team performance and stale-lead alerts.", plan: "Growth" },
         ],
       }}
       compare={{

@@ -17,16 +17,16 @@ const STATS = [
 ];
 
 const VALUES = [
-  { icon: Zap,    title: "Speed",      desc: "Every lead that comes in is captured instantly. Every follow-up reminder fires on time. We build for the urgency of property sales." },
-  { icon: Heart,  title: "Simplicity", desc: "Sales teams shouldn't need training to use their CRM. Arthaleads is intuitive enough for a telecaller on day one." },
-  { icon: Shield, title: "Support",    desc: "When your team is in the middle of a campaign and something goes wrong, we're there. Real support from people who understand real estate." },
+  { icon: Zap,    title: "Speed",      desc: "Every lead captured instantly, every follow-up reminder on time." },
+  { icon: Heart,  title: "Simplicity", desc: "Simple enough for a telecaller to use on day one." },
+  { icon: Shield, title: "Support",    desc: "Real people who know real estate, on WhatsApp when you need them." },
 ];
 
 const STORY_POINTS = [
-  { icon: Layers,   text: "Every lead source in one inbox: Facebook and Instagram ads, Google, WhatsApp and website forms, with portal leads imported." },
+  { icon: Layers,   text: "Every lead source in one inbox: Meta ads, Google, WhatsApp, website forms and portal imports." },
   { icon: Users,    text: "Duplicate prevention so your team never wastes a call." },
-  { icon: Shield,   text: "Role-based access so telecallers, managers, and admins each see exactly what they need." },
-  { icon: BarChart3,text: "Real-time dashboards built for the pace of property sales campaigns." },
+  { icon: Shield,   text: "Role-based access for telecallers, managers and admins." },
+  { icon: BarChart3,text: "Real-time dashboards for property sales campaigns." },
 ];
 
 const iconTile = { background: "rgba(255,107,0,0.10)", boxShadow: "inset 0 0 0 1px rgba(255,107,0,0.22)" };
@@ -43,7 +43,7 @@ export default function AboutUs() {
       <PageHero
         eyebrow="About us"
         title={<>Built for real estate. <span className="site-dim">Built for India.</span></>}
-        lede="We set out to solve a problem every Indian real estate team knows: leads slipping through the cracks across WhatsApp groups, Facebook campaigns, and forgotten spreadsheets."
+        lede="Every Indian real estate team knows the problem: leads slipping through WhatsApp groups, Facebook campaigns and forgotten spreadsheets. We built the fix."
         actions={[
           { label: "Read our story", href: "#story" },
           { label: "Work with us", to: "/careers" },
@@ -80,9 +80,8 @@ export default function AboutUs() {
           <Reveal className="min-w-0">
             <SectionHeader eyebrow="Our story" title={<>Why we built <span className="site-dim">Arthaleads</span></>} className="!mb-6" />
             <div className="space-y-4 text-base sm:text-[17px] leading-relaxed">
-              <p>Real estate sales teams in India work across multiple channels simultaneously: Facebook lead ads, Google campaigns, WhatsApp enquiries, walk-ins, and housing portals, all at once. Before Arthaleads, managing this meant juggling six different tabs, three WhatsApp groups, and a shared Excel sheet that nobody trusted.</p>
-              <p>Hot leads would go cold because no one followed up in time. Telecallers would call the same number three times from different lists. Managers had no way to see what the team was actually doing.</p>
-              <p className="site-ink">Prophunt LLP started Arthaleads in Pune in 2025 to be the single workspace where every property enquiry lands, gets assigned, gets called, and gets tracked. From first contact to closed deal.</p>
+              <p>Indian real estate teams take leads from ads, WhatsApp, walk-ins and portals at once, then manage them across six tabs, three WhatsApp groups and an Excel sheet nobody trusts. Hot leads go cold and the same buyer gets called three times.</p>
+              <p className="site-ink">Prophunt LLP started Arthaleads in Pune in 2025: one workspace where every enquiry lands, gets assigned, called and tracked to a closed deal.</p>
             </div>
           </Reveal>
           <ul className="grid gap-3 min-w-0">
@@ -106,21 +105,20 @@ export default function AboutUs() {
           style={{ background: "radial-gradient(50% 60% at 50% 40%, rgba(255,107,0,0.18), transparent 70%)" }} />
         <Container className="relative text-center">
           <Reveal className="max-w-3xl mx-auto">
-            <h2 className="font-display text-white font-extrabold tracking-[-0.02em] leading-[1.12] text-[32px] sm:text-[44px] lg:text-[52px]" style={{ textWrap: "balance" }}>
+            <h2 className="site-h2">
               Turn every property enquiry <span className="site-dim">into a closed deal.</span>
             </h2>
             <p className="mt-6 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto" style={{ color: "rgba(255,255,255,0.72)" }}>
-              We believe the difference between a sale and a missed opportunity is usually just one thing: a timely, informed follow-up. Arthaleads exists to make sure that follow-up never gets missed.
+              The gap between a sale and a missed one is usually a timely follow-up. Arthaleads makes sure it never gets missed.
             </p>
           </Reveal>
         </Container>
       </Section>
 
-      {/* Values */}
-      <Section tone="white">
+      {/* Values (tint: the closing CTA after it is white) */}
+      <Section tone="tint">
         <Container>
-          <SectionHeader eyebrow="What we stand for" title="Three values we never compromise"
-            lede="Every decision, every feature, every customer interaction is shaped by these." />
+          <SectionHeader eyebrow="What we stand for" title="Three values we never compromise" />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {VALUES.map(({ icon: Icon, title, desc }, i) => (
               <Reveal key={title} delay={i * 110} className="min-w-0 flex">
@@ -128,7 +126,7 @@ export default function AboutUs() {
                   <span className="site-icon w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={iconTile}>
                     <Icon className="w-[22px] h-[22px]" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
                   </span>
-                  <h3 className="font-display text-xl font-bold site-ink mb-2">{title}</h3>
+                  <h3 className="site-h3 !mb-2">{title}</h3>
                   <p className="text-[15px] leading-relaxed">{desc}</p>
                 </Card>
               </Reveal>
@@ -139,9 +137,9 @@ export default function AboutUs() {
           <Reveal>
             <Card raised className="mt-6 p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
               <div className="min-w-0">
-                <p className="site-eyebrow mb-2">The company</p>
+                <h3 className="site-h4 !mb-2">The company</h3>
                 <p className="text-[15px] leading-relaxed max-w-2xl">
-                  Arthaleads is built and run by <strong className="site-ink">Prophunt LLP</strong>, a limited liability partnership based in Baner, Pune. We started building Arthaleads in 2025 and support every customer from Pune.
+                  Arthaleads is built and run by <strong className="site-ink">Prophunt LLP</strong>, a limited liability partnership in Baner, Pune, supporting every customer from Pune since 2025.
                 </p>
               </div>
               <SiteButton to="/contact" variant="secondary" className="shrink-0">Contact us <ArrowRight className="w-4 h-4" /></SiteButton>

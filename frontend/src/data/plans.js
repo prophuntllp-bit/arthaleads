@@ -4,6 +4,9 @@
 // never drift apart again (the home page used to show old seat limits and
 // "pricing on request" while /pricing published per-seat prices).
 // Prices live in utils/plan.js (PLAN_PRICING), which the billing code also uses.
+// The in-app Plan & Billing page (pages/Plans.jsx) keeps its own list and does
+// not read this file. No storage sizes here: the website does not sell plans
+// on storage (owner, 31 Oct 2026). `recommended` marks the plan /pricing pushes.
 import { PLAN_PRICING } from "../utils/plan";
 
 export const PLANS = [
@@ -28,7 +31,7 @@ export const PLANS = [
         "Website / WordPress plugin",
         "WhatsApp chats with manual replies",
         "2 projects",
-        "2 GB file storage, call recordings kept 30 days",
+        "Call recordings kept 30 days",
       ] },
       // Roles belong on Starter: the five-seat minimum is sold as one admin,
       // one manager and three agents, so the tier has to include the thing that
@@ -48,7 +51,7 @@ export const PLANS = [
     name: "Growth",
     tagline: "For active real estate teams that need automation and insights",
     color: "#ff6b00",
-    popular: true,
+    recommended: true,
     maxMembers: PLAN_PRICING.growth.maxSeats,
     userLimit: "5 to 30 members",
     groups: [
@@ -56,15 +59,15 @@ export const PLANS = [
         "Unlimited projects",
         "WhatsApp AI agent",
         "WhatsApp templates and campaigns",
-        "15 GB file storage, call recordings kept 90 days",
+        "AI lead scoring & Hot Today",
         "Duplicate lead detection",
         "Auto round-robin lead assignment",
         "Bulk lead export",
         "Campaign routing rules",
-        "AI lead scoring & Hot Today",
         "Artha AI assistant",
         "Bookings & invoices",
         "Meta Conversions API",
+        "Call recordings kept 90 days",
       ] },
       { label: "Team", items: [
         "Attendance tracking",
@@ -93,7 +96,7 @@ export const PLANS = [
         "Custom webhook & API access",
         "WhatsApp button flow for click-to-WhatsApp ads",
         "AI voice calling",
-        "100 GB file storage (more on request), call recordings kept 1 year",
+        "Call recordings kept 1 year",
         "Multi-org management",
         "Advanced automation management",
       ] },

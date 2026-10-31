@@ -21,10 +21,10 @@ function CookiePreferences() {
     } catch { /* ignore */ }
   }, []);
 
-  const cardBg = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
-  const border = isDark ? "rgba(255,255,255,0.1)" : "#e5e7eb";
-  const heading = isDark ? "#fff" : "#111827";
-  const soft = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
+  const cardBg = "var(--site-card)";
+  const border = "var(--site-line)";
+  const heading = "var(--site-ink)";
+  const soft = "var(--site-muted)";
 
   const categories = [
     { key: "necessary", name: "Strictly Necessary", locked: true,
@@ -50,7 +50,7 @@ function CookiePreferences() {
 
   return (
     <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: "0.75rem", padding: "1.25rem" }}>
-      <h3 style={{ fontSize: 15, fontWeight: 700, color: heading, marginBottom: 4 }}>Manage Your Cookie Preferences</h3>
+      <h3 className="site-h4" style={{ marginBottom: 4 }}>Manage Your Cookie Preferences</h3>
       <p style={{ fontSize: 12, color: soft, marginBottom: 16 }}>
         Choose which cookies you allow. Your choice is saved on this device and respected on future visits.
       </p>
@@ -60,29 +60,38 @@ function CookiePreferences() {
           <div key={c.key} style={{
             display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14,
             padding: "12px 14px", borderRadius: 10, border: `1px solid ${border}`,
-            background: isDark ? "rgba(255,255,255,0.02)" : "#f9fafb",
+            background: "var(--site-tint)",
           }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: heading, marginBottom: 2 }}>{c.name}</div>
               <div style={{ fontSize: 12, color: soft, lineHeight: 1.5 }}>{c.desc}</div>
             </div>
             <button
+              type="button"
               onClick={() => !c.locked && toggle(c.key)}
               disabled={c.locked}
+              role="switch"
+              aria-checked={!!prefs[c.key]}
               aria-label={`Toggle ${c.name}`}
               style={{
-                flexShrink: 0, width: 44, height: 24, borderRadius: 999, border: "none",
-                cursor: c.locked ? "not-allowed" : "pointer", position: "relative",
-                background: prefs[c.key] ? "#ff6b00" : (isDark ? "rgba(255,255,255,0.15)" : "#d1d5db"),
-                opacity: c.locked ? 0.6 : 1, transition: "background 0.2s",
+                flexShrink: 0, minWidth: 56, minHeight: 44, margin: "-10px -8px -10px 0", padding: "0 6px",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                border: "none", background: "transparent",
+                cursor: c.locked ? "not-allowed" : "pointer", opacity: c.locked ? 0.6 : 1,
               }}
             >
-              <span style={{
-                position: "absolute", top: 2, left: 2,
-                transform: prefs[c.key] ? "translateX(20px)" : "translateX(0)",
-                width: 20, height: 20, borderRadius: "50%", background: "#fff",
-                transition: "transform 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-              }} />
+              <span aria-hidden="true" style={{
+                position: "relative", display: "block", width: 44, height: 24, borderRadius: 999,
+                background: prefs[c.key] ? "#ff6b00" : (isDark ? "rgba(255,255,255,0.15)" : "#d1d5db"),
+                transition: "background 0.2s",
+              }}>
+                <span style={{
+                  position: "absolute", top: 2, left: 2,
+                  transform: prefs[c.key] ? "translateX(20px)" : "translateX(0)",
+                  width: 20, height: 20, borderRadius: "50%", background: "#fff",
+                  transition: "transform 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                }} />
+              </span>
             </button>
           </div>
         ))}
@@ -137,13 +146,13 @@ export default function CookiePolicy() {
       <Section title="3. Types of Cookies We Use">
         <ul className="list-disc pl-5 space-y-2">
           <li>
-            <strong style={{ color: "var(--app-text)" }}>Strictly Necessary:</strong>{" "}
+            <strong style={{ color: "var(--site-ink)" }}>Strictly Necessary:</strong>{" "}
             These cookies are required for the platform to function. They handle authentication, security,
             CSRF protection, and session management. Without them, you cannot log into the CRM. These are
             set unconditionally and cannot be opted out of.
           </li>
           <li>
-            <strong style={{ color: "var(--app-text)" }}>Analytics:</strong>{" "}
+            <strong style={{ color: "var(--site-ink)" }}>Analytics:</strong>{" "}
             Google Analytics on our marketing website (www.arthaleads.com) only, never inside the CRM app.
             It helps us understand which pages are used and where improvements are needed, with IP addresses
             anonymised. It loads only after you choose "Accept all" in the cookie banner or turn analytics on
@@ -151,7 +160,7 @@ export default function CookiePolicy() {
             as <code>_ga</code> and <code>_ga_*</code>.
           </li>
           <li>
-            <strong style={{ color: "var(--app-text)" }}>Marketing:</strong>{" "}
+            <strong style={{ color: "var(--site-ink)" }}>Marketing:</strong>{" "}
             Used only with your explicit consent to measure the effectiveness of our advertising campaigns.
             Disabled by default.
           </li>
@@ -161,28 +170,28 @@ export default function CookiePolicy() {
       <Section title="4. Specific Cookies We Set">
         <ul className="list-disc pl-5 space-y-2">
           <li>
-            <strong style={{ color: "var(--app-text)" }}>crm_token</strong>:
+            <strong style={{ color: "var(--site-ink)" }}>crm_token</strong>:
             Secure httpOnly session cookie that keeps you authenticated. Set on login, cleared on logout.
             Expires after 2 hours of inactivity (or 7 days if "Remember me" is selected).
-            <em style={{ color: "var(--app-text-soft)" }}> Strictly necessary.</em>
+            <em style={{ color: "var(--site-muted)" }}> Strictly necessary.</em>
           </li>
           <li>
-            <strong style={{ color: "var(--app-text)" }}>cookie_prefs</strong> and{" "}
-            <strong style={{ color: "var(--app-text)" }}>artha_cookie_consent</strong>:
+            <strong style={{ color: "var(--site-ink)" }}>cookie_prefs</strong> and{" "}
+            <strong style={{ color: "var(--site-ink)" }}>artha_cookie_consent</strong>:
             Store your cookie consent choices from the preference panel above and the cookie banner. Set locally in{" "}
             <code>localStorage</code>, never sent to our servers.
-            <em style={{ color: "var(--app-text-soft)" }}> Strictly necessary (preference storage).</em>
+            <em style={{ color: "var(--site-muted)" }}> Strictly necessary (preference storage).</em>
           </li>
           <li>
-            <strong style={{ color: "var(--app-text)" }}>theme</strong>:
+            <strong style={{ color: "var(--site-ink)" }}>theme</strong>:
             Remembers your light/dark mode choice. Stored in <code>localStorage</code>.
-            <em style={{ color: "var(--app-text-soft)" }}> Strictly necessary (UI preference).</em>
+            <em style={{ color: "var(--site-muted)" }}> Strictly necessary (UI preference).</em>
           </li>
           <li>
-            <strong style={{ color: "var(--app-text)" }}>admin_sidebar_pinned</strong>:
+            <strong style={{ color: "var(--site-ink)" }}>admin_sidebar_pinned</strong>:
             Remembers whether the admin panel sidebar is pinned open or collapsed. Stored in{" "}
             <code>localStorage</code>. Never sent to servers.
-            <em style={{ color: "var(--app-text-soft)" }}> Strictly necessary (UI preference).</em>
+            <em style={{ color: "var(--site-muted)" }}> Strictly necessary (UI preference).</em>
           </li>
         </ul>
       </Section>
@@ -194,14 +203,14 @@ export default function CookiePolicy() {
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
           <li>
-            <strong style={{ color: "var(--app-text)" }}>impersonating</strong>:
+            <strong style={{ color: "var(--site-ink)" }}>impersonating</strong>:
             When Arthaleads platform support enters a support session on your account, a temporary record
             is stored in <code>sessionStorage</code> so the support banner can display context. This is
             cleared the moment the session ends or the browser tab is closed. It is never persisted to
             our servers beyond the audit log entry.
           </li>
           <li>
-            <strong style={{ color: "var(--app-text)" }}>fup_panel_dismissed</strong>:
+            <strong style={{ color: "var(--site-ink)" }}>fup_panel_dismissed</strong>:
             Tracks whether you have dismissed the follow-up reminder panel during the current session.
           </li>
         </ul>
@@ -213,17 +222,17 @@ export default function CookiePolicy() {
           may set their own cookies or store identifiers strictly to deliver their function:
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
-          <li><strong style={{ color: "var(--app-text)" }}>Google Analytics</strong>: website usage statistics, only if you allow analytics cookies (see Section 3).</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Google reCAPTCHA</strong>: spam protection on sign-up and website forms. Google may set its own cookies to tell people from bots.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Firebase (Google)</strong>: push notification delivery for Android app users. May store a device token.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>OpenAI</strong>: AI feature processing. API calls only; no browser-level cookies set by OpenAI in our platform.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Anthropic</strong>: backup AI feature processing when OpenAI is unavailable. API calls only; no browser-level cookies set by Anthropic in our platform.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Resend</strong>: transactional email delivery. No browser cookies.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Google Analytics</strong>: website usage statistics, only if you allow analytics cookies (see Section 3).</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Google reCAPTCHA</strong>: spam protection on sign-up and website forms. Google may set its own cookies to tell people from bots.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Firebase (Google)</strong>: push notification delivery for Android app users. May store a device token.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>OpenAI</strong>: AI feature processing. API calls only; no browser-level cookies set by OpenAI in our platform.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Anthropic</strong>: backup AI feature processing when OpenAI is unavailable. API calls only; no browser-level cookies set by Anthropic in our platform.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Resend</strong>: transactional email delivery. No browser cookies.</li>
         </ul>
         <p>
           We do not use Facebook Pixel or any behavioural advertising trackers. The full list of service
           providers that process personal data for us is in the{" "}
-          <a href="/privacy#10-sub-processors" style={{ color: "var(--brand-text)" }} className="hover:underline">Privacy Policy</a>.
+          <a href="/privacy#10-sub-processors" style={{ color: "var(--site-brand-ink)" }} className="hover:underline">Privacy Policy</a>.
         </p>
       </Section>
 
@@ -233,9 +242,9 @@ export default function CookiePolicy() {
           settings. Instructions for common browsers:
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
-          <li><strong style={{ color: "var(--app-text)" }}>Chrome:</strong> Settings → Privacy and security → Cookies and other site data.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Safari:</strong> Preferences → Privacy → Manage Website Data.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>Firefox:</strong> Options → Privacy &amp; Security → Cookies and Site Data.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Chrome:</strong> Settings → Privacy and security → Cookies and other site data.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Safari:</strong> Preferences → Privacy → Manage Website Data.</li>
+          <li><strong style={{ color: "var(--site-ink)" }}>Firefox:</strong> Options → Privacy &amp; Security → Cookies and Site Data.</li>
         </ul>
         <p>
           Note: Disabling strictly necessary cookies will prevent you from logging into the CRM or using
@@ -257,21 +266,21 @@ export default function CookiePolicy() {
         </ul>
         <p>
           For details on how we handle personal data more broadly, see our{" "}
-          <a href="/privacy" style={{ color: "var(--brand-text)" }} className="hover:underline">Privacy Policy</a>.
+          <a href="/privacy" style={{ color: "var(--site-brand-ink)" }} className="hover:underline">Privacy Policy</a>.
         </p>
       </Section>
 
       <Section title="9. Contact Us">
         <p>Questions about our use of cookies or data practices?</p>
         <ContactBox>
-          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Prophunt LLP (Arthaleads)</p>
-          <p style={{ color: "var(--app-text-soft)" }}>
+          <p className="font-bold mb-1" style={{ color: "var(--site-ink)" }}>Prophunt LLP (Arthaleads)</p>
+          <p style={{ color: "var(--site-muted)" }}>
             Email:{" "}
-            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--brand-text)" }} className="hover:underline">
+            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--site-brand-ink)" }} className="hover:underline">
               contact@arthaleads.com
             </a>
           </p>
-          <p style={{ color: "var(--app-text-soft)" }}>
+          <p style={{ color: "var(--site-muted)" }}>
             Address: 1, Utkarsha Bungalow, Late Babanrao Shripati Dhankude Road, Baner, Pune, Maharashtra 411045, India
           </p>
         </ContactBox>

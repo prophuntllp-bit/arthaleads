@@ -272,7 +272,7 @@ function Faq({ faqs }) {
   if (!faqs?.length) return null;
   return (
     <section id="faq" className="blog-faq scroll-mt-28" aria-labelledby="faq-title">
-      <h2 id="faq-title" className="font-display site-ink font-extrabold tracking-[-0.02em] text-[24px] sm:text-[28px] mb-6">Frequently asked questions</h2>
+      <h2 id="faq-title" className="site-h3 mb-6">Frequently asked questions</h2>
       <div className="blog-faq__list">
         {faqs.map((f, i) => (
           <details key={i} className="blog-faq__item" open={i === 0}>
@@ -307,7 +307,7 @@ function Contents({ headings }) {
   if (headings.length < 2) return null;
   return (
     <nav aria-label="In this article">
-      <h3 className="font-display text-sm font-bold site-ink mb-3">In this article</h3>
+      <h3 className="site-h4 mb-2">In this article</h3>
       <ol className="space-y-1">
         {headings.map((h, i) => {
           const on = active === h.id;
@@ -315,7 +315,7 @@ function Contents({ headings }) {
             <li key={h.id}>
               <a href={`#${h.id}`}
                 onClick={(e) => { e.preventDefault(); document.getElementById(h.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
-                className="flex gap-3 py-1.5 text-sm leading-snug transition-colors hover:text-[color:var(--site-ink)]"
+                className="flex items-center gap-3 min-h-[44px] py-1.5 text-sm leading-snug transition-colors hover:text-[color:var(--site-ink)]"
                 style={{ color: on ? "var(--site-brand-ink)" : undefined, fontWeight: on ? 600 : 400 }}>
                 <span className="font-bold tabular-nums shrink-0" style={{ color: "var(--site-brand-ink)" }}>{String(i + 1).padStart(2, "0")}</span>
                 <span>{h.text}</span>
@@ -335,7 +335,7 @@ function Sidebar({ headings, related, categories }) {
   return (
     <Card as="aside" raised className="lg:sticky lg:top-28 self-start p-6 space-y-6 min-w-0">
       <div>
-        <h3 className="site-eyebrow !text-[11px] mb-3">Explore the blog</h3>
+        <h3 className="site-h4 mb-3">Explore the blog</h3>
         <form onSubmit={(e) => { e.preventDefault(); navigate(`/blog${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ""}`); }} className="relative">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 site-muted" aria-hidden="true" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search articles" aria-label="Search articles"
@@ -358,12 +358,12 @@ function Sidebar({ headings, related, categories }) {
 
       {related.length > 0 && (
         <div className="pt-6" style={rule}>
-          <h3 className="font-display text-sm font-bold site-ink mb-3">Suggested reading</h3>
+          <h3 className="site-h4 mb-3">Suggested reading</h3>
           <ul className="space-y-4">
             {related.slice(0, 3).map((p) => (
               <li key={p._id}>
                 <Link to={`/blog/${p.slug}`} className="group block">
-                  <PostCategory post={p} className="!text-[10px]" />
+                  <PostCategory post={p} />
                   <span className="block text-sm font-semibold site-ink leading-snug mt-1 group-hover:text-[color:var(--site-brand-ink)] transition-colors">{p.title}</span>
                   <span className="block text-xs site-muted mt-1">{p.readingTime || 1} min read</span>
                 </Link>
@@ -387,7 +387,7 @@ function LinkedInLogo({ className = "w-4 h-4" }) {
 function ShareButtons({ post }) {
   const [copied, setCopied] = useState(false);
   const url = `${SITE}/blog/${post.slug}`;
-  const base = "w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:border-[color:var(--site-brand)]";
+  const base = "w-11 h-11 rounded-full flex items-center justify-center transition-colors hover:border-[color:var(--site-brand)]";
   const style = { border: "1px solid var(--site-line-strong)", background: "var(--site-card)" };
   const copy = async () => {
     try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* clipboard blocked */ }
@@ -469,7 +469,7 @@ function BlogPostInner({ initial }) {
             <span className="site-icon w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={iconTile}>
               <BookOpen className="w-7 h-7" style={{ color: "var(--site-brand-ink)" }} aria-hidden="true" />
             </span>
-            <h1 className="font-display site-ink font-extrabold tracking-[-0.02em] text-[28px] sm:text-[36px] mb-3">Article not found</h1>
+            <h1 className="site-h1 mb-3">Article not found</h1>
             <p className="mb-7 text-base sm:text-lg">This article doesn't exist or has been removed.</p>
             <SiteButton to="/blog"><ArrowLeft className="w-4 h-4" /> Back to the blog</SiteButton>
           </Container>
@@ -486,21 +486,21 @@ function BlogPostInner({ initial }) {
       <Section tone="white" className="!pt-[6.5rem] sm:!pt-32 !pb-10 sm:!pb-14 overflow-x-clip">
         <div aria-hidden="true" className="hero-warm" style={{ opacity: 0.55 }} />
         <Container className="relative">
-          <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm site-muted mb-6">
-            <Link to="/" className="hover:text-[color:var(--site-brand-ink)] transition-colors">Home</Link>
+          <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-x-2 text-sm site-muted -mt-3 mb-3">
+            <Link to="/" className="inline-flex items-center min-h-[44px] hover:text-[color:var(--site-brand-ink)] transition-colors">Home</Link>
             <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
-            <Link to="/blog" className="hover:text-[color:var(--site-brand-ink)] transition-colors">Blog</Link>
+            <Link to="/blog" className="inline-flex items-center min-h-[44px] hover:text-[color:var(--site-brand-ink)] transition-colors">Blog</Link>
             <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
             <span className="truncate max-w-[60ch]" style={{ color: "var(--site-text)" }} aria-current="page">{post.title}</span>
           </nav>
 
           <div className="max-w-4xl">
             {post.category && (
-              <Link to={`/blog/category/${post.category.slug}`} className="site-eyebrow inline-block hover:underline underline-offset-4 mb-5">
+              <Link to={`/blog/category/${post.category.slug}`} className="site-eyebrow inline-flex items-center min-h-[44px] hover:underline underline-offset-4 mb-2">
                 {post.category.name}
               </Link>
             )}
-            <h1 className="font-display site-ink font-extrabold tracking-[-0.03em] text-[34px] leading-[1.08] sm:text-[46px] lg:text-[52px]" style={{ textWrap: "balance" }}>
+            <h1 className="site-h1">
               {post.title}
             </h1>
           </div>
@@ -550,7 +550,7 @@ function BlogPostInner({ initial }) {
                 <Tag className="w-3.5 h-3.5 site-muted" aria-hidden="true" />
                 {post.tags.map((tag) => (
                   <Link key={tag} to={`/blog?tag=${encodeURIComponent(tag)}`}
-                    className="site-chip px-3 py-1 rounded-full text-xs font-medium transition-colors hover:text-[color:var(--site-brand-ink)]">#{tag}</Link>
+                    className="site-chip relative px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors hover:text-[color:var(--site-brand-ink)] after:content-[''] after:absolute after:inset-x-0 after:-inset-y-1.5">#{tag}</Link>
                 ))}
               </div>
             )}
@@ -560,13 +560,13 @@ function BlogPostInner({ initial }) {
                 <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" aria-hidden="true" /> Back to all articles
               </Link>
               <div className="flex flex-wrap gap-2.5">
-                <SiteButton to="/book-demo">Book a Demo <ArrowRight className="w-4 h-4" /></SiteButton>
+                <SiteButton to="/book-demo">Book a demo <ArrowRight className="w-4 h-4" /></SiteButton>
                 <SiteButton href={CRM_SIGNUP_URL} external variant="secondary">Try Arthaleads free</SiteButton>
               </div>
             </div>
 
             <Card className="mt-12 p-6 sm:p-7">
-              <h3 className="font-display text-lg font-bold site-ink mb-2">About Arthaleads</h3>
+              <h3 className="site-h4 mb-2">About Arthaleads</h3>
               <p className="text-sm leading-relaxed">
                 Arthaleads is a CRM for Indian real estate sales teams. It brings enquiries from ads, portals, your website and WhatsApp into one workspace,
                 with follow-ups, projects, bookings and invoices. These articles are educational and are not a substitute for advice based on your own business and data.
@@ -580,7 +580,7 @@ function BlogPostInner({ initial }) {
 
       {/* ── Keep reading ── */}
       {related.length > 0 && (
-        <Section tone="tint" aria-label="Suggested articles">
+        <Section tone="sand" aria-label="Suggested articles">
           <Container>
             <SectionHeader eyebrow="Keep reading" title="Suggested articles for you" />
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">

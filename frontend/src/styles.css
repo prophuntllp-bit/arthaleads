@@ -734,11 +734,6 @@
    they never start invisible or blurred (that hid the H1 for seconds on phones). */
 @keyframes word-rise { from { transform: translateY(0.25em); } to { transform: none; } }
 .word-rise { display: inline-block; animation: word-rise 500ms cubic-bezier(.2,.7,.2,1) both; }
-/* Phones: the chat avatar used to sit on the hero's buttons. It now appears with
-   the sticky trial bar (MobileCtaBar) and sits above it. */
-@media (max-width: 767px) {
-  html[data-mcta="off"] .mkt-chat-launcher { opacity: 0; pointer-events: none; }
-}
 @media (prefers-reduced-motion: reduce) {
   .shine-btn::after, .word-rise { animation: none !important; }
   .word-rise { opacity: 1; }
@@ -812,7 +807,7 @@ html[data-public-theme="dark"] {
   --site-card-soft: #171a24;
   --site-chip: rgba(255, 255, 255, 0.06);
   --site-stage: #0c0d12;
-  --site-dark: #140e0a;
+  --site-dark: #1a140f;
   --site-dark-card: #1f1a16;
   --site-brand-ink: #ff8a3d;
   --site-green: #4ade80;
@@ -912,7 +907,7 @@ html[data-public-theme="dark"] .site-section.site-section--dark { box-shadow: in
    a step smaller, sentence case, untracked (Hallmark polish, 30 Oct 2026: no tracked caps). */
 /* One heading scale for every marketing page (UI audit 31 Oct 2026).
    h1 34/46/52, h2 30/38/44, h3 20/22, h4 16/17. Manrope, ink colour. */
-.site-h1, .site-h2, .site-h3, .site-h4 { font-family: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif; color: var(--site-ink); text-wrap: balance; margin: 0; }
+.site-h1, .site-h2, .site-h3, .site-h4 { font-family: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif; color: var(--site-ink); text-wrap: balance; }
 .site-h1 { font-size: 34px; line-height: 1.08; font-weight: 800; letter-spacing: -0.03em; }
 .site-h2 { font-size: 30px; line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
 .site-h3 { font-size: 20px; line-height: 1.25; font-weight: 700; letter-spacing: -0.01em; }
@@ -1020,7 +1015,7 @@ html[data-public-theme="dark"] .site-cta-panel {
 .menu-open .mkt-chat-launcher, .menu-open .wa-widget { display: none; }
 /* Phones and tablets use the floating Card Nav, which has its own surface:
    the full-width bar background only applies on desktop. */
-@media (max-width: 1279px) {
+@media (max-width: 1023px) {
   .public-nav { background: transparent !important; box-shadow: none !important; pointer-events: none; }
   .public-nav .card-nav { pointer-events: auto; }
 }
@@ -1143,7 +1138,7 @@ html[data-public-theme="dark"] .hero-glass {
 @media (min-width: 1280px) { .features-steps { top: 80px; } }
 /* Anything else that sticks under the marketing nav (e.g. the /compare table header). */
 .site-sticky-top { top: 76px; }
-@media (min-width: 1280px) { .site-sticky-top { top: 80px; } }
+@media (min-width: 1024px) { .site-sticky-top { top: 80px; } }
 
 /* Blog article body (pages/PublicBlogPost.jsx): long-form reading on the marketing theme. */
 .blog-prose { font-size: 17px; line-height: 1.8; color: var(--site-text); max-width: 70ch; overflow-wrap: break-word; }
@@ -1178,7 +1173,7 @@ html[data-public-theme="dark"] .hero-glass {
 .blog-topics-bar { border-top: 1px solid var(--site-line); border-bottom: 1px solid var(--site-line); background: var(--site-bg); }
 .blog-topics { display: flex; gap: 0.5rem; overflow-x: auto; padding: 0.9rem 0; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .blog-topics::-webkit-scrollbar { display: none; }
-.blog-topic { flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.9rem; border-radius: 12px; border: 1px solid var(--site-line-strong); background: var(--site-card); font-size: 0.875rem; font-weight: 600; color: var(--site-ink); transition: border-color 0.2s, background-color 0.2s; }
+.blog-topic { flex-shrink: 0; min-height: 44px; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.9rem; border-radius: 12px; border: 1px solid var(--site-line-strong); background: var(--site-card); font-size: 0.875rem; font-weight: 600; color: var(--site-ink); transition: border-color 0.2s, background-color 0.2s; }
 .blog-topic:hover { border-color: var(--site-brand); }
 .blog-topic.is-on { background: var(--brand-btn); border-color: transparent; color: #fff; }
 .blog-topic__count { font-size: 0.75rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--site-muted); }
