@@ -20,10 +20,10 @@
     --app-surface: rgba(255, 255, 255, 0.58);
     --app-surface-solid: #ffffff;
     --app-surface-low: rgba(255, 255, 255, 0.38);
-    /* Popups: the CRM's peach, dulled a little (owner, 30 Oct 2026),
-       with a lighter peach for boxes inside them; fields and cards stay white. */
-    --app-modal-bg: #ebdacb;
-    --app-modal-inset: #f5ebe1;
+    /* Popups are dark in both themes (owner, 31 Oct 2026: use the dark
+       Lead Details window for light mode too). */
+    --app-modal-bg: #1e1d20;
+    --app-modal-inset: #29272c;
     --app-surface-high: rgba(255, 255, 255, 0.75);
     --app-text: #18181b;
     /* Soft text darkened from #71717a → #5f5f66 for AA contrast on glass surfaces,
@@ -174,93 +174,73 @@
     border: 1px solid var(--app-border-strong);
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
   }
-  /* Inside any popup the see-through surfaces become solid shades, so rows,
-     inputs and boxes keep visible edges on the solid panel (a list on
-     Performance floated with no edges at all). Covers .modal-panel and the
-     popups that set the solid background inline. */
+  /* Inside a popup everything uses the dark colour set, whatever the page
+     theme (owner, 31 Oct 2026). Covers .modal-panel and the hand-built
+     popups whose panel sets background: var(--app-modal-bg). Pop-out menus
+     that set var(--app-surface-solid) only get solid inner shades. */
   .modal-panel,
-  [style*="--app-surface-solid"],
   [style*="--app-modal-bg"] {
-    --app-surface-low: var(--app-modal-inset);
+    color-scheme: dark;
+    color: var(--app-text);
+    --app-bg: #111113;
     --app-surface: var(--app-modal-bg);
-    /* Same look as Lead Details (owner, 30 Oct 2026): white fields and white
-       content cards on the off-white panel, sand boxes, orange selected tab. */
-    --app-field-bg: #ffffff;
-    --seg-strip: var(--tab-accent-strip); --seg-strip-border: var(--app-border);
-    --seg-pill: var(--tab-accent-bg); --seg-ring: var(--tab-accent-ring);
-    --seg-on: var(--tab-accent-text); --seg-chip-on: var(--tab-accent-chip);
-    /* Edges inside popups a step stronger than on the page, so rows and boxes
-       stay outlined on the tinted panel (owner, 30 Oct 2026). */
-    --app-border: rgba(var(--app-primary-deep-rgb), 0.16);
-  }
-  :root.dark .modal-panel,
-  :root.dark [style*="--app-surface-solid"],
-  :root.dark [style*="--app-modal-bg"] {
+    --app-surface-solid: #1e1d20;
+    --app-surface-low: var(--app-modal-inset);
+    --app-surface-high: rgba(42, 40, 46, 0.84);
+    --app-card-solid: #1e1d20;
+    --wa-dropdown-bg: #1e1d20;
+    --app-text: #ededed;
+    --app-text-soft: #969696;
     --app-border: rgba(255, 255, 255, 0.14);
+    --app-border-strong: rgba(var(--app-primary-rgb), 0.28);
+    --app-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255,255,255,0.08) inset;
+    --app-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255,255,255,0.10) inset;
     --app-field-bg: var(--app-modal-inset);
+    --seg-strip: #2a292d; --seg-strip-border: var(--app-border);
+    --seg-pill: rgba(var(--app-primary-rgb), 0.22); --seg-ring: rgba(var(--app-primary-rgb), 0.85);
+    --seg-on: #ffffff; --seg-chip-on: #4a494f;
   }
-  :root:not(.dark) .modal-panel .card { background: #ffffff; border-color: #ebe2d8; }
-  /* The title strip at the top of a popup and its plain buttons (Cancel and
-     the like) are white on the peach panel (owner, 30 Oct 2026). Matches the
-     header row of the shared Modal and of the hand-built popups alike. */
-  :root:not(.dark) .modal-panel > :first-child:is([style*="border-bottom"], .border-b),
-  :root:not(.dark) [style*="--app-modal-bg"] > :first-child:is([style*="border-bottom"], .border-b) {
-    background: #ffffff;
-    border-top-left-radius: inherit;
-    border-top-right-radius: inherit;
+  [style*="--app-surface-solid"] {
+    --app-surface-low: var(--app-modal-inset);
+    --app-surface: var(--app-surface-solid);
   }
-  :root:not(.dark) .modal-panel .btn-secondary,
-  :root:not(.dark) [style*="--app-modal-bg"] .btn-secondary {
-    background: #ffffff;
-    border-color: rgba(var(--app-primary-deep-rgb), 0.18);
-  }
+  :root:not(.dark) [style*="--app-surface-solid"] { --app-surface-low: #f3efe9; }
   .seg-accent {
-    --seg-strip: var(--tab-accent-strip); --seg-strip-border: var(--app-border);
-    --seg-pill: var(--tab-accent-bg); --seg-ring: var(--tab-accent-ring);
-    --seg-on: var(--tab-accent-text); --seg-chip-on: var(--tab-accent-chip);
+    --seg-strip: #2a292d; --seg-strip-border: rgba(255, 255, 255, 0.14);
+    --seg-pill: rgba(var(--app-primary-rgb), 0.22); --seg-ring: rgba(var(--app-primary-rgb), 0.85);
+    --seg-on: #ffffff; --seg-chip-on: #4a494f;
   }
+  /* Dark versions of the light-only pieces, inside popups */
+  .modal-panel .wa-thread, [style*="--app-modal-bg"] .wa-thread { background-image: url("/wa-bg-dark.webp"); }
+  .modal-panel .wa-bubble-out, [style*="--app-modal-bg"] .wa-bubble-out {
+    background: #1f3d2b; color: #e6f4ea; border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+  .modal-panel .pill-ok   { color: #6ee7b7; background: rgba(16, 185, 129, 0.18); border-color: rgba(110, 231, 183, 0.35); }
+  .modal-panel .pill-info { color: #67e8f9; background: rgba(6, 182, 212, 0.18);  border-color: rgba(103, 232, 249, 0.35); }
 
-  /* -- Lead Details popup, from the owner's mock-ups (30 Oct 2026) --
-     Light: sand top box, solid orange selected tab, white info card, grey-green
-     consent box. Dark: top box warming to orange on the right, outlined orange
-     tab, and the info area on a light cream card (dark text) holding the
-     consent box. */
-  .lead-hero { background: var(--app-modal-inset); border: 1px solid rgba(var(--app-primary-deep-rgb), 0.16); }
-  :root.dark .lead-hero {
+  /* -- Lead Details popup, the owner's dark mock-up (30 Oct 2026) --
+     Top box warming to orange on the right, outlined orange tab, and the info
+     area on a light cream card (dark text) holding the consent box. */
+  .lead-hero {
     background: linear-gradient(105deg, #262428 0%, #2b2526 45%, #4a2a17 80%, #6a3412 100%);
     border: 1px solid rgba(var(--app-primary-rgb), 0.28);
   }
   /* Source and priority pills on the dark top box: tinted, not white. */
-  :root.dark .lead-hero .badge {
+  .lead-hero .badge {
     background-color: color-mix(in srgb, currentColor 18%, transparent) !important;
     box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 35%, transparent);
     filter: brightness(1.7) saturate(1.2);
   }
-  .lead-info-wrap { display: flex; flex-direction: column; gap: 1.25rem; }
-  .lead-info-card { background: #ffffff; border: 1px solid #ebe2d8; border-radius: 1.25rem; padding: 0.5rem 1.5rem 1rem; }
-  :root.dark .lead-info-wrap {
+  .lead-info-wrap {
+    display: flex; flex-direction: column; gap: 1.25rem;
     background: #f3efe9; border-radius: 1.5rem; padding: 0.75rem 1.5rem 1.5rem;
     --app-text: #18181b; --app-text-soft: #5f5f66; --app-border: rgba(24, 24, 27, 0.10);
+    --app-surface-low: #ebe6df; --app-surface-solid: #ffffff; --app-field-bg: #ffffff;
     color: var(--app-text);
   }
-  :root.dark .lead-info-card { background: transparent; border: 0; padding: 0; }
-  .consent-card { background: #eef0eb; border: 1px solid #dde2da; }
-  :root.dark .consent-card { background: #e4e8e2; border-color: #d2d8cf; }
+  .consent-card { background: #e4e8e2; border: 1px solid #d2d8cf; }
   .consent-kicker { display: inline-block; padding-bottom: 0.4rem; border-bottom: 1px solid rgba(24, 24, 27, 0.18); }
-  .consent-logo { background: #25d366; color: #ffffff; }
-  :root.dark .consent-logo { background: rgba(37, 211, 102, 0.18); color: #16a34a; }
-  /* Accent tab strip (SegmentTabs accent): solid orange selected tab in light,
-     an orange outline on a dark orange wash in dark. */
-  :root {
-    --tab-accent-strip: var(--app-modal-inset); --tab-accent-bg: var(--app-primary);
-    --tab-accent-ring: var(--app-primary); --tab-accent-text: #ffffff;
-    --tab-accent-chip: #ffffff;
-  }
-  :root.dark {
-    --tab-accent-strip: #2a292d; --tab-accent-bg: rgba(var(--app-primary-rgb), 0.22);
-    --tab-accent-ring: rgba(var(--app-primary-rgb), 0.85); --tab-accent-text: #ffffff;
-    --tab-accent-chip: #4a494f;
-  }
+  .consent-logo { background: rgba(37, 211, 102, 0.18); color: #16a34a; }
 
   .card:hover {
     border-color: var(--app-border-strong);
