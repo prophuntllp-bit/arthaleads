@@ -1165,12 +1165,29 @@ router.get("/analytics", async (req, res, next) => {
       }},
     ]);
 
+    // Every call each team member placed in the last 30 days, for the
+    // Performance "Each person" table (owner, 31 Oct 2026). Calls with no
+    // person (Vistrow Voice conversations) are not anybody's.
+    const callsByAgentFor = (Model) => Model.aggregate([
+      { $match: { orgId } },
+      { $unwind: "$activities" },
+      { $match: { "activities.type": "called", "activities.createdAt": { $gte: thirtyAgo }, "activities.performedBy": { $ne: null }, ...ownCallsMatch(req.user) } },
+      { $group: {
+        _id:      "$activities.performedBy",
+        made:     { $sum: 1 },
+        answered: { $sum: { $cond: [{ $eq: ["$activities.meta.status", "answered"] }, 1, 0] } },
+        missed:   { $sum: { $cond: [{ $eq: ["$activities.meta.status", "missed"] }, 1, 0] } },
+        talkSeconds: { $sum: { $cond: [{ $eq: ["$activities.meta.status", "answered"] }, { $ifNull: ["$activities.meta.duration", 0] }, 0] } },
+      }},
+    ]);
+
     // Project leads (ProjectLead model) can also be called now - merge their
     // aggregation into the same per-day / per-agent buckets rather than a
     // separate chart, since Mongo can't aggregate across two collections at once.
-    const [volLead, volPL, durLead, durPL] = await Promise.all([
+    const [volLead, volPL, durLead, durPL, byLead, byPL] = await Promise.all([
       volumeByDayFor(Lead), volumeByDayFor(ProjectLead),
       durationByAgentFor(Lead), durationByAgentFor(ProjectLead),
+      callsByAgentFor(Lead), callsByAgentFor(ProjectLead),
     ]);
 
     const volMap = new Map();
@@ -1203,7 +1220,16 @@ router.get("/analytics", async (req, res, next) => {
       .map((r) => ({ ...r, avgDuration: r.totalDuration / r.totalCalls }))
       .sort((a, b) => b.totalCalls - a.totalCalls);
 
-    res.json({ success: true, volumeByDay, durationByAgent });
+    const byAgent = new Map();
+    for (const row of [...byLead, ...byPL]) {
+      const key = String(row._id);
+      const cur = byAgent.get(key) || { userId: key, made: 0, answered: 0, missed: 0, talkSeconds: 0 };
+      cur.made += row.made; cur.answered += row.answered; cur.missed += row.missed; cur.talkSeconds += row.talkSeconds;
+      byAgent.set(key, cur);
+    }
+    const callsByAgent = [...byAgent.values()];
+
+    res.json({ success: true, volumeByDay, durationByAgent, callsByAgent });
   } catch (err) { next(err); }
 });
 

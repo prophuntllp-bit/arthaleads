@@ -85,8 +85,15 @@ export default function VistrowVoicePanel({ lead, vistrow }) {
   // Nothing to say: the integration is off and this lead was never called.
   if (!calls.length && !d && !st?.enabled) return null;
 
+  // A website widget conversation is the visitor talking to the AI on the
+  // site, not an AI call to them (owner, 31 Oct 2026).
+  const isWidget = !!last && /widget|web/i.test(String(last.channel || "")) && !last.followUpKind && !last.result;
+  const talk = last?.durationSeconds > 0
+    ? `${Math.floor(last.durationSeconds / 60)}m ${Math.round(last.durationSeconds % 60)}s`.replace(/^0m /, "")
+    : null;
   const lastLine = last
-    ? [last.result || (last.followUpKind ? KIND[last.followUpKind] : null) || "Call made", last.createdAt ? fmtDateTime(last.createdAt) : null].filter(Boolean).join(" · ")
+    ? [isWidget ? "Website widget conversation" : last.result || (last.followUpKind ? KIND[last.followUpKind] : null) || "Call made",
+       isWidget ? talk : null, last.createdAt ? fmtDateTime(last.createdAt) : null].filter(Boolean).join(" · ")
     : "No call yet";
 
   return (
@@ -96,7 +103,7 @@ export default function VistrowVoicePanel({ lead, vistrow }) {
           <PhoneOutgoing className="h-3.5 w-3.5" style={{ color: "#6366f1" }} />
           <span className="text-xs font-bold uppercase tracking-wider text-app-soft">Vistrow AI calls</span>
         </div>
-        <span className="text-sm text-app"><span className="text-app-soft">Last AI call:</span> {lastLine}</span>
+        <span className="text-sm text-app"><span className="text-app-soft">{isWidget ? "Last conversation:" : "Last AI call:"}</span> {lastLine}</span>
         {calls.length > 0 && <span className="text-sm text-app"><span className="text-app-soft">Tries:</span> {attempts}</span>}
         {nextCall && <span className="text-sm text-app"><span className="text-app-soft">Next AI call:</span> {fmtDateTime(nextCall)}</span>}
         {inFlight && <span className="text-sm text-app-soft">Sending to Vistrow...</span>}

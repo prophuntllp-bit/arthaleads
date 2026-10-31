@@ -1100,6 +1100,8 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
       // see the branching below. Unknown/future fields are simply never
       // destructured here, so they're silently ignored rather than rejected.
       call_id, recording_url, recording_mime_type, page_path,
+      // The page the visitor was on, as a full address (website widget).
+      page_url, website_url,
       // Vistrow bridge (2026-10-15): the lead this call was placed for, the
       // call direction, and the call's result in this CRM's vocabulary.
       // crm_outcome.attempts arrives with the final "Not Reachable" report
@@ -1200,6 +1202,18 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
       && !Array.isArray(extracted_data) && Object.keys(extracted_data).length > 0;
     const safeRecordingUrl = sanitizeVistrowRecordingUrl(recording_url);
     const pagePathClean = page_path && typeof page_path === "string" ? page_path.trim() : "";
+    // Website widget conversations (owner, 31 Oct 2026: a widget lead must show
+    // which website it came from): the page address from page_url /
+    // website_url, or page_path when that is a full address. It becomes the
+    // lead's sourcePage / sourceDomain, the same fields a website form fills,
+    // so the lists show "site.com/page" for it too.
+    const widgetPage = [page_url, website_url, page_path]
+      .map((v) => (typeof v === "string" ? v.trim() : ""))
+      .find((v) => /^https?:\/\//i.test(v)) || "";
+    const widgetDomain = (() => { try { return widgetPage ? new URL(widgetPage).hostname.replace(/^www\./, "") : ""; } catch { return ""; } })();
+    // A widget conversation is the visitor talking to the AI on the site, so
+    // it is incoming even when Vistrow sends no direction.
+    const callDirection = direction || (/widget|web/i.test(String(channel || "")) ? "inbound" : "");
 
     let voiceCall;
     if (hasCallId || cleanTranscript.length || SENTIMENTS.includes(sentiment) || Number.isFinite(durNum)
@@ -1212,7 +1226,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
       if (channel && typeof channel === "string") voiceCall.channel = channel.trim();
       if (language && typeof language === "string") voiceCall.language = language.trim();
       if (agent_name && typeof agent_name === "string") voiceCall.agentName = agent_name.trim();
-      if (pagePathClean) voiceCall.pagePath = pagePathClean;
+      if (pagePathClean || widgetPage) voiceCall.pagePath = pagePathClean || widgetPage;
       if (safeRecordingUrl) {
         voiceCall.recordingUrl = safeRecordingUrl;
         if (recording_mime_type && typeof recording_mime_type === "string") {
@@ -1351,7 +1365,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
           type: "called",
           description: callDescription({ direction, followUpKind, attempts: callAttempts, booking: callResult, durationSeconds: voiceCall.durationSeconds }),
           performedByName: "Vistrow Voice",
-          meta: { callId: callIdNum, direction: direction || "", followUpKind, attempts: callAttempts, booking: callResult },
+          meta: { callId: callIdNum, direction: callDirection, followUpKind, attempts: callAttempts, booking: callResult },
         };
         // Same rule as the WhatsApp chat reader: never over a real name.
         const callName = cleanName(name);
@@ -1400,6 +1414,14 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
           return res.status(200).json({ success: true, message: "Call updated", leadId: existingByPhone._id });
         }
         if (brochureRequested) await notifyBrochureRequest({ orgId, leadId: existingByPhone._id, callId: callIdNum, projectName: brochureProject });
+        // The website the widget conversation came from, only where the lead
+        // has none yet (never over a form's own page).
+        if (widgetDomain) {
+          await Lead.updateOne(
+            { _id: existingByPhone._id, $or: [{ sourceDomain: "" }, { sourceDomain: null }, { sourceDomain: { $exists: false } }] },
+            { $set: { sourcePage: widgetPage, sourceDomain: widgetDomain } }
+          );
+        }
         if (rename) {
           try {
             const WaConversation = require("../models/WaConversation");
@@ -1441,7 +1463,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
         type: "called",
         description: callDescription({ direction, followUpKind, attempts: callAttempts, booking: callResult, durationSeconds: voiceCall.durationSeconds }),
         performedByName: "Vistrow Voice",
-        meta: { callId: callIdNum, direction: direction || "", followUpKind, attempts: callAttempts, booking: callResult },
+        meta: { callId: callIdNum, direction: callDirection, followUpKind, attempts: callAttempts, booking: callResult },
       };
 
       let lead;
@@ -1461,6 +1483,7 @@ router.post("/lead", express.json(), noOperators, customLeadLimiter, async (req,
           assignedTo: assignee?._id || null,
           assignedToName: assignee?.name || "",
           leadSourceLabel: sourceLabel,
+          ...(widgetDomain ? { sourcePage: widgetPage, sourceDomain: widgetDomain } : {}),
           voiceCalls: [newCallEntry],
           // Never let the schema's own "Apartment"/"Buy"/"₹0" defaults apply
           // to a voice lead with no real data for these - an explicit
